@@ -69,26 +69,84 @@ def from_base(i, name, keep=None):
 
 scenes = []
 # ---- A: spinning apple, hand slides in
-A = from_base(0, 'apple', keep=[1]); hand = A.layers[0]
+
+def extend_hand(g, bank_fallback=3):
+    """The arm art was clipped by its own sprite canvas (top edge hit the top row, nothing past the right edge).
+    Decode the 9 blocks into an index canvas, despeckle the dither noise on the lower edge, regenerate everything right of
+    X0 by mirroring the clean forearm texture (edges extrapolated), and re-cut into 32x32 blocks incl. a new top row and right column.
+    Only palette indices are moved around, so no new colours / palette banks are needed."""
+    import cv2
+    X0, XL, XR = 52, 28, 51                         # regenerate x >= X0, mirror texture taken from x in [XL, XR] (pure forearm)
+    CW, CH, OX, OY = 160, 128, 64, 80               # canvas x in [-64,96), y in [-80,48)
+    cv = np.zeros((CH, CW), np.uint8); bank = g.blks[0]['bank']
+    for b in g.blks:
+        for ty in range(4):
+            for tx in range(4):
+                for r in range(8):
+                    w = b['words'][(ty * 4 + tx) * 8 + r]
+                    for c in range(8): cv[b['cy'] - 16 + ty * 8 + r + OY, b['cx'] - 16 + tx * 8 + c + OX] = (w >> (4 * c)) & 15
+    # despeckle: the pale checker dots along the lower edge are quantiser noise -> 3x3 median in index space (indices are ordered by brightness)
+    med = cv2.medianBlur(cv, 3)
+    for x in range(36, 64):
+        col = np.where(cv[:, x + OX] > 0)[0]; bot = col.max()
+        for y in range(bot - 9, bot + 1):
+            if 0 < cv[y, x + OX] <= 4 and med[y, x + OX] > 0: cv[y, x + OX] = med[y, x + OX]
+    def edges(x):
+        c = np.where(cv[:, x + OX] > 0)[0]; return float(c.min()), float(c.max())
+    ed = {x: edges(x) for x in range(XL - 4, XR + 1)}
+    def sm(x, k):                                   # 5-col median of an edge
+        return float(np.median([ed[min(XR, max(XL - 4, x + d))][k] for d in range(-2, 3)]))
+    Ta, Ba = np.median([ed[x][0] for x in range(XR - 4, XR + 1)]), np.median([ed[x][1] for x in range(XR - 4, XR + 1)])
+    ts = (Ta - np.median([ed[x][0] for x in range(36, 41)])) / (XR - 38)              # top edge keeps rising (forearm widens); bottom stays flat
+    out = cv.copy(); out[:, X0 + OX:] = 0; n = XR - XL
+    for x in range(X0, CW - OX):
+        u = (x - XR) % (2 * n); sx = XR - u if u <= n else XL + (u - n)
+        Tn = Ta + ts * (x - XR); Bn = Ba; Ts, Bs = sm(sx, 0), sm(sx, 1)
+        for y in range(int(round(Tn)), int(round(Bn)) + 1):
+            f = (y - Tn) / (Bn - Tn); ys = int(round(Ts + f * (Bs - Ts)))
+            for d in (0, 1, -1, 2, -2, 3, -3):
+                v = cv[ys + d, sx + OX]
+                if v: out[y, x + OX] = v; break
+    blks = []
+    for cy in (-64, -32, 0, 32):
+        for cx in (-48, -16, 16, 48, 80):
+            blk = out[cy - 16 + OY:cy + 16 + OY, cx - 16 + OX:cx + 16 + OX]
+            if not blk.any(): continue
+            words = []
+            for ty in range(0, 32, 8):
+                for tx in range(0, 32, 8):
+                    T = blk[ty:ty + 8, tx:tx + 8].astype(np.uint32)
+                    for r in range(8): words.append(int(sum(int(T[r, c]) << (4 * c) for c in range(8))))
+            blks.append(dict(cx=cx, cy=cy, words=words, bank=bank))
+    print('hand blocks', len(g.blks), '->', len(blks)); g.blks = blks
+A = from_base(0, 'apple', keep=[1]); hand = A.layers[0]; extend_hand(hand.g)
 free = [k for k in range(16) if k not in used_banks([hand])]
-def norm(im, H=112):                        # every pose -> same apple height, centred on its bbox, bottom-aligned (no size pulsing while it turns)
-    bb = im.getchannel('A').point(lambda v: 255 if v >= 128 else 0).getbbox(); c = im.crop(bb); w = max(1, round(c.width * H / c.height))
-    c = c.resize((w, H), Image.NEAREST); o = Image.new('RGBA', (128, 128), (0, 0, 0, 0)); o.alpha_composite(c, ((128 - w) // 2, 120 - H)); return o
-poses = new_group([norm(img(f'apple_{k}.png')) for k in range(4)], 16, 16, free[:8], A.pal)
+def solid(im):                              # close pin-holes / notches in the apple's silhouette (alpha dither in the source art showed up as black specks on its edge)
+    a = np.array(im); m = (a[..., 3] >= 128).astype(np.uint8); cl = cv2.morphologyEx(m, cv2.MORPH_CLOSE, np.ones((5, 5), np.uint8))
+    ff = (1 - cl).copy(); h, w = ff.shape; msk = np.zeros((h + 2, w + 2), np.uint8); cv2.floodFill(ff, msk, (0, 0), 2); cl = np.where(ff == 2, 0, 1).astype(np.uint8)   # + enclosed holes
+    wgt = m.astype(np.float32); rgb = a[..., :3].astype(np.float32) * wgt[..., None]
+    fill = cv2.blur(rgb, (7, 7)) / np.maximum(cv2.blur(wgt, (7, 7)), 1e-3)[..., None]
+    new = (cl == 1) & (m == 0); a[..., :3] = np.where(new[..., None], fill, a[..., :3]).astype(np.uint8); a[..., 3] = np.where(cl == 1, 255, 0); return Image.fromarray(a, 'RGBA')
+def norm(im, T=96.0):                       # every pose -> same silhouette AREA and centroid on the canvas centre: the apple neither pulses in size nor hops sideways/up when the pose changes
+    a = np.array(im.getchannel('A')) >= 128; ys, xs = np.where(a); k = T / a.sum() ** .5
+    r = im.resize((round(im.width * k), round(im.height * k)), Image.NEAREST); o = Image.new('RGBA', (128, 128), (0, 0, 0, 0))
+    o.paste(r, (round(64 - xs.mean() * k), round(64 - ys.mean() * k))); return o
+poses = new_group([norm(solid(img(f'apple_{k}.png'))) for k in range(4)], 16, 16, free[:8], A.pal)
 def smooth(f): return f * f * (3 - 2 * f)
 START, LAND = (120, 80, 256), (158, 72, 140)       # apple centre x, y and scale (Q8); LAND = resting in the palm (hand is drawn in front, so its thumb/fingers cradle it)
-def master(t):                                    # one smoothstep glide, arriving exactly as the hand does (t=150), so it settles softly
+def master(t):                                    # one smoothstep glide, arriving exactly as the hand does (t=150); scale is interpolated geometrically so the shrink looks even
     f = smooth(min(1, t / (A.frames - 1)))
-    return tuple(round(a + (b - a) * f) for a, b in zip(START, LAND))
+    return (round(START[0] + (LAND[0] - START[0]) * f), round(START[1] + (LAND[1] - START[1]) * f), round(START[2] * (LAND[2] / START[2]) ** f))
 seg, t, i = [], 0, 0
 while t < A.frames:
     d = max(3, round([8, 5, 8, 5][i % 4] * (1.0 if t < 70 else 1.0 + (t - 70) / 80 * 1.6))); seg.append([i % 4, t, min(A.frames, t + d)]); t += d; i += 1
 last0 = max(k for k, sg in enumerate(seg) if sg[0] == 0); seg = seg[:last0 + 1]; seg[-1][2] = A.frames
 apple_layers = []
 for pose, t0, t1 in seg:
-    (xa, ya, sa), (xb, yb, sb) = master(t0), master(t1 - 1)
-    apple_layers.append(L(poses[pose], [K(t0, xa, ya, sa), K(t1 - 1, xb, yb, sb)], grp=0, dbl=0))
-A.layers = apple_layers + [hand]; scenes.append(A)
+    ks = [K(t, *master(t)) for t in range(t0, t1)]       # a key on EVERY frame: no piecewise-linear speed changes at pose switches
+    if len(ks) == 1: ks.append(ks[0])
+    apple_layers.append(L(poses[pose], ks, grp=0, dbl=0))
+A.layers = [hand] + apple_layers; scenes.append(A)       # last layer = front, so the apple now sits IN FRONT of the hand
 import colorsys
 def alienise(sc, layers, dh=-0.22, ds=1.25):         # recolour the globe's palette banks only (hand banks untouched): blue seas -> toxic green, land -> amber, clouds tinted
     banks = {b['bank'] for l in layers for b in l.g.blks}

@@ -32,7 +32,7 @@ void intro_build(const IScene *S, int t, u16 *oam) {
         }
         for (int bi = 0; bi < L->n && n < 128; bi++) {
             const IBlk *B = &L->blk[bi]; int dx = B->cx, dy = B->cy;
-            if (aff) { dx = ((c * B->cx - s * B->cy) * sc) >> 16; dy = ((s * B->cx + c * B->cy) * sc) >> 16; }
+            if (aff) { dx = ((c * B->cx - s * B->cy) * sc + 0x8000) >> 16; dy = ((s * B->cx + c * B->cy) * sc + 0x8000) >> 16; }
             int bw = aff && L->dbl ? w * 2 : w, bh = aff && L->dbl ? h * 2 : h;
             int x = X + dx - bw / 2, y = Y + dy - bh / 2;
             if (x + bw <= 0 || x >= 240 || y + bh <= 0 || y >= 160) continue;

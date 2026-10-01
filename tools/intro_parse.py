@@ -9,7 +9,7 @@ def load(path):
         nwords, nl, frames, fin, fout, bd = int(f[1]), int(f[4]), int(f[5]), int(f[6]), int(f[7]), int(f[8], 16)
         body = re.search(rf'{n}_tiles\[\d+\][^=]*= \{{(.*?)\}};', t, re.S).group(1)
         words = [int(x, 16) for x in re.findall(r'0x[0-9a-fA-F]+', body)]
-        pal = [int(x, 16) for x in re.findall(r'0x[0-9a-fA-F]+', re.search(rf'{n}_pal\[256\] = \{{(.*?)\}};', t, re.S).group(1))]
+        pal = [int(x, 16) for x in re.findall(r'0x[0-9a-fA-F]+', re.search(rf'{n}_pal\[256\][^=]*= \{{(.*?)\}};', t, re.S).group(1))]
         lrows = re.findall(r'\{(%s_b\d+,[^}]*)\}' % n, re.search(rf'{n}_l\[\] = \{{(.*?)\}};\n', t + '\n', re.S).group(1) + '}')
         layers = []
         for lr in lrows:
