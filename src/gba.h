@@ -25,6 +25,8 @@ extern u16 host_pal[512];
 #define KEY_START 8
 #define KEY_A 1
 #define KEY_B 2
+#define KEY_RIGHT 16
+#define KEY_LEFT 32
 
 #define DCNT_BG0 0x0100
 #define DCNT_BG1 0x0200

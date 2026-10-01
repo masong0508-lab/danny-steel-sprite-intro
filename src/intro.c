@@ -88,16 +88,17 @@ void intro_play(void) {
         white = S->flags & 1;
     }
 }
+static int last_step = -1;
 void intro_title_tick(int frame) {
-    static int last = -1;
     int step = (frame % INTRO_TITLE_CYCLE) / INTRO_TITLE_HOLD;
-    if (step == last) return;                                          // same pose: OAM already correct
-    last = step;
+    if (step == last_step) return;                                     // same pose: OAM already correct
+    last_step = step;
     intro_build(&intro_scenes[INTRO_SCENES - 1], frame % INTRO_TITLE_CYCLE, shadow); push_oam();
 }
 void intro_reload_title(void) {
     const IScene *S = &intro_scenes[INTRO_SCENES - 1];
     for (int i = 0; i < S->nwords; i++) OBJ_VRAM[i] = S->tiles[i];
     for (int i = 0; i < 256; i++) OBJ_PAL[i] = S->pal[i];
+    last_step = -1; intro_build(S, 0, shadow); push_oam();             // the menu drew its own sprites into OAM: put the skyline back
 }
 #endif
