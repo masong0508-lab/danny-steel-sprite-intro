@@ -36,7 +36,7 @@ static void scroll_pos(int *sx, int *sy) {
 
 // Build the whole title screen from scratch (used at boot and every time we "loop back").
 static void title_setup(void) {
-    REG_DISPCNT = DCNT_BLANK; REG_BLDY = 16;
+    REG_BLDCNT = keep_music ? 0x00BF : 0x00FF; REG_BLDY = 16; REG_DISPCNT = 0;   // no forced blank (it shows white): white after the eyes' flash, black otherwise
     if (!keep_music) music_stop();
     for (int i = 0; i < 224; i++) PAL16[i] = bg_pal[i];
     for (int i = 0; i < 16; i++) PAL16[224 + i] = text_pal[i];            // palette bank 14 = text

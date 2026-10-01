@@ -84,7 +84,7 @@ static void ui_draw(int fade) {                                    // fade 0 = f
 }
 
 void menu_enter(void) {
-    REG_DISPCNT = DCNT_BLANK; REG_BLDCNT = 0x00FF; REG_BLDY = 16;
+    REG_BLDCNT = 0x00FF; REG_BLDY = 16; REG_DISPCNT = 0;            // black, no forced blank (forced blank shows white)
     set_pal(menu_pal);
     REG_BG2PA = 128; REG_BG2PD = 128; REG_BG2PB = 0; REG_BG2PC = 0; REG_BG2X = 0; REG_BG2Y = 0;   // 0.5 texel per pixel = 2x zoom
     REG_BGCNT(2) = 0;                                               // priority 0, nothing else needed in bitmap mode
