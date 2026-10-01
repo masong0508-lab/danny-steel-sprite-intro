@@ -239,7 +239,8 @@ def strip_im(n): return Image.fromarray(feather(np.array(img(n).convert('RGB')).
 ft, fb = img('face_top.png'), img('face_bot.png')
 g_top, g_bot, g_closed, g_half, g_open = new_group([ft, fb, strip_im('eye_closed.png'), strip_im('eye_half.png'), strip_im('eye_open.png')], 32, 16, list(range(8)), E.pal)
 def win(gr, t0, t1, x, y): return L(gr, [K(t0, x, y), K(t1, x, y)])
-TL = [(g_closed, 0, 9), (g_half, 10, 11), (g_open, 12, 22)]
+# blink (from the screen recording: open -> half -> closed -> half -> open) squeezed into the open phase so the total stays 23 frames and the white flash (t=22) is untouched
+TL = [(g_closed, 0, 9), (g_half, 10, 11), (g_open, 12, 13), (g_half, 14, 14), (g_closed, 15, 17), (g_half, 18, 18), (g_open, 19, 22)]
 E.layers = [win(g_top, 0, 22, 120, 24), win(g_bot, 0, 22, 120, 128)] + [win(gr, a, b, 120, 72) for gr, a, b in TL]; scenes.append(E)
 # ---- F: title hand-over + looping skyline (ping-pong over 4 frames, stepped by intro_title_tick)
 HOLD = 6; SEQ = [0, 1, 2, 3, 2, 1]
