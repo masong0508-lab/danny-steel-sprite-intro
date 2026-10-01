@@ -58,7 +58,7 @@ static void push_oam(void) { for (int i = 0; i < 512; i++) OAMW[i] = shadow[i]; 
 static void dma32(const void *src, volatile void *dst, u32 words) { DMA3SAD = (u32)src; DMA3DAD = (u32)dst; DMA3CNT = 0x84000000u | words; }   // 32-bit copy, CPU halts until done
 static int fade_level(const IScene *S, int t) {                       // 0..16 = how far into the fade-in / fade-out we are
     if (t < S->fin) return 16 - t * 16 / S->fin;
-    if (S->fout && t >= S->frames - S->fout) return (t - (S->frames - S->fout) + 1) * 16 / S->fout;
+    if (S->fout && t >= S->frames - S->fout) return (S->flags & 2) ? 16 : (t - (S->frames - S->fout) + 1) * 16 / S->fout;   // flags bit1: hard flash (full level at once)
     return 0;
 }
 static void show(const IScene *S, int t, int white) {                 // build frame t in RAM, then flip it onto the screen at the next vblank

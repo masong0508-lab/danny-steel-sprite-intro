@@ -62,6 +62,51 @@ def new_group(ims, bw, bh, banks, pal):
 
 def used_banks(layers): return {b['bank'] for l in layers for b in l.g.blks}
 
+def extend_arm(g, rows=(-64, -32, 0, 32, 64), cols=(-48, -16, 16, 48, 80)):
+    """Generic version of extend_hand: finds the rightmost opaque column of a 32x32-block arm sprite, regenerates the last 12 columns and everything
+    to the right of them from the clean forearm texture (mirrored), with flat/slightly sloped edges, so the arm runs off the right edge of the screen."""
+    import cv2
+    CW = CH = 224; OX = OY = 112; cv = np.zeros((CH, CW), np.uint8); bank = g.blks[0]['bank']
+    for b in g.blks:
+        for ty in range(4):
+            for tx in range(4):
+                for r in range(8):
+                    w = b['words'][(ty * 4 + tx) * 8 + r]
+                    for c in range(8): cv[b['cy'] - 16 + ty * 8 + r + OY, b['cx'] - 16 + tx * 8 + c + OX] = (w >> (4 * c)) & 15
+    xr = int(np.where((cv > 0).any(0))[0].max()) - OX; X0 = xr - 11; XR = X0 - 1; XL = XR - 24
+    med = cv2.medianBlur(cv, 3)
+    for x in range(XL, xr + 1):                      # despeckle the pale dither dots on the lower edge
+        col = np.where(cv[:, x + OX] > 0)[0]; bot = col.max()
+        for y in range(bot - 9, bot + 1):
+            if 0 < cv[y, x + OX] <= 4 and med[y, x + OX] > 0: cv[y, x + OX] = med[y, x + OX]
+    def edges(x):
+        c = np.where(cv[:, x + OX] > 0)[0]; return float(c.min()), float(c.max())
+    ed = {x: edges(x) for x in range(XL - 4, XR + 1)}
+    def sm(x, k): return float(np.median([ed[min(XR, max(XL - 4, x + d))][k] for d in range(-2, 3)]))
+    Ta = np.median([ed[x][0] for x in range(XR - 4, XR + 1)]); Ba = np.median([ed[x][1] for x in range(XR - 4, XR + 1)])
+    ts = float(np.clip((Ta - np.median([ed[x][0] for x in range(XR - 24, XR - 19)])) / 20, -0.3, 0.3))
+    out = cv.copy(); out[:, X0 + OX:] = 0; n = XR - XL
+    for x in range(X0, CW - OX):
+        u = (x - XR) % (2 * n); sx = XR - u if u <= n else XL + (u - n)
+        Tn = Ta + ts * (x - XR); Bn = Ba; Ts, Bs = sm(sx, 0), sm(sx, 1)
+        for y in range(int(round(Tn)), int(round(Bn)) + 1):
+            f = (y - Tn) / (Bn - Tn); ys = int(round(Ts + f * (Bs - Ts)))
+            for d in (0, 1, -1, 2, -2, 3, -3):
+                v = cv[ys + d, sx + OX]
+                if v: out[y, x + OX] = v; break
+    blks = []
+    for cy in rows:
+        for cx in cols:
+            blk = out[cy - 16 + OY:cy + 16 + OY, cx - 16 + OX:cx + 16 + OX]
+            if not blk.any(): continue
+            words = []
+            for ty in range(0, 32, 8):
+                for tx in range(0, 32, 8):
+                    T = blk[ty:ty + 8, tx:tx + 8].astype(np.uint32)
+                    for r in range(8): words.append(int(sum(int(T[r, c]) << (4 * c) for c in range(8))))
+            blks.append(dict(cx=cx, cy=cy, words=words, bank=bank))
+    print('arm art ended at', xr, '- blocks', len(g.blks), '->', len(blks)); g.blks = blks
+
 base = load('tools/intro_data_base.c')
 def from_base(i, name, keep=None):
     b = base[i]; s = S(name, b['frames'], b['fin'], b['fout'], b['bd']); s.pal = list(b['pal'])
@@ -146,7 +191,8 @@ for pose, t0, t1 in seg:
     ks = [K(t, *master(t)) for t in range(t0, t1)]       # a key on EVERY frame: no piecewise-linear speed changes at pose switches
     if len(ks) == 1: ks.append(ks[0])
     apple_layers.append(L(poses[pose], ks, grp=0, dbl=0))
-A.layers = [hand] + apple_layers; scenes.append(A)       # last layer = front, so the apple now sits IN FRONT of the hand
+A.layers = [hand] + apple_layers; A.fout = 0; scenes.append(A)       # hard cut to the fist (guide video)
+A_ = None;  # (scene appended above)       # last layer = front, so the apple now sits IN FRONT of the hand
 import colorsys
 def alienise(sc, layers, dh=-0.22, ds=1.25):         # recolour the globe's palette banks only (hand banks untouched): blue seas -> toxic green, land -> amber, clouds tinted
     banks = {b['bank'] for l in layers for b in l.g.blks}
@@ -155,10 +201,28 @@ def alienise(sc, layers, dh=-0.22, ds=1.25):         # recolour the globe's pale
             c = sc.pal[bk * 16 + i]; r, g, b = (c & 31) / 31, ((c >> 5) & 31) / 31, ((c >> 10) & 31) / 31
             h, sat, v = colorsys.rgb_to_hsv(r, g, b); h = (h + dh) % 1; sat = min(1, sat * ds + (0.12 if v > .7 else 0)); v = v ** 1.15
             r, g, b = colorsys.hsv_to_rgb(h, sat, v); sc.pal[bk * 16 + i] = round(r * 31) | (round(g * 31) << 5) | (round(b * 31) << 10)
-B = from_base(1, 'earth'); hb = used_banks(B.layers[:2]); globe = [l for l in B.layers[2:] if not (used_banks([l]) & hb)]
-print('globe layers', len(globe), 'of', len(B.layers) - 2); alienise(B, globe); scenes.append(B)
+# ---- A2: fist. Guide video @24fps: hard cut to the fist (arm runs off the right edge), ~0.32 s, then a hard WHITE flash (~0.12 s) and a quick fade into the palm shot
+FI = from_base(1, 'fist', keep=[0]); extend_arm(FI.layers[0].g)
+FI.frames, FI.fin, FI.fout, FI.flags = 26, 0, 7, 3                 # flags bit0 = flash to white, bit1 = hard flash (full white for all fout frames)
+FI.layers[0].keys = [K(0, 170, 112), K(18, 170, 112)]; scenes.append(FI)         # layer is hidden after t=18 -> 7 white frames
+# ---- B: palm + globe, timed to the guide: globe 49 px -> 236 px between 0.54 s and 1.33 s (measured on the recording), moving from the palm to centre screen
+B = from_base(1, 'earth', keep=[1, 2, 3, 4, 5, 6]); extend_arm(B.layers[0].g)
+Dt = [(0, 49), (11, 107), (14, 118), (19, 142), (24, 166), (29, 187), (34, 204), (41, 221), (44, 230)]       # (frame @60fps after the flash, globe diameter px)
+Pt = [(0, 160, 87), (11, 162, 86), (24, 151, 81), (34, 136, 82), (44, 120, 81)]
+def lerp(tab, t, k): 
+    for a, b in zip(tab, tab[1:]):
+        if a[0] <= t <= b[0]: f = (t - a[0]) / (b[0] - a[0]); return a[k] + (b[k] - a[k]) * f
+    return tab[-1][k]
+B.frames, B.fin, B.fout = 44, 4, 0
+palm = B.layers[0]; palm.keys = [K(0, 172, 116), K(15, 172, 116)]       # palm leaves once the globe covers it (keeps the per-scanline sprite cost under the 1210 limit)
+def gkeys(a, b, mul): return [K(t, round(lerp(Pt, t, 1)), round(lerp(Pt, t, 2)), round(lerp(Dt, t, 1) * mul)) for t in range(a, b + 1)]
+spans = [(0, 3), (4, 7), (8, 11), (12, 15)]                                       # 64 px spin poses (native size at D=64 -> scale = 4*D)
+for l, (a, b) in zip(B.layers[1:5], spans): l.keys = gkeys(a, b, 4)
+B.layers[5].keys = gkeys(16, 43, 2)                                              # 128 px globe (native at D=128 -> scale = 2*D)
+hb = used_banks(B.layers[:1]); globe = [l for l in B.layers[1:] if not (used_banks([l]) & hb)]
+print('globe layers', len(globe), 'of', len(B.layers) - 1); alienise(B, globe); scenes.append(B)
 C = from_base(2, 'land', keep=[]); free = [k for k in range(16)]                  # close-up shot: now the alien world's Japan (assets/anim/land_japan.png, made by tools/gen_japan.py), same 8 px pan as before
-C.pal = [0] * 256; C.layers = [L(new_group([img('land_japan.png')], 64, 32, free[:8], C.pal)[0], base[2]['layers'][0]['keys'])]; scenes.append(C)
+C.pal = [0] * 256; C.layers = [L(new_group([img('land_japan.png')], 64, 32, free[:8], C.pal)[0], base[2]['layers'][0]['keys'])]; C.fin = 0; scenes.append(C)
 # ---- D: man over the city (full-bleed, bottom-aligned like the title)
 D = from_base(3, 'city', keep=[0, 1]); ck = [(t, x, 128, sc, a, e) for t, x, y, sc, a, e in base[3]['layers'][2]['keys']]
 free = [k for k in range(16) if k not in used_banks(D.layers)]
