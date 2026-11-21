@@ -4,12 +4,14 @@ These are **captures from the playable GBA ROM and the game's own
 C renderer**, not generated illustrations or speculative mockups.
 
 **Emulated, true-ROM captures (mGBA):** the first four images were taken
-by executing `dist/danny_steel_title.gba` in headless mGBA, sending
+by compiling the current source revision to `danny_steel_title.gba` and
+executing it in headless mGBA, sending
 START/A inputs to navigate its opening title and new-game menus.
 They were upscaled with nearest-neighbour interpolation for legibility.
 
 **Gameplay/story engine frames:** the remaining eight images came from
-the actual `story_draw` and `cinema_draw` game renderer, compiled for
+the native `hd_world_draw` / `hd_game_overlay` and compatible
+`story_draw` / `cinema_draw` game renderer, compiled for
 a desktop host using identical art and palette data. These frames were
 captured at carefully chosen story beats; they are *representative
 screenshots of the code*, not a claim that one uninterrupted live run
@@ -26,7 +28,8 @@ completed-project state to demonstrate the unlocked interface.
 
 The photo-texture title preserves the drifting painted background,
 hand-distressed wordmark, animated skyline and mellow tonal identity.
-The menu uses actual looping footage and printed instructions.
+The menu is now a native 240x160 illustration of a rainy Old Quarter street,
+with printed narrative choices and no rotating-square or gray-video overlay.
 
 ## Gameplay and dialogue
 
@@ -47,6 +50,7 @@ The menu uses actual looping footage and printed instructions.
 | ![Advanced Studio Notes](screenshots/11_advanced_studio_notes.png) | ![Advanced Studio Perform](screenshots/12_advanced_studio_perform.png) |
 
 Capture source: `tools/story_gallery.c` and
-`.github/workflows/screenshots.yml`. Each image retains the original
-GBA pixel art, upscaled using nearest-neighbour scaling; there are
-no new textures, painted-over characters, or AI-generated scenes.
+`.github/workflows/screenshots.yml`. The main menu and overhead view are rendered at native 240x160 GBA resolution;
+the legacy cinematics, first-person renderer and Advanced Studio still
+expand 120x80 pixel art in place. All final pictures are displayed at
+2x their GBA size using nearest-neighbour scaling. No images are mockups.
