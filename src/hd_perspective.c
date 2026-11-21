@@ -195,7 +195,7 @@ static void actor(uint8_t *p,int sx,int ground,int h,char kind,unsigned tick){
   }
  }
 }
-static void render_billboards(uint8_t *p,const Story *s,int cx,int cy,
+static void render_billboards(uint8_t *p,int cx,int cy,
                               int fx,int fy,int rx,int ry,unsigned tick){
  for(int y=0;y<STORY_H;y++)for(int x=0;x<STORY_W;x++){
   char t=story_tile(x,y);
@@ -207,7 +207,8 @@ static void render_billboards(uint8_t *p,const Story *s,int cx,int cy,
   if(forward<85||forward>2200||abs_i(side)>forward*4/3)continue;
   int sx=120+side*160/forward;
   int height=24000/(forward+70);
-  if(height>115)height=115;if(height<8)height=8;
+  if(height>115)height=115;
+  if(height<8)height=8;
   if(sx<0||sx>=240||forward>wall_depth[sx])continue;
   actor(p,sx,80+height/2,height,t,tick);
  }
@@ -223,5 +224,5 @@ void hd_first_person_draw(uint8_t *p,const Story *s,unsigned tick){
  set_sky(p,tick,s->facing,camx,camy);
  floor_render(p,s,camx,camy,fx,fy,rx,ry,tick);
  cast_walls(p,camx,camy,fx,fy,rx,ry);
- render_billboards(p,s,camx,camy,fx,fy,rx,ry,tick);
+ render_billboards(p,camx,camy,fx,fy,rx,ry,tick);
 }
