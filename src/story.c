@@ -132,7 +132,9 @@ enum { D_NONE, D_OPEN, D_LETTER, D_LETTER_AGAIN, D_CLERK_LOCKED, D_CLERK, D_CLER
        D_HOPE_WITNESS, D_HOPE_TERMINAL, D_HOPE_DOOR,
        D_HOPE_NOTE_WAIT, D_HOPE_NOTE_LATE,
        D_MARA_CONCERN, D_MARA_WARNING, D_BAD_MUSIC_MASTER,
-       D_GOOD_END_SCARS, D_RESCUE_LOST_REMOTE };
+       D_GOOD_END_SCARS, D_RESCUE_LOST_REMOTE,
+       D_SHIFT_EARLY, D_SHIFT_DONE, D_SHIFT_REPEAT,
+       D_SHIFT_TIRED, D_SHIFT_PAUSED };
 #define SCRIPT(name, ...) static const StoryPage name[] = { __VA_ARGS__ }
 /* The banana-sign shift is practical income, not Danny's calling. He is
    grateful for the stability without pretending to enjoy mascot work. */
@@ -539,6 +541,20 @@ SCRIPT(d_rescue_lost,
  {"DANNY", "I'll keep the phone", "on. She can call."});
 /* Fourth harm can occur from any desk, before Danny ever reaches the
    house. It must NOT teleport him to a safe-house failure scene. */
+/* Shop scenes reuse the real Potheads set; these words are about making
+   ends meet, never a claim Danny loves being a sandwich-board mascot. */
+SCRIPT(d_shift_early,
+ {"DANNY", "Already did my", "hours in the suit."},
+ {"DANNY", "I can be grateful", "and still be tired."});
+SCRIPT(d_shift_done,
+ {"DANNY", "One more shift done.", "Rent will get paid."},
+ {"DANNY", "Now I can get back", "to making something."});
+SCRIPT(d_shift_repeat,
+ {"DANNY", "I put my hours in.", "That\'s plenty today."});
+SCRIPT(d_shift_tired,
+ {"DANNY", "Too worn down for", "another sign shift."});
+SCRIPT(d_shift_paused,
+ {"DANNY", "The sign can wait.", "There are bigger things."});
 SCRIPT(d_rescue_lost_remote,
  {"PHONE", "A lead went quiet.", "Mara is still gone."},
  {"UNKNOWN CALLER", "She will call you.", "Just give it a day."},
@@ -659,7 +675,9 @@ static const struct { const StoryPage *pages; uint8_t count; } scripts[] = {
   SEQ(d_hope_witness), SEQ(d_hope_terminal), SEQ(d_hope_door),
   SEQ(d_hope_note_wait), SEQ(d_hope_note_late),
   SEQ(d_mara_concern), SEQ(d_mara_warning), SEQ(d_bad_music_master),
-  SEQ(d_good_end_scars), SEQ(d_rescue_lost_remote)
+  SEQ(d_good_end_scars), SEQ(d_rescue_lost_remote),
+  SEQ(d_shift_early), SEQ(d_shift_done), SEQ(d_shift_repeat),
+  SEQ(d_shift_tired), SEQ(d_shift_paused)
 };
 const StoryPage *story_pages(const Story *s, int *count) {
     unsigned id = s->dialogue;
@@ -671,7 +689,9 @@ const StoryPage *story_pages(const Story *s, int *count) {
    The same script pages act as camera beats; no replay cutscene flags needed. */
 static uint8_t cinematics_for_dialogue(uint8_t d){
     switch(d){
-    case D_OPEN: return CINE_OPEN;
+    case D_OPEN: case D_SHIFT_EARLY: case D_SHIFT_DONE:
+    case D_SHIFT_REPEAT: case D_SHIFT_TIRED: return CINE_OPEN;
+    case D_SHIFT_PAUSED: return CINE_NOTICE;
     case D_LETTER: case D_LETTER_AGAIN: return CINE_LETTER;
     case D_CLERK_LOCKED: case D_CLERK: case D_CLERK_AGAIN: return CINE_BORE;
     case D_MARA_LOCKED: case D_MARA: case D_MARA_AGAIN:
@@ -1043,6 +1063,30 @@ static void resolve_risk(Story *s){
     }else if(selected)commit_bad(s,target);
 }
 static void interact(Story *s) {
+    /* The isometric shop occupies the solid (21,11) facade. Facing it
+       from its adjacent walkable tile opens an OPTIONAL work interaction.
+       No collision changes, new flags in SRAM, or mandatory job gate. */
+    if(s->x==20u && s->y==11u && s->facing==0u){
+        if(s->rescue_stage==STORY_RESCUE_LOST ||
+           (s->rescue_stage>=STORY_RESCUE_MISSING &&
+            s->rescue_stage<=STORY_RESCUE_TRACE)){
+            talk(s,D_SHIFT_PAUSED);return;
+        }
+        if(!can_make_memory(s))talk(s,D_SHIFT_EARLY);
+        else if(s->daily_mask&STORY_DAY_SHIFT)talk(s,D_SHIFT_REPEAT);
+        else if(!s->energy)talk(s,D_SHIFT_TIRED);
+        else{
+            --s->energy;
+            work_gain(s,2u);
+            s->daily_mask|=STORY_DAY_SHIFT;
+            s->dirty=1;
+            talk(s,D_SHIFT_DONE);
+        }
+        /* On a repeat visit there is no need to replay the entire
+           bird's-eye establishing camera. Resume on the steady dance. */
+        s->cinema_frame=136u;
+        return;
+    }
     char c=nearby_actor(s);
     switch (c) {
     case 'L':
