@@ -370,7 +370,6 @@ static void recordshop(uint8_t *p,unsigned t){
 void cinema_draw(uint8_t *p,unsigned scene,unsigned tick,unsigned page,unsigned final){
  if(scene>=CINE_COUNT)scene=CINE_NONE;
  unsigned t=tick;
- int pan=breathe(t);
  int focus=(int)(page&3u);
  /* Sky motion continues even when the finale actor pose holds. */
  switch(scene){
