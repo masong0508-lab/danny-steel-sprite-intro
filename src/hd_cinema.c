@@ -183,7 +183,7 @@ static void pot_city(uint8_t *p,unsigned t,int z,int cx,int cy){
  pot_rect(p,cx,cy,z,77,34,106,17,HD_LEAF);
  pot_rect(p,cx,cy,z,80,37,100,11,HD_BRICK_DARK);
  if(z>=184)
-  hd_text(p,pot_pt(cx,99-120,z),pot_pt(cy,39-80,z),
+  hd_text(p,pot_pt(cx,81-120,z),pot_pt(cy,39-80,z),
           "POTHEADS",HD_PAPER,1,1);
  else
   for(int i=0;i<8;i++)
