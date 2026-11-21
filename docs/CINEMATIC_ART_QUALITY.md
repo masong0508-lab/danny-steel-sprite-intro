@@ -63,8 +63,11 @@ workflow. It is not a request to produce standalone concept art.
    and clothing connections as necessary.
 2. Review the expanded record-store finale and memorial concert at native
    1× and 4×. The record store has varied sleeves, a warm listening light,
-   and an anchored turntable. Mara physically holds an album above
-   the platter, rather than a floating card stamped on the record.
+   and an anchored turntable. Four different cover illustrations
+   represent Danny's master, the neighborhood, the score and after-hours
+   sketches, rather than eight copy-pasted record icons.
+   Mara physically holds an album above the platter, rather than a
+   floating card stamped on the record.
    The concert has a lit truss, instruments, speakers, foreground patrons,
    and a microphone aligned with Mara's actual reaching hand. Neither
    should imply Danny is alive at his posthumous legacy performance.

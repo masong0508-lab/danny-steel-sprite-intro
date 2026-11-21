@@ -300,6 +300,51 @@ static void rooftop(uint8_t *p,unsigned t,int paint,int ending_state){
   hd_actor_stage(p,57,145,1,t,t<115u?3:0);
  }
 }
+/* Four contrasting album-cover identities in the shop, all authored
+   as clipped native primitives. The former eight repeated vinyl glyphs
+   made the shelves read like an identical debug tile grid. */
+static void album_sleeve(uint8_t *p,int x,int y,int id){
+ unsigned paper=id%3==0?HD_GLASS:id%3==1?HD_LEAF_DARK:
+                HD_BRICK_LIT;
+ hd_rect(p,x,y,21,26,HD_BARK);
+ hd_rect(p,x+2,y+2,17,22,paper);
+ hd_rect(p,x+2,y+2,17,2,(id&1)?HD_COPPER:HD_GOLD);
+ switch(id&3){
+  case 0: /* Danny's master: the record itself. */
+   hd_ellipse(p,x+10,y+12,7,7,HD_INK);
+   hd_ellipse(p,x+10,y+12,3,3,HD_PAPER);
+   hd_ellipse(p,x+10,y+12,1,1,HD_GOLD);
+   break;
+  case 1: /* Live in the Old Quarter: asymmetrical midnight skyline. */
+   hd_rect(p,x+4,y+13,3,7,HD_INK);
+   hd_rect(p,x+8,y+10,4,10,HD_INK);
+   hd_rect(p,x+13,y+7,4,13,HD_INK);
+   hd_pixel(p,x+15,y+9,HD_LAMP);
+   hd_pixel(p,x+10,y+13,HD_GOLD);
+   hd_line(p,x+4,y+20,x+17,y+20,HD_STONE_LIT);
+   break;
+  case 2: /* Unfinished score: waveform and annotated tape mark. */
+   hd_line(p,x+4,y+13,x+7,y+13,HD_INK);
+   hd_line(p,x+7,y+13,x+9,y+7,HD_INK);
+   hd_line(p,x+9,y+7,x+12,y+19,HD_INK);
+   hd_line(p,x+12,y+19,x+15,y+10,HD_INK);
+   hd_line(p,x+15,y+10,x+17,y+13,HD_INK);
+   hd_rect(p,x+6,y+17,3,2,HD_GOLD);
+   hd_pixel(p,x+15,y+7,HD_PAPER);
+   break;
+  default: /* After-hours sketches: plant, window and flowers. */
+   hd_line(p,x+10,y+19,x+10,y+9,HD_INK);
+   hd_line(p,x+10,y+16,x+5,y+12,HD_INK);
+   hd_line(p,x+10,y+15,x+15,y+11,HD_INK);
+   hd_ellipse(p,x+10,y+9,5,4,HD_RED_SHADE);
+   hd_ellipse(p,x+10,y+9,2,2,HD_GOLD);
+   hd_pixel(p,x+6,y+12,HD_LEAF_LIT);
+   hd_pixel(p,x+14,y+11,HD_LEAF_LIT);
+   break;
+ }
+ hd_line(p,x+3,y+22,x+17,y+22,HD_STONE_LIT);
+ if(id&1)hd_pixel(p,x+5,y+5,HD_LAMP);
+}
 static void good_record(uint8_t *p,unsigned t){
  inside(p,t,1);
  /* Warm listening-room key light, stock-shelf brackets, and actual
@@ -318,16 +363,7 @@ static void good_record(uint8_t *p,unsigned t){
  hd_rect(p,132,31,100,64,HD_STONE_DARK);
  for(int i=0;i<8;i++){
   int x=133+(i%4)*25,y=33+(i/4)*32;
-  unsigned paper=i%3==0?HD_GLASS:i%3==1?HD_LEAF_DARK:
-                 HD_BRICK_LIT;
-  hd_rect(p,x,y,21,26,HD_BARK);
-  hd_rect(p,x+2,y+2,17,22,paper);
-  hd_rect(p,x+2,y+2,17,2,i&1?HD_COPPER:HD_GOLD);
-  hd_ellipse(p,x+10,y+12,7,7,HD_INK);
-  hd_ellipse(p,x+10,y+12,3,3,HD_PAPER);
-  hd_ellipse(p,x+10,y+12,1,1,HD_GOLD);
-  hd_line(p,x+3,y+21,x+16,y+21,HD_STONE_LIT);
-  if(i&1)hd_pixel(p,x+5,y+7,HD_LAMP);
+  album_sleeve(p,x,y,i);
  }
  hd_rect(p,133,62,98,2,HD_COPPER);
  hd_rect(p,133,94,98,3,HD_BARK);
@@ -416,6 +452,13 @@ static void concert(uint8_t *p,unsigned t){
  hd_rect(p,42,112,39,6,HD_BARK);
  hd_rect(p,45,108,12,4,HD_STONE_LIT);
  hd_rect(p,63,108,11,4,HD_STONE_LIT);
+ /* Purposeful spotlight pools at the same stage coordinates as the two
+    actors. Draw them BEFORE people and the foreground audience, so feet
+    are visibly grounded instead of glowing through shoes. */
+ hd_ellipse(p,75,120,22,4,HD_SHADOW);
+ hd_ellipse(p,75,119,17,2,HD_COPPER);
+ hd_ellipse(p,121,123,27,4,HD_SHADOW);
+ hd_ellipse(p,121,122,21,2,HD_LAMP);
  /* Mara steps into the spotlight to introduce the record in memory
     of Danny. The clerk supports from stage left, rather than making
     Danny inexplicably appear alive at his own posthumous tribute. */
@@ -435,10 +478,16 @@ static void concert(uint8_t *p,unsigned t){
  for(int i=0;i<15;i++){
   int x=i*17-5;
   int bob=(int)(((unsigned)(i*7)+t/26u)&3u);
-  int yy=117+bob;
-  hd_ellipse(p,x,yy,7,5,(i&1)?HD_HAIR:HD_STONE_DARK);
-  hd_rect(p,x-6,yy+3,13,16,(i%3)?HD_GLASS:HD_BRICK);
-  if(i%4==0)hd_line(p,x+6,yy+6,x+10,yy-6,HD_SKIN);
+  int depth=i%3;
+  int yy=114+depth*3+bob;
+  int radius=5+depth;
+  hd_ellipse(p,x,yy,radius,4+depth/2,
+             (i&1)?HD_HAIR:HD_STONE_DARK);
+  hd_rect(p,x-radius,yy+3,radius*2+1,13+depth*2,
+          i%4==0?HD_BRICK:i%4==1?HD_GLASS:
+          i%4==2?HD_LEAF_DARK:HD_STONE_LIT);
+  if(i%4==0)hd_line(p,x+radius-1,yy+6,x+radius+4,yy-7,HD_SKIN);
+  else if(i%5==2)hd_rect(p,x-radius+2,yy+7,5,2,HD_COPPER);
  }
 }
 int hd_special_cinema_draw(uint8_t *p,const Story *s,unsigned t){

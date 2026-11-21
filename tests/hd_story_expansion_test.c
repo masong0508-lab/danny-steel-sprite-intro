@@ -55,6 +55,20 @@ int main(void){
   if(c==HD_GOLD||c==HD_COPPER||c==HD_PAPER)warm_record++;
  }
  assert(warm_record>80u);
+ /* Every first-row cover must have a genuinely different INK silhouette:
+    not merely the same disc icon with a different background color.
+    Hash the shapes only, so the palette retune cannot fake diversity. */
+ uint32_t covers[4]={0,0,0,0};
+ for(int i=0;i<4;i++){
+  int ox=133+i*25,oy=33;
+  uint32_t hash=2166136261u;
+  for(int yy=oy+4;yy<oy+21;yy++)for(int xx=ox+3;xx<ox+18;xx++){
+   unsigned c=frame.pixels[yy*HD_W+xx];
+   hash=(hash^(c==HD_INK?1u:0u))*16777619u;
+  }
+  covers[i]=hash;
+  for(int prev=0;prev<i;prev++)assert(covers[i]!=covers[prev]);
+ }
  s.page=6;
  clear();hd_cinema_draw(frame.pixels,&s,4760u);
  unsigned memorial_stage=checksum(),stage_light=0;
