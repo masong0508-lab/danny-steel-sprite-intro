@@ -64,23 +64,31 @@ int main(void){
  Story s;
  story_new(&s,0);
  assert(s.cinema==CINE_OPEN);
- int pages=0,job=0,income=0,liked=0,art=0;
+ int pages=0,banana=0,income=0,gratitude=0,dislike=0,art=0;
  const StoryPage *d=story_pages(&s,&pages);
- assert(pages>=6);
+ assert(pages>=7);
  for(int i=0;i<pages;i++){
-  if(strstr(d[i].line1,"Potheads")||strstr(d[i].line2,"Potheads"))job=1;
-  if(strstr(d[i].line1,"rent")||strstr(d[i].line2,"rent"))income=1;
-  if(strstr(d[i].line1,"like")||strstr(d[i].line2,"like"))liked=1;
-  if(strstr(d[i].line1,"sketches")||strstr(d[i].line2,"songs"))art=1;
+  if(strstr(d[i].line1,"banana")||strstr(d[i].line2,"banana"))
+   banana=1;
+  if(strstr(d[i].line1,"rent")||strstr(d[i].line2,"rent"))
+   income=1;
+  if(strstr(d[i].line1,"grateful")||strstr(d[i].line2,"grateful"))
+   gratitude=1;
+  if(strstr(d[i].line1,"don't love")||strstr(d[i].line2,"don't love"))
+   dislike=1;
+  if(strstr(d[i].line1,"art")||strstr(d[i].line2,"art")||
+     strstr(d[i].line1,"music")||strstr(d[i].line2,"Music"))
+   art=1;
  }
- assert(job && income && liked && art);
+ /* Do not regress to the earlier claim that he enjoys mascot work. */
+ assert(banana && income && gratitude && dislike && art);
  int gx=0,gy=0;const char *name=0;
  assert(story_goal(&s,&gx,&gy,&name));
  assert(gx==5 && gy==5 && !story_solid(20,11));
  puts("8 unique cartridge facade identities x 2 orientations, palette and clipping safe");
  printf("Matching first-person Potheads sign: %u light letter texels, %u fascia texels\n",
         letters,banner);
- puts("Potheads is a valued, rent-paying job; music and visual art remain Danny's ambition");
+ puts("Potheads pays Danny's rent; gratitude and an unwanted mascot shift coexist with artistic ambitions");
  puts("Original clinic/bus/letter objectives, movement and save structure unchanged");
  return 0;
 }
