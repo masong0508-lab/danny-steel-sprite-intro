@@ -5,6 +5,8 @@
    exactly matches story_tick(). There is no second depth framebuffer:
    the 240 x uint16 z strip is a small persistent work array. */
 static uint16_t wall_depth[HD_W];
+/* Sparse native-column depth/texture cache, not another framebuffer. */
+static uint8_t wall_type[HD_W],wall_u[HD_W],wall_tx[HD_W],wall_ty[HD_W];
 static int abs_i(int a){return a<0?-a:a;}
 static unsigned texel(unsigned x,unsigned y){
  uint32_t v=(x+31u)*1664525u+(y+79u)*1013904223u;
@@ -149,12 +151,16 @@ static void cast_walls(uint8_t *p,int cx,int cy,int fx,int fy,int rx,int ry){
   }
   if(hit_dist>2300)hit_dist=2300;
   wall_depth[x]=(uint16_t)hit_dist;
+  wall_type[x]=(uint8_t)hit;
   if(!hit)continue;
   int height=20800/(hit_dist+60);
   if(height>150)height=150;
   if(height<3)height=3;
   int top=79-height/2,bottom=79+height/2;
   int u=abs_i(dx)>abs_i(dy)?wy&255:wx&255;
+  wall_u[x]=(uint8_t)u;
+  wall_tx[x]=(uint8_t)tx;
+  wall_ty[x]=(uint8_t)ty;
   wall_column(p,x,top,bottom,hit,u,hit_dist,tx,ty);
  }
 }
@@ -206,13 +212,35 @@ static void actor(uint8_t *p,int sx,int ground,int h,char kind,unsigned tick){
   }
  }
 }
+typedef struct {
+ int16_t sx,ground,height,depth;
+ uint8_t kind;
+} SceneBillboard;
+#define MAX_VISIBLE_BILLBOARDS 24u
+static SceneBillboard visible[MAX_VISIBLE_BILLBOARDS];
+/* Restore occluding wall columns AFTER a sprite is drawn.
+   This preserves hidden-surface order without a 240x160 sprite buffer. */
+static void restore_occluding_wall(uint8_t *p,int sx,int h,int depth){
+ int radius=h*4/11+4;
+ if(radius<8)radius=8;
+ for(int x=sx-radius;x<=sx+radius;x++){
+  if((unsigned)x>=HD_W || !wall_type[x] || wall_depth[x]>=depth)
+   continue;
+  int wh=20800/((int)wall_depth[x]+60);
+  if(wh>150)wh=150;
+  if(wh<3)wh=3;
+  wall_column(p,x,79-wh/2,79+wh/2,(char)wall_type[x],wall_u[x],
+              wall_depth[x],wall_tx[x],wall_ty[x]);
+ }
+}
 static void render_billboards(uint8_t *p,int cx,int cy,
                               int fx,int fy,int rx,int ry,unsigned tick){
+ unsigned count=0;
  for(int y=0;y<STORY_H;y++)for(int x=0;x<STORY_W;x++){
-  char t=story_tile(x,y);
-  if(t!='F'&&t!='C'&&t!='B'&&t!='L'&&t!='P'&&t!='V'&&
-     t!='Q'&&t!='S'&&t!='W'&&t!='H'&&t!='R'&&t!='M'&&t!='K')
-   continue;
+  char kind=story_tile(x,y);
+  if(kind!='F'&&kind!='C'&&kind!='B'&&kind!='L'&&kind!='P'&&
+     kind!='V'&&kind!='Q'&&kind!='S'&&kind!='W'&&kind!='H'&&
+     kind!='R'&&kind!='M'&&kind!='K')continue;
   int dx=x*256+128-cx,dy=y*256+128-cy;
   int forward=dx*fx+dy*fy,side=dx*rx+dy*ry;
   if(forward<85||forward>2200||abs_i(side)>forward*4/3)continue;
@@ -221,7 +249,19 @@ static void render_billboards(uint8_t *p,int cx,int cy,
   if(height>115)height=115;
   if(height<8)height=8;
   if(sx<0||sx>=240||forward>wall_depth[sx])continue;
-  actor(p,sx,80+height/2,height,t,tick);
+  if(count>=MAX_VISIBLE_BILLBOARDS)continue;
+  SceneBillboard item={(int16_t)sx,(int16_t)(80+height/2),
+                       (int16_t)height,(int16_t)forward,(uint8_t)kind};
+  unsigned j=count++;
+  while(j>0u && visible[j-1u].depth<item.depth){
+   visible[j]=visible[j-1u];j--;
+  }
+  visible[j]=item;
+ }
+ for(unsigned i=0;i<count;i++){
+  const SceneBillboard *item=&visible[i];
+  actor(p,item->sx,item->ground,item->height,(char)item->kind,tick);
+  restore_occluding_wall(p,item->sx,item->height,item->depth);
  }
 }
 void hd_first_person_draw(uint8_t *p,const Story *s,unsigned tick){
