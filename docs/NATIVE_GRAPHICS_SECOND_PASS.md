@@ -81,3 +81,13 @@ are in `docs/screenshots/`; see `docs/SCREENSHOT_GALLERY.md`.
 This verification confirms the produced pixels and source compilation,
 not sustained real-hardware FPS, completeness of rare cinema, or the
 quality of audio output. Those remain separate measurable tasks.
+
+## Subsequent third art pass
+
+The previously outstanding specialist endings and investigation sets
+have since received native 240x160 art, while an additional common
+character rig unifies the story actors. Perspective sprites now sort
+and clip against wall depth to avoid cut-out overlap. See
+[`GBA_VISUAL_REFINEMENT_III.md`](GBA_VISUAL_REFINEMENT_III.md)
+for the exact verified additions, all 24 scene types, 28 screenshots,
+rescue-conditional ending safeguards, and remaining combat/FPS limits.
