@@ -105,10 +105,12 @@ int main(void){
  Story saved_good;setup_three(&saved_good);rescue(&saved_good);
  saved_good.flags=STORY_FULL;
  saved_good.life_stage=STORY_LIFE_WAIT;
- saved_good.day_frame=STORY_DAY_FRAMES-1;
+ saved_good.day_frame=0;
  bus(&saved_good);
  assert(saved_good.ended&&saved_good.ending==STORY_END_GOOD);
  assert(saved_good.life_stage==STORY_LIFE_NONE);
+ /* Force the clock to a boundary only AFTER the ending begins. */
+ saved_good.day_frame=STORY_DAY_FRAMES-1;
  story_tick(&saved_good,0);
  assert(saved_good.dialogue==0&&saved_good.ending==STORY_END_GOOD);
  Story neutral;setup_three(&neutral);rescue(&neutral);
