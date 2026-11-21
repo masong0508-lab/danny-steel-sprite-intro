@@ -92,12 +92,25 @@ static void draw_hidden(int page){
         game.life_stage!=STORY_LIFE_FINALE &&
         game.activity!=STORY_ACT_STUDIO &&
         !(game.paused && (game.choice & 0x80u));
-    if(native_map){
+    if(game.activity==STORY_ACT_STUDIO){
+        hd_studio_draw((u8*)hd_shared_frame,&game,(unsigned)clock_ticks);
+    }else if(native_map){
         hd_world_draw((u8*)hd_shared_frame,&game,(unsigned)clock_ticks);
+    }else if(game.view && !game.cinema && !game.battle &&
+             !game.ended && game.life_stage!=STORY_LIFE_FINALE &&
+             game.scene==STORY_SCENE_NONE &&
+             !(game.paused && (game.choice & 0x80u))){
+        /* Raycast at true 240-column resolution in the same world. */
+        hd_first_person_draw((u8*)hd_shared_frame,&game,
+                             (unsigned)clock_ticks);
+    }else if(!game.ended && game.life_stage!=STORY_LIFE_FINALE &&
+             !game.battle && hd_cinema_supports(game.cinema)){
+        hd_cinema_draw((u8*)hd_shared_frame,&game,
+                       (unsigned)game.cinema_frame);
     }else{
-        /* The legacy shots remain valid while menus/world art move to
-           native pixels. In-place reverse expansion does not allocate a
-           second framebuffer, nor does it overwrite unread source rows. */
+        /* Specialist ending films, battle, consequence pages and a few
+           rare sequences retain their existing proven authored renderer.
+           Expand backwards in the same EWRAM page; never a new buffer. */
         Story visual=game;
         if(visual.dialogue && !game.ended && !game.battle &&
            game.life_stage!=STORY_LIFE_FINALE &&

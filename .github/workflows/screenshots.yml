@@ -5,10 +5,18 @@ on:
     paths:
       - ".github/workflows/screenshots.yml"
       - "tools/story_gallery.c"
+      - "src/hd_studio.c"
+      - "src/hd_perspective.c"
+      - "src/hd_cinema.c"
   workflow_dispatch:
 
 permissions:
   contents: write
+
+# A gallery capture is valid only for the newest revision of its branch.
+concurrency:
+  group: danny-steel-visuals-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   capture:
@@ -30,6 +38,7 @@ jobs:
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
             src/story.c src/studio.c src/story_draw.c src/cinema.c \
             src/hd_canvas.c src/hd_menu.c src/hd_world.c src/hd_overlay.c \
+            src/hd_perspective.c src/hd_studio.c src/hd_cinema.c \
             tools/story_gallery.c -o /tmp/danny_story_gallery
           /tmp/danny_story_gallery docs/screenshots
           for f in docs/screenshots/*.ppm; do
@@ -60,5 +69,9 @@ jobs:
           git add docs/screenshots
           if ! git diff --cached --quiet; then
             git commit -m "docs: capture actual mGBA and game-renderer screenshots [skip ci]"
+            # Source commits can advance while mGBA is capturing. Fast-forward
+            # first; never force-push or discard new game code.
+            git fetch origin "${GITHUB_REF_NAME}"
+            git rebase "origin/${GITHUB_REF_NAME}"
             git push origin "HEAD:${GITHUB_REF_NAME}"
           fi

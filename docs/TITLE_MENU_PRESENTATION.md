@@ -38,12 +38,12 @@ and bossa theme; it is *not* an OS, sci-fi HUD or futuristic terminal.
   compatibility upscale. The same 38,400-byte EWRAM buffer is reused
   by the GBA's two built-in mode-4 VRAM pages. No third framebuffer,
   heap allocations, sampled audio or floating point is introduced.
-- **Legacy shots remain playable:** first-person raycaster, timed
-  cinematics, ending montages and the six-tab music studio still use
-  their proven 120x80 authoring renderer but are expanded into the
-  full-size page in place, with native subtitle treatment where
-  appropriate. They are *not yet* fully repainted in 240x160. Ending
-  dialogue and scored captions intentionally retain existing hooks.
+- **Second graphics pass:** first-person world-matched perspective,
+  twelve recurring cinematic locations and all six functional Studio
+  pages now use dedicated native 240x160 renderers. The rare investigation
+  scenes, specialty battles and ending montages retain their proven
+  120x80 fallback and in-place expansion, with their original timing,
+  dialogue and scores untouched. See `NATIVE_GRAPHICS_SECOND_PASS.md`.
 - **Removal:** the old grayscale video loop, sprite cursor dataset and
   their outdated asset generators are removed from the source. Git
   history retains them. The older square-zoom swipe footage was
@@ -66,6 +66,6 @@ C rendering functions. See `docs/SCREENSHOT_GALLERY.md`.
 **Important:** Passing host tests and a ROM compile validates
 programming correctness, not professional art direction or exact
 frame rate. Hardware/mobile emulator playtesting, measured 30 FPS
-headroom, and a separate full-detail first-person/cinematic/Studio
-art pass are still needed. Do not imply the entire game is now
-native high resolution.
+headroom and a further art pass on the specialized ending/crisis
+storyboards are still needed. Do not claim measured sustained 30 FPS
+or that every single cinematic has been repainted.

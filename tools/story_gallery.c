@@ -17,9 +17,15 @@ static void write_frame(const char *name,const Story *s,unsigned t){
  char filename[700];
  snprintf(filename,sizeof(filename),"%s/%s.ppm",outdir,name);
  memset(canvas,0,sizeof canvas);
- if(!s->view && s->cinema==CINE_NONE && s->scene==STORY_SCENE_NONE &&
-    !s->ended && !s->battle && s->activity!=STORY_ACT_STUDIO){
-  hd_world_draw(canvas,s,t);
+ if(s->activity==STORY_ACT_STUDIO){
+  hd_studio_draw(canvas,s,t);
+ }else if(!s->ended && !s->battle && s->life_stage!=STORY_LIFE_FINALE &&
+          s->cinema==CINE_NONE && s->scene==STORY_SCENE_NONE){
+  if(s->view)hd_first_person_draw(canvas,s,t);
+  else hd_world_draw(canvas,s,t);
+ }else if(!s->ended && !s->battle && s->life_stage!=STORY_LIFE_FINALE &&
+          hd_cinema_supports(s->cinema)){
+  hd_cinema_draw(canvas,s,t);
  }else{
   Story visual=*s;
   if(visual.dialogue && !visual.ended && visual.life_stage!=STORY_LIFE_FINALE)
@@ -70,6 +76,11 @@ int main(int argc,char **argv){
  write_frame("06_gameplay_overhead",&s,90);
  s.view=1;
  write_frame("07_gameplay_first_person",&s,90);
+ /* Same navigable grid, additional cardinal views of the native renderer. */
+ stand(&s,10,7,0);
+ write_frame("13_3d_from_archive",&s,107);
+ stand(&s,18,13,2);
+ write_frame("14_3d_waterfront",&s,121);
  s.view=0;
  stand(&s,11,8,3);
  press(&s,1u);
@@ -102,6 +113,12 @@ int main(int argc,char **argv){
  s.studio_tab=STUDIO_PERFORM;s.activity_choice=1;
  studio_motif_step(18u,&(MotifBeat){0});
  write_frame("12_advanced_studio_perform",&s,110);
+ s.studio_tab=STUDIO_SONG;s.studio_cursor=0;
+ write_frame("15_advanced_studio_song",&s,125);
+ s.studio_tab=STUDIO_ORDER;s.studio_cursor=2;
+ write_frame("16_advanced_studio_order",&s,135);
+ s.studio_tab=STUDIO_LYRICS;
+ write_frame("17_advanced_studio_lyrics",&s,148);
  puts("Actual Danny Steel story renderer gallery generated");
  return 0;
 }
