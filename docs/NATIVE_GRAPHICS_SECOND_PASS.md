@@ -68,3 +68,16 @@ emulator and real-hardware FPS profiling is still a priority before any
 claim of sustained 30 FPS. A further dedicated pass should upgrade the
 specialized ending shots and less common crisis/investigation cutscenes
 without reducing narrative detail or ROM reliability.
+
+## Verified picture review
+
+The final 17-image gallery was regenerated against the actual merged
+renderer and a freshly compiled ROM. I inspected the contact sheet and
+corrected the Studio instruction bar after finding overlapping help text.
+The revised captures show individual native 3D views, core story scenes,
+and SONG, NOTES, ORDER, LYRICS, and LIVE Studio screens. The screenshots
+are in `docs/screenshots/`; see `docs/SCREENSHOT_GALLERY.md`.
+
+This verification confirms the produced pixels and source compilation,
+not sustained real-hardware FPS, completeness of rare cinema, or the
+quality of audio output. Those remain separate measurable tasks.
