@@ -25,12 +25,16 @@ static int ease(int from,int to,unsigned t,unsigned begin,unsigned span){
  return from+(to-from)*(int)smooth/256;
 }
 static void dusk(uint8_t *p,unsigned frame,int night){
- for(int y=0;y<160;y++){
-  unsigned c=y<37?(night?19:17):y<71?(night?24:25):
-    y<91?(night?HD_GLASS:HD_GLASS_LIT):
-    y<117?HD_STONE_DARK:y<135?HD_ROAD_COOL:HD_ROAD;
-  hd_rect(p,0,y,HD_W,1,c);
- }
+ /* Six contiguous bands are byte-for-byte identical to the old 160
+    scanline fills, with 154 fewer rectangle dispatches per frame. These
+    scenes run on the GBA CPU; reducing setup work matters more than
+    adding another decorative layer or framebuffer. */
+ hd_rect(p,0,  0,HD_W,37,night?19:17);
+ hd_rect(p,0, 37,HD_W,34,night?24:25);
+ hd_rect(p,0, 71,HD_W,20,night?HD_GLASS:HD_GLASS_LIT);
+ hd_rect(p,0, 91,HD_W,26,HD_STONE_DARK);
+ hd_rect(p,0,117,HD_W,18,HD_ROAD_COOL);
+ hd_rect(p,0,135,HD_W,25,HD_ROAD);
  /* Warm layered cloud banks turn the dead-flat night sky into a location.
     Bands use the existing palette and drift only on coarse frame ticks. */
  for(int i=0;i<5;i++){

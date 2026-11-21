@@ -80,6 +80,13 @@ static void verify_reachable_editorial_cuts(void){
 int main(void){
  verify_reachable_editorial_cuts();
  Story s;story_new(&s,0);s.dialogue=0;
+ /* The optimized sky stripes preserve the original dusk colors on real
+    cinematic frames. Pick unobstructed coordinates above the skyline;
+    unlike a test of a private helper, this checks production output. */
+ (void)film(&s,CINE_ART,24u,0u);
+ assert(color(239,0)==17u&&color(239,40)==25u);
+ (void)film(&s,CINE_MARA,24u,0u);
+ assert(color(239,0)==19u&&color(239,40)==24u);
  /* The envelope remains laid on the SAME counter; the hand enters
     the shot without replacing the whole asset or moving the letter. */
  uint32_t letter_a=film(&s,CINE_LETTER,140u,0u);

@@ -37,6 +37,9 @@ workflow. It is not a request to produce standalone concept art.
   effect layers or giant literal image arrays.
 - Scene effects must be bounded deterministic draw commands. Prefer
   short integer and rect/line operations, clipped through hd_canvas.
+  The dusk backdrop is now rendered as six contiguous stripes rather
+  than 160 per-line rectangles (154 fewer draw-call setups per shot),
+  preserving its original sky/ground cutoffs and palette values.
 - New cinematic composition must not change save-state logic, story
   flags, dialogue timing or branching for Mara's rescue and endings.
 - The cinematic staging test checks guards, palette, portrait identities,
