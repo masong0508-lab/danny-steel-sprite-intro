@@ -154,3 +154,15 @@ Morning and closing-time dialogue makes their daily routine more believable
 without hiding NPCs. New SRAM v5 uses 31 of the same 32 bytes per slot and
 migrates v1–v4. Tests validate project completion, visual frame bounds,
 appointments, endings, and save checksums.
+
+### Mara's preventable rescue chapter and playable bad ending
+Four *intentional* harmful choices are available with B at the letter,
+BORE clerk, music archive and Mirror Orchard terminal. Every risk requires
+RIGHT + A confirmation. Three distinct bad checks make Mara disappear;
+follow the guided witness → terminal → safe house rescue. The player can
+open the door and rescue her, or explicitly leave, with an ambiguous,
+non-graphic failure. A fourth bad check before rescue also fails.
+Rescuing Mara reopens neutral/good options at the bus; choosing another
+harmful check afterward can still cause a bad ending that correctly notes
+Mara's survival. An eight-byte checksummed SRAM extension stores this
+branch without changing legacy v5 slot layout. See docs/MARA_RESCUE.md.
