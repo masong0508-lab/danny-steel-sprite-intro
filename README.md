@@ -117,3 +117,21 @@ buffer, sample allocation, heap work, new art textures, or 3D camera modes.
 GBA hardware FPS remains unmeasured; these are code-level optimizations.
 `tests/objective_test.c` checks objective ordering, life-stage overrides,
 render bounds and identical guidance in the overhead and first-person HUD.
+
+## Optional daily moments between appointments
+
+After choosing the neutral route, numbered days now have five optional,
+world-positioned activities: walk with Mara, revisit the family letter, humor
+the BORE clerk, mix a reel at the music archive, and paint the rooftop skyline.
+Each has animated dialogue with a second script after the first clinic visit.
+The guidance compass suggests an unfinished activity and the HUD displays
+`MOMENTS 0/5` through `5/5`. Finishing all five opens a short closing
+reflection; tomorrow resets the suggestions. You can ignore every one of these
+activities without affecting clinic notifications or ending access. The first
+clinic visit no longer prevents painting while Danny waits for the second.
+
+Two formerly unused bytes in v3's 24-byte SRAM record now hold the daily
+activity mask and cumulative moments. No save format or slot stride changed,
+and all old saves begin with zero moments. No framebuffer or heap allocation was
+added. See `docs/DAILY_MOMENTS.md`; a dedicated host test checks day reset,
+post-clinic dialogue, optionality, objective targeting and 2D/3D render guards.

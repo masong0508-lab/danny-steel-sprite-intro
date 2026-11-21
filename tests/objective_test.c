@@ -25,9 +25,9 @@ int main(void){
  s.flags=STORY_ALL;check(&s,19,7,"MUSIC");
  s.flags=STORY_ALL|STORY_MUSIC;check(&s,14,6,"CANVAS");
  s.flags=STORY_FULL;check(&s,19,5,"LAST BUS");
- s.life_stage=STORY_LIFE_WAIT;check(&s,14,6,"LIVE");
+ s.life_stage=STORY_LIFE_WAIT;check(&s,8,11,"MARA");
  s.life_stage=STORY_LIFE_CLINIC;check(&s,16,5,"CLINIC");
- s.life_stage=STORY_LIFE_FOLLOWUP_WAIT;check(&s,14,6,"LIVE");
+ s.life_stage=STORY_LIFE_FOLLOWUP_WAIT;check(&s,8,11,"MARA");
  s.life_stage=STORY_LIFE_FINAL_CLINIC;check(&s,16,5,"CLINIC");
  s.life_stage=STORY_LIFE_LAST_WORK;check(&s,14,6,"CANVAS");
  s.life_stage=STORY_LIFE_FINALE;
