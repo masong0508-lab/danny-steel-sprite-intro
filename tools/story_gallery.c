@@ -17,7 +17,12 @@ static void write_frame(const char *name,const Story *s,unsigned t){
  char filename[700];
  snprintf(filename,sizeof(filename),"%s/%s.ppm",outdir,name);
  memset(canvas,0,sizeof canvas);
- if(s->activity==STORY_ACT_STUDIO){
+ if(s->life_stage==STORY_LIFE_FINALE ||
+    (s->ended && (s->ending==STORY_END_GOOD ||
+                  s->ending==STORY_END_NEUTRAL ||
+                  s->ending==STORY_END_BAD))){
+  hd_ending_draw(canvas,s,s->finale_frame);
+ }else if(s->activity==STORY_ACT_STUDIO){
   hd_studio_draw(canvas,s,t);
  }else if(!s->ended && !s->battle && s->life_stage!=STORY_LIFE_FINALE &&
           s->cinema==CINE_NONE && s->scene==STORY_SCENE_NONE){
@@ -119,6 +124,36 @@ int main(int argc,char **argv){
  write_frame("16_advanced_studio_order",&s,135);
  s.studio_tab=STUDIO_LYRICS;
  write_frame("17_advanced_studio_lyrics",&s,148);
+ /* Additional actual in-game plot states exercise the expanded native
+    cinematics; no art is fabricated for the screenshot pipeline. */
+ s.activity=0;s.activity_choice=0;s.dialogue=0;s.ended=0;
+ s.life_stage=STORY_LIFE_NONE;s.scene=STORY_SCENE_NONE;
+ s.cinema=CINE_WITNESS;s.page=1;
+ write_frame("18_story_witness_handoff",&s,110);
+ s.cinema=CINE_SERVER;s.page=1;
+ write_frame("19_story_archive_terminal",&s,119);
+ s.cinema=CINE_SAFE;s.page=1;
+ write_frame("20_story_safehouse",&s,124);
+ s.cinema=CINE_MARA_EMPTY;s.page=1;
+ write_frame("21_story_mara_missing_cafe",&s,131);
+ s.cinema=CINE_RESCUE_DOOR;s.page=1;
+ write_frame("22_story_closed_rescue_door",&s,133);
+ s.cinema=CINE_RESCUE_SAVED;s.page=1;
+ write_frame("23_story_rescue_saved",&s,150);
+ s.cinema=CINE_NONE;s.ended=1;s.dialogue=0;
+ s.ending=STORY_END_NEUTRAL;s.rescue_stage=STORY_RESCUE_NONE;
+ s.finale_frame=3790u;
+ write_frame("24_neutral_rooftop_memories",&s,3790);
+ s.ending=STORY_END_GOOD;s.finale_frame=2900u;
+ write_frame("25_good_ending_recordshop",&s,2900);
+ s.finale_frame=4750u;
+ write_frame("26_good_ending_concert",&s,4750);
+ s.ending=STORY_END_BAD;s.rescue_stage=STORY_RESCUE_LOST;
+ s.finale_frame=1250u;
+ write_frame("27_bad_unanswered_cafe",&s,1250);
+ s.rescue_stage=STORY_RESCUE_AFTERSHOCK;
+ s.finale_frame=2110u;
+ write_frame("28_bad_saved_rescue_door",&s,2110);
  puts("Actual Danny Steel story renderer gallery generated");
  return 0;
 }
