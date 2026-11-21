@@ -861,7 +861,8 @@ static unsigned day_period(const Story *s){
 static void moment_menu(Story *s,unsigned station){
     s->activity=(uint8_t)station;s->activity_choice=0;
     s->cinema=(uint8_t)(station=='F'?CINE_MARA:station=='L'?CINE_LETTER:
-        station=='C'?CINE_BORE:station=='M'?CINE_MUSIC:CINE_ART);
+        station=='C'?CINE_BORE:
+        (station=='M'||station=='E')?CINE_MUSIC:CINE_ART);
     s->cinema_frame=0;
 }
 static void stat_gain(uint8_t *v,unsigned gain){
