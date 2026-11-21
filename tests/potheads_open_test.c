@@ -54,7 +54,19 @@ static void verify_work_not_wishful_thinking(void){
  assert(count==7);
  assert(strstr(pages[1].line1,"don't love")!=NULL);
  assert(strstr(pages[2].line2,"grateful")!=NULL);
+ /* Dialogue frames are authored camera beats, not mandatory delays.
+    Even instant A presses show the descent and full-costume dance. */
+ static const unsigned anchors[7]={0u,36u,76u,132u,178u,218u,254u};
+ for(unsigned page=1;page<7;page++){
+  tap(&s,1u);
+  assert(s.page==page);
+  assert(s.cinema_frame>=anchors[page]);
+ }
  finish_dialogue(&s);
+ /* B remains a genuine skip for players who want to get to gameplay. */
+ Story skip;story_new(&skip,1);
+ tap(&skip,2u);
+ assert(skip.dialogue==0u&&skip.cinema==CINE_NONE);
  s.x=20;s.y=11;s.prev_x=s.x;s.prev_y=s.y;s.facing=0;
  s.life_stage=STORY_LIFE_WAIT;s.energy=3;
  tap(&s,1u);
