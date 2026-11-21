@@ -15,7 +15,8 @@ workflow. It is not a request to produce standalone concept art.
 - Prefer silhouette readability and proportions to micro-details. Heads,
   necks, shoulders, sleeves, connected arms, legs, waist and shoes must
   join. No hovering feet, circular ball torsos, egg-shaped sleeve pads,
-  detached hands or inconsistent character scale between cuts.
+  black horizontal arm-rib bands, detached hands or inconsistent
+  character scale between cuts.
 - Cut on dialogue **meaning**, not simply on page count; gestures and
   important objects remain in the same world positions. Avoid abrupt
   scale jumps. A fast reader still gets the authored camera beat; B still

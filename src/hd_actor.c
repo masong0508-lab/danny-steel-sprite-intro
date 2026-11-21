@@ -183,24 +183,29 @@ void hd_actor_closeup(uint8_t *p,int x,int base,int role,
   hd_rect(p,x+half-3,yy,3,2,rim);
   if(d%12==0)hd_rect(p,x-half+7,yy,9,1,HD_STONE_LIT);
  }
- /* Ten stepped fabric segments follow actual shoulder -> elbow -> wrist
-    trajectories. Unlike two oval shoulder-pads, these have cuffs and
-    remain anchored to the torso at every frame. Chunked four-pixel
-    strips keep the handheld draw-call budget modest. */
+ /* One continuous four-pixel fabric run per band from shoulder to wrist.
+    Earlier bands painted a black horizontal line at EVERY four-pixel
+    interval, accidentally turning both arms into striped plastic tubing.
+    Keep ink only along the OUTSIDE silhouette, not across the joint.
+    The seam shading and wrist cuffs use the same fixed coordinate space. */
  for(int k=0;k<11;k++){
   int yy=y-44+k*4;
   int shift=k/2;
   int wide=k<3?12+k*2:k<8?18:18-(k-8)*2;
   int lc=x-24-shift,rc=x+24+shift;
   if(emotion!=5){
-   hd_rect(p,lc-wide/2-1,yy,wide+2,4,HD_INK);
-   hd_rect(p,lc-wide/2,yy+1,wide,3,jacket);
-   hd_rect(p,lc-wide/2+1,yy+1,3,3,rim);
+   int left=lc-wide/2;
+   hd_rect(p,left-1,yy,wide+2,4,HD_INK);
+   hd_rect(p,left,yy,wide,4,jacket);
+   hd_rect(p,left+1,yy,2,4,rim);
+   if(k==2||k==8)hd_line(p,left+5,yy+2,left+wide-4,yy+2,rim);
   }
   if(emotion!=7){
-   hd_rect(p,rc-wide/2-1,yy,wide+2,4,HD_INK);
-   hd_rect(p,rc-wide/2,yy+1,wide,3,jacket);
-   hd_rect(p,rc+wide/2-4,yy+1,3,3,rim);
+   int left=rc-wide/2;
+   hd_rect(p,left-1,yy,wide+2,4,HD_INK);
+   hd_rect(p,left,yy,wide,4,jacket);
+   hd_rect(p,left+wide-3,yy,2,4,rim);
+   if(k==2||k==8)hd_line(p,left+4,yy+2,left+wide-5,yy+2,rim);
   }
  }
  if(emotion!=5){

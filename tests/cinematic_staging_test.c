@@ -105,9 +105,13 @@ int main(void){
     cinematic frames. Pick unobstructed coordinates above the skyline;
     unlike a test of a private helper, this checks production output. */
  (void)film(&s,CINE_ART,24u,0u);
- assert(color(239,0)==17u&&color(239,40)==25u);
+ /* The first/last two rows are the intentional black film frame, NOT
+    original dusk pixels. Sample y=8 inside clear sky instead. */
+ assert(color(239,0)==HD_INK);
+ assert(color(239,8)==17u&&color(239,40)==25u);
  (void)film(&s,CINE_MARA,24u,0u);
- assert(color(239,0)==19u&&color(239,40)==24u);
+ assert(color(239,0)==HD_INK);
+ assert(color(239,8)==19u&&color(239,40)==24u);
  /* The envelope remains laid on the SAME counter; the hand enters
     the shot without replacing the whole asset or moving the letter. */
  uint32_t letter_a=film(&s,CINE_LETTER,140u,0u);
@@ -219,6 +223,14 @@ int main(void){
  }
  assert(left_cuff>20u && right_cuff>20u);
  assert(left_hand>20u && right_hand>20u);
+ /* No black horizontal rib should run THROUGH the sleeve at any
+    4-pixel joint. Sample well inside both actor sleeves; the shape
+    may have a dark side edge, but must keep its solid jacket fill. */
+ for(int k=0;k<11;k++){
+  int yy=143-44+k*4;
+  assert(color(93,yy)!=HD_INK);
+  assert(color(147,yy)!=HD_INK);
+ }
  /* Actor breathing and reaction pose changes must remain real, while
     always staying in the allocated 240x160 frame. */
  uint32_t neutral=2166136261u;
