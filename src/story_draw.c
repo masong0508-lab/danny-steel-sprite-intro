@@ -431,27 +431,41 @@ static void consequence_board(uint8_t *p,const Story *s){
 /* One compact menu is reused for all five locations in either camera mode. */
 static void activity_menu(uint8_t *p,const Story *s){
     const char *where="",*left="",*right="";
+    const char *effect="";
+    unsigned selected=s->activity_choice;
     switch(s->activity){
-    case 'F':where="MARA / AN AFTERNOON";left="WALK";right="TALK";break;
-    case 'L':where="LETTER / WHAT NOW";left="WRITE";right="KEEP";break;
-    case 'C':where="BORE / ANOTHER FORM";left="FILE";right="JOKE";break;
-    case 'M':where="MUSIC / A NEW TAKE";left="RECORD";right="LISTEN";break;
-    case 'm':where="BORE TAPE";left="BUILD";right="SOFTEN";break;
-    case 'r':where="ROOFTOP ART";left="LAYER";right="LIGHT";break;
-    default:where="ROOFTOP / THE SKY";left="PAINT";right="REST";break;
+    case 'F':where="MARA / AFTERNOON";left="WALK";right="TALK";
+        effect=selected?"BOND +1 ENERGY +1":"BOND +2 ENERGY -1";break;
+    case 'L':where="LETTER / MEMORIES";left="WRITE";right="KEEP";
+        effect=selected?"SPARK +1 ENERGY +1":"SPARK +2 ENERGY -1";break;
+    case 'C':where="BORE / A FORM";left="FILE";right="JOKE";
+        effect=selected?"BOND +1 ENERGY +1":"SPARK +1 ENERGY -1";break;
+    case 'M':where="MUSIC / FIRST TAKE";left="RECORD";right="LISTEN";
+        effect=selected?"SPARK +1 ENERGY +1":"MUSIC STAGE +1";break;
+    case 'm':where="BORE TAPE";left="BUILD";right="SOFTEN";
+        effect=selected?"STAGE +1 ENERGY +1":"STAGE +1 / MORE WORK";break;
+    case 'r':where="ROOFTOP ART";left="LAYER";right="LIGHT";
+        effect=selected?"STAGE +1 ENERGY +1":"STAGE +1 / MORE WORK";break;
+    default:where="ROOFTOP / THE SKY";left="PAINT";right="REST";
+        effect=selected?"ENERGY +2 SPARK +1":"PAINT STAGE +1";break;
     }
-    panel(p,45,80);
-    text(p,4,48,where,18,26);
-    if(s->activity=='m' || s->activity=='r'){
-        char progress[]="STEP 0 / 4";
+    panel(p,42,80);
+    box(p,3,43,2,34,18);
+    text(p,8,45,where,20,25);
+    if(s->activity=='m'||s->activity=='r'){
+        char progress[]="0 / 4";
         unsigned phase=s->activity=='m'?s->song_steps:s->art_steps;
-        progress[5]=(char)('0'+(phase>4u?4u:phase));
-        text(p,60,48,progress,20,12);
+        progress[0]=(char)('0'+(phase>4u?4u:phase));
+        text(p,91,45,progress,18,5);
     }
-    text(p,13,58,left,s->activity_choice?22:20,10);
-    text(p,69,58,right,s->activity_choice?20:22,10);
-    text(p,s->activity_choice?61:4,58,">",18,1);
-    text(p,4,69,"LEFT/RIGHT A DO B BACK",20,28);
+    text(p,8,53,effect,18,27);
+    box(p,7,61,50,10,selected?3:24);
+    box(p,62,61,51,10,selected?24:3);
+    box(p,8,62,48,1,selected?5:13);
+    box(p,63,62,49,1,selected?13:5);
+    text(p,13,64,left,selected?10:20,10);
+    text(p,69,64,right,selected?20:10,10);
+    text(p,7,74,"LEFT/RIGHT  A OK  B BACK",20,27);
 }
 
 /* Explicit on-screen alternatives: harm requires B near a location,
