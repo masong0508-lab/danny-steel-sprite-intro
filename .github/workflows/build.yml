@@ -73,6 +73,10 @@ jobs:
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/story_draw.c src/cinema.c tests/cinema_test.c -o /tmp/danny_cinema_test
           /tmp/danny_cinema_test
 
+      - name: Validate staged cutscene movement, spatial coherence and route-specific ending shots
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/story_draw.c src/cinema.c tests/cinema_direction_test.c -o /tmp/danny_cinema_direction_test
+          /tmp/danny_cinema_direction_test
       - name: Validate BORE-derived melodic motifs and note ranges
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/music_motifs.c tests/music_motifs_test.c -o /tmp/danny_motifs_test

@@ -176,3 +176,12 @@ directly from existing quest flags and state; no additional SRAM marks or
 loading-time dependency. Choices preview their stat effects, and earlier
 investigation, trust and art milestones influence later rescue conversations.
 See docs/CONSEQUENCES.md and tests/consequence_journal_test.c.
+
+### Cinematic direction pass: staged actor movement and coherent film sets
+Danny Steel's GBA scene director now gives characters eased walk-ins,
+connected reaching hands, grounded documents, phone and brush, the same café
+when Mara is present or missing, a physically continuous rescue door/reunion,
+and an evolving skyline that never erases the final painting. The bad-ending
+montage now selects different *visual* shots depending on whether Mara survived.
+No extra framebuffer/large assets were introduced. See
+docs/ENDING_CINEMATICS.md and tests/cinema_direction_test.c.

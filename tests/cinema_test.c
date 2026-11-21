@@ -52,6 +52,6 @@ int main(void){
  assert(s.cinema==CINE_BUS);close_script(&s);
  assert(s.choosing&&s.cinema==CINE_BUS);
  press(&s,2);assert(!s.choosing&&s.cinema==CINE_NONE);
- puts("cinematics: 20 shot types, animated beats, palette and viewport guards OK");
+ puts("cinematics: 24 staged scene types, animated beats, palette and viewport guards OK");
  return 0;
 }
