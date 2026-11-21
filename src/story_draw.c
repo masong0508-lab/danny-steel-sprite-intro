@@ -440,7 +440,7 @@ static void activity_menu(uint8_t *p,const Story *s){
         effect=selected?"SPARK +1 ENERGY +1":"SPARK +2 ENERGY -1";break;
     case 'C':where="BORE / A FORM";left="FILE";right="JOKE";
         effect=selected?"BOND +1 ENERGY +1":"SPARK +1 ENERGY -1";break;
-    case 'M':where="MUSIC / FIRST TAKE";left="RECORD";right="LISTEN";
+    case 'M':where="BORE / MUSIC STUDIO";left="ARRANGE";right="LISTEN";
         effect=selected?"SPARK +1 ENERGY +1":"MUSIC STAGE +1";break;
     case 'm':where="BORE TAPE";left="BUILD";right="SOFTEN";
         effect=selected?"STAGE +1 ENERGY +1":"STAGE +1 / MORE WORK";break;
@@ -452,9 +452,9 @@ static void activity_menu(uint8_t *p,const Story *s){
     panel(p,42,80);
     box(p,3,43,2,34,18);
     text(p,8,45,where,20,25);
-    if(s->activity=='m'||s->activity=='r'){
+    if(s->activity=='M'||s->activity=='m'||s->activity=='r'){
         char progress[]="0 / 4";
-        unsigned phase=s->activity=='m'?s->song_steps:s->art_steps;
+        unsigned phase=s->activity=='r'?s->art_steps:s->song_steps;
         progress[0]=(char)('0'+(phase>4u?4u:phase));
         text(p,91,45,progress,18,5);
     }

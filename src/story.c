@@ -280,7 +280,8 @@ SCRIPT(d_music,
  {"ARCHIVE TAPE", "BORE REEL 07", "ROUGH TRACK INTACT."},
  {"DANNY", "My old song still", "sounds like me."},
  {"DANNY", "I'll leave a copy", "with my name on it."},
- {"ARCHIVE TAPE", "COPY REGISTERED.", "KEEP THE ORIGINAL."});
+ {"ARCHIVE TAPE", "COPY REGISTERED.", "KEEP THE ORIGINAL."},
+ {"ARCHIVE TAPE", "FOUR SESSIONS MAKE", "ONE FINISHED MASTER."});
 SCRIPT(d_music_again,
  {"DANNY", "The tape survived.", "Not the cassette case."});
 SCRIPT(d_art,

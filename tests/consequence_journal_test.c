@@ -92,7 +92,7 @@ int main(void){
  stand(&t,7,3,3);press(&t,A);assert(t.risk_menu=='H');
  guards(&t);press(&t,A);
  assert(t.rescue_stage==STORY_RESCUE_SAVED);
- first_page(&t,"I knew you would");
+ first_page(&t,"You kept looking.");
  guards(&t);close_pages(&t);
  /* Finishing a painting offers another authored reunion if trust is lower. */
  Story art;story_new(&art,0);close_pages(&art);

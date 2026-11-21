@@ -220,3 +220,13 @@ his phone available; another day passes before the bad-ending film.
 Visit the café phone, witness or terminal, or press R for the notebook.
 Mara's death is never implied or confirmed. Existing saved clocks persist
 the story. See docs/MARA_RESCUE.md and tests/hope_phone_test.c.
+
+### BORE Music Studio — actual capabilities
+The playable music-studio workstation is at the **M** archive location.
+Its ARRANGE/LISTEN daily activity and the four-stage BUILD/SOFTEN tape
+project change Danny's work, energy, spark and saved song progress.
+Completing all four sessions preserves a named master recording and
+unlocks story reactions from the BORE clerk; the score reuses authored
+PSG music cues. This is a story-driven arranging minigame, **not** a
+free-form piano roll, live sampling DAW or user-composed audio export.
+Erasing an early demo does not erase a different completed master.
