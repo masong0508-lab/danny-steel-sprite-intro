@@ -46,8 +46,7 @@ static void set_sky(uint8_t *p,unsigned tick,int facing,int cx,int cy){
  /* A flat-toned, quiet horizon instead of procedural neon sky. */
  hd_line(p,0,79,239,79,HD_STONE);
 }
-static unsigned floor_ink(int wx,int wy,int x,int y,unsigned tick){
- char t=story_tile(wx>>8,wy>>8);
+static unsigned floor_ink(char t,int wx,int wy,int x,int y,unsigned tick){
  int fx=wx&255,fy=wy&255;
  if(t=='~'){
   if(((fy+((int)tick*2))&63)<4)return HD_GLASS_LIT;
@@ -79,10 +78,16 @@ static void floor_render(uint8_t *p,const Story *s,int cx,int cy,
   int dist=13500/(y-75); if(dist>2304)dist=2304;
   int side_unit=dist*3*256/480;
   int step=y<98?2:1;
+  int last_tx=-99,last_ty=-99;
+  char tile='.';
   for(int x=0;x<240;x+=step){
    int side=((x-120)*side_unit)>>8;
    int wx=cx+fx*dist+rx*side,wy=cy+fy*dist+ry*side;
-   unsigned ink=floor_ink(wx,wy,x,y,tick);
+   int tx=wx>>8,ty=wy>>8;
+   if(tx!=last_tx||ty!=last_ty){
+    last_tx=tx;last_ty=ty;tile=story_tile(tx,ty);
+   }
+   unsigned ink=floor_ink(tile,wx,wy,x,y,tick);
    p[y*HD_W+x]=(uint8_t)ink;
    if(step==2)p[y*HD_W+x+1]=(uint8_t)ink;
   }
@@ -129,10 +134,16 @@ static void cast_walls(uint8_t *p,int cx,int cy,int fx,int fy,int rx,int ry){
   int side=((x-120)*3)/16; /* 0.75 FOV at each edge, fixed-point */
   int dx=fx*32+rx*side,dy=fy*32+ry*side;
   int wx=cx,wy=cy,hit_dist=2400,tx=0,ty=0;
+  int previous_tx=cx>>8,previous_ty=cy>>8;
   char hit=0;
   for(int step=1;step<76;step++){
    wx+=dx;wy+=dy;
    tx=wx>>8;ty=wy>>8;
+   /* 32-step ray samples often sit in the SAME town tile.
+      Only touch the story grid on cell crossings. Same collision set,
+      depth and view, but many fewer tile queries and branch chains. */
+   if(tx==previous_tx && ty==previous_ty)continue;
+   previous_tx=tx;previous_ty=ty;
    char t=story_tile(tx,ty);
    if(t=='#'||t=='A'||t=='T'){hit=t;hit_dist=step*32;break;}
   }
