@@ -575,7 +575,9 @@ void story_draw(const Story *s,int frame,uint8_t *p) {
                       s->ending==STORY_END_BAD))){
         unsigned ending=s->ending==STORY_END_GOOD?STORY_END_GOOD:
                          s->ending==STORY_END_BAD?STORY_END_BAD:STORY_END_NEUTRAL;
-        cinema_ending_draw(p,ending,s->finale_frame);
+        cinema_ending_draw_context(p,ending,s->finale_frame,
+            s->rescue_stage==STORY_RESCUE_SAVED ||
+            s->rescue_stage==STORY_RESCUE_AFTERSHOCK);
         if(s->dialogue){
             int count;const StoryPage *pages=story_pages(s,&count);
             if(pages && s->page<count){

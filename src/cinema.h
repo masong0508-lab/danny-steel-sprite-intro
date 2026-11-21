@@ -14,6 +14,11 @@ enum {
    Only the good route includes the separate 16-second coda. */
 void cinema_ending_draw(uint8_t *pixels, unsigned ending, unsigned frame);
 unsigned cinema_ending_shot(unsigned ending, unsigned frame);
+/* Contextual bad-ending montages distinguish a rescued Mara from an
+   unresolved disappearance. Both use the same score boundaries. */
+unsigned cinema_ending_scene(unsigned ending,unsigned frame,unsigned mara_safe);
+void cinema_ending_draw_context(uint8_t *pixels,unsigned ending,
+                                unsigned frame,unsigned mara_safe);
 void cinema_draw(uint8_t *pixels, unsigned scene, unsigned tick,
                  unsigned page, unsigned finale_frame);
 

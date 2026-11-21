@@ -336,7 +336,7 @@ void cinema_draw(uint8_t *p,unsigned scene,unsigned tick,unsigned page,unsigned 
  unsigned t=tick;
  int pan=breathe(t);
  int focus=(int)(page&3u);
- if(scene==CINE_FINALE)t=final;
+ /* Sky motion continues even when the finale actor pose holds. */
  switch(scene){
  case CINE_OPEN:
   street(p,t,0);
@@ -524,8 +524,8 @@ void cinema_draw(uint8_t *p,unsigned scene,unsigned tick,unsigned page,unsigned 
   /* Twelve coherent shots along one fixed rooftop composition. The camera
      drifts but never teleports objects or changes the skyline direction. */
   int f=(int)final;
-  roof(p,final/2,1);
-  canvas(p,69,18,final,f>=20&&f<295);
+  roof(p,t/2,1);
+  canvas(p,69,18,f>295?295u:final,f>=20);
   /* Exterior paint supplies, stationary in every shot. */
   rect(p,13,69,10,5,14);rect(p,15,66,6,3,18);
   pixel(p,15,67,26);pixel(p,18,67,16);pixel(p,20,67,13);
@@ -614,29 +614,41 @@ unsigned cinema_ending_shot(unsigned ending,unsigned frame){
  return pick_shot(neutral_shots,
         sizeof(neutral_shots)/sizeof(neutral_shots[0]),frame);
 }
-void cinema_ending_draw(uint8_t *p,unsigned ending,unsigned frame){
- unsigned good=ending==1;
+/* A rescue-success bad ending cannot show Mara as missing, and a failed
+   rescue cannot accidentally show Mara present at the cafe. */
+unsigned cinema_ending_scene(unsigned ending,unsigned frame,unsigned mara_safe){
+ unsigned shot=cinema_ending_shot(ending,frame);
+ if(ending==3u){
+    if(shot==2u)return mara_safe?CINE_MARA:CINE_MARA_EMPTY;
+    if(shot==4u)return mara_safe?CINE_RESCUE_SAVED:CINE_RESCUE_DOOR;
+ }
+ return ending==1u?good_shots[shot].scene:
+        ending==3u?bad_shots[shot].scene:neutral_shots[shot].scene;
+}
+void cinema_ending_draw_context(uint8_t *p,unsigned ending,unsigned frame,
+                                unsigned mara_safe){
+ unsigned good=ending==1u;
  const EndingShot *shots=good?good_shots:ending==3?bad_shots:neutral_shots;
  unsigned shot=cinema_ending_shot(ending,frame);
- unsigned begin=shot?shots[shot-1].until:0;
- unsigned local=frame>begin?frame-begin:0;
- unsigned scene=shots[shot].scene;
+ unsigned begin=shot?shots[shot-1u].until:0u;
+ unsigned local=frame>begin?frame-begin:0u;
+ unsigned scene=cinema_ending_scene(ending,frame,mara_safe);
  if(!good && scene==CINE_FINALE){
-   /* Preserve Danny's final position and the physical paint-covered canvas
-      across return cuts. The actual collapse happens only in shot 0. */
-   cinema_draw(p,scene,frame,0,frame<420?frame:420);
- } else if(good && scene==CINE_GOOD){
-   cinema_draw(p,scene,100+local,shots[shot].page,0);
- } else {
-   cinema_draw(p,scene,100+local,shots[shot].page,0);
+   /* Sky and city continue moving; Danny stays in the last pose reached. */
+   cinema_draw(p,scene,frame,0,frame<420u?frame:420u);
+ }else{
+   cinema_draw(p,scene,100u+local,shots[shot].page,0);
  }
- /* Fixed locations and reversible transitions; no fake zooms or teleporting
-    props. A short letterbox dissolve marks memory/epilogue changes. */
- if(local<10 && shot>0){
-   int bar=(10-(int)local)/2;
+ /* Film-gate cut at score section boundaries: no fake pixel zoom or extra
+    framebuffer. The same authored world location persists inside each shot. */
+ if(local<14u&&shot>0u){
+   int bar=(14-(int)local)*9/14;
    rect(p,0,0,120,bar,3);
    rect(p,0,80-bar,120,bar,3);
  }
+}
+void cinema_ending_draw(uint8_t *p,unsigned ending,unsigned frame){
+ cinema_ending_draw_context(p,ending,frame,0u);
 }
 
 /* Tiny world-space accents, only during ordinary life-sim scenes.
