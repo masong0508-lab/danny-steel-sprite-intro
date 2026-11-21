@@ -37,6 +37,37 @@ static unsigned paint(unsigned t,unsigned page,int overlay){
  if(t>=144u){assert(paper>55u);assert(gold>35u);}
  return checksum;
 }
+static void tap(Story *s,unsigned key){
+ story_tick(s,0u);story_tick(s,(uint16_t)key);story_tick(s,0u);
+}
+static void finish_dialogue(Story *s){
+ for(unsigned i=0;i<24u&&s->dialogue;i++)tap(s,1u);
+ assert(!s->dialogue);
+}
+static void verify_work_not_wishful_thinking(void){
+ Story s;story_new(&s,0);
+ int count=0;
+ const StoryPage *pages=story_pages(&s,&count);
+ assert(count==7);
+ assert(strstr(pages[1].line1,"don't love")!=NULL);
+ assert(strstr(pages[2].line2,"grateful")!=NULL);
+ finish_dialogue(&s);
+ s.x=20;s.y=11;s.prev_x=s.x;s.prev_y=s.y;s.facing=0;
+ s.life_stage=STORY_LIFE_WAIT;s.energy=3;
+ tap(&s,1u);
+ assert(s.dialogue!=0u&&s.cinema==CINE_OPEN);
+ assert(s.cinema_frame>=136u);
+ assert(s.work==2u&&s.energy==2u);
+ assert(s.daily_mask&STORY_DAY_SHIFT);
+ finish_dialogue(&s);
+ tap(&s,1u);
+ assert(s.work==2u&&s.energy==2u); /* no same-day work exploit */
+ finish_dialogue(&s);
+ s.rescue_stage=STORY_RESCUE_MISSING;
+ tap(&s,1u);
+ assert(s.cinema==CINE_NOTICE);
+ assert(s.work==2u&&s.energy==2u); /* rescue takes precedence */
+}
 int main(void){
  assert(paint(0u,0u,1)!=paint(54u,0u,1));
  assert(paint(54u,0u,1)!=paint(132u,0u,1));
@@ -47,6 +78,7 @@ int main(void){
  }
  assert(paint(180u,1u,0)!=paint(180u,1u,1));
  assert(paint(320u,3u,1)==paint(320u,3u,1));
- puts("Potheads opening: descending camera, connected pose cycle, paper sign, dialog visibility, bounds and palette OK");
+ verify_work_not_wishful_thinking();
+ puts("Potheads opening: camera, silhouette, animation, grateful dialogue, optional paid shift, bounds and rescue priority OK");
  return 0;
 }
