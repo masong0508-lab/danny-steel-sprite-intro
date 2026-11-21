@@ -66,12 +66,28 @@ offscreen clipping, palette safety and multiple walkable map views.
 Existing native 2D/3D render, ending, arena, storyline, music, save
 and ROM tests continue to run.
 
-The screenshot workflow captures four additional *actual game-engine*
+The screenshot workflow captured four additional *actual game-engine*
 overhead views in distinct parts of the Old Quarter, alongside the
-previous title, arena, cinema and Studio captures. The planned gallery
-now has **36** named frames if capture succeeds.
+previous title, arena, cinema and Studio captures. The capture workflow
+passed and published **36** numbered frames and a contact sheet to
+`docs/screenshots/`.
 
 Real-device sustained 30 FPS is **not yet proven**. The host render
 probe gives only relative workstation CPU cost per frame; the next
 performance gate is timed mGBA or hardware profiling of the new town
 atlas, 3D NPC projection, and worst-case large combat scenes.
+
+## Tested release acceptance
+
+The full host regression suite, native atlas palette/bounds tests,
+and devkitARM build passed for [PR #9](https://github.com/masong0508-lab/danny-steel-sprite-intro/pull/9).
+The tested GBA ROM is **794,668 bytes**. The linked RAM budget remains
+**38,400 bytes EWRAM** and **8,900 bytes IWRAM static**, below the
+already enforced CI limits. The game clock, save data, NPC interactions
+and Mirror Orchard battle controls are unchanged.
+
+The CI workstation's informational average overhead render time was
+**0.028 ms/frame**, and its first-person view **0.080 ms/frame**.
+Those are *host CPU measurements* and must not be mistaken for
+measured ARM7TDMI hardware frame times. The 30 FPS target remains to
+be checked on timed mGBA or physical GBA.
