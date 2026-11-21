@@ -91,3 +91,29 @@ non-graphic and follows with identifiable earlier memories. Credits dialogue
 only unlocks after the music has played. Loading an ending save restarts both
 music and film at zero to prevent an out-of-sync resume. No new SRAM fields or
 framebuffers. See `docs/ENDING_CINEMATICS.md`; host tests cover both timings.
+
+## Next-objective guidance, cutscene art and render optimization
+
+The overhead map and 3D exploration share one world-coordinate objective query.
+The HUD shows the next primary destination and cardinal direction, while the
+overhead view pulses a small marker on that *actual town tile*. The progression
+is letter → BORE stamp → Mara → music archive → rooftop canvas → last bus.
+During the numbered-day neutral story, medical appointments take precedence;
+after the final doctor visit the compass directs Danny back to his last canvas,
+without making the interaction automatic. The Mirror Orchard investigation
+remains optional and does not replace the main objective.
+
+The 20 authored cutscene types now give Danny, Mara, the clerk, and other
+characters more individual clothing, facial details, distinct hairstyles,
+blinking and arm/leg gestures. Rooftop water tanks, street infrastructure,
+tar seams and physical art supplies remain anchored across shots. Paint
+strokes accumulate on the same skyline canvas rather than randomizing.
+
+The fixed-resolution first-person renderer precomputes its 40 floor-distance
+values in ROM rather than repeating the same divide for all 120 columns:
+**4,800 per-frame divisions removed**. Projection coordinates are reused
+for floor color and tile detail, preserving the same geometry. No extra frame
+buffer, sample allocation, heap work, new art textures, or 3D camera modes.
+GBA hardware FPS remains unmeasured; these are code-level optimizations.
+`tests/objective_test.c` checks objective ordering, life-stage overrides,
+render bounds and identical guidance in the overhead and first-person HUD.
