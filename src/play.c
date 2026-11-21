@@ -5,6 +5,7 @@
 #include "music.h"
 #include "story_save.h"
 #include "rescue_save.h"
+#include "studio.h"
 
 #define REG_BG2PA R16(0x04000020)
 #define REG_BG2PB R16(0x04000022)
@@ -24,6 +25,8 @@ static int shown_page, pending, pending_page, clock_ticks, save_cooldown;
 /* Shared musical language for Danny and BORE. The same cue is heard in the
    associated 2D/3D location and during its corresponding cinematic. */
 static unsigned scene_music_cue(void){
+    if(game.activity==STORY_ACT_STUDIO && game.activity_choice)
+        return MUSIC_CUE_STUDIO; /* SELECT: hear actual edited pattern */
     if(game.ended && game.ending==STORY_END_GOOD)return MUSIC_CUE_LEGACY;
     if(game.life_stage==STORY_LIFE_FINALE ||
        (game.ended && game.ending==STORY_END_NEUTRAL) ||
@@ -65,6 +68,8 @@ void play_erase_slot(int slot){
     for(int i=0;i<SAVE_STRIDE;i++)save_ram[slot*SAVE_STRIDE+i]=0xFF;
     for(unsigned i=0;i<RESCUE_EXT_LEN;i++)
         save_ram[RESCUE_EXT_OFFSET+slot*RESCUE_EXT_LEN+i]=0xFF;
+    for(unsigned i=0;i<STUDIO_EXT_LEN;i++)
+        save_ram[STUDIO_EXT_OFFSET+slot*STUDIO_EXT_LEN+i]=0xFF;
 }
 static void write_save(void){
     u8 b[SAVE_LEN];
@@ -75,6 +80,10 @@ static void write_save(void){
     rescue_save_encode(game.slot,game.bad_mask,game.rescue_stage,extension);
     for(unsigned i=0;i<RESCUE_EXT_LEN;i++)
         save_ram[RESCUE_EXT_OFFSET+game.slot*RESCUE_EXT_LEN+i]=extension[i];
+    uint8_t studio_bytes[STUDIO_EXT_LEN];
+    studio_save_encode(game.slot,studio_bytes);
+    for(unsigned i=0;i<STUDIO_EXT_LEN;i++)
+        save_ram[STUDIO_EXT_OFFSET+game.slot*STUDIO_EXT_LEN+i]=studio_bytes[i];
     game.dirty=0;
 }
 static void draw_hidden(int page){
@@ -86,6 +95,7 @@ static void draw_hidden(int page){
 }
 void play_enter(int want_load,int slot){
     u8 b[SAVE_LEN];
+    studio_reset();
     if(want_load&&read_slot(slot,b)){
         story_resume(&game,slot,b[5],b[6],b[7],b[8],b[9],b[10],b[11]);
         game.cult_stage=b[12]>CULT_RESOLVED?CULT_RESOLVED:b[12];
@@ -112,6 +122,14 @@ void play_enter(int want_load,int slot){
             if(rescue_save_decode(game.slot,extension,&bad_mask,&rescue_stage)){
                 game.bad_mask=bad_mask;game.rescue_stage=rescue_stage;
             }
+        }
+        /* Studio extension is optional: old saves load the default tune.
+           Corrupt or cross-slot extension never invalidates game progress. */
+        {u8 studio_bytes[STUDIO_EXT_LEN];
+         for(unsigned i=0;i<STUDIO_EXT_LEN;i++)
+           studio_bytes[i]=save_ram[STUDIO_EXT_OFFSET+
+               game.slot*STUDIO_EXT_LEN+i];
+         (void)studio_save_decode(game.slot,studio_bytes);
         }
         if(game.rescue_stage==STORY_RESCUE_LOST){
             /* LOST repurposes these already-persisted day bytes to count
