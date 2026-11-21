@@ -69,6 +69,18 @@ void hd_rect(uint8_t *p,int x,int y,int w,int h,unsigned c){
 }
 static int abs_i(int n){return n<0?-n:n;}
 void hd_line(uint8_t *p,int x,int y,int xx,int yy,unsigned c){
+ /* City mortar, train rails and menu rules draw thousands of axis-aligned
+    pixels. One clipped span preserves every Bresenham pixel but avoids
+    repeatedly stepping and bounds-checking the same horizontal/vertical
+    line. Arbitrary diagonals still use the original painter. */
+ if(y==yy){
+  hd_rect(p,x<xx?x:xx,y,abs_i(xx-x)+1,1,c);
+  return;
+ }
+ if(x==xx){
+  hd_rect(p,x,y<yy?y:yy,1,abs_i(yy-y)+1,c);
+  return;
+ }
  int dx=abs_i(xx-x),dy=abs_i(yy-y),sx=x<xx?1:-1,sy=y<yy?1:-1,err=dx-dy;
  for(;;){
   hd_pixel(p,x,y,c);
