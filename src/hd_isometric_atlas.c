@@ -1,5 +1,6 @@
 #include "hd_isometric_atlas.h"
 #include <stdint.h>
+#include <string.h>
 /* Structured low-frequency cartridge pixel art. The street has coherent
    rhomboid paving joints, roofs have shingle courses, and weather
    reflections are rare deliberate accents, not random bright static.
@@ -260,15 +261,19 @@ static const uint8_t faces[14][32*16]={
 };
 void hd_iso_tile(uint8_t *p,int px,int py,unsigned material){
  const uint8_t *src=faces[material%14u];
- for(int y=0;y<16;y++){
+ /* A diamond row contains ONE contiguous non-transparent span.
+    Copy it directly from cartridge into the existing Mode-4 frame.
+    This replaces 512 per-pixel transparency checks per visible tile
+    with at most 14 clipped ROM row copies; no decoded art or new RAM. */
+ for(int y=1;y<15;y++){
   int yy=py+y;
   if((unsigned)yy>=HD_H)continue;
-  int row=yy*HD_W,base=y*32;
-  for(int x=0;x<32;x++){
-   int xx=px+x;
-   if((unsigned)xx>=HD_W)continue;
-   unsigned ink=src[base+x];
-   if(ink<64u)p[row+xx]=(uint8_t)ink;
-  }
+  int lo=y<8?16-y*2:(y-7)*2;
+  int start=px+lo,width=32-lo*2,cut=0;
+  if(width<=0||start>=HD_W||start+width<=0)continue;
+  if(start<0){cut=-start;width+=start;start=0;}
+  if(start+width>HD_W)width=HD_W-start;
+  if(width>0)
+   memcpy(p+yy*HD_W+start,src+y*32+lo+cut,(unsigned)width);
  }
 }
