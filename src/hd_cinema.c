@@ -649,7 +649,7 @@ static void record_room(uint8_t *p,unsigned t){
   hd_rect(p,136+j*17,76,11,2,HD_RED_SHADE);
  actor(p,38,136,1,t,t<80?2:3);
 }
-static void rooftop(uint8_t *p,unsigned t){
+static void rooftop(uint8_t *p,unsigned t,unsigned page){
  dusk(p,t,0);
  hd_rect(p,0,103,HD_W,57,HD_ROAD);
  hd_rect(p,0,102,HD_W,4,HD_STONE);
@@ -680,8 +680,10 @@ static void rooftop(uint8_t *p,unsigned t){
  /* Advance to the same canvas edge before touching it. The brush
     extends from the raised hand and pigments appear only on contact. */
  int painter=ease(78,128,t,7,78);
- actor(p,painter,142,1,t,t<92u?2:3);
- if(t>=92u){
+ int reaction=page>=3u&&t>=192u;
+ if(reaction)hd_actor_closeup(p,106,143,1,t,5);
+ else actor(p,painter,142,1,t,t<92u?2:3);
+ if(!reaction&&t>=92u){
   int hand=painter+23;
   hd_line(p,hand,93,hand+8,87,HD_BARK);
   hd_pixel(p,hand+8,87,HD_RED_SHADE);
@@ -728,7 +730,9 @@ static void clinic(uint8_t *p,const Story *s,unsigned t,int last){
               s->rescue_stage==STORY_RESCUE_LOST;
  actor(p,68,135,1,t,last?7:1);
  if(last&&!missing)actor(p,115,136,2,t,5);
- actor(p,198,133,5,t,1);
+ if(s->page>=3u&&t>=160u)
+  hd_actor_closeup(p,184,142,5,t,1);
+ else actor(p,198,133,5,t,1);
  hd_line(p,181,106,157,102,HD_PLASTER_LIT);
  hd_ellipse(p,157,101,3,2,HD_SKIN);
 }
@@ -760,8 +764,10 @@ void hd_cinema_draw(uint8_t *p,const Story *s,unsigned t){
    hd_line(p,166,94,177,103,HD_COPPER);
    hd_line(p,188,94,177,103,HD_COPPER);
    hd_rect(p,176,97,3,2,HD_RED_SHADE);
-   actor(p,dx,145,1,t,t<85u?2:page==0?1:3);
-   if(t>=85u&&page>=1u){
+   int reaction=page>=3u&&t>=150u;
+   if(reaction)hd_actor_closeup(p,132,143,1,t,7);
+   else actor(p,dx,145,1,t,t<85u?2:page==0?1:3);
+   if(!reaction&&t>=85u&&page>=1u){
     hd_line(p,dx+23,96,166,97,HD_SKIN);
     hd_pixel(p,166,97,HD_SKIN_LIT);
    }
@@ -775,13 +781,15 @@ void hd_cinema_draw(uint8_t *p,const Story *s,unsigned t){
    int danny=ease(78,91,t,11,60);
    int mara=ease(178,164,t,18,63);
    actor(p,danny,141,1,t,t<70?2:page>=1?5:1);
-   actor(p,mara,141,2,t,t<82?2:page>=2?3:1);
+   int reaction=page>=3u&&t>=145u;
+   if(reaction)hd_actor_closeup(p,178,145,2,t,5);
+   else actor(p,mara,141,2,t,t<82?2:page>=2?3:1);
    /* Body gestures have real table targets instead of floating cups. */
    if(t>=86u&&page>=1u){
     hd_line(p,danny+18,108,114,99,HD_SKIN);
     hd_pixel(p,114,99,HD_SKIN_LIT);
    }
-   if(t>=104u&&page>=2u){
+   if(!reaction&&t>=104u&&page>=2u){
     hd_line(p,mara-18,108,141,99,HD_SKIN);
     hd_pixel(p,141,99,HD_SKIN_LIT);
    }
@@ -812,11 +820,12 @@ void hd_cinema_draw(uint8_t *p,const Story *s,unsigned t){
     hd_line(p,bx+68,113,bx+92,113,HD_LAMP);
    }
    int danny=ease(192,165,t,20,78);
-   actor(p,danny,142,1,t,t<100u?2:page>=2?7:0);
+   if(page>=3u&&t>=170u)hd_actor_closeup(p,162,143,1,t,7);
+   else actor(p,danny,142,1,t,t<100u?2:page>=2?7:0);
    break;
   }
   case CINE_MUSIC:record_room(p,t);break;
-  case CINE_ART:rooftop(p,t);break;
+  case CINE_ART:rooftop(p,t,page);break;
   case CINE_NOTICE:{
    street(p,t,1);
    int x=ease(68,91,t,13,71);

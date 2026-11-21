@@ -69,6 +69,36 @@ int main(void){
  assert(missing==film(&s,CINE_LAST_CLINIC,170u,2u));
  s.rescue_stage=STORY_RESCUE_SAVED;
  assert(attended==film(&s,CINE_LAST_CLINIC,170u,2u));
+ /* Close-up reaction beats use real pixel-painted characters, not
+    a palette swap, a face overlay or a duplicated sprite in the scene. */
+ uint32_t letter_reaction=film(&s,CINE_LETTER,174u,3u);
+ assert(letter_reaction!=film(&s,CINE_LETTER,174u,2u));
+ uint32_t mara_close=film(&s,CINE_MARA,177u,3u);
+ assert(mara_close!=film(&s,CINE_MARA,177u,2u));
+ uint32_t bus_close=film(&s,CINE_BUS,195u,3u);
+ assert(bus_close!=film(&s,CINE_BUS,195u,2u));
+ uint32_t art_close=film(&s,CINE_ART,227u,3u);
+ assert(art_close!=film(&s,CINE_ART,227u,2u));
+ uint32_t doctor_close=film(&s,CINE_LAST_CLINIC,195u,3u);
+ assert(doctor_close!=film(&s,CINE_LAST_CLINIC,195u,2u));
+ /* Every role's distinct portrait must stay bounded in the exact same
+    guarded 240x160 buffer, with no new RAM backing. */
+ uint32_t portraits[5];
+ for(int role=1;role<=5;role++){
+  memset(&sample,0xA5,sizeof sample);
+  hd_rect(sample.pixels,0,0,HD_W,HD_H,HD_STONE_DARK);
+  hd_actor_closeup(sample.pixels,120,143,role,171u,7);
+  uint32_t h=2166136261u;
+  for(unsigned k=0;k<HD_BYTES;k++){
+   assert(sample.pixels[k]<64u);
+   h=(h^sample.pixels[k])*16777619u;
+  }
+  for(unsigned g=0;g<32u;g++)
+   assert(sample.before[g]==0xA5&&sample.after[g]==0xA5);
+  portraits[role-1]=h;
+  for(int prior=1;prior<role;prior++)
+   assert(portraits[role-1]!=portraits[prior-1]);
+ }
  /* Reunion opening and exit are physically distinct framings. */
  uint32_t door_early=film(&s,CINE_RESCUE_SAVED,80u,1u);
  uint32_t door_late=film(&s,CINE_RESCUE_SAVED,240u,2u);

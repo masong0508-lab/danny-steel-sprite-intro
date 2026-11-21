@@ -151,3 +151,95 @@ void hd_actor_stage(uint8_t *p,int x,int feet,int role,unsigned frame,int emotio
   hd_line(p,x+19,fy-57,x+6,fy-61,HD_SKIN);
  }
 }
+
+/* A selective 240x160 painted cinematic close-up. Only drawn in carefully
+   authored reaction shots: no big static portraits, sprites, bitmap scale
+   buffers or heap. The same 1-5 role identity and emotion as stage actors. */
+void hd_actor_closeup(uint8_t *p,int x,int base,int role,
+                      unsigned frame,int emotion){
+ unsigned jacket=role==1?HD_RED:role==2?HD_GLASS:
+                 role==3?HD_STONE_LIT:role==4?HD_LEAF_DARK:HD_PLASTER;
+ unsigned rim=role==1?HD_RED_SHADE:role==2?HD_GLASS:
+              role==3?HD_STONE_DARK:HD_LEAF_DARK;
+ unsigned hair=role==2?HD_HAIR:role==3?HD_STONE_DARK:
+               role==4?HD_BARK:HD_INK;
+ int breathe=(int)((frame/27u)&1u),y=base-breathe;
+ /* Foreground torso runs behind the lower subtitle matte so every bust
+    remains attached to the picture rather than floating above a panel. */
+ hd_ellipse(p,x,y-17,32,31,HD_SHADOW);
+ hd_ellipse(p,x,y-15,29,29,rim);
+ hd_ellipse(p,x,y-15,26,27,jacket);
+ hd_rect(p,x-8,y-55,16,17,HD_SKIN);
+ hd_rect(p,x-18,y-57,12,14,jacket);
+ hd_rect(p,x+7,y-57,13,14,jacket);
+ hd_line(p,x-18,y-29,x-5,y-13,HD_STONE_LIT);
+ hd_line(p,x+19,y-30,x+6,y-14,rim);
+ hd_rect(p,x-4,y-23,8,2,HD_GOLD);
+ if(role==5){
+  hd_rect(p,x-4,y-35,8,16,HD_PAPER);
+  hd_rect(p,x-3,y-32,6,8,HD_GLASS_LIT);
+  hd_pixel(p,x+9,y-26,HD_RED);
+ }
+ /* Face has a deliberately asymmetric outline; hair, eyes, cheeks,
+    ears and jaw are separately articulated at native pixel scale. */
+ hd_ellipse(p,x,y-69,23,27,HD_INK);
+ hd_ellipse(p,x,y-69,20,25,HD_SKIN);
+ hd_ellipse(p,x-6,y-73,11,17,HD_SKIN_LIT);
+ hd_rect(p,x-22,y-72,5,12,HD_SKIN);
+ hd_rect(p,x+18,y-71,5,12,HD_SKIN);
+ hd_rect(p,x-19,y-66,4,3,HD_RED_SHADE);
+ hd_rect(p,x+15,y-65,4,3,HD_RED_SHADE);
+ if(role==2 || role==4){
+  hd_ellipse(p,x,y-90,24,13,hair);
+  hd_rect(p,x-24,y-85,7,26,hair);
+  hd_rect(p,x+18,y-85,8,29,hair);
+  hd_line(p,x-19,y-56,x-22,y-32,hair);
+  hd_line(p,x+21,y-55,x+18,y-32,hair);
+ }else if(role==3){
+  hd_rect(p,x-20,y-94,39,11,hair);
+  hd_rect(p,x+13,y-91,9,6,HD_STONE);
+ }else{
+  hd_ellipse(p,x-2,y-93,21,10,hair);
+  hd_rect(p,x-20,y-89,8,14,hair);
+  hd_line(p,x-18,y-89,x-5,y-94,hair);
+  hd_rect(p,x+11,y-90,9,7,hair);
+ }
+ if(role==1){
+  hd_line(p,x-15,y-91,x-7,y-95,HD_INK);
+  hd_rect(p,x-7,y-50,4,8,HD_RED_SHADE);
+ }
+ int gaze=emotion==7?-2:emotion==5?2:0;
+ int blink=((frame+role*17u)%127u)>=122u;
+ if(blink){
+  hd_line(p,x-15,y-72,x-4,y-72,HD_BARK);
+  hd_line(p,x+4,y-72,x+15,y-72,HD_BARK);
+ }else{
+  hd_rect(p,x-15,y-74,11,3,HD_INK);
+  hd_rect(p,x+4,y-74,11,3,HD_INK);
+  hd_rect(p,x-12+gaze,y-73,3,4,HD_INK);
+  hd_rect(p,x+7+gaze,y-73,3,4,HD_INK);
+  hd_pixel(p,x-11+gaze,y-73,HD_PAPER);
+  hd_pixel(p,x+8+gaze,y-73,HD_PAPER);
+ }
+ hd_line(p,x-2,y-69,x-4,y-61,HD_SKIN_LIT);
+ hd_line(p,x-4,y-60,x+1,y-59,HD_BARK);
+ if(emotion==7){
+  hd_line(p,x-15,y-80,x-5,y-77,HD_BARK);
+  hd_line(p,x+5,y-77,x+15,y-80,HD_BARK);
+  hd_line(p,x-8,y-48,x+9,y-49,HD_BRICK_DARK);
+ }else if(emotion==1 && ((frame/10u)&1u)){
+  hd_rect(p,x-8,y-50,15,5,HD_BRICK_DARK);
+  hd_rect(p,x-5,y-47,9,2,HD_SKIN_LIT);
+ }else if(emotion==5){
+  hd_line(p,x-8,y-48,x+8,y-46,HD_BRICK_DARK);
+  hd_pixel(p,x+10,y-47,HD_SKIN_LIT);
+ }else{
+  hd_line(p,x-8,y-49,x+8,y-49,HD_BRICK_DARK);
+ }
+ if(role==5){ /* doctor's lapels and instrument remain recognizable */
+  hd_line(p,x-19,y-39,x-4,y-20,HD_PAPER);
+  hd_line(p,x+19,y-39,x+4,y-20,HD_PAPER);
+  hd_ellipse(p,x+13,y-34,5,5,HD_INK);
+  hd_ellipse(p,x+13,y-34,3,3,HD_GLASS_LIT);
+ }
+}
