@@ -140,11 +140,13 @@ static void furniture(uint8_t *p,int x,int y,int w,int c){
    feet/shadows; no abstract flying heads or randomly teleporting props. */
 /* Six distinct character silhouettes with coordinated body parts.
    Roles 1 Danny / 2 Mara / 3 BORE clerk / 4 witness / 5 heckler / 6 doctor.
-   Gesture 0 breathe / 1 talk / 2 walk / 3 reach. */
+   Gesture 0 breathe / 1 talk / 2 walk / 3 reach right / 4 reach left /
+   5 listen / 6 relieved / 7 worried. Faces and arms respond together. */
 static void actor(uint8_t *p,int x,int foot,int role,unsigned t,int gesture){
  int moving=(gesture==2);
  int gait=moving?((int)(t/7)&1):0;
- int bob=moving?gait:((int)(t/31)&1);
+ /* Listening and emotional reactions settle into a stationary pose. */
+ int bob=moving?gait:gesture>=5?0:((int)(t/31)&1);
  int coat=role==1?16:role==2?25:role==3?17:role==4?12:role==5?23:20;
  int trim=role==1?18:role==2?28:role==3?20:role==4?11:role==5?16:26;
  int hair=role==2?24:role==3?29:role==4?14:role==5?23:3;
@@ -215,8 +217,22 @@ static void actor(uint8_t *p,int x,int foot,int role,unsigned t,int gesture){
   rect(p,x-4,foot-34+bob,2,1,3);
   rect(p,x+3,foot-34+bob,2,1,3);
  }
+ /* Facial acting: concerned brows and mouth, relieved smile, or speech.
+    Every feature stays attached to the same character's face. */
+ if(gesture==7){
+  stroke(p,x-5,foot-38+bob,x-2,foot-36+bob,3);
+  stroke(p,x+2,foot-36+bob,x+5,foot-38+bob,3);
+ }else if(gesture==6){
+  pixel(p,x-4,foot-36+bob,7);pixel(p,x+3,foot-36+bob,7);
+ }
  pixel(p,x+1,foot-32+bob,22);
- if(gesture==1 && ((t/9)&1))rect(p,x-2,foot-29+bob,4,2,23);
+ if(gesture==7){
+  rect(p,x-2,foot-28+bob,4,1,23);
+  pixel(p,x-3,foot-27+bob,23);pixel(p,x+2,foot-27+bob,23);
+ }else if(gesture==6){
+  pixel(p,x-3,foot-30+bob,23);rect(p,x-2,foot-29+bob,4,1,23);
+  pixel(p,x+2,foot-30+bob,23);
+ }else if(gesture==1&&((t/9)&1))rect(p,x-2,foot-29+bob,4,2,23);
  else rect(p,x-2,foot-29+bob,4,1,role==2?16:23);
  /* Arms are attached to shoulders; hand never floats at head level. */
  if(gesture==3){
@@ -234,6 +250,26 @@ static void actor(uint8_t *p,int x,int foot,int role,unsigned t,int gesture){
    stroke(p,x+8,shoulder+4,x+11,shoulder+15,coat);
    disk(p,x+11,shoulder+15,2,skin);
   
+ }else if(gesture==5){
+  /* Listening: quiet shoulders and hands hanging at the waist. */
+  stroke(p,x-8,shoulder+4,x-11,shoulder+14,coat);
+  stroke(p,x+8,shoulder+4,x+11,shoulder+14,coat);
+  disk(p,x-11,shoulder+14,2,skin);
+  disk(p,x+11,shoulder+14,2,skin);
+ }else if(gesture==6){
+  /* Relief: one hand against the chest; a small open reach. */
+  stroke(p,x-8,shoulder+4,x-11,shoulder+12,coat);
+  stroke(p,x-11,shoulder+12,x-2,shoulder+12,skin);
+  disk(p,x-2,shoulder+12,2,skin);
+  stroke(p,x+8,shoulder+4,x+13,shoulder+13,coat);
+  disk(p,x+13,shoulder+13,2,skin);
+ }else if(gesture==7){
+  /* Concern: a shoulder/elbow/hand chain rises to the forehead. */
+  stroke(p,x+8,shoulder+4,x+15,shoulder+1,coat);
+  stroke(p,x+15,shoulder+1,x+5,brow+6,skin);
+  disk(p,x+5,brow+6,2,skin);
+  stroke(p,x-8,shoulder+4,x-11,shoulder+14,coat);
+  disk(p,x-11,shoulder+14,2,skin);
  }else if(gesture==1){
   stroke(p,x+8,shoulder+4,x+13,shoulder-2+((int)(t/12)&3),coat);
   disk(p,x+13,shoulder-2+((int)(t/12)&3),2,skin);
@@ -413,8 +449,8 @@ void cinema_draw(uint8_t *p,unsigned scene,unsigned tick,unsigned page,unsigned 
  case CINE_MARA: {
    cafe(p,t);cafe_table(p,2);
    int dx=travel(34,43,t,12,55),mx=travel(95,83,t,18,57);
-   actor(p,dx,72,1,t,t<65?2:focus==1?1:focus>=2?3:0);
-   actor(p,mx,72,2,t,t<70?2:focus==0?1:focus>=2?4:0);
+   actor(p,dx,72,1,t,t<65?2:focus==1?5:focus>=2?3:1);
+   actor(p,mx,72,2,t,t<70?2:focus==0?1:focus>=2?4:5);
    if(focus>=2){rect(p,62,57,5,3,20);rect(p,63,58,3,1,18);}
    break;
   }
@@ -486,7 +522,7 @@ void cinema_draw(uint8_t *p,unsigned scene,unsigned tick,unsigned page,unsigned 
    }
  case CINE_CLINIC:
     clinic(p,t,0);
-    actor(p,travel(35,43,t,8,59),72,1,t,t<65?2:focus==2?0:1);
+    actor(p,travel(35,43,t,8,59),72,1,t,t<65?2:focus==2?7:5);
     actor(p,86,72,6,t,focus>=1?4:1);
     rect(p,81,53,17,2,20);
     if(focus>=1)stroke(p,87,52,89,48,31);
@@ -506,8 +542,8 @@ void cinema_draw(uint8_t *p,unsigned scene,unsigned tick,unsigned page,unsigned 
  }
   case CINE_LAST_CLINIC:
     clinic(p,t,1);
-    actor(p,30,72,1,t,focus>=2?0:1);
-    actor(p,58,72,2,t,focus>=2?4:0);
+    actor(p,30,72,1,t,focus>=2?7:5);
+    actor(p,58,72,2,t,focus>=2?6:5);
     actor(p,101,72,6,t,focus&1?4:1);
     break;
  case CINE_GOOD:
@@ -560,7 +596,7 @@ void cinema_draw(uint8_t *p,unsigned scene,unsigned tick,unsigned page,unsigned 
   break;
  case CINE_MARA_EMPTY:
    cafe(p,t);cafe_table(p,1);
-   actor(p,travel(36,42,t,20,58),72,1,t,t<68?2:0);
+   actor(p,travel(36,42,t,20,58),72,1,t,t<68?2:7);
    rect(p,81,62,13,2,14);rect(p,84,64,2,7,14);
    rect(p,91,64,2,7,14);
    break;
@@ -569,7 +605,7 @@ void cinema_draw(uint8_t *p,unsigned scene,unsigned tick,unsigned page,unsigned 
     rect(p,76,22,29,35,3);rect(p,78,24,25,31,14);
     rect(p,80,25,21,28,22);pixel(p,97,43,18);
     int x=travel(38,59,t,6,70);
-    actor(p,x,72,1,t,t<76?2:3);
+    actor(p,x,72,1,t,t<76?2:focus>=2?7:3);
     if(t>84 && ((t/24)&1))pixel(p,97,43,7);
     break;
    }
@@ -584,15 +620,15 @@ void cinema_draw(uint8_t *p,unsigned scene,unsigned tick,unsigned page,unsigned 
        has opened does Mara enter the shot. Hands meet without crossing. */
     int dx=travel(30,50,t,12,79);
     int mx=travel(93,89,t,50,72);
-    actor(p,dx,72,1,t,t<92?2:focus>=1?3:1);
+    actor(p,dx,72,1,t,t<92?2:t>=124?6:focus>=1?3:5);
     if(t>=45u)
-        actor(p,mx,72,2,t,t<118?2:focus>=1?4:1);
+        actor(p,mx,72,2,t,t<118?2:t>=124?6:focus>=1?4:5);
     if(t>=123u)stroke(p,dx+19,57,mx-20,57,31);
     break;
    }
  case CINE_BAD:
    roof(p,t,1);canvas(p,71,21,t,0);
-   actor(p,41,76,1,t,0);
+   actor(p,41,76,1,t,7);
    rect(p,14,66,11,4,14);rect(p,17,63,5,3,18);
    rect(p,17,57,8,11,3);rect(p,19,59,4,6,25);
    if((t/90u)&1u)pixel(p,21,61,18);
