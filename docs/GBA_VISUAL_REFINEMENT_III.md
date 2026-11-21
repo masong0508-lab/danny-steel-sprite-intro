@@ -73,9 +73,11 @@ visible billboards, not a new sprite framebuffer or heap allocations.
 
 ## Outstanding work
 
-The special Mirror Orchard combat arena is still intentionally on the
-legacy 120×80 authoring path; it is an arena with its own telegraphs and
-must not be replaced until the hitboxes and parry clarity are preserved.
+**Superseded by the subsequent native arena pass:** the Mirror Orchard
+combat scene now renders at 240×160, while preserving the original
+three-lane collision and six-tick parry. Its illustrated ROM backgrounds,
+portraits and exact combat checks are documented in
+[`NATIVE_MIRROR_ORCHARD.md`](NATIVE_MIRROR_ORCHARD.md).
 The film's new artwork is more detailed, but in-emulator aesthetic QA and
 real hardware/mGBA FPS profiling are still necessary. Do **not** claim
 sustained 30 FPS or physical GBA audio/performance validation simply
