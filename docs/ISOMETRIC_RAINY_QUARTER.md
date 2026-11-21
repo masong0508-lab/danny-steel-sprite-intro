@@ -70,3 +70,23 @@ Danny portraits depend on actual art review and future character
 references. The current milestone establishes correct spatial
 projection and gameplay integration, not a claim of identical
 quality to the high-resolution desktop art references.
+
+## Tested implementation
+
+The native isometric camera and first-person facade/rain upgrade were
+merged through [PR #10](https://github.com/masong0508-lab/danny-steel-sprite-intro/pull/10).
+Strict host tests, story/save/ending/combat/music regressions, and the
+devkitARM GBA ROM build all **passed** on the feature branch.
+
+The branch ROM measured **804,220 bytes**. Static memory remained at
+**38,400 bytes EWRAM** and **8,900 bytes IWRAM**, within the enforced
+linker budgets. The captured actual game frames are in
+`docs/screenshots/`, including the new isometric overview and 3D
+first-person views.
+
+The host CPU profiler measured **0.035 ms** for an isometric overview
+frame and **0.061 ms** for a first-person frame on the CI runner. These
+are **not GBA frame times**. A full in-emulator walk and measured
+worst-case 30 FPS test on ARM7TDMI hardware remain open. The new
+art is more coherent than the old grid, but it does not yet match the
+detail level of the supplied high-resolution desktop references.
