@@ -60,8 +60,8 @@ floating waypoint UI, and it adds no new collisions or adult-product
 sales systems.
 
 The existing shared 38,400-byte Mode-4 EWRAM frame, GBA palette,
-single native isometric projection, 3D toggle and eight RAM budget
-headroom checks are preserved. The artwork is stored as 10,240 bytes
+single native isometric projection, 3D toggle and linked static RAM budget
+checks are preserved. The artwork is stored as 10,240 bytes
 of extra GBA cartridge pixel data; the user accepts larger ROMs for
 higher-value visual art.
 
