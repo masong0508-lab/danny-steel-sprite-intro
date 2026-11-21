@@ -81,6 +81,17 @@ int main(int argc,char **argv){
  s.cinema=CINE_NONE;s.scene=STORY_SCENE_NONE;s.view=0;
  stand(&s,12,13,3);
  write_frame("06_gameplay_overhead",&s,90);
+ /* The same real map in four directions, captured from valid walkable
+    tiles. Material, silhouette, footprint and foliage differ by location. */
+ stand(&s,11,8,1);
+ write_frame("33_quarter_archive_plaza",&s,145);
+ stand(&s,8,12,3);
+ write_frame("34_quarter_mara_street",&s,155);
+ stand(&s,19,4,1);
+ write_frame("35_quarter_bus_and_facades",&s,162);
+ stand(&s,3,8,3);
+ write_frame("36_quarter_riverside_residents",&s,177);
+ stand(&s,12,13,3);
  s.view=1;
  write_frame("07_gameplay_first_person",&s,90);
  /* Same navigable grid, additional cardinal views of the native renderer. */
