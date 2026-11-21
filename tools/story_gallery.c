@@ -94,7 +94,8 @@ int main(int argc,char **argv){
  write_frame("05f_potheads_after_hours",&s,300);
  done(&s);
  s.cinema=CINE_NONE;s.scene=STORY_SCENE_NONE;s.view=0;
- stand(&s,12,13,3);
+ /* The first controllable view is now the same storefront as the film. */
+ stand(&s,20,11,0);
  write_frame("06_gameplay_overhead",&s,90);
  /* The same real map in four directions, captured from valid walkable
     tiles. Material, silhouette, footprint and foliage differ by location. */
