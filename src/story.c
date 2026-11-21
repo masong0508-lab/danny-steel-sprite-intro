@@ -1006,6 +1006,10 @@ void story_tick(Story *s, uint16_t keys) {
     uint16_t pressed = (uint16_t)(keys & ~s->old_keys);
     s->old_keys = keys;
     if (s->anim) --s->anim;
+    if(!s->dialogue&&!s->ended&&
+       (s->rescue_stage==STORY_RESCUE_LOST||
+        s->rescue_stage==STORY_RESCUE_AFTERSHOCK))
+        begin_bad_film(s);
     if (s->cinema && !s->paused && s->cinema_frame < 65530) ++s->cinema_frame;
     /* One step is exactly one VBlank, including dialogue. Pause freezes the
        clock. Day transitions never steal controls during a fight or textbox. */
@@ -1017,7 +1021,7 @@ void story_tick(Story *s, uint16_t keys) {
             stat_gain(&s->energy,2);
             s->dirty=1;
         }
-        if (!s->dialogue && !s->battle && !s->choosing && !s->activity) {
+        if (!s->dialogue && !s->battle && !s->choosing && !s->activity && !s->risk_menu) {
             if (s->life_stage==STORY_LIFE_WAIT && s->day_number>=2) {
                 s->life_stage=STORY_LIFE_CLINIC;
                 s->scene=STORY_SCENE_NOTICE;s->dirty=1;talk(s,D_MEDICAL_NOTICE);
@@ -1039,13 +1043,16 @@ void story_tick(Story *s, uint16_t keys) {
        the performance or leave the camera on a static credit card. */
     if (!s->dialogue && (
           (s->life_stage==STORY_LIFE_FINALE && !s->ended) ||
-          (s->ended && s->ending==STORY_END_GOOD &&
-           s->finale_frame<STORY_GOOD_FINAL_FRAMES))) {
+          (s->ended && ((s->ending==STORY_END_GOOD &&
+           s->finale_frame<STORY_GOOD_FINAL_FRAMES) ||
+           (s->ending==STORY_END_BAD &&
+           s->finale_frame<STORY_END_SCORE_FRAMES))))) {
         unsigned limit=s->ending==STORY_END_GOOD?
             STORY_GOOD_FINAL_FRAMES:STORY_END_SCORE_FRAMES;
         if (s->finale_frame<limit) ++s->finale_frame;
         if (s->finale_frame>=limit) {
             if (s->ending==STORY_END_GOOD)talk(s,D_GOOD_END);
+            else if(s->ending==STORY_END_BAD)talk(s,D_BAD_END);
             else {
                 s->ended=1;s->ending=STORY_END_NEUTRAL;
                 talk(s,D_NEUTRAL_END);
@@ -1074,6 +1081,12 @@ void story_tick(Story *s, uint16_t keys) {
         if (pressed & START) s->quit=1;
         return;
     }
+    if(s->risk_menu){
+        if(pressed&(LEFT|RIGHT|UP|DOWN))s->risk_choice^=1u;
+        if(pressed&B){s->risk_menu=0;s->risk_choice=0;s->cinema=CINE_NONE;}
+        else if(pressed&A)resolve_risk(s);
+        return;
+    }
     if(s->activity){
         if(pressed&(LEFT|RIGHT|UP|DOWN))s->activity_choice^=1u;
         if(pressed&B){s->activity=STORY_ACT_NONE;s->cinema=CINE_NONE;}
@@ -1092,9 +1105,13 @@ void story_tick(Story *s, uint16_t keys) {
             } else if (s->choice==0) {
                 /* Adequate progress, but not 100%: keep living and crafting.
                    The neutral ending is delayed by active, numbered game days. */
-                s->life_stage=STORY_LIFE_WAIT;
-                s->day_number=1;s->day_frame=0;
-                talk(s,D_NEUTRAL_START);
+                if(s->life_stage){
+                    talk(s,D_BUS_RESCUE);
+                }else{
+                    s->life_stage=STORY_LIFE_WAIT;
+                    s->day_number=1;s->day_frame=0;
+                    talk(s,D_NEUTRAL_START);
+                }
             } else {
                 /* STAY means continue exploring; it is not an instant ending. */
                 talk(s,D_ART_DAY);
@@ -1107,6 +1124,18 @@ void story_tick(Story *s, uint16_t keys) {
     if (s->paused) { if (pressed & B) s->quit = 1; return; }
     if (pressed & (L|SELECT)) { s->view ^= 1; s->dirty = 1; }
     if (pressed & R) {
+        if(s->rescue_stage==STORY_RESCUE_MISSING){
+            talk(s,D_RESCUE_NOTES_1);return;
+        }
+        if(s->rescue_stage==STORY_RESCUE_WITNESS){
+            talk(s,D_RESCUE_NOTES_2);return;
+        }
+        if(s->rescue_stage==STORY_RESCUE_TRACE){
+            talk(s,D_RESCUE_NOTES_3);return;
+        }
+        if(s->rescue_stage==STORY_RESCUE_SAVED){
+            talk(s,D_RESCUE_NOTES_SAVED);return;
+        }
         if (s->life_stage) {
             talk(s,s->life_stage==STORY_LIFE_CLINIC||s->life_stage==STORY_LIFE_FINAL_CLINIC?D_NOTE_VISIT:
                  s->life_stage==STORY_LIFE_FOLLOWUP_WAIT?D_NOTE_FOLLOWUP:
@@ -1123,6 +1152,23 @@ void story_tick(Story *s, uint16_t keys) {
         return;
     }
     if (pressed & A) { interact(s); return; }
+    if(pressed&B){
+        char target=nearby_actor(s);
+        unsigned bit=target=='L'?STORY_BAD_LETTER:
+                     target=='C'?STORY_BAD_CLERK:
+                     target=='M'?STORY_BAD_MUSIC:
+                     target=='S'?STORY_BAD_SERVER:0u;
+        if(bit && !(s->bad_mask&bit) &&
+           s->rescue_stage!=STORY_RESCUE_LOST &&
+           s->rescue_stage!=STORY_RESCUE_AFTERSHOCK){
+            s->risk_menu=(uint8_t)target;s->risk_choice=0;
+            s->cinema=target=='L'?CINE_LETTER:
+                target=='C'?CINE_BORE:
+                target=='M'?CINE_MUSIC:CINE_SERVER;
+            s->cinema_frame=0;
+        }
+        return;
+    }
     if (s->cooldown) --s->cooldown;
     if (!s->cooldown) {
         int d = -1;
