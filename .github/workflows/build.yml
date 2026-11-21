@@ -32,8 +32,17 @@ jobs:
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
             src/story.c src/studio.c src/hd_canvas.c src/hd_world.c \
             src/hd_perspective.c src/hd_cinema.c src/hd_studio.c \
-            src/hd_overlay.c tests/hd_nextgen_test.c -o /tmp/danny_hd_nextgen
+            src/hd_actor.c src/hd_special.c src/hd_overlay.c \
+            tests/hd_nextgen_test.c -o /tmp/danny_hd_nextgen
           /tmp/danny_hd_nextgen
+      - name: Validate every native cinema and three rescue-aware score-length endings
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
+            src/story.c src/studio.c src/cinema.c src/hd_canvas.c \
+            src/hd_cinema.c src/hd_actor.c src/hd_special.c \
+            src/hd_ending.c tests/hd_story_expansion_test.c \
+            -o /tmp/danny_hd_story_expansion
+          /tmp/danny_hd_story_expansion
       - name: Test story progression and map accessibility
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c tests/story_test.c -o /tmp/danny_story_test
