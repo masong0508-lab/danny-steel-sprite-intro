@@ -23,11 +23,13 @@ typedef struct {
 void studio_reset(void);
 const StudioPatch *studio_patch(void);
 const char *studio_lyric(unsigned index);
+const char *studio_note_label(unsigned pitch);
 void studio_change(unsigned tab,unsigned cursor,int delta);
 void studio_toggle(unsigned tab,unsigned cursor);
 unsigned studio_cursor_count(unsigned tab);
 void studio_motif_step(unsigned step,MotifBeat *out);
 uint32_t studio_ticks(void);
 unsigned studio_playhead(void);
+unsigned studio_playpart(void);
 void studio_save_encode(unsigned slot,uint8_t out[STUDIO_EXT_LEN]);
 int studio_save_decode(unsigned slot,const uint8_t in[STUDIO_EXT_LEN]);
