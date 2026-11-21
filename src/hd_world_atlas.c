@@ -2585,3 +2585,32 @@ void hd_world_tree_art(uint8_t *dst,int center_x,int foot_y,unsigned kind,unsign
   }
  }
 }
+
+/* Perspective scales exactly the ROM sprite artwork for each distance:
+   no head/coat proportion drift between 2D and first-person.
+   Scale mapping is calculated per COLUMN, not per displayed pixel. */
+void hd_world_person_projected(uint8_t *dst,int center_x,int foot_y,int height,
+                               unsigned role,unsigned facing,unsigned gait){
+ if(height<5)return;
+ if(height>116)height=116;
+ int width=(height*PERSON_W+PERSON_H/2)/PERSON_H;
+ if(width<3)width=3;
+ if(width>78)width=78;
+ const uint8_t *src=person_pixels[((role%7u)*4u+(facing&3u))*2u+(gait&1u)];
+ int left=center_x-width/2,top=foot_y-height;
+ uint8_t xmap[78];
+ for(int x=0;x<width;x++)xmap[x]=(uint8_t)((x*PERSON_W)/width);
+ for(int y=0;y<height;y++){
+  int yy=top+y;
+  if((unsigned)yy>=HD_H)continue;
+  unsigned sy=(unsigned)(y*PERSON_H/height);
+  const uint8_t *line=src+sy*PERSON_W;
+  uint8_t *out=dst+yy*HD_W;
+  for(int x=0;x<width;x++){
+   int xx=left+x;
+   if((unsigned)xx>=HD_W)continue;
+   unsigned ink=line[xmap[x]];
+   if(ink<64u)out[xx]=(uint8_t)ink;
+  }
+ }
+}
