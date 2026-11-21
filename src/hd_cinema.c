@@ -723,8 +723,9 @@ static void clinic(uint8_t *p,const Story *s,unsigned t,int last){
  hd_line(p,169,69,178,76,HD_RED_SHADE);
  hd_line(p,178,76,189,61,HD_RED_SHADE);
  /* No unverified living-person appearance while Mara is missing. */
- int missing=s->rescue_stage>=STORY_RESCUE_MISSING&&
-             s->rescue_stage<=STORY_RESCUE_LOST;
+ int missing=(s->rescue_stage>=STORY_RESCUE_MISSING&&
+              s->rescue_stage<=STORY_RESCUE_TRACE)||
+              s->rescue_stage==STORY_RESCUE_LOST;
  actor(p,68,135,1,t,last?7:1);
  if(last&&!missing)actor(p,115,136,2,t,5);
  actor(p,198,133,5,t,1);
