@@ -53,20 +53,23 @@ static void night(uint8_t *p){
    quest trap. The banner is attached to the shop's side facade rather
    than drawn as a floating HUD caption over the pavement. */
 static void potheads_fascia(uint8_t *p,int sx,int sy,int h){
- int y=sy-h+22;
- hd_rect(p,sx+19,y,52,15,HD_SHADOW);
- hd_rect(p,sx+18,y-1,54,13,HD_LEAF_DARK);
- hd_rect(p,sx+20,y+1,50,9,HD_BRICK_DARK);
- hd_rect(p,sx+20,y+1,50,2,HD_LEAF);
- hd_text(p,sx+23,y+4,"POTHEADS",HD_PAPER,1,0);
- hd_rect(p,sx+22,y+12,45,2,HD_GOLD);
- /* A restrained botanical emblem, styled like the reference shop's
-    green insignia but rendered in physical world coordinates. */
- hd_line(p,sx+19,y-5,sx+18,y,HD_LEAF);
- hd_line(p,sx+19,y-4,sx+16,y-6,HD_LEAF_LIT);
- hd_line(p,sx+19,y-4,sx+23,y-7,HD_LEAF_LIT);
- hd_line(p,sx+19,y-3,sx+15,y-3,HD_LEAF);
- hd_line(p,sx+19,y-3,sx+23,y-3,HD_LEAF);
+ /* A bracket-mounted blade sign visible ABOVE the nearby rooflines.
+    This is the storefront name, not the future handheld 21+ placard. */
+ int x=sx+17,y=sy-h-12;
+ hd_line(p,x+3,y+11,x+15,y+12,HD_INK);
+ hd_line(p,x+3,y+13,x+15,y+12,HD_COPPER);
+ hd_rect(p,x+14,y,53,16,HD_SHADOW);
+ hd_rect(p,x+15,y-1,50,14,HD_LEAF_DARK);
+ hd_rect(p,x+17,y+1,46,10,HD_BRICK_DARK);
+ hd_rect(p,x+17,y+1,46,2,HD_LEAF);
+ hd_text(p,x+20,y+4,"POTHEADS",HD_PAPER,1,0);
+ hd_rect(p,x+17,y+12,46,2,HD_GOLD);
+ /* Green botanical ornament, with no advertising gameplay interaction. */
+ hd_line(p,x+12,y+4,x+11,y+10,HD_LEAF);
+ hd_line(p,x+12,y+7,x+7,y+5,HD_LEAF_LIT);
+ hd_line(p,x+12,y+7,x+16,y+3,HD_LEAF_LIT);
+ hd_line(p,x+12,y+8,x+7,y+10,HD_LEAF);
+ hd_line(p,x+12,y+8,x+17,y+9,HD_LEAF);
 }
 static void building(uint8_t *p,int sx,int sy,int wx,int wy,
                      unsigned tick,char type){
