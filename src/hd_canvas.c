@@ -1,5 +1,6 @@
 #include "hd_canvas.h"
 #include <string.h>
+uint32_t hd_shared_frame[HD_BYTES/4] __attribute__((section(".ewram"), aligned(4)));
 #define RGB(r,g,b) ((uint16_t)((r)|((g)<<5)|((b)<<10)))
 /* 32 measured dusk / ink / skin / rain tones in the spare half of the
    mode-4 palette. Existing story colors 0..31 are untouched. */
