@@ -60,6 +60,9 @@ than separate backdrop mockups.
 | Mara's street and adjacent residents | ![Mara's neighbourhood](screenshots/34_quarter_mara_street.png) |
 | Bus stop, architecture and street props | ![Bus street](screenshots/35_quarter_bus_and_facades.png) |
 | Riversides and residents | ![Riverside residents](screenshots/36_quarter_riverside_residents.png) |
+| Potheads' real storefront, isometric camera | ![Potheads storefront](screenshots/37_potheads_storefront.png) |
+| Differentiated civic shop fronts | ![Civic facade art](screenshots/38_civic_facades.png) |
+| Potheads' matching first-person shop wall | ![Potheads in first person](screenshots/39_potheads_first_person.png) |
 
 The original 2D and 3D views now use **the same costume cels** for named
 townspeople; the same map positions, facing, interaction coordinates and

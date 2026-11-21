@@ -1,0 +1,11 @@
+#pragma once
+#include "hd_canvas.h"
+/* Eight authored period facades: tenement, stone corner, timber,
+   art house, shop, boarded shop, archive, and Potheads storefront.
+   Always render behind all roof, sign and street furniture layers. */
+void hd_facade_wall(uint8_t *p,int sx,int sy,int height,
+                    unsigned variant,unsigned side);
+
+/* Matching shop-wall lettering for the existing first-person raycaster.
+   Returns -1 outside the fixed texture-space Potheads fascia. */
+int hd_potheads_wall_ink(int u,int v);

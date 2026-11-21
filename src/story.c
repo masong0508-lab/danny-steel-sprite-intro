@@ -135,6 +135,9 @@ enum { D_NONE, D_OPEN, D_LETTER, D_LETTER_AGAIN, D_CLERK_LOCKED, D_CLERK, D_CLER
        D_GOOD_END_SCARS, D_RESCUE_LOST_REMOTE };
 #define SCRIPT(name, ...) static const StoryPage name[] = { __VA_ARGS__ }
 SCRIPT(d_open,
+ {"DANNY", "Good shift outside", "Potheads today."},
+ {"DANNY", "That sign job pays", "the rent. I like it."},
+ {"DANNY", "After work, my", "sketches and songs."},
  {"DANNY", "Last bus tonight.", "Doctor called again."},
  {"DANNY", "I can face a letter", "before test results."},
  {"DANNY", "Then Mara. Music.", "One thing at a time."});
