@@ -59,7 +59,7 @@ int main(void){
  for(unsigned i=0;i<14;i++)for(unsigned j=i+1;j<14;j++)
   assert(textures[i]!=textures[j]);
  const int loc[][2]={{12,13},{11,8},{8,12},{19,4},
-                     {3,8},{18,13},{7,7},{16,6},{20,7}};
+                     {3,8},{18,13},{7,7},{16,6},{20,7},{20,11}};
  unsigned checks=0;uint32_t views[4];
  for(unsigned i=0;i<sizeof loc/sizeof loc[0];i++){
   if(story_solid(loc[i][0],loc[i][1]))continue;
