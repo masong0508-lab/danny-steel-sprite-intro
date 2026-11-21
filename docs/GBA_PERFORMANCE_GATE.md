@@ -55,9 +55,14 @@ detail for a fake performance claim.
   endings. This is an *informational regression indicator on the CI
   runner*, **not** an ARM7TDMI hardware benchmark or measured FPS.
 - The devkitARM build emits a GNU linker `.map` file and CI reports
-  linked sections plus binary bytes, without requiring an unavailable
-  `arm-none-eabi-size` program. Future UI work can be checked for
-  EWRAM/IWRAM growth.
+  linked sections plus binary bytes, without requiring the unavailable
+  `arm-none-eabi-size` utility. The baseline after this optimization was
+  **38,400 bytes of EWRAM** (one shared framebuffer), **8,880 bytes of
+  IWRAM BSS**, 20 bytes of linked IWRAM data and zero explicit IWRAM.
+  CI now rejects static EWRAM above **192 KiB** and static IWRAM
+  (.bss + .data + .iwram) above **24 KiB**, leaving at least 8 KiB of
+  IWRAM capacity for stack/interrupt headroom. These are static section
+  budgets, not a claim of measured runtime peak memory usage.
 
 ## Explicit hold point
 
