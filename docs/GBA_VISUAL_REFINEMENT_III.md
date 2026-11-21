@@ -1,0 +1,82 @@
+# GBA visual refinement III — scene coverage, character acting and continuity
+
+This is a code and art pass to the **playable GBA ROM**, not speculative
+concept art. It responds to the earlier user screenshot critique and continues
+the established autumnal / analogue / bittersweet direction: paper, hand
+paint, weathered façades, shop windows, brass, red fabric and rainy streets.
+There are no holograms, oversized diagnostic counters or generic futuristic
+interface decorations.
+
+## Major changes
+
+**24 of 24 authored cinematic scene types** now have their own 240×160
+rendering path. The second graphics pass completed the most common 12
+locations; this one supplies the other 12 in `src/hd_special.c`:
+
+- Mirror Orchard's analogue server/records room, evidence backup and rebrand.
+- The witness's rainy-street encounter and physical clue handoff.
+- The actual safe-house interior, rescue door and opened/rescued variant.
+- The unanswered café, with a table, a phone and an unoccupied chair.
+- Early-morning rooftop day, last painting, bad rooftop and good-record
+  environments, including a small concert venue.
+
+The scenes use coherent, reused physical landmarks rather than disconnected
+backdrops. Both possible rescue outcomes are visually and narratively
+**different**; a lost/unverified Mara is never depicted as recovered.
+A rescued Mara is never falsely treated as missing.
+
+**Character acting:** `src/hd_actor.c` uses a shared 240-pixel-space
+scene character skeleton to keep clothing, feet, sleeves, hands, hair and
+faces attached through walking, reaching, talking and distressed poses.
+Danny's red coat and satchel, Mara's long hair, the BORE clerk's badge,
+the hooded witness and the doctor's white clothes identify roles beyond
+just a single flat sprite color. Sparse blink/mouth animation responds to
+the current pose; each character remains anchored to the scene floor.
+
+**Native score-length endings:** `src/hd_ending.c` follows the **existing**
+`cinema_ending_shot` / `cinema_ending_scene` definitions (including the
+three story outcomes and rescue branch) and preserves the existing exact
+timecoded captions and ending dialogue. The 72.5-second HERE TODAY
+score length, good-only 16-second coda and saved narrative state are
+unchanged. Frames are redrawn using high-resolution rooftop, letter,
+BORE, café, music studio, server and rescued/closed-door art. Non-graphic
+endings remain non-graphic. The artwork itself does not change the
+plot or decide which ending the player earns.
+
+**Better first-person rendering:** `src/hd_perspective.c` now sorts
+nearby actors and physical props **back to front** and restores wall
+columns in front of overlapping sprites. This avoids billboard-cutout
+artifacts where a character edge previously bled through a nearer
+building. It uses small per-column depth/texture caches and at most 24
+visible billboards, not a new sprite framebuffer or heap allocations.
+
+## Engineering and verification
+
+- 240×160 indexed Mode 4, with the same single **38,400-byte** shared
+  work canvas and VRAM page flipping.
+- No pre-rendered FMV, no new giant art arrays, no texture downloads,
+  no heap or PCM audio buffers.
+- Adds small GBA depth/actor scratch arrays (approximately 1.2 KB)
+  instead of another 38 KB image buffer.
+- Existing gameplay inputs, town coordinates, jobs, interaction scripts,
+  original ending timing, music engine, save layouts and project progress
+  are left intact.
+- `tests/hd_story_expansion_test.c` checks native scene coverage,
+  four pages for each scene, all three ending shot groups, two rescue
+  variants, five unique actors, palette values and buffer guards.
+  `tests/hd_nextgen_test.c` continues to cover 3D views and all
+  playable Advanced Studio pages.
+- `tools/story_gallery.c` plus mGBA automation capture **28 actual
+  game graphics images**: the first four from a headless run of the
+  compiled ROM; the others from the same game C renderer at explicit
+  plot and ending states. No AI-generated images are used.
+
+## Outstanding work
+
+The special Mirror Orchard combat arena is still intentionally on the
+legacy 120×80 authoring path; it is an arena with its own telegraphs and
+must not be replaced until the hitboxes and parry clarity are preserved.
+The film's new artwork is more detailed, but in-emulator aesthetic QA and
+real hardware/mGBA FPS profiling are still necessary. Do **not** claim
+sustained 30 FPS or physical GBA audio/performance validation simply
+because the ROM compiles.
