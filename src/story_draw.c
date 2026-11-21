@@ -14,17 +14,11 @@ const uint16_t story_palette[32] = {
 #undef RGB
 
 static int16_t sin_q12[256];
-static uint16_t floor_depth[80];
 void story_draw_init(void) {
     for (int i=0;i<256;i++) {
         int h=i&127,p=h*(128-h);
         int v=65536*p/(81920-4*p);
         sin_q12[i]=(int16_t)(i>=128?-v:v);
-    }
-    /* Division belongs in setup, not in the 4,800 floor pixels per frame. */
-    for (int y=40;y<80;y++) {
-        int d=4400/(y-39);
-        floor_depth[y]=(uint16_t)(d>2300?2300:d);
     }
 }
 static void put(uint8_t *p,int x,int y,int c) {
@@ -76,9 +70,9 @@ static int tile_color(int x,int y,int px,int py,int tick) {
     if(t=='#'||t=='A')return (px==0||py==0)?3:(px==7||py==7)?5:4;
     if(t=='T')return ((px+py+x+y)&3)==0?12:13;
     if(t=='~')return py==3?26:25;
-    if(t==','||t=='=')return px==0||py==0?9:10;
+    if(t==','||t=='=')return (px==0&&((x+y)&1)==0)||(py==0&&(y&1)==0)?9:10;
     if(t=='g')return (px==3&&py==5)||(((x+y)&3)==0&&px==6&&py==2)?13:11;
-    return px==0||py==0?9:8;
+    return (px==0&&(x&3)==0)||(py==0&&(y&3)==0)?9:8;
 }
 static void tile(uint8_t *p,int sx,int sy,int wx,int wy,int tick) {
     char t=story_tile(wx,wy);
@@ -100,7 +94,7 @@ static void person(uint8_t *p,int x,int y,int kind,int scale,int tick){
     int w=scale/3;if(w<2)w=2;
     int head=scale/4;if(head<2)head=2;
     int top=y-scale;
-    int coat=kind=='F'?16:kind=='C'?17:23;
+    int coat=kind=='F'?16:kind=='C'?17:kind=='P'?25:kind=='V'?28:kind=='Q'?14:kind=='W'?13:kind=='H'?17:23;
     box(p,x-head/2,top,head,head,31);
     box(p,x-head/2,top,head,1,kind=='F'?24:3);
     box(p,x-w/2,top+head,w,scale/2,coat);
@@ -109,6 +103,7 @@ static void person(uint8_t *p,int x,int y,int kind,int scale,int tick){
     if(scale>8){put(p,x-1,top+head/2,19);put(p,x+1,top+head/2,19);}
     if(kind=='C'&&scale>8)box(p,x+w/2,top+head+scale/4,3,2,18);
     if(kind=='F'&&(tick/10&1))put(p,x+head/2,top+head+1,31);
+    if(kind=='P'||kind=='V'||kind=='Q'){put(p,x-head/2,top-2,18);put(p,x+head/2,top-2,18);}
 }
 static void marker(uint8_t *p,int x,int y,int type,int size,int tick) {
     if(type=='L') {
@@ -127,7 +122,11 @@ static void overhead(const Story *s,int tick,uint8_t *p) {
         int px=tx*8-1,py=ty*8-1;
         tile(p,px,py,wx,wy,tick);
         char c=story_tile(wx,wy);
-        if(c=='L'||c=='C'||c=='F'||c=='B')marker(p,px+4,py+7,c,7,tick);
+        if(c=='L'||c=='C'||c=='F'||c=='B'||c=='P'||c=='V'||c=='Q'||c=='S'||c=='W'||c=='H') {
+            if(c=='S')box(p,px+1,py+1,6,5,26);
+            else if(c=='H')box(p,px+1,py+1,6,5,18);
+            else marker(p,px+4,py+7,c,7,tick);
+        }
     }
     int dx=0,dy=0;
     if(s->anim){dx=(s->prev_x-(int)s->x)*s->anim*2;dy=(s->prev_y-(int)s->y)*s->anim*2;}
@@ -152,7 +151,7 @@ static void first_person(const Story *s,int tick,uint8_t *p) {
         int vx=sin_q12[(ang+64)&255],vy=sin_q12[ang];
         /* Perspective floor projection: near details move with Danny, not with the camera backdrop. */
         for(int y=40;y<80;y++){
-            int dist=floor_depth[y];
+            int dist=4400/(y-39);if(dist>2300)dist=2300;
             int tx=(camx+vx*dist/4096)>>8,ty=(camy+vy*dist/4096)>>8;
             char c=story_tile(tx,ty);
             int color=c=='~'?25:c==','||c=='='?10:c=='g'||c=='T'?11:c=='#'?4:8;
@@ -189,7 +188,7 @@ static void first_person(const Story *s,int tick,uint8_t *p) {
     /* Real world-position billboards; a wall can occlude them. */
     for(int y=0;y<STORY_H;y++)for(int x=0;x<STORY_W;x++){
         char c=story_tile(x,y);
-        if(c!='C'&&c!='F'&&c!='B'&&c!='L')continue;
+        if(c!='C'&&c!='F'&&c!='B'&&c!='L'&&c!='P'&&c!='V'&&c!='Q'&&c!='S'&&c!='W'&&c!='H')continue;
         int dx=x*256+128-camx,dy=y*256+128-camy;
         int forward=(dx*dirx+dy*diry)/4096;
         int side=(dy*dirx-dx*diry)/4096;
@@ -197,13 +196,71 @@ static void first_person(const Story *s,int tick,uint8_t *p) {
         int sx=60+(side*63)/(forward+1);
         int height=8400/(forward+64);if(height>64)height=64;if(height<3)height=3;
         if(sx<0||sx>=120||forward>depth[sx])continue;
-        marker(p,sx,39+height/2,c,height,tick);
+        if(c=='S'||c=='H'){box(p,sx-height/4,39-height/2,height/2,height/2,c=='S'?26:18);}
+        else marker(p,sx,39+height/2,c,height,tick);
+    }
+}
+/* A hybrid battle arena drawn over the actual perspective scene. No new bitmap,
+   textures, trigonometry or per-frame heap allocations. Projected lane lines and
+   billboards are consistent with the 3D exploration camera. */
+static void line(uint8_t *p,int x0,int y0,int x1,int y1,int c) {
+    int dx=abs_i(x1-x0),dy=abs_i(y1-y0),sx=x0<x1?1:-1,sy=y0<y1?1:-1,err=dx-dy;
+    for(;;){ put(p,x0,y0,c);if(x0==x1&&y0==y1)break;
+        int e=err*2;if(e>-dy){err-=dy;x0+=sx;}if(e<dx){err+=dx;y0+=sy;}}
+}
+static void cult_arena(const Story *s,int tick,uint8_t *p) {
+    first_person(s,tick,p);
+    /* Far converging lines establish three traversable floor lanes. */
+    for(int i=-2;i<=2;i++)line(p,60+i*5,43,60+i*19,73, i==0?26:22);
+    for(int y=51;y<=72;y+=7) {
+        int spread=(y-43)*19/30;
+        line(p,60-spread*2,y,60+spread*2,y, y==72?18:29);
+    }
+    /* Distinct readable silhouettes, including comedy-costume ears. */
+    int enemy=s->cult_enemy;
+    box(p,48,17,25,4,21);
+    text(p,49,17,story_enemy_name(s),20,20);
+    person(p,60,49,enemy==0?'P':enemy==1?'V':'Q',28,tick);
+    box(p,51,29,5,1,15);box(p,64,29,5,1,15);
+    if(s->battle==BATTLE_DODGE) {
+        int beat=s->battle_timer/15;
+        int phase=s->battle_timer%15;
+        if(beat<4) {
+            int lane=story_attack_lane(s,beat);
+            int x=60+(lane-1)*(7+phase*17/15),y=48+phase*22/15;
+            int size=4+phase/3;
+            box(p,x-size/2,y-size/2,size,size,23);
+            box(p,x-size/2+1,y-size/2+1,size-2,size-2,20);
+            if(size>6){text(p,x-2,y-2,"!",16,1);}
+        }
+    }
+    /* Danny is screen-anchored at the proper depth of the floor; lateral movement
+       is the actual logical lane being collision-tested by story_tick(). */
+    int hx=60+((int)s->battle_lane-1)*37;
+    box(p,hx-5,65,10,2,3);
+    box(p,hx-3,59,6,6,s->battle_parry?26:16);
+    box(p,hx-2,56,4,4,31);
+    if(s->battle_parry){box(p,hx-8,57,2,12,26);box(p,hx+6,57,2,12,26);}
+    box(p,0,0,120,12,21);
+    text(p,3,2,s->cult_stage>=CULT_RESOLVED?"ORCHARD / AFTER":s->cult_stage?"ORCHARD / DURING":"ORCHARD / BEFORE",20,26);
+    for(int i=0;i<4;i++)box(p,95+i*6,3,4,5,i<s->battle_focus?18:3);
+    if(s->battle==BATTLE_MENU) {
+        box(p,0,70,120,10,21);
+        text(p,3,71,"FACTS  CARE  EXIT",20,25);
+        int arrowx=s->battle_choice==0?3:s->battle_choice==1?31:55;
+        box(p,arrowx,78,17,1,26);
+        text(p,81,71,"A PICK",18,8);
+    } else {
+        box(p,0,71,120,9,21);
+        text(p,3,73,"LEFT RIGHT DODGE",20,17);
+        text(p,81,73,"A PARRY",26,8);
     }
 }
 static void panel(uint8_t *p,int top,int bottom){
     box(p,0,top,120,bottom-top,21);box(p,0,top,120,1,22);
 }
 void story_draw(const Story *s,int frame,uint8_t *p) {
+    if(s->battle){cult_arena(s,frame,p);return;}
     if(s->view)first_person(s,frame,p); else overhead(s,frame,p);
     box(p,0,0,120,8,21);
     text(p,3,2,"DANNY / OLD QUARTER",20,29);

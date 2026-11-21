@@ -21,6 +21,10 @@ jobs:
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/story_draw.c tests/render_test.c -o /tmp/danny_render_test
           /tmp/danny_render_test
+      - name: Test before, during and after server encounters
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/story_draw.c tests/cult_test.c -o /tmp/danny_cult_test
+          /tmp/danny_cult_test
 
   build:
     needs: host

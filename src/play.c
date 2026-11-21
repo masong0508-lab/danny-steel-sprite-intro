@@ -10,9 +10,10 @@
 #define REG_BG2PD R16(0x04000026)
 #define REG_BG2X (*(volatile u32 *)0x04000028)
 #define REG_BG2Y (*(volatile u32 *)0x0400002C)
-#define SAVE_LEN 13
+#define SAVE_LEN 16
+#define LEGACY_SAVE_LEN 13
 #define SAVE_STRIDE 32
-#define SAVE_VER 1
+#define SAVE_VER 2
 static volatile u8 *const save_ram = (volatile u8 *)0x0E000000;
 const char story_sram_id[] __attribute__((used)) = "SRAM_V113";
 static Story game;
@@ -23,10 +24,22 @@ static int read_slot(int slot,u8 *buf){
     if((unsigned)slot>1u)return 0;
     unsigned hash=0x6D;
     for(int i=0;i<SAVE_LEN;i++)buf[i]=save_ram[slot*SAVE_STRIDE+i];
-    if(buf[0]!='D'||buf[1]!='S'||buf[2]!='T'||buf[3]!='2'||buf[4]!=SAVE_VER)return 0;
-    for(int i=0;i<SAVE_LEN-1;i++)hash^=buf[i];
-    if(buf[SAVE_LEN-1]!=hash)return 0;
-    if(story_solid(buf[5],buf[6]))return 0;
+    if(buf[0]!='D'||buf[1]!='S'||buf[2]!='T'||buf[3]!='2')return 0;
+    /* Preserve original saves: V1 has a 13-byte record; V2 adds optional
+       cult quest milestones without touching Danny's primary quest flags. */
+    int len=buf[4]==1?LEGACY_SAVE_LEN:buf[4]==SAVE_VER?SAVE_LEN:0;
+    if(!len)return 0;
+    for(int i=0;i<len-1;i++)hash^=buf[i];
+    if(buf[len-1]!=hash)return 0;
+    if(story_solid(buf[5],buf[6])) {
+        /* A previous valid save can occupy a newly-added NPC location.
+           Relocate only those known new actors, never accept a bad wall tile. */
+        char t=story_tile(buf[5],buf[6]);
+        if(t=='P'||t=='V'||t=='Q'||t=='S'||t=='W'||t=='H') --buf[5];
+        else return 0;
+        if(story_solid(buf[5],buf[6]))return 0;
+    }
+    if(len==LEGACY_SAVE_LEN){buf[12]=buf[13]=buf[14]=0;}
     return 1;
 }
 int play_slot_valid(int slot){u8 b[SAVE_LEN];return read_slot(slot,b);}
@@ -35,7 +48,7 @@ void play_erase_slot(int slot){
     for(int i=0;i<SAVE_STRIDE;i++)save_ram[slot*SAVE_STRIDE+i]=0xFF;
 }
 static void write_save(void){
-    u8 b[SAVE_LEN]={'D','S','T','2',SAVE_VER,game.x,game.y,game.facing,game.view,game.flags,game.ended,game.ending,0};
+    u8 b[SAVE_LEN]={'D','S','T','2',SAVE_VER,game.x,game.y,game.facing,game.view,game.flags,game.ended,game.ending,game.cult_stage,game.cult_pre_wins,game.cult_post_wins,0};
     unsigned hash=0x6D;
     for(int i=0;i<SAVE_LEN-1;i++)hash^=b[i];
     b[SAVE_LEN-1]=(u8)hash;
@@ -51,8 +64,14 @@ static void draw_hidden(int page){
 }
 void play_enter(int want_load,int slot){
     u8 b[SAVE_LEN];
-    if(want_load&&read_slot(slot,b))story_resume(&game,slot,b[5],b[6],b[7],b[8],b[9],b[10],b[11]);
-    else {story_new(&game,slot);write_save();}
+    if(want_load&&read_slot(slot,b)){
+        story_resume(&game,slot,b[5],b[6],b[7],b[8],b[9],b[10],b[11]);
+        game.cult_stage=b[12]>CULT_RESOLVED?CULT_RESOLVED:b[12];
+        game.cult_pre_wins=b[13]&7;
+        game.cult_post_wins=b[14]&7;
+        /* Upgrade old slots with the new checksum and version on next autosave. */
+        if(b[4]!=SAVE_VER)game.dirty=1;
+    } else {story_new(&game,slot);write_save();}
     story_draw_init();
     clock_ticks=0;shown_page=0;pending=0;pending_page=0;save_cooldown=0;
     REG_DISPCNT=0;REG_BLDCNT=0;REG_BLDY=0;
