@@ -14,7 +14,18 @@ static void advance(void){test_timer=(u16)(test_timer+30000);music_poll();}
 int main(void){
  studio_reset();music_init();music_start();
  music_set_cue(MUSIC_CUE_STUDIO);
- assert(music_get_cue()==MUSIC_CUE_STUDIO);
+ assert(music_get_cue()==MUSIC_CUE_STUDIO); /* transport starts now */
+ music_poll(); /* first audible step: lead, harmony and bass */
+ assert(test_sound_regs[1]!=0u);
+ assert(test_sound_regs[3]!=0u);
+ assert(test_sound_regs[6]!=0u);
+ /* A rest must silence actual hardware channels, not leave hanging tones. */
+ for(int i=0;i<8 && studio_playhead()!=1u;i++)advance();
+ assert(studio_playhead()==1u);
+ assert((test_sound_regs[1]&0xF000u)==0u);
+ assert(test_sound_regs[3]==0u);
+ assert(test_sound_regs[6]==0u);
+ assert(test_sound_regs[8]==0u);
  for(int i=0;i<6;i++)advance();
  assert(studio_playhead()<STUDIO_STEPS);
  uint16_t note1=test_sound_regs[2];
@@ -26,7 +37,10 @@ int main(void){
  assert(music_get_cue()==MUSIC_CUE_STUDIO);
  assert(note1!=0u);
  music_set_cue(MUSIC_CUE_STREETS);
- for(int i=0;i<50&&music_get_cue()!=MUSIC_CUE_STREETS;i++)advance();
+ assert(music_get_cue()==MUSIC_CUE_STREETS); /* stop immediately */
+ music_set_cue(MUSIC_CUE_STUDIO);
+ assert(music_get_cue()==MUSIC_CUE_STUDIO); /* replay immediately */
+ music_set_cue(MUSIC_CUE_STREETS);
  assert(music_get_cue()==MUSIC_CUE_STREETS);
  /* The original title and ending still have absolute cue priority. */
  music_set_cue(MUSIC_CUE_TITLE);
@@ -34,6 +48,6 @@ int main(void){
  music_begin_ending(2u);
  music_set_cue(MUSIC_CUE_STUDIO);
  assert(music_get_cue()==MUSIC_CUE_HERE_TODAY);
- puts("studio PSG preview: selected live cue, sequenced notes, transport exit and non-interruption of ending score OK");
+ puts("studio PSG preview: rests mute hardware channels, immediate transport, edited notes and ending priority OK");
  return 0;
 }
