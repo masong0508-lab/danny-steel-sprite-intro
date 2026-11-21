@@ -367,13 +367,19 @@ void cinema_draw(uint8_t *p,unsigned scene,unsigned tick,unsigned page,unsigned 
  int focus=(int)(page&3u);
  /* Sky motion continues even when the finale actor pose holds. */
  switch(scene){
- case CINE_OPEN:
+ case CINE_OPEN: {
   street(p,t,0);
-  bus(p,92-(int)(t/7)%145,27,t);
-  actor(p,32,67,1,t,2);
-  rect(p,2,39,26,12,14);rect(p,3,40,24,10,22);
+  /* The last bus ARRIVES and idles at the same kerb, rather than
+     teleporting back to the entrance on a modulo counter. */
+  int busx=travel(134,17,t,0,126);
+  bus(p,busx,26,t);
+  actor(p,travel(39,45,t,8,62),74,1,t,t<70?2:0);
+  /* Permanently anchored sign and stop post. */
+  rect(p,104,39,2,28,14);
+  rect(p,99,37,12,8,14);rect(p,101,39,8,4,18);
   break;
- case CINE_LETTER: {
+ }
+  case CINE_LETTER: {
    street(p,t,1);
    rect(p,3,15,56,43,14);rect(p,5,18,52,38,23);
    rect(p,13,24,18,29,3);rect(p,16,26,12,24,17);
@@ -404,22 +410,34 @@ void cinema_draw(uint8_t *p,unsigned scene,unsigned tick,unsigned page,unsigned 
    if(focus>=2){rect(p,62,57,5,3,20);rect(p,63,58,3,1,18);}
    break;
   }
- case CINE_BUS:
+ case CINE_BUS: {
   street(p,t,1);
-  bus(p,15+((t/60)%2),21,t);
-  actor(p,90+pan/2,69,1,t,focus==2?2:1);
+  bus(p,travel(136,16,t,0,100),25,t);
+  /* Danny approaches the parked bus and pauses before deciding. */
+  int x=travel(108,92,t,32,85);
+  actor(p,x,74,1,t,t<119?2:focus==2?0:1);
   break;
- case CINE_STAY:
-  street(p,t,1);
-  rect(p,5,13,75,42,14);rect(p,7,17,71,36,23);
-  rect(p,22,25,36,13,18);rect(p,24,27,32,9,20);
-  actor(p,51,68,1,t,1);actor(p,87,68,2,t,1);
+ }
+  case CINE_STAY: {
+  cafe(p,t);cafe_table(p,1);
+  actor(p,travel(37,45,t,10,45),72,1,t,t<56?2:1);
+  actor(p,travel(95,87,t,25,61),72,2,t,t<87?2:0);
   break;
- case CINE_MUSIC:
-  studio(p,t);actor(p,20,69,1,t,focus==2?3:1);
-  for(int i=0;i<5;i++)rect(p,81+i*5,16,2,2+((int)(t/9)+i)%6,((t/17+i)&1)?7:18);
+ }
+  case CINE_MUSIC: {
+  studio(p,t);
+  /* The engineer moves from the tape reel to the mixing desk, leaving
+     the physical reel and controls fixed inside the same room. */
+  int x=travel(17,30,t,12,54);
+  actor(p,x,73,1,t,t<68?2:focus>=2?3:1);
+  for(int i=0;i<5;i++){
+   unsigned pulse=(t/8u+(unsigned)i*4u)%16u;
+   int level=(int)(pulse>8u?16u-pulse:pulse);
+   rect(p,81+i*5,19-level/3,2,2+level/3,level>4?18:7);
+  }
   break;
- case CINE_ART: {
+ }
+  case CINE_ART: {
     roof(p,t,0);canvas(p,70,20,t,1);
     int x=travel(37,46,t,7,45);
     actor(p,x,76,1,t,t<53?2:3);
@@ -465,14 +483,20 @@ void cinema_draw(uint8_t *p,unsigned scene,unsigned tick,unsigned page,unsigned 
     rect(p,81,53,17,2,20);
     if(focus>=1)stroke(p,87,52,89,48,31);
     break;
- case CINE_FOLLOWUP:
+ case CINE_FOLLOWUP: {
   street(p,t,1);
+  /* Identifiable outpatient entrance: fixed doorway, sign and steps. */
   rect(p,11,14,67,44,21);rect(p,17,19,54,32,20);
   rect(p,25,24,38,4,17);rect(p,34,32,20,15,25);
-  actor(p,79,71,1,t,focus&1?1:0);
-  actor(p,104,71,2,t,focus&1?0:1);
+  rect(p,16,17,56,2,14);rect(p,40,50,19,2,14);
+  rect(p,46,52,28,3,14);
+  int dx=travel(63,80,t,7,75);
+  int mx=travel(91,104,t,24,78);
+  actor(p,dx,74,1,t,t<82?2:focus&1?1:0);
+  actor(p,mx,74,2,t,t<102?2:focus&1?0:1);
   break;
- case CINE_LAST_CLINIC:
+ }
+  case CINE_LAST_CLINIC:
     clinic(p,t,1);
     actor(p,30,72,1,t,focus>=2?0:1);
     actor(p,58,72,2,t,focus>=2?4:0);
