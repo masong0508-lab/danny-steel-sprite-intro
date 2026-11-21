@@ -156,6 +156,23 @@ static void witness_lane(uint8_t *p,unsigned t){
 }
 static void safehouse(uint8_t *p,unsigned t,int scene){
  inside(p,t,1);
+ /* The same window stays in place for the closed-door, saved, and
+    ordinary safehouse shots. Fabric folds and sconce make this a home,
+    not an empty cyan wall behind two actors. */
+ hd_rect(p,17,16,7,74,HD_RED_SHADE);
+ hd_rect(p,18,19,3,68,HD_BRICK_LIT);
+ hd_rect(p,115,16,7,74,HD_RED_SHADE);
+ hd_rect(p,119,19,2,68,HD_BRICK_LIT);
+ hd_rect(p,19,53,7,4,HD_GOLD);
+ hd_rect(p,113,53,9,4,HD_GOLD);
+ hd_rect(p,125,38,16,3,HD_COPPER);
+ hd_rect(p,130,41,8,3,HD_BARK);
+ hd_rect(p,132,44,5,7,HD_LAMP);
+ hd_pixel(p,134,46,HD_PAPER);
+ hd_rect(p,58,138,76,17,HD_RED_SHADE);
+ hd_rect(p,61,140,70,13,HD_BRICK);
+ hd_line(p,63,143,129,143,HD_COPPER);
+ hd_line(p,63,150,129,150,HD_COPPER);
  /* A real wooden door, hinges, floor threshold and inviting tungsten lamp. */
  hd_rect(p,144,13,83,115,HD_INK);
  hd_rect(p,148,17,75,106,HD_BARK);
@@ -245,8 +262,23 @@ static void empty_cafe(uint8_t *p,unsigned t){
  hd_text(p,24,56,"MARA'S CAFE",HD_PAPER,1,1);
  hd_rect(p,21,70,95,39,HD_INK);
  hd_rect(p,25,73,87,33,HD_GLASS_LIT);
+ /* The interior is still recognizable even while Mara is absent:
+    darkened counter, familiar cake stand and two unattended bulbs.
+    They suggest a disrupted routine, not an invented death or recovery. */
+ hd_rect(p,28,93,81,11,HD_STONE_DARK);
+ hd_rect(p,30,91,77,2,HD_BARK);
+ hd_rect(p,91,83,15,4,HD_GOLD);
+ hd_rect(p,93,81,11,2,HD_PAPER);
+ hd_rect(p,97,79,3,2,HD_RED_SHADE);
+ hd_rect(p,34,77,2,9,HD_COPPER);
+ hd_rect(p,80,77,2,9,HD_COPPER);
+ hd_ellipse(p,35,87,4,3,HD_LAMP);
+ hd_ellipse(p,81,87,4,3,HD_LAMP);
  hd_rect(p,64,73,3,33,HD_BARK);
  hd_rect(p,24,90,90,3,HD_COPPER);
+ hd_rect(p,15,65,107,5,HD_BARK);
+ for(int j=0;j<11;j++)
+  hd_rect(p,17+j*9,66,4,3,(j&1)?HD_GOLD:HD_RED_SHADE);
  hd_rect(p,99,119,92,7,HD_BARK);
  hd_rect(p,105,125,7,24,HD_BARK);
  hd_rect(p,178,125,7,24,HD_BARK);
@@ -255,6 +287,15 @@ static void empty_cafe(uint8_t *p,unsigned t){
  hd_rect(p,147,114,10,13,HD_INK);
  hd_rect(p,149,116,6,9,HD_GLASS);
  if((t/70u)&1u)hd_rect(p,151,118,2,1,HD_LAMP);
+ /* A genuinely vacant chair remains tied to this same outdoor table.
+    Its seat, legs and shadow preserve the wet pavement perspective. */
+ hd_ellipse(p,169,147,13,3,HD_SHADOW);
+ hd_rect(p,165,132,18,3,HD_BARK);
+ hd_rect(p,167,126,3,9,HD_BARK);
+ hd_rect(p,180,126,3,9,HD_BARK);
+ hd_rect(p,168,135,3,13,HD_BARK);
+ hd_rect(p,178,135,3,13,HD_BARK);
+ hd_rect(p,166,133,16,1,HD_COPPER);
  /* Mara is absent. No unearned implication that she died or recovered. */
  hd_rect(p,198,112,27,4,HD_BARK);
  hd_rect(p,201,115,3,26,HD_BARK);

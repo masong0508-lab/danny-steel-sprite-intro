@@ -24,6 +24,11 @@ workflow. It is not a request to produce standalone concept art.
 - Backgrounds should feel lived-in with grounded props and physical
   shadows. Preserve the room's identity between close-ups and wide
   framings. Keep characters clear of the bottom dialogue matte.
+- In the missing-Mara chapter, the cafe retains its counter, lamps and
+  empty outside chair: routine interrupted rather than an unverified
+  claim of death. The rescue safehouse keeps the same curtained window,
+  wall sconce and floor rug through the closed/open door and reunion
+  shots. Treat these as spatial continuity anchors, not disposable art.
 - The medical follow-up has an actual clinic approach: fixed glazed
   doors, foyer lighting, projecting cross, sheltered bench and reflective
   pavement; dialogue cuts from the establishment to Mara and then
