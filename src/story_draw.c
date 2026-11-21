@@ -569,9 +569,10 @@ static void ending_caption(uint8_t *p,unsigned ending,unsigned rescue,unsigned f
    else if(f<1590){a="BEFORE / MARA AND DANNY";b="LAUGHED AT THE BAD JOKES";}
    else if(f<2010){a="BEFORE / THE BORE OFFICE";b="CERTIFIED THAT HE EXISTED";}
    else if(f<2490){a="BEFORE / THE MUSIC STUDIO";b="AN UNFINISHED SONG";}
-   else if(f<2870){a="THE ROOFTOP GREW STILL";b="THE PAINTING REMAINED";}
-   else if(f<3650){a="THERE WERE THINGS UNSAID";b="THERE WAS WORK LEFT UNDONE";}
-   else if(f<4050){a="THE CITY KEPT ITS SKY";b="AND HIS COLORS";}
+   else if(f<2870){a="MARA RETURNED TO THE ROOF";b="THE PAINTING REMAINED";}
+   else if(f<3250){a="SHE FOUND A FOLDED NOTE";b="BESIDE THE PAINT SUPPLIES";}
+   else if(f<3650){a="SOME WORDS WERE LEFT UNSAID";b="BUT THE LETTER REMAINED";}
+   else if(f<4050){a="SHE SAW HIS COLORFUL CITY";b="JUST AS HE HAD PAINTED IT";}
    else{a="THE LAST DAYS OF DANNY STEEL";b="NEUTRAL END / THE CANVAS";}
  }
  box(p,0,61,120,19,21);
