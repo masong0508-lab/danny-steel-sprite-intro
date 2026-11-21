@@ -65,6 +65,25 @@ int main(void){
    }
   }
  }
+ /* HUD controls must not clip the enemy's face, ears or headgear.
+    The upper-middle art region is identical between a menu and a dodge
+    view with no projectile in that region. */
+ {
+  Story menu=s;
+  menu.cult_enemy=0;menu.cult_stage=0;
+  menu.battle_lane=1;menu.battle_focus=4;
+  menu.battle_parry=0;menu.battle_timer=0;
+  menu.battle=BATTLE_MENU;
+  clear();hd_arena_draw(guarded.frame,&menu,121);
+  uint8_t upper[17*80];
+  for(int y=28;y<45;y++)
+   memcpy(upper+(y-28)*80,guarded.frame+y*HD_W+80,80);
+  menu.battle=BATTLE_DODGE;
+  clear();hd_arena_draw(guarded.frame,&menu,121);
+  for(int y=28;y<45;y++)
+   assert(memcmp(upper+(y-28)*80,guarded.frame+y*HD_W+80,80)==0);
+  inspect();cases++;
+ }
  assert(rival_hashes[0]!=rival_hashes[1]);
  assert(rival_hashes[0]!=rival_hashes[2]);
  assert(rival_hashes[1]!=rival_hashes[2]);
