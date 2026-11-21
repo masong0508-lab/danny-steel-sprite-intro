@@ -67,10 +67,10 @@ jobs:
           /tmp/danny_hd_nextgen
       - name: Validate reference-ready Potheads opening, sign and all dance beats
         run: |
-          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \\
-            src/story.c src/studio.c src/cinema.c src/hd_canvas.c \\
-            src/hd_cinema.c src/hd_actor.c src/hd_special.c \\
-            src/hd_ending.c src/hd_overlay.c tests/potheads_open_test.c \\
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
+            src/story.c src/studio.c src/cinema.c src/hd_canvas.c \
+            src/hd_cinema.c src/hd_actor.c src/hd_special.c \
+            src/hd_ending.c src/hd_overlay.c tests/potheads_open_test.c \
             -o /tmp/danny_potheads_open
           /tmp/danny_potheads_open
       - name: Validate every native cinema and three rescue-aware score-length endings
