@@ -9,7 +9,7 @@ executing it in headless mGBA, sending
 START/A inputs to navigate its opening title and new-game menus.
 They were upscaled with nearest-neighbour interpolation for legibility.
 
-**Gameplay/story engine frames:** the remaining twenty-eight images are made by
+**Gameplay/story engine frames:** the remaining thirty-two images are made by
 the exact production C rendering functions, including `hd_world_draw`, `hd_first_person_draw`, `hd_cinema_draw`,
 `hd_studio_draw`, `hd_special_cinema_draw` and `hd_ending_draw`,
 compiled for a desktop host with the identical game art, palettes and
@@ -45,6 +45,26 @@ with printed narrative choices and no rotating-square or gray-video overlay.
 | BORE continuity office | ![BORE office conversation](screenshots/08_story_bore_office.png) |
 | Mara's café | ![Mara conversation](screenshots/09_story_mara_cafe.png) |
 | Last bus | ![Bus scene](screenshots/10_story_last_bus.png) |
+
+## Old Quarter's new cartridge-authored artwork
+
+The overhead camera now uses its own native 16×16 pavement, masonry,
+foliage and water illustrations stored as ROM pixels, plus a common
+four-direction character atlas. These are **real exploration screens**,
+at valid walkable locations in the original 24×18 game town, rather
+than separate backdrop mockups.
+
+| Area | Actual rendering |
+| --- | --- |
+| Archive plaza and townspeople | ![Archive square](screenshots/33_quarter_archive_plaza.png) |
+| Mara's street and adjacent residents | ![Mara's neighbourhood](screenshots/34_quarter_mara_street.png) |
+| Bus stop, architecture and street props | ![Bus street](screenshots/35_quarter_bus_and_facades.png) |
+| Riversides and residents | ![Riverside residents](screenshots/36_quarter_riverside_residents.png) |
+
+The original 2D and 3D views now use **the same costume cels** for named
+townspeople; the same map positions, facing, interaction coordinates and
+collision rules continue to determine playable movement. This art pass
+does not invent additional town sectors or quests.
 
 ## Additional authored scenes and ending shots
 
@@ -102,8 +122,8 @@ notes](NATIVE_MIRROR_ORCHARD.md).
 | ![Lyrics](screenshots/17_advanced_studio_lyrics.png) | ![Perform](screenshots/12_advanced_studio_perform.png) |
 
 Capture source: `tools/story_gallery.c` and
-`.github/workflows/screenshots.yml`. The main menu, overhead view, first-person streets, twelve key cinematic
-sets and the six-tab Studio now render at native 240x160 GBA resolution.
+`.github/workflows/screenshots.yml`. The main menu, authored overhead atlas, first-person streets, native
+cinematic locations and the six-tab Studio render at 240x160 GBA resolution.
 All 24 authored cinematic scene types and the three score-length ending
 montages now render at native 240x160. The optional Mirror Orchard
 combat arena also uses native 240x160 ROM-backed environments and portraits

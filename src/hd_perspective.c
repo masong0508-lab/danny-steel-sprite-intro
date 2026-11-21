@@ -1,4 +1,5 @@
 #include "hd_canvas.h"
+#include "hd_world_atlas.h"
 
 /* A full 240-column perspective renderer for the actual same 24x18
    collision map. All steps and ray offsets are fixed-point, cardinal facing
@@ -173,6 +174,14 @@ static void cast_walls(uint8_t *p,int cx,int cy,int fx,int fy,int rx,int ry){
 }
 static void actor(uint8_t *p,int sx,int ground,int h,char kind,unsigned tick){
  if(h<8)return;
+ /* World-grounded people use the same authored 4-direction sprites in
+    both views. The old rectangles stay only for physical shop markers. */
+ if(kind=='F'||kind=='C'||kind=='P'||kind=='V'||kind=='Q'||kind=='W'){
+  unsigned role=kind=='F'?1u:kind=='C'?2u:kind=='P'?3u:
+                kind=='V'?4u:kind=='Q'?5u:6u;
+  hd_world_person_projected(p,sx,ground,h,role,1u,0u);
+  return;
+ }
  int w=h*4/11;if(w<5)w=5;
  unsigned coat=kind=='F'?HD_GLASS:kind=='C'?HD_GLASS_LIT:
    kind=='P'?HD_COPPER:kind=='V'?HD_BRICK:kind=='Q'?HD_RED_SHADE:
