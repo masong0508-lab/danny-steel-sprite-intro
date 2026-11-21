@@ -524,6 +524,18 @@ static void cafe(uint8_t *p,unsigned t){
   hd_rect(p,x+4,87,27,2,HD_COPPER);
  }
  hd_line(p,8,110,105,110,HD_PLASTER_LIT);
+ /* Café shade, textured awning, lit service interior and rain reflections. */
+ hd_rect(p,5,67,98,4,HD_BARK);
+ for(int k=0;k<11;k++)
+  hd_rect(p,7+k*9,68,5,3,(k&1)?HD_GOLD:HD_RED_SHADE);
+ hd_rect(p,17,78,23,5,HD_STONE_LIT);
+ hd_rect(p,59,77,21,4,HD_STONE_LIT);
+ hd_rect(p,27,84,8,12,HD_LEAF_DARK);
+ hd_rect(p,67,82,7,15,HD_BARK);
+ hd_rect(p,73,85,5,5,HD_SKIN); /* silhouette behind the glass */
+ hd_rect(p,72,90,7,12,HD_STONE_DARK);
+ for(int i=0;i<3;i++)
+  hd_line(p,18+i*28,116,30+i*28,118,HD_REFLECT);
 }
 static void table(uint8_t *p,int x,int y,unsigned t){
  hd_ellipse(p,x,y+21,36,6,HD_SHADOW);
@@ -536,8 +548,16 @@ static void table(uint8_t *p,int x,int y,unsigned t){
   hd_rect(p,xx-6,y-10,12,10,HD_PAPER);
   hd_rect(p,xx-6,y-10,12,2,HD_GOLD);
   hd_rect(p,xx-6,y-11,12,1,HD_COPPER);
-  if((t/80u+i+2u)%3u==0u)hd_pixel(p,xx,y-13,HD_PLASTER_LIT);
+  if((t/80u+(unsigned)(i+2))%3u==0u)
+   hd_pixel(p,xx,y-13,HD_PLASTER_LIT);
  }
+ hd_ellipse(p,x-43,y+25,11,3,HD_SHADOW);
+ hd_ellipse(p,x+43,y+25,11,3,HD_SHADOW);
+ hd_rect(p,x-47,y+8,9,2,HD_BARK);
+ hd_rect(p,x+39,y+8,9,2,HD_BARK);
+ hd_rect(p,x+9,y-3,16,8,HD_PAPER); /* receipt */
+ hd_line(p,x+11,y,x+22,y,HD_STONE_DARK);
+ hd_pixel(p,x+20,y+2,HD_RED_SHADE);
 }
 static void interior(uint8_t *p,unsigned t,int variant){
  unsigned wall=variant==1?HD_STONE_DARK:variant==2?HD_BRICK_DARK:HD_ROAD_COOL;
@@ -576,9 +596,25 @@ static void archive(uint8_t *p,unsigned t,unsigned page){
  hd_rect(p,141,91,21,1,HD_STONE_DARK);
  hd_rect(p,182,87,16,12,HD_COPPER);
  hd_rect(p,186,83,8,5,HD_PAPER);
- if(page>=2u)hd_rect(p,151,83,19,4,HD_RED_SHADE);
- actor(p,ease(64,76,t,8,60),137,1,t,page==0?2:1);
+ /* The form, approval stamp and connected clerk hand share a desk. */
+ hd_rect(p,150,81,25,13,HD_PAPER);
+ hd_rect(p,152,83,18,1,HD_STONE);
+ hd_rect(p,152,86,16,1,HD_STONE);
+ hd_rect(p,152,89,11,1,HD_STONE);
+ if(page>=2u){
+  hd_ellipse(p,163,89,5,3,HD_RED_SHADE);
+  hd_pixel(p,163,88,HD_GOLD);
+ }
+ hd_rect(p,178,84,10,7,HD_INK);
+ hd_rect(p,180,82,6,5,HD_BARK);
+ actor(p,ease(64,76,t,8,60),137,1,t,page==0?2:page>=2?3:1);
  actor(p,193,135,3,t,page&1u?1:3);
+ if(page>=1u){
+  hd_line(p,176,107,165,97,HD_STONE_LIT);
+  hd_line(p,175,106,165,96,HD_PLASTER_LIT);
+  hd_ellipse(p,164,96,3,2,HD_SKIN);
+ }
+ hd_line(p,126,32,237,32,HD_STONE_DARK);
  hd_text(p,143,14,"BORE / THE ARCHIVE",HD_PAPER,1,0);
 }
 static void record_room(uint8_t *p,unsigned t){
@@ -602,6 +638,15 @@ static void record_room(uint8_t *p,unsigned t){
  hd_line(p,70,100,76+px,97,HD_PAPER);
  hd_rect(p,97,80,3,16,HD_COPPER);
  hd_line(p,99,82,87,92,HD_COPPER);
+ hd_rect(p,150,87,46,12,HD_BARK);
+ hd_rect(p,153,85,40,9,HD_PAPER); /* a real illustrated sleeve */
+ hd_rect(p,155,87,13,5,HD_GOLD);
+ hd_line(p,171,88,190,88,HD_STONE_DARK);
+ hd_line(p,171,90,187,90,HD_STONE);
+ hd_rect(p,122,31,3,68,HD_COPPER);
+ hd_rect(p,130,28,94,2,HD_STONE_LIT);
+ for(int j=0;j<5;j++)
+  hd_rect(p,136+j*17,76,11,2,HD_RED_SHADE);
  actor(p,38,136,1,t,t<80?2:3);
 }
 static void rooftop(uint8_t *p,unsigned t){
@@ -632,9 +677,24 @@ static void rooftop(uint8_t *p,unsigned t){
  hd_line(p,175,113,189,147,HD_BARK);
  hd_rect(p,208,135,12,9,HD_BRICK_DARK);
  hd_rect(p,211,130,6,6,HD_RED_SHADE);
- actor(p,ease(78,101,t,7,65),142,1,t,t<80?2:3);
+ /* Advance to the same canvas edge before touching it. The brush
+    extends from the raised hand and pigments appear only on contact. */
+ int painter=ease(78,128,t,7,78);
+ actor(p,painter,142,1,t,t<92u?2:3);
+ if(t>=92u){
+  int hand=painter+23;
+  hd_line(p,hand,93,hand+8,87,HD_BARK);
+  hd_pixel(p,hand+8,87,HD_RED_SHADE);
+  int strokes=(int)((t-92u)/32u);
+  if(strokes>6)strokes=6;
+  for(int j=0;j<strokes;j++){
+   int px=160+j*7;
+   hd_line(p,px,78-(j&1)*3,px+5,76+(j&1)*3,
+           j&1?HD_COPPER:HD_RED_SHADE);
+  }
+ }
 }
-static void clinic(uint8_t *p,unsigned t,int last){
+static void clinic(uint8_t *p,const Story *s,unsigned t,int last){
  interior(p,t,2);
  hd_rect(p,146,31,77,68,HD_PLASTER);
  hd_rect(p,150,35,69,60,HD_GLASS_LIT);
@@ -645,9 +705,31 @@ static void clinic(uint8_t *p,unsigned t,int last){
  hd_rect(p,181,103,29,4,HD_BRICK_DARK);
  hd_rect(p,184,96,21,10,HD_PAPER);
  for(int i=0;i<4;i++)hd_line(p,185,98+i*2,202,98+i*2,HD_ROAD_COOL);
+ /* Consultation chart, desk and patient-clinician line of action. */
+ hd_rect(p,83,107,123,5,HD_BARK);
+ hd_rect(p,87,111,6,27,HD_BARK);
+ hd_rect(p,197,111,6,27,HD_BARK);
+ hd_rect(p,115,98,39,11,HD_PAPER);
+ hd_line(p,120,101,146,101,HD_STONE);
+ hd_line(p,120,104,140,104,HD_STONE);
+ hd_rect(p,126,93,15,5,HD_COPPER);
+ hd_rect(p,142,96,14,8,HD_GLASS_LIT);
+ hd_pixel(p,146,98,HD_RED_SHADE);
+ hd_rect(p,154,36,60,51,HD_PAPER);
+ hd_rect(p,156,38,56,47,HD_GLASS_LIT);
+ for(int i=0;i<5;i++)
+  hd_line(p,160,47+i*7,207,47+i*7,HD_STONE_LIT);
+ hd_line(p,162,75,169,69,HD_RED_SHADE);
+ hd_line(p,169,69,178,76,HD_RED_SHADE);
+ hd_line(p,178,76,189,61,HD_RED_SHADE);
+ /* No unverified living-person appearance while Mara is missing. */
+ int missing=s->rescue_stage>=STORY_RESCUE_MISSING&&
+             s->rescue_stage<=STORY_RESCUE_LOST;
  actor(p,68,135,1,t,last?7:1);
- if(last)actor(p,115,136,2,t,5);
+ if(last&&!missing)actor(p,115,136,2,t,5);
  actor(p,198,133,5,t,1);
+ hd_line(p,181,106,157,102,HD_PLASTER_LIT);
+ hd_ellipse(p,157,101,3,2,HD_SKIN);
 }
 void hd_cinema_draw(uint8_t *p,const Story *s,unsigned t){
  unsigned sc=s->cinema,page=s->page;
@@ -689,8 +771,8 @@ void hd_cinema_draw(uint8_t *p,const Story *s,unsigned t){
    hd_pixel(p,x+26,101,HD_LAMP);
    break;
   }
-  case CINE_CLINIC:clinic(p,t,0);break;
-  case CINE_LAST_CLINIC:clinic(p,t,1);break;
+  case CINE_CLINIC:clinic(p,s,t,0);break;
+  case CINE_LAST_CLINIC:clinic(p,s,t,1);break;
   case CINE_FOLLOWUP:
    street(p,t,1);
    hd_rect(p,16,66,102,48,HD_PLASTER);
