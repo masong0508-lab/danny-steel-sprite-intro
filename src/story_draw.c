@@ -110,6 +110,18 @@ static void marker(uint8_t *p,int x,int y,int type,int size,int tick) {
         box(p,x-size/2,y-size/2,size,size*2/3,15);
         box(p,x-size/2+1,y-size/2+1,size-2,1,22);
         put(p,x,y-size/2+2,16);
+    } else if(type=='R') {
+        box(p,x-size/2,y-size/2,size,size,7);
+        box(p,x-size/2+1,y-size/2+1,size-2,size-2,26);
+        box(p,x,y,1,size/2,18);
+    } else if(type=='K') {
+        box(p,x-size/2,y-size/2,size,size,20);
+        box(p,x-1,y-size/2+1,3,size-2,16);
+        box(p,x-size/2+1,y-1,size-2,2,16);
+    } else if(type=='M') {
+        box(p,x-size/2,y-size/2,size,size,3);
+        box(p,x-size/2+1,y-size/2+1,size-2,size-2,15);
+        put(p,x,y,16);
     } else if(type=='B') {
         box(p,x,y-size,1,size,7);box(p,x-size/2,y-size, size, size/3,16);
         box(p,x-size/3,y-size+1,size*2/3,1,15);
@@ -122,7 +134,7 @@ static void overhead(const Story *s,int tick,uint8_t *p) {
         int px=tx*8-1,py=ty*8-1;
         tile(p,px,py,wx,wy,tick);
         char c=story_tile(wx,wy);
-        if(c=='L'||c=='C'||c=='F'||c=='B'||c=='P'||c=='V'||c=='Q'||c=='S'||c=='W'||c=='H') {
+        if(c=='L'||c=='C'||c=='F'||c=='B'||c=='P'||c=='V'||c=='Q'||c=='S'||c=='W'||c=='H'||c=='R'||c=='M'||c=='K') {
             if(c=='S')box(p,px+1,py+1,6,5,26);
             else if(c=='H')box(p,px+1,py+1,6,5,18);
             else marker(p,px+4,py+7,c,7,tick);
@@ -188,7 +200,7 @@ static void first_person(const Story *s,int tick,uint8_t *p) {
     /* Real world-position billboards; a wall can occlude them. */
     for(int y=0;y<STORY_H;y++)for(int x=0;x<STORY_W;x++){
         char c=story_tile(x,y);
-        if(c!='C'&&c!='F'&&c!='B'&&c!='L'&&c!='P'&&c!='V'&&c!='Q'&&c!='S'&&c!='W'&&c!='H')continue;
+        if(c!='C'&&c!='F'&&c!='B'&&c!='L'&&c!='P'&&c!='V'&&c!='Q'&&c!='S'&&c!='W'&&c!='H'&&c!='R'&&c!='M'&&c!='K')continue;
         int dx=x*256+128-camx,dy=y*256+128-camy;
         int forward=(dx*dirx+dy*diry)/4096;
         int side=(dy*dirx-dx*diry)/4096;
@@ -256,16 +268,110 @@ static void cult_arena(const Story *s,int tick,uint8_t *p) {
         text(p,81,73,"A PARRY",26,8);
     }
 }
+/* Dedicated low-memory cinematic scenes. They use the same 120x80 buffer
+   as roaming and fighting, with no textures, dynamic allocations or new VRAM. */
+static void scene_sky(uint8_t *p,int frame,int muted){
+    for(int y=0;y<80;y++)box(p,0,y,120,1,y<16?(muted?29:26):y<38?(muted?17:25):8);
+    for(int i=0;i<10;i++){
+        int x=i*15-7-((frame/32+i*5)%17);
+        int h=20+(i*7)%17;
+        box(p,x,46-h,13,h,3);
+        for(int wy=47-h;wy<41;wy+=7)for(int wx=x+3;wx<x+12;wx+=5)put(p,wx,wy,7);
+    }
+}
+static void scene_rooftop(const Story *s,int frame,uint8_t *p){
+    int f=s->finale_frame;
+    scene_sky(p,frame,1);
+    box(p,0,48,120,32,9);box(p,0,47,120,3,6);
+    /* The painting is a physical object in the same perspective every shot. */
+    box(p,75,16,3,45,14);box(p,58,21,34,27,7);
+    box(p,60,23,30,23,26);
+    for(int x=62;x<90;x+=6)box(p,x,35+(x%4),4,9,25);
+    box(p,60,42,30,4,13);box(p,57,50,36,2,14);
+    box(p,68,52,3,17,14);box(p,82,52,3,17,14);
+    /* Danny reaches *towards* the painting, not the outstretched title pose. */
+    int sinking=f>=260?(f-260)/24:0;if(sinking>10)sinking=10;
+    int head_y=35+sinking;
+    int body_x=f>=300?54:43;
+    box(p,body_x,head_y,8,8,31);box(p,body_x,head_y,8,2,24);
+    box(p,body_x-1,head_y+8,10,15,16);
+    box(p,body_x+1,head_y+23,3,9,3);box(p,body_x+6,head_y+23,3,9,3);
+    if(f<240){
+        /* A small arm movement, with a brush physically meeting the canvas. */
+        int arm_y=head_y+12+((f/18)&1);
+        for(int x=52;x<66;x++)put(p,x,arm_y-(x-52)/6,31);
+        for(int x=65;x<72;x++)put(p,x,arm_y-3-(x-65),14);
+    } else if(f<300){
+        for(int x=52;x<60;x++)put(p,x,head_y+16+(x-52)/3,31);
+    } else {
+        /* The brush drops beside the canvas; no graphic injury or close-up. */
+        box(p,58,59,8,1,14);
+    }
+    if(f>=360){
+        box(p,0,66,120,14,21);
+        text(p,6,70,"THE CITY KEPT ITS SKY",20,28);
+    }
+}
+static void scene_clinic(uint8_t *p,int frame){
+    (void)frame;
+    box(p,0,0,120,80,8);box(p,0,2,120,8,20);
+    box(p,6,13,42,35,17);box(p,9,16,36,29,26);
+    box(p,10,33,35,12,25);box(p,13,38,7,7,3);box(p,29,34,7,11,3);
+    box(p,60,31,55,3,6);box(p,61,34,6,22,3);box(p,109,34,6,22,3);
+    box(p,69,22,14,12,31);box(p,67,34,20,12,20);
+    box(p,93,24,14,11,31);box(p,90,35,20,13,17);
+    box(p,73,32,6,2,25);box(p,94,28,10,2,29);
+    box(p,8,52,38,8,22);box(p,13,55,28,2,20);
+}
+static void scene_notice(uint8_t *p,int frame){
+    scene_sky(p,frame,0);
+    box(p,0,58,120,22,9);
+    box(p,45,15,31,45,3);box(p,47,17,27,41,25);
+    box(p,49,20,23,30,20);box(p,52,23,17,3,18);
+    text(p,53,34,"CLINIC",16,6);
+    box(p,57,53,7,2,7);
+}
+static void scene_record(uint8_t *p,int frame){
+    scene_sky(p,frame,0);
+    box(p,0,48,120,32,3);
+    box(p,12,14,95,52,21);box(p,16,17,87,46,10);
+    box(p,18,19,83,6,16);
+    text(p,21,19,"THE BORE ARCHIVES",20,20);
+    for(int x=34;x<86;x++)for(int y=26;y<60;y++){
+        int dx=x-60,dy=y-43;
+        if(dx*dx+dy*dy<256)put(p,x,y,4);
+        else if(dx*dx+dy*dy<289 && dx*dx+dy*dy>256)put(p,x,y,15);
+    }
+    box(p,58,41,5,5,26);
+    text(p,14,68,"SONGS OUTLIVE THE DAY",20,28);
+}
 static void panel(uint8_t *p,int top,int bottom){
     box(p,0,top,120,bottom-top,21);box(p,0,top,120,1,22);
 }
 void story_draw(const Story *s,int frame,uint8_t *p) {
     if(s->battle){cult_arena(s,frame,p);return;}
-    if(s->view)first_person(s,frame,p); else overhead(s,frame,p);
+    if(s->life_stage==STORY_LIFE_FINALE || (s->ended && s->ending==STORY_END_NEUTRAL)) {
+        scene_rooftop(s,frame,p);
+    } else if(s->ended && s->ending==STORY_END_GOOD){
+        scene_record(p,frame);
+    } else if(s->scene==STORY_SCENE_CLINIC){
+        scene_clinic(p,frame);
+    } else if(s->scene==STORY_SCENE_NOTICE){
+        scene_notice(p,frame);
+    } else if(s->view)first_person(s,frame,p); else overhead(s,frame,p);
     box(p,0,0,120,8,21);
-    text(p,3,2,"DANNY / OLD QUARTER",20,29);
-    int collected=!!(s->flags&1)+!!(s->flags&2)+!!(s->flags&4);
-    for(int i=0;i<3;i++)box(p,100+i*6,2,4,4,i<collected?18:3);
+    if(s->life_stage && s->life_stage<STORY_LIFE_FINALE){
+        char number[]={'D','A','Y',' ',(char)('0'+(s->day_number/10)%10),
+                       (char)('0'+s->day_number%10),0};
+        text(p,3,2,number,20,7);
+        int progress=s->day_frame*48/STORY_DAY_FRAMES;
+        box(p,40,3,48,2,3);box(p,40,3,progress,2,18);
+    } else if(s->ended) {
+        text(p,3,2,s->ending==STORY_END_GOOD?"GOOD END":"NEUTRAL END",20,20);
+    } else {
+        text(p,3,2,"DANNY / OLD QUARTER",20,29);
+    }
+    for(int i=0;i<5;i++)box(p,90+i*6,2,4,4,(s->flags&(1<<i))?18:3);
     if(s->dialogue){
         int count; const StoryPage *pages=story_pages(s,&count);
         if(pages&&s->page<count){
@@ -286,6 +392,8 @@ void story_draw(const Story *s,int frame,uint8_t *p) {
         text(p,5,72,"B SAVE AND MENU",20,27);
     } else {
         box(p,0,72,120,8,21);
-        text(p,3,74,s->view?"L MAP   A TALK   R NOTES":"L 3D   A TALK   R NOTES",20,29);
+        text(p,3,74,s->ended?"START / RETURN TO MENU":
+             s->life_stage==STORY_LIFE_FINALE?"THE LAST PAINTING":
+             s->view?"L MAP   A TALK   R NOTES":"L 3D   A TALK   R NOTES",20,29);
     }
 }

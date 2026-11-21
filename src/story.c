@@ -34,11 +34,15 @@ char story_tile(int x, int y) {
     if (x == 21 && y == 7) return 'S';
     if (x == 6 && y == 11) return 'W';
     if (x == 7 && y == 2) return 'H';
+    /* Art studio, music archive and outpatient clinic are all walkable anchors. */
+    if (x == 14 && y == 6) return 'R';
+    if (x == 19 && y == 7) return 'M';
+    if (x == 16 && y == 5) return 'K';
     return town[y][x];
 }
 int story_solid(int x, int y) {
     const char c = story_tile(x, y);
-    return c == '#' || c == 'A' || c == 'T' || c == '~' || c == 'L' || c == 'C' || c == 'F' || c == 'B' || c == 'P' || c == 'V' || c == 'Q' || c == 'S' || c == 'W' || c == 'H';
+    return c == '#' || c == 'A' || c == 'T' || c == '~' || c == 'L' || c == 'C' || c == 'F' || c == 'B' || c == 'P' || c == 'V' || c == 'Q' || c == 'S' || c == 'W' || c == 'H' || c == 'R' || c == 'M' || c == 'K';
 }
 
 enum { D_NONE, D_OPEN, D_LETTER, D_LETTER_AGAIN, D_CLERK_LOCKED, D_CLERK, D_CLERK_AGAIN,
@@ -48,7 +52,12 @@ enum { D_NONE, D_OPEN, D_LETTER, D_LETTER_AGAIN, D_CLERK_LOCKED, D_CLERK, D_CLER
        D_CULT_BACKUP, D_CULT_AFTER, D_CULT_NOT_YET, D_CULT_WITNESS_AFTER,
        D_CULT_SAFE_AGAIN, D_CULT_PRE_WIN, D_CULT_DURING_WIN, D_CULT_POST_WIN,
        D_CULT_RUN, D_CULT_LOSE, D_CULT_NOTES_1, D_CULT_NOTES_2,
-       D_CULT_NOTES_3, D_CULT_NOTES_4 };
+       D_CULT_NOTES_3, D_CULT_NOTES_4,
+       D_MUSIC, D_MUSIC_AGAIN, D_ART, D_ART_AGAIN, D_ART_DAY, D_ART_LAST_LOCKED,
+       D_NEUTRAL_START, D_MEDICAL_NOTICE, D_DOCTOR_FIRST,
+       D_DOCTOR_RETURN, D_DOCTOR_LAST, D_NEUTRAL_PAINT, D_NEUTRAL_END,
+       D_GOOD_END, D_DAY_NOTES, D_CLINIC_LOCKED,
+       D_NOTE_VISIT, D_NOTE_FOLLOWUP, D_NOTE_CANVAS };
 #define SCRIPT(name, ...) static const StoryPage name[] = { __VA_ARGS__ }
 SCRIPT(d_open,
  {"DANNY", "The last bus leaves", "at sundown. Of course."},
@@ -167,6 +176,75 @@ SCRIPT(d_cult_notes_3,
  {"POCKET NOTEBOOK", "Someone got safe.", "Back up the truth."});
 SCRIPT(d_cult_notes_4,
  {"POCKET NOTEBOOK", "People helped. Logs", "saved. Server lives."});
+SCRIPT(d_music,
+ {"ARCHIVE TAPE", "Unused BORE songs.", "They still play."},
+ {"DANNY", "Somebody might like", "these someday."},
+ {"DANNY", "I should finish", "the missing track."});
+SCRIPT(d_music_again,
+ {"DANNY", "The tape survived.", "Not the cassette case."});
+SCRIPT(d_art,
+ {"DANNY", "The rooftop canvas", "still needs a sky."},
+ {"DANNY", "Maybe it can hold", "a little sunlight."});
+SCRIPT(d_art_again,
+ {"DANNY", "The roof painting", "is almost finished."});
+SCRIPT(d_art_day,
+ {"DANNY", "One more layer of", "paint. One more day."},
+ {"DANNY", "The city keeps on", "being a city."});
+SCRIPT(d_art_last_locked,
+ {"DANNY", "The doctors haven't", "finished talking."},
+ {"DANNY", "My canvas can wait", "a little longer."});
+SCRIPT(d_neutral_start,
+ {"DAY ONE", "Danny stays behind", "for an ordinary day."},
+ {"DANNY", "I did enough to", "leave. Not all of it."},
+ {"DANNY", "I'll keep painting", "while the buses run."});
+SCRIPT(d_medical_notice,
+ {"DAY TWO", "A clinic message", "arrived this morning."},
+ {"DANNY", "The test results?", "I had forgotten."},
+ {"CLINIC", "Please come in.", "We need to talk."});
+SCRIPT(d_doctor_first,
+ {"DOCTOR", "The tests show a", "serious illness."},
+ {"DOCTOR", "We have more to", "discuss next visit."},
+ {"DANNY", "I thought I had", "years, not days."},
+ {"DOCTOR", "Tell someone you", "trust. Don't go alone."});
+SCRIPT(d_doctor_return,
+ {"DAY THREE", "A final appointment", "is scheduled today."},
+ {"MARA", "I'll go with you.", "No jokes required."},
+ {"DANNY", "I brought two.", "Just in case."});
+SCRIPT(d_doctor_last,
+ {"DOCTOR", "The cancer is far", "advanced. I'm sorry."},
+ {"DOCTOR", "We can support you", "through what comes."},
+ {"MARA", "We can sit here as", "long as you need."},
+ {"DANNY", "I'd like to go", "finish my painting."});
+SCRIPT(d_neutral_paint,
+ {"ROOFTOP", "Danny returned to", "the unfinished sky."},
+ {"DANNY", "One last bit of", "light. Right there."},
+ {"DANNY", "I never did learn", "when to stop."});
+SCRIPT(d_neutral_end,
+ {"NARRATOR", "The brush slipped", "from his hand."},
+ {"NARRATOR", "Danny collapsed onto", "his last painting."},
+ {"MARA", "He died with paint", "still on his hands."},
+ {"NEUTRAL END", "The city carried", "his colors onward."});
+SCRIPT(d_good_end,
+ {"DANNY", "The canvas is dry.", "The music is safe."},
+ {"YEARS LATER", "Danny was gone by", "the time it happened."},
+ {"RECORD STORE", "His unreleased BORE", "songs sold millions."},
+ {"RECORD STORE", "The games and album", "topped the charts."},
+ {"MARA", "He never heard the", "crowds sing along."},
+ {"GOOD END", "But the songs found", "somewhere to live."});
+SCRIPT(d_day_notes,
+ {"POCKET NOTEBOOK", "The bus can wait.", "The roof cannot."},
+ {"POCKET NOTEBOOK", "Read, walk, paint.", "The day continues."});
+SCRIPT(d_clinic_locked,
+ {"CLINIC", "OPEN BY APPOINTMENT", "NEXT NOTICE PENDING."});
+SCRIPT(d_note_visit,
+ {"POCKET NOTEBOOK", "CLINIC ON EAST ST.", "They asked for me."},
+ {"DANNY", "I should see them", "before I paint."});
+SCRIPT(d_note_followup,
+ {"POCKET NOTEBOOK", "WAIT FOR THE NEXT", "DOCTOR APPOINTMENT."},
+ {"DANNY", "Mara offered to", "walk there with me."});
+SCRIPT(d_note_canvas,
+ {"POCKET NOTEBOOK", "LAST ROOFTOP CANVAS", "NORTH PLAZA STAIRS."},
+ {"DANNY", "The last detail is", "a corner of sky."});
 #undef SCRIPT
 #define SEQ(name) {name, (uint8_t)(sizeof(name) / sizeof((name)[0]))}
 static const struct { const StoryPage *pages; uint8_t count; } scripts[] = {
@@ -180,7 +258,13 @@ static const struct { const StoryPage *pages; uint8_t count; } scripts[] = {
  SEQ(d_cult_safe_again), SEQ(d_cult_pre_win), SEQ(d_cult_during_win),
  SEQ(d_cult_post_win), SEQ(d_cult_run), SEQ(d_cult_lose),
  SEQ(d_cult_notes_1), SEQ(d_cult_notes_2), SEQ(d_cult_notes_3),
- SEQ(d_cult_notes_4)
+ SEQ(d_cult_notes_4),
+ SEQ(d_music), SEQ(d_music_again), SEQ(d_art), SEQ(d_art_again),
+ SEQ(d_art_day), SEQ(d_art_last_locked), SEQ(d_neutral_start),
+ SEQ(d_medical_notice), SEQ(d_doctor_first), SEQ(d_doctor_return),
+ SEQ(d_doctor_last), SEQ(d_neutral_paint), SEQ(d_neutral_end),
+ SEQ(d_good_end), SEQ(d_day_notes), SEQ(d_clinic_locked),
+ SEQ(d_note_visit), SEQ(d_note_followup), SEQ(d_note_canvas)
 };
 const StoryPage *story_pages(const Story *s, int *count) {
     unsigned id = s->dialogue;
@@ -193,6 +277,7 @@ void story_new(Story *s, int slot) {
     *s = (Story){0};
     s->x = 12; s->y = 13; s->prev_x = s->x; s->prev_y = s->y;
     s->facing = 3; s->slot = (uint8_t)(slot & 1);
+    s->day_number = 1;
     talk(s, D_OPEN); s->dirty = 1;
 }
 void story_resume(Story *s, int slot, int x, int y, int facing, int view, int flags, int ended, int ending) {
@@ -200,9 +285,12 @@ void story_resume(Story *s, int slot, int x, int y, int facing, int view, int fl
     if (!story_solid(x,y)) { s->x = (uint8_t)x; s->y = (uint8_t)y; }
     s->prev_x = s->x; s->prev_y = s->y;
     s->facing = (uint8_t)(facing & 3); s->view = (uint8_t)(view & 1);
-    s->flags = (uint8_t)(flags & STORY_ALL);
-    s->ended = (uint8_t)(!!ended); s->ending = (uint8_t)(ending & 1);
-    s->dirty = 0; talk(s, D_RETURN);
+    s->flags = (uint8_t)(flags & STORY_FULL);
+    s->ended = (uint8_t)(!!ended); s->ending = (uint8_t)(ending <= STORY_END_BAD ? ending : 0);
+    s->dirty = 0;
+    if(s->ended && s->ending==STORY_END_GOOD)talk(s,D_GOOD_END);
+    else if(s->ended && s->ending==STORY_END_NEUTRAL)talk(s,D_NEUTRAL_END);
+    else talk(s,D_RETURN);
 }
 /* Two attack waves with four clearly telegraphed speech-bubble hazards each.
    Players dodge LEFT/RIGHT in three projected lanes; A parries for six frames. */
@@ -276,10 +364,10 @@ static void cult_tick(Story *s, uint16_t pressed) {
 static void interact(Story *s) {
     const int dx[] = {1,0,-1,0}, dy[] = {0,1,0,-1};
     char c = story_tile(s->x + dx[s->facing], s->y + dy[s->facing]);
-    if (c != 'L' && c != 'C' && c != 'F' && c != 'B' && c != 'P' && c != 'V' && c != 'Q' && c != 'S' && c != 'W' && c != 'H') {
+    if (c != 'L' && c != 'C' && c != 'F' && c != 'B' && c != 'P' && c != 'V' && c != 'Q' && c != 'S' && c != 'W' && c != 'H' && c != 'R' && c != 'M' && c != 'K') {
         for (int d = 0; d < 4; ++d) {
             char a = story_tile(s->x + dx[d], s->y + dy[d]);
-            if (a == 'L' || a == 'C' || a == 'F' || a == 'B' || a == 'P' || a == 'V' || a == 'Q' || a == 'S' || a == 'W' || a == 'H') { c = a; break; }
+            if (a == 'L' || a == 'C' || a == 'F' || a == 'B' || a == 'P' || a == 'V' || a == 'Q' || a == 'S' || a == 'W' || a == 'H' || a == 'R' || a == 'M' || a == 'K') { c = a; break; }
         }
     }
     switch (c) {
@@ -302,7 +390,34 @@ static void interact(Story *s) {
         }
         break;
     case 'B':
-        talk(s, ((s->flags & STORY_ALL) == STORY_ALL) ? D_BUS_READY : D_BUS_LOCKED);
+        talk(s, ((s->flags & STORY_ALL) == STORY_ALL && !s->life_stage) ? D_BUS_READY : D_BUS_LOCKED);
+        break;
+    case 'M':
+        if (!(s->flags & STORY_MUSIC)) { s->flags |= STORY_MUSIC; s->dirty=1; talk(s,D_MUSIC); }
+        else talk(s,D_MUSIC_AGAIN);
+        break;
+    case 'R':
+        if (s->life_stage == STORY_LIFE_LAST_WORK) {
+            s->life_stage=STORY_LIFE_FINALE;s->finale_frame=0;
+            s->scene=STORY_SCENE_NONE;s->dirty=1;talk(s,D_NEUTRAL_PAINT);
+        } else if (s->life_stage == STORY_LIFE_FINALE) {
+            /* The final cutscene is already playing: no restarting it. */
+        } else if (s->life_stage >= STORY_LIFE_CLINIC) {
+            talk(s,D_ART_LAST_LOCKED);
+        } else if (s->life_stage == STORY_LIFE_WAIT) {
+            talk(s,D_ART_DAY);
+        } else if (!(s->flags & STORY_ART)) {
+            s->flags |= STORY_ART;s->dirty=1;talk(s,D_ART);
+        } else talk(s,D_ART_AGAIN);
+        break;
+    case 'K':
+        if (s->life_stage == STORY_LIFE_CLINIC) {
+            s->life_stage=STORY_LIFE_FOLLOWUP_WAIT;
+            s->scene=STORY_SCENE_CLINIC;s->dirty=1;talk(s,D_DOCTOR_FIRST);
+        } else if (s->life_stage == STORY_LIFE_FINAL_CLINIC) {
+            s->life_stage=STORY_LIFE_LAST_WORK;
+            s->scene=STORY_SCENE_CLINIC;s->dirty=1;talk(s,D_DOCTOR_LAST);
+        } else talk(s,D_CLINIC_LOCKED);
         break;
     case 'P': cult_start(s, 0); break;
     case 'V': cult_start(s, 1); break;
@@ -330,6 +445,32 @@ void story_tick(Story *s, uint16_t keys) {
     uint16_t pressed = (uint16_t)(keys & ~s->old_keys);
     s->old_keys = keys;
     if (s->anim) --s->anim;
+    /* One step is exactly one VBlank, including dialogue. Pause freezes the
+       clock. Day transitions never steal controls during a fight or textbox. */
+    if (s->life_stage >= STORY_LIFE_WAIT && s->life_stage <= STORY_LIFE_LAST_WORK && !s->paused) {
+        if (++s->day_frame >= STORY_DAY_FRAMES) {
+            s->day_frame=0;
+            if (s->day_number<99) ++s->day_number;
+            s->dirty=1;
+        }
+        if (!s->dialogue && !s->battle && !s->choosing) {
+            if (s->life_stage==STORY_LIFE_WAIT && s->day_number>=2) {
+                s->life_stage=STORY_LIFE_CLINIC;
+                s->scene=STORY_SCENE_NOTICE;s->dirty=1;talk(s,D_MEDICAL_NOTICE);
+            } else if (s->life_stage==STORY_LIFE_FOLLOWUP_WAIT && s->day_number>=3) {
+                s->life_stage=STORY_LIFE_FINAL_CLINIC;
+                s->scene=STORY_SCENE_NOTICE;s->dirty=1;talk(s,D_DOCTOR_RETURN);
+            }
+        }
+    }
+    if (s->life_stage==STORY_LIFE_FINALE && !s->dialogue && !s->ended) {
+        if (s->finale_frame<450) ++s->finale_frame;
+        if (s->finale_frame>=450) {
+            s->ended=1;s->ending=STORY_END_NEUTRAL;s->dirty=1;
+            talk(s,D_NEUTRAL_END);
+        }
+        return;
+    }
     /* Combat takes priority over exploration, so toggling 2D/3D cannot evade a hit. */
     if (s->battle) { cult_tick(s, pressed); return; }
     if (s->dialogue) {
@@ -338,18 +479,36 @@ void story_tick(Story *s, uint16_t keys) {
             if ((pressed & A) && s->page + 1 < count) ++s->page;
             else {
                 int ready = s->dialogue == D_BUS_READY && (pressed & A);
-                s->dialogue = 0; s->page = 0;
+                s->dialogue = 0; s->page = 0; s->scene=STORY_SCENE_NONE;
                 if (ready) { s->choosing = 1; s->choice = 0; }
             }
         }
+        return;
+    }
+    if (s->ended) {
+        /* An ending is a stable scene, not a doorway back into gameplay. */
+        if (pressed & START) s->quit=1;
         return;
     }
     if (s->choosing) {
         if (pressed & (LEFT|RIGHT|UP|DOWN)) s->choice ^= 1;
         if (pressed & B) s->choosing = 0;
         if (pressed & A) {
-            s->ending = s->choice; s->ended = 1; s->choosing = 0;
-            talk(s, s->ending ? D_END_STAY : D_END_GO); s->dirty = 1;
+            s->choosing=0;
+            if (s->choice==0 && (s->flags & STORY_FULL)==STORY_FULL) {
+                s->ended=1;s->ending=STORY_END_GOOD;
+                talk(s,D_GOOD_END);
+            } else if (s->choice==0) {
+                /* Adequate progress, but not 100%: keep living and crafting.
+                   The neutral ending is delayed by active, numbered game days. */
+                s->life_stage=STORY_LIFE_WAIT;
+                s->day_number=1;s->day_frame=0;
+                talk(s,D_NEUTRAL_START);
+            } else {
+                /* STAY means continue exploring; it is not an instant ending. */
+                talk(s,D_ART_DAY);
+            }
+            s->dirty=1;
         }
         return;
     }
@@ -357,11 +516,17 @@ void story_tick(Story *s, uint16_t keys) {
     if (s->paused) { if (pressed & B) s->quit = 1; return; }
     if (pressed & (L|SELECT)) { s->view ^= 1; s->dirty = 1; }
     if (pressed & R) {
+        if (s->life_stage) {
+            talk(s,s->life_stage==STORY_LIFE_CLINIC||s->life_stage==STORY_LIFE_FINAL_CLINIC?D_NOTE_VISIT:
+                 s->life_stage==STORY_LIFE_FOLLOWUP_WAIT?D_NOTE_FOLLOWUP:
+                 s->life_stage>=STORY_LIFE_LAST_WORK?D_NOTE_CANVAS:D_DAY_NOTES);
+            return;
+        }
         if (s->cult_stage) {
             talk(s, (uint8_t)(D_CULT_NOTES_1 + s->cult_stage - 1));
             return;
         }
-        talk(s, s->flags == STORY_ALL ? D_JOURNAL_3 :
+        talk(s, (s->flags & STORY_ALL)==STORY_ALL ? D_JOURNAL_3 :
              (s->flags & STORY_STAMP) ? D_JOURNAL_2 :
              (s->flags & STORY_HOME) ? D_JOURNAL_1 : D_JOURNAL_0);
         return;

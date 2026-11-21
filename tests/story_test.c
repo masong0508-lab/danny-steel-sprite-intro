@@ -42,8 +42,12 @@ int main(void) {
     walk_to(&s,11,8); press(&s,A); assert((s.flags&STORY_STAMP));close_dialogue(&s);
     walk_to(&s,8,12); press(&s,A); assert((s.flags&STORY_MARA));close_dialogue(&s);
     walk_to(&s,19,4); press(&s,A);close_dialogue(&s);assert(s.choosing);
-    press(&s,RIGHT);press(&s,A); assert(s.ended&&s.ending==1);close_dialogue(&s);
-    story_resume(&s,0,11,12,2,1,7,1,1);assert(s.flags==7&&s.view&&s.ended);
+    /* STAY keeps gameplay running; the old instant ending is gone. */
+    press(&s,RIGHT);press(&s,A); assert(!s.ended&&!s.life_stage);close_dialogue(&s);
+    /* GO with basic tasks starts numbered days; neutral is not instant. */
+    walk_to(&s,19,4);press(&s,A);close_dialogue(&s);assert(s.choosing);
+    press(&s,A);assert(!s.ended&&s.life_stage==STORY_LIFE_WAIT);close_dialogue(&s);
+    story_resume(&s,0,11,12,2,1,7,0,0);assert(s.flags==7&&s.view&&!s.ended);
     puts("Danny Steel: all four story anchors reachable, dialogue and both modes functional.");
     return 0;
 }

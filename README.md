@@ -4,7 +4,7 @@ A small, original bittersweet comedy-adventure, with a BORE-universe continuity-
 
 ## Playable chapter: Old Quarter
 
-The city is closing, the last bus is leaving, and Danny is trying to determine which pieces of yesterday are worth carrying into tomorrow. Read a letter from home, have the BORE Continuity Office validate your existence, and speak to Mara before deciding whether to board the bus or remain behind. Both ending choices have complete short sequences. The prose is intentionally a little sad beneath the bureaucracy and bad jokes; the BORE reference is a light crossover and does not attempt to rewrite the larger game's canon.
+The city is closing, the last bus is leaving, and Danny is trying to determine which pieces of yesterday are worth carrying into tomorrow. Read a letter from home, have the BORE Continuity Office validate your existence, and speak to Mara before deciding whether to board the bus or remain behind. Finishing the optional music and art objectives raises *primary-story* completion to 100%, while the Mirror Orchard investigation remains independent. The prose is intentionally a little sad beneath the bureaucracy and bad jokes; the BORE reference is a light crossover and does not attempt to rewrite the larger game's canon.
 
 ## Controls
 
@@ -12,7 +12,7 @@ The city is closing, the last bus is leaving, and Danny is trying to determine w
 * **Menu:** LEFT/RIGHT, A select, B back; NEW GAME, LOAD and ERASE support two persistent slots.
 * **Exploration, map:** D-pad walk, A talk/read/interact with adjacent objects, L or SELECT toggle to first-person, R journal.
 * **Exploration, first-person:** UP/DOWN move forward/backward, LEFT/RIGHT turn 90 degrees, A interact, L or SELECT return to map, R journal.
-* **Dialogue:** A next, B dismiss. At the bus choose GO or STAY with LEFT/RIGHT and A; B cancels.
+* **Dialogue:** A next, B dismiss. At the bus choose GO or STAY with LEFT/RIGHT and A; B cancels. GO with 100% main-story completion produces the good epilogue; GO with enough but incomplete progress starts the numbered-day neutral route. STAY continues exploration.
 * **Pause:** START; B saves and returns to the menu.
 
 The **same grid coordinates and quest-state flags** drive the top-down map and pseudo-3D first-person view; neither mode is a disconnected cutscene. Both modes feature locations, streets, trees, the BORE clerk, Mara, the letter and bus. The camera interpolates steps; the renderer uses an integer ray marcher, fixed palette, low-memory tile art and no dynamically allocated framebuffers.
@@ -32,7 +32,7 @@ gcc -std=c11 -Wall -Wextra -Werror -Isrc src/story.c src/story_draw.c tests/rend
 
 ## Current limits
 
-This is the **first playable chapter**, not a finished full-length game or a full 3D engine. GBA first-person is intentionally a 120x80 integer pseudo-3D view doubled with hardware affine scaling; full 3D geometry, voice performances, deeper branching dialogue, larger districts, animation upgrades and port parity are future work. The GBC companion repository still contains its own title-screen prototype, not this newly integrated story mode. Save slots use 32 KB-compatible GBA SRAM (`SRAM_V113`) and should be verified in an SRAM-capable emulator. FPS and hardware timing have not been measured on physical hardware.
+This is the **first playable chapter**, not a finished full-length game or a full 3D engine. GBA first-person is intentionally a 120x80 integer pseudo-3D view doubled with hardware affine scaling; full 3D geometry, voice performances, deeper branching dialogue, larger districts, animation upgrades and port parity are future work. The GBC companion repository still contains its own title-screen prototype, not this newly integrated story mode. Save slots use 32 KB-compatible GBA SRAM (`SRAM_V113`) and should be verified in an SRAM-capable emulator. Version-3 24-byte slots fit inside the original 32-byte slot spacing; valid v1/v2 records are upgraded, while preserving collected objectives and fandom milestones. Old immediate endings are reset to allow new choices. FPS and hardware timing have not been measured on physical hardware.
 
 ## Optional side story: Mirror Orchard (fictional satire)
 
@@ -46,3 +46,17 @@ The story's three recurring hecklers are visible as fixed, reachable NPCs in **b
 * **Persistence:** v2 SRAM save slots now track stage and pre/post fight outcomes. Existing 13-byte v1 slots load and automatically upgrade on a subsequent save. The battle itself is not serialized; it restarts cleanly when re-entered.
 
 The battle rendering is part of the existing **120×80 → 240×160 GBA mode-4 affine** hybrid pipeline, not a claim of hardware-accelerated 3D. It reuses the same pixel buffer and geometry, with no heap allocation or additional framebuffer. Host tests cover all stage changes, rematches, safe opt-out, unchanged main quest flags, both exploration views and render buffer bounds. Actual GBA hardware/ROM frame rates still need measurement.
+
+## Numbered days and the three-ending arc (in progress)
+
+The instant two-way ending has been replaced with a longer, saved timeline. The GBA prototype currently simulates **one numbered game day in four minutes at 60 VBlanks per second**; this accelerated pacing is for playability while the larger near-real-time life simulation is built. The HUD shows day number and daylight progress, and the game clock pauses while the Pause menu is open. Time continues naturally through exploration, conversation, and optional battles. A periodic save checkpoint preserves the clock without requiring constant writes.
+
+**Good ending — implemented.** Complete the original letter, clerk and Mara arc **plus** the BORE music archive and rooftop art task; then choose GO at the bus. A posthumous epilogue reveals that Danny's unreleased BORE-game music and games became fictional multimillion-selling hits after his death. The story treats that recognition as bittersweet, not a reversal of his death. Completion of the optional Mirror Orchard cult investigation is **not** required for 100% main-story completion.
+
+**Neutral ending — implemented.** Finish the three core main-story tasks but leave one or both art/music tasks incomplete, then choose GO. Instead of ending immediately, Danny remains in the Old Quarter, can keep exploring and painting, and starts a numbered life-simulator day. On Day 2 he receives a clinic notification, then can visit the outpatient office in the east quarter for the first doctor scene. On Day 3 he gets the final appointment notification and visits again for the diagnosis of advanced, unspecified-type cancer. There is no automatic ending timer after that visit: the player has to return to the rooftop stairway on the north plaza, where a dedicated 450-frame cinematic shows Danny making his final brushstrokes, gradually slumping against the canvas, and dying there. The camera stays on the rooftop and the unfinished sky; dialogue and the neutral screen then appear. The death is non-graphic, and the scene cannot be speed-skipped into an accidental ending.
+
+**Bad ending — storyboarding, not yet playable.** The planned off-camera rooftop death and its dialogue require a careful, deliberately authored narrative path. There is deliberately no failure counter that automatically converts losing a fight or missing a collectible into a self-harm sequence.
+
+On the GBA, the same 120×80 bitmap and 32-entry color palette are reused for the doctor, notification, record-shop and rooftop cinematics. No framebuffer, heap allocation or procedural texture budget is added. The patient-facing medical storyline is fictional and deliberately does not specify a cancer subtype.
+
+Run `tests/ending_test.c` along with the existing host tests to validate day-boundary timing, doctor's office access, two medical visit sequences, good-epilogue gating, a non-premature neutral ending, both final-scenery render buffer guards and post-ending input behavior. Neither GBA hardware FPS nor physical-ROM execution has been measured for this patch.

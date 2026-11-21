@@ -10,10 +10,11 @@
 #define REG_BG2PD R16(0x04000026)
 #define REG_BG2X (*(volatile u32 *)0x04000028)
 #define REG_BG2Y (*(volatile u32 *)0x0400002C)
-#define SAVE_LEN 16
+#define SAVE_LEN 24
 #define LEGACY_SAVE_LEN 13
+#define V2_SAVE_LEN 16
 #define SAVE_STRIDE 32
-#define SAVE_VER 2
+#define SAVE_VER 3
 static volatile u8 *const save_ram = (volatile u8 *)0x0E000000;
 const char story_sram_id[] __attribute__((used)) = "SRAM_V113";
 static Story game;
@@ -27,7 +28,7 @@ static int read_slot(int slot,u8 *buf){
     if(buf[0]!='D'||buf[1]!='S'||buf[2]!='T'||buf[3]!='2')return 0;
     /* Preserve original saves: V1 has a 13-byte record; V2 adds optional
        cult quest milestones without touching Danny's primary quest flags. */
-    int len=buf[4]==1?LEGACY_SAVE_LEN:buf[4]==SAVE_VER?SAVE_LEN:0;
+    int len=buf[4]==1?LEGACY_SAVE_LEN:buf[4]==2?V2_SAVE_LEN:buf[4]==SAVE_VER?SAVE_LEN:0;
     if(!len)return 0;
     for(int i=0;i<len-1;i++)hash^=buf[i];
     if(buf[len-1]!=hash)return 0;
@@ -35,11 +36,19 @@ static int read_slot(int slot,u8 *buf){
         /* A previous valid save can occupy a newly-added NPC location.
            Relocate only those known new actors, never accept a bad wall tile. */
         char t=story_tile(buf[5],buf[6]);
-        if(t=='P'||t=='V'||t=='Q'||t=='S'||t=='W'||t=='H') --buf[5];
+        if(t=='R') ++buf[6];
+        else if(t=='P'||t=='V'||t=='Q'||t=='S'||t=='W'||t=='H'||t=='M'||t=='K') --buf[5];
         else return 0;
         if(story_solid(buf[5],buf[6]))return 0;
     }
     if(len==LEGACY_SAVE_LEN){buf[12]=buf[13]=buf[14]=0;}
+    /* Version 1/2 finales were immediate choices, unlike the new stories;
+       keep all quest progress and let old players choose again. */
+    if(len<SAVE_LEN){
+        buf[10]=0;buf[11]=0;
+        for(int i=15;i<SAVE_LEN;i++)buf[i]=0;
+        buf[16]=1; /* day 1 */
+    }
     return 1;
 }
 int play_slot_valid(int slot){u8 b[SAVE_LEN];return read_slot(slot,b);}
@@ -48,7 +57,10 @@ void play_erase_slot(int slot){
     for(int i=0;i<SAVE_STRIDE;i++)save_ram[slot*SAVE_STRIDE+i]=0xFF;
 }
 static void write_save(void){
-    u8 b[SAVE_LEN]={'D','S','T','2',SAVE_VER,game.x,game.y,game.facing,game.view,game.flags,game.ended,game.ending,game.cult_stage,game.cult_pre_wins,game.cult_post_wins,0};
+    u8 b[SAVE_LEN]={'D','S','T','2',SAVE_VER,game.x,game.y,game.facing,game.view,game.flags,
+        game.ended,game.ending,game.cult_stage,game.cult_pre_wins,game.cult_post_wins,
+        game.life_stage,game.day_number,(u8)game.day_frame,(u8)(game.day_frame>>8),
+        (u8)game.finale_frame,(u8)(game.finale_frame>>8),0,0,0};
     unsigned hash=0x6D;
     for(int i=0;i<SAVE_LEN-1;i++)hash^=b[i];
     b[SAVE_LEN-1]=(u8)hash;
@@ -69,6 +81,16 @@ void play_enter(int want_load,int slot){
         game.cult_stage=b[12]>CULT_RESOLVED?CULT_RESOLVED:b[12];
         game.cult_pre_wins=b[13]&7;
         game.cult_post_wins=b[14]&7;
+        game.life_stage=b[15]<=STORY_LIFE_FINALE?b[15]:0;
+        game.day_number=b[16]>0?b[16]:1;
+        game.day_frame=(u16)(b[17]|((unsigned)b[18]<<8));
+        if(game.day_frame>=STORY_DAY_FRAMES)game.day_frame=0;
+        game.finale_frame=(u16)(b[19]|((unsigned)b[20]<<8));
+        if(game.finale_frame>450)game.finale_frame=450;
+        if(game.life_stage==STORY_LIFE_FINALE && !game.ended) {
+            /* A resumed final scene starts cleanly without duplicated dialogue. */
+            game.dialogue=0;
+        }
         /* Upgrade old slots with the new checksum and version on next autosave. */
         if(b[4]!=SAVE_VER)game.dirty=1;
     } else {story_new(&game,slot);write_save();}
@@ -91,6 +113,9 @@ int play_update(void){
     }
     story_tick(&game,(u16)(~REG_KEYINPUT&0x03FF));
     if(game.quit){write_save();music_set_volume(40);return 1;}
+    /* Periodic clock checkpoint: gameplay time survives resets and reloads. */
+    if(game.life_stage>=STORY_LIFE_WAIT && game.life_stage<=STORY_LIFE_LAST_WORK
+       && (clock_ticks%600)==599)game.dirty=1;
     if(game.dirty&&++save_cooldown>=120){write_save();save_cooldown=0;}
     if((clock_ticks++&1)==0){
         /* Draw the hidden bitmap; the hardware page flips on the NEXT VBlank. */
