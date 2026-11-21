@@ -1,5 +1,6 @@
 #include "story_draw.h"
 #include "story_checks.h"
+#include "studio.h"
 
 #define RGB(r,g,b) ((r)|((g)<<5)|((b)<<10))
 const uint16_t story_palette[32] = {
@@ -442,6 +443,8 @@ static void activity_menu(uint8_t *p,const Story *s){
         effect=selected?"BOND +1 ENERGY +1":"SPARK +1 ENERGY -1";break;
     case 'M':where="BORE / MUSIC STUDIO";left="ARRANGE";right="LISTEN";
         effect=selected?"SPARK +1 ENERGY +1":"MUSIC STAGE +1";break;
+    case 'E':where="MASTER / COMPLETE";left="LISTEN";right="STUDIO";
+        effect=selected?"ADVANCED / SIX TABS":"EASY / PLAY THE MASTER";break;
     case 'm':where="BORE TAPE";left="BUILD";right="SOFTEN";
         effect=selected?"STAGE +1 ENERGY +1":"STAGE +1 / MORE WORK";break;
     case 'r':where="ROOFTOP ART";left="LAYER";right="LIGHT";
@@ -452,7 +455,7 @@ static void activity_menu(uint8_t *p,const Story *s){
     panel(p,42,80);
     box(p,3,43,2,34,18);
     text(p,8,45,where,20,25);
-    if(s->activity=='M'||s->activity=='m'||s->activity=='r'){
+    if(s->activity=='M'||s->activity=='m'||s->activity=='r'||s->activity=='E'){
         char progress[]="0 / 4";
         unsigned phase=s->activity=='r'?s->art_steps:s->song_steps;
         progress[0]=(char)('0'+(phase>4u?4u:phase));
@@ -589,7 +592,104 @@ static void ending_caption(uint8_t *p,unsigned ending,unsigned rescue,
  text(p,4,63,a,20,28);
  text(p,4,71,b,18,28);
 }
+
+/* The advanced studio has a dedicated 120x80 scene, not a cryptic
+   overlay on the map. Six short tabs echo the Bogotchi studio hierarchy.
+   Every editable value is driven by the shared PSG sequencer; lyrics are
+   explicitly text cues, NOT synthesized singing. No new framebuffer. */
+static void studio_editor(uint8_t *p,const Story *s,int frame){
+ const StudioPatch *a=studio_patch();
+ static const char *const tabs[STUDIO_TAB_COUNT]={
+  "SNG","NTS","ORD","LYR","CHR","LIVE"
+ };
+ const unsigned tab=s->studio_tab<STUDIO_TAB_COUNT?s->studio_tab:0u;
+ unsigned cursor=s->studio_cursor;
+ box(p,0,0,120,80,21);
+ box(p,0,0,120,8,3);
+ box(p,0,8,120,2,18);
+ text(p,3,1,"BORE / ADVANCED STUDIO",20,24);
+ text(p,95,1,s->activity_choice?"PLAY":"STOP",s->activity_choice?12:7,5);
+ for(unsigned i=0;i<STUDIO_TAB_COUNT;i++){
+   int x=3+(int)i*19;
+   box(p,x,12,18,10,tab==i?25:3);
+   box(p,x,20,18,2,tab==i?18:5);
+   text(p,x+2,14,tabs[i],tab==i?3:20,4);
+ }
+ box(p,3,25,114,41,3);
+ box(p,4,26,112,39,21);
+ if(tab==STUDIO_SONG){
+   static const char *const speed[4]={"SLOW","MID","FAST","BRISK"};
+   static const char *const feel[3]={"SOFT","WARM","BRIGHT"};
+   text(p,7,28,"SONG / SOUND SETTINGS",20,28);
+   for(unsigned i=0;i<2u;i++){
+     int y=39+(int)i*12;
+     box(p,8,y-2,103,10,i==cursor?25:3);
+     text(p,11,y,i==0u?"TEMPO":"FEEL",i==cursor?3:18,6);
+     text(p,60,y,i==0u?speed[a->tempo]:feel[a->mood],20,13);
+   }
+   text(p,11,61,"UP/DOWN CHANGE",18,25);
+ }else if(tab==STUDIO_NOTES){
+   text(p,8,27,"NOTES / MELODY",20,25);
+   for(int n=0;n<7;n++)
+     box(p,8,34+n*4,104,1,n==3?18:5);
+   for(unsigned i=0;i<STUDIO_STEPS;i++){
+     int x=9+(int)i*13;
+     box(p,x,33,11,29,i==cursor?25:3);
+     box(p,x+1,34,9,27,21);
+     if(a->notes[i]){
+       int y=56-((int)a->notes[i]-1)*4;
+       box(p,x+1,y,9,3,(i==cursor)?20:18);
+     }else box(p,x+3,59,5,2,5);
+     if(i==4u)box(p,x,33,1,29,16);
+   }
+   text(p,8,62,"A MUTE  UP/DOWN PITCH",20,28);
+ }else if(tab==STUDIO_ORDER){
+   static const char *const names[4]={"BASE","UP","LOW","FILL"};
+   text(p,8,28,"ORDER / FOUR PARTS",20,27);
+   for(unsigned i=0;i<4u;i++){
+     int x=6+(int)i*28;
+     box(p,x,38,26,19,i==cursor?25:5);
+     box(p,x+1,39,24,17,3);
+     text(p,x+8,40,i==cursor?"*":" ",18,1);
+     text(p,x+3,47,names[a->order[i]],20,5);
+   }
+   text(p,7,60,"A CYCLE  PART SELECT",18,28);
+ }else if(tab==STUDIO_LYRICS){
+   text(p,8,28,"LYRICS / CUE CARD",20,27);
+   box(p,8,39,104,16,25);
+   box(p,9,40,102,14,3);
+   text(p,12,44,studio_lyric(a->lyric),20,25);
+   text(p,8,59,"TEXT ONLY / NOT SUNG",18,27);
+ }else if(tab==STUDIO_CHOIR){
+   static const char *const voice[4]={"SOLO","WARM","BRIGHT","FULL"};
+   text(p,8,28,"CHOIR / PSG LAYERS",20,27);
+   box(p,8,37,103,11,25);box(p,9,38,101,9,3);
+   text(p,16,40,voice[a->choir],20,15);
+   text(p,8,51,"LEAD HARM BASS BEAT",18,27);
+   for(int i=0;i<4;i++)
+     box(p,8+i*26,60,22,3,
+         i==1 && a->choir==0u?5:i==3&&a->mood!=2u?5:18);
+ }else{
+   text(p,8,28,"PERFORM / LIVE PREVIEW",20,27);
+   unsigned playing=s->activity_choice;
+   unsigned playhead=studio_playhead()&7u;
+   for(unsigned i=0;i<STUDIO_STEPS;i++){
+     int x=10+(int)i*13;
+     int h=a->notes[i]?4+(int)a->notes[i]*2:2;
+     box(p,x,51-h,9,h,playing&&i==playhead?20:a->notes[i]?18:5);
+     if(playing&&i==playhead)box(p,x,53,9,2,12);
+   }
+   text(p,9,57,studio_lyric(a->lyric),20,25);
+   (void)frame;
+ }
+ box(p,0,68,120,12,3);
+ text(p,3,69,"L/R TABS  DPAD EDIT",18,29);
+ text(p,3,75,"A SET  B EXIT  SEL PLAY",20,29);
+}
 void story_draw(const Story *s,int frame,uint8_t *p) {
+    if(s->activity==STORY_ACT_STUDIO){
+        studio_editor(p,s,frame);return;
+    }
     if(s->battle){cult_arena(s,frame,p);return;}
     if(s->life_stage==STORY_LIFE_FINALE ||
        (s->ended && (s->ending==STORY_END_GOOD ||
