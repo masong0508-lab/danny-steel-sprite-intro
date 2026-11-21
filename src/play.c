@@ -108,10 +108,14 @@ void play_enter(int want_load,int slot){
         game.day_frame=(u16)(b[17]|((unsigned)b[18]<<8));
         if(game.day_frame>=STORY_DAY_FRAMES)game.day_frame=0;
         game.finale_frame=(u16)(b[19]|((unsigned)b[20]<<8));
-        if(game.finale_frame>450)game.finale_frame=450;
-        if(game.life_stage==STORY_LIFE_FINALE && !game.ended) {
-            /* A resumed final scene starts cleanly without duplicated dialogue. */
-            game.dialogue=0;
+        if(game.finale_frame>STORY_GOOD_FINAL_FRAMES)game.finale_frame=0;
+        if(game.life_stage==STORY_LIFE_FINALE ||
+           (game.ended && game.ending==STORY_END_GOOD)) {
+            /* The one-shot score starts from the beginning on SRAM resume;
+               replay the matching film rather than desynchronizing it. */
+            game.finale_frame=0;game.dialogue=0;game.page=0;
+            game.cinema=game.ending==STORY_END_GOOD?CINE_GOOD:CINE_FINALE;
+            game.cinema_frame=0;
         }
         /* Upgrade old slots with the new checksum and version on next autosave. */
         if(b[4]!=SAVE_VER)game.dirty=1;

@@ -348,8 +348,62 @@ static void scene_record(uint8_t *p,int frame){
 static void panel(uint8_t *p,int top,int bottom){
     box(p,0,top,120,bottom-top,21);box(p,0,top,120,1,22);
 }
+/* Short, staged caption beats; the audio remains the master timing.
+   Unlike a blocking textbox these never wait for A during a 72-second cue. */
+static void ending_caption(uint8_t *p,unsigned ending,unsigned f){
+ const char *a=0,*b=0;
+ if(ending==STORY_END_GOOD){
+   if(f<530){a="DANNY MADE ONE LAST PROMISE";b="TO FINISH WHAT HE BEGAN";}
+   else if(f<1080){a="HE LEFT SOME SONGS BEHIND";b="AND THE BORE DEMOS TOO";}
+   else if(f<1560){a="MARA REMEMBERED HIS LAUGH";b="EVEN ON QUIET MORNINGS";}
+   else if(f<2050){a="HIS NAME WAS FILED AWAY";b="BUT NOT HIS MUSIC";}
+   else if(f<2600){a="AFTER DANNY WAS GONE";b="SOMEONE FOUND THE RECORDINGS";}
+   else if(f<3200){a="THE SONGS FOUND LISTENERS";b="FAR BEYOND THE OLD QUARTER";}
+   else if(f<3730){a="MILLIONS OF RECORDS SOLD";b="THE BORE GAMES FOUND FANS";}
+   else if(f<4350){a="HE NEVER SAW THEIR SUCCESS";b="BUT PEOPLE HEARD HIS VOICE";}
+   else if(f<4890){a="ONE MORE SONG FOR DANNY";b="CLOSER TO THE END";}
+   else if(f<5140){a="THE CITY KEPT PLAYING";b="THE MUSIC KEPT TRAVELING";}
+   else{a="THE LAST DAYS OF DANNY STEEL";b="GOOD END / A LEGACY";}
+ }else{
+   if(f<370){a="ONE LAST LINE OF PAINT";b="HIS HAND REACHED THE CANVAS";}
+   else if(f<810){a="HIS LAST WORK WAS QUIET";b="THE BRUSH STAYED THERE";}
+   else if(f<1130){a="BEFORE / A LETTER FROM HOME";b="SOMEBODY HAD WAITED";}
+   else if(f<1590){a="BEFORE / MARA AND DANNY";b="LAUGHED AT THE BAD JOKES";}
+   else if(f<2010){a="BEFORE / THE BORE OFFICE";b="CERTIFIED THAT HE EXISTED";}
+   else if(f<2490){a="BEFORE / THE MUSIC STUDIO";b="AN UNFINISHED SONG";}
+   else if(f<2870){a="THE ROOFTOP GREW STILL";b="THE PAINTING REMAINED";}
+   else if(f<3650){a="THERE WERE THINGS UNSAID";b="THERE WAS WORK LEFT UNDONE";}
+   else if(f<4050){a="THE CITY KEPT ITS SKY";b="AND HIS COLORS";}
+   else{a="THE LAST DAYS OF DANNY STEEL";b="NEUTRAL END / THE CANVAS";}
+ }
+ box(p,0,61,120,19,21);
+ box(p,0,60,120,1,22);
+ text(p,4,63,a,20,28);
+ text(p,4,71,b,18,28);
+}
 void story_draw(const Story *s,int frame,uint8_t *p) {
     if(s->battle){cult_arena(s,frame,p);return;}
+    if(s->life_stage==STORY_LIFE_FINALE ||
+       (s->ended && (s->ending==STORY_END_GOOD || s->ending==STORY_END_NEUTRAL))){
+        unsigned ending=s->ending==STORY_END_GOOD?STORY_END_GOOD:STORY_END_NEUTRAL;
+        cinema_ending_draw(p,ending,s->finale_frame);
+        if(s->dialogue){
+            int count;const StoryPage *pages=story_pages(s,&count);
+            if(pages && s->page<count){
+                const StoryPage *d=&pages[s->page];
+                panel(p,49,80);
+                text(p,4,52,d->speaker,18,28);
+                text(p,4,60,d->line1,20,28);
+                text(p,4,68,d->line2,20,28);
+                text(p,91,74,"A NEXT",22,7);
+            }
+        }else if(s->finale_frame >= (ending==STORY_END_GOOD?
+                STORY_GOOD_FINAL_FRAMES:STORY_END_SCORE_FRAMES)){
+            box(p,0,72,120,8,21);
+            text(p,3,74,"START / RETURN TO MENU",20,29);
+        }else ending_caption(p,ending,s->finale_frame);
+        return;
+    }
     if(s->life_stage==STORY_LIFE_FINALE) {
         cinema_draw(p,CINE_FINALE,s->cinema_frame,s->page,s->finale_frame);
     } else if(s->cinema) {

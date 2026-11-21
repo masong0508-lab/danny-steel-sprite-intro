@@ -42,20 +42,25 @@ static void test_neutral(void){
     assert(!s.ended);
     stand(&s,14,7,3);press(&s,A);
     assert(s.life_stage==STORY_LIFE_FINALE&&!s.ended);render_guard(&s);
-    done(&s);while(s.finale_frame<449)story_tick(&s,0);
+    done(&s);while(s.finale_frame<STORY_END_SCORE_FRAMES-1)story_tick(&s,0);
     assert(!s.ended);story_tick(&s,0);
     assert(s.ended&&s.ending==STORY_END_NEUTRAL&&s.dialogue);
     render_guard(&s);done(&s);press(&s,START);assert(s.quit);
-    puts("neutral: numbered days, two doctor scenes, last canvas, delayed ending OK");
+    puts("neutral: numbered days, two doctor visits and 72.5-second film ending OK");
 }
 static void test_good(void){
     Story s;story_new(&s,1);done(&s);s.flags=STORY_FULL;
     bus(&s);assert(s.ended&&s.ending==STORY_END_GOOD);
-    assert(s.life_stage==STORY_LIFE_NONE);render_guard(&s);
+    assert(s.life_stage==STORY_LIFE_NONE && !s.dialogue);render_guard(&s);
+    while(s.finale_frame<STORY_END_SCORE_FRAMES)story_tick(&s,0);
+    assert(!s.dialogue && s.finale_frame==STORY_END_SCORE_FRAMES);
+    while(s.finale_frame<STORY_GOOD_FINAL_FRAMES-1)story_tick(&s,0);
+    assert(!s.dialogue);story_tick(&s,0);
+    assert(s.dialogue && s.finale_frame==STORY_GOOD_FINAL_FRAMES);
     done(&s);press(&s,START);assert(s.quit);
     story_resume(&s,1,19,4,1,0,STORY_FULL,1,STORY_END_GOOD);
-    assert(s.dialogue&&s.ended);
-    puts("good: 100-percent primary quests, posthumous BORE soundtrack epilogue OK");
+    assert(!s.dialogue && s.ended && s.finale_frame==0);
+    puts("good: full score montage + 16-second legacy coda before dialogue ending OK");
 }
 static void test_art_music(void){
     Story s;story_new(&s,0);done(&s);

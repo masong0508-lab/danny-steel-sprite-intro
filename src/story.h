@@ -12,6 +12,10 @@
 #define STORY_FULL (STORY_ALL | STORY_MUSIC | STORY_ART)
 /* Each numbered day lasts four minutes at the GBA's 60Hz VBlank rate. */
 #define STORY_DAY_FRAMES 14400
+/* 72.5-second source song, then the good-only 16-second reprise. */
+#define STORY_END_SCORE_FRAMES 4350u
+#define STORY_END_CODA_FRAMES 960u
+#define STORY_GOOD_FINAL_FRAMES (STORY_END_SCORE_FRAMES + STORY_END_CODA_FRAMES)
 #define STORY_END_GOOD 1
 #define STORY_END_NEUTRAL 2
 #define STORY_END_BAD 3 /* reserved for the later branching chapter */

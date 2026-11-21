@@ -322,9 +322,13 @@ void story_resume(Story *s, int slot, int x, int y, int facing, int view, int fl
     s->flags = (uint8_t)(flags & STORY_FULL);
     s->ended = (uint8_t)(!!ended); s->ending = (uint8_t)(ending <= STORY_END_BAD ? ending : 0);
     s->dirty = 0;
-    if(s->ended && s->ending==STORY_END_GOOD)talk(s,D_GOOD_END);
-    else if(s->ended && s->ending==STORY_END_NEUTRAL)talk(s,D_NEUTRAL_END);
-    else talk(s,D_RETURN);
+    if(s->ended && s->ending==STORY_END_GOOD){
+        /* Replay the cinematic in sync with the one-shot score after loading. */
+        s->finale_frame=0;s->dialogue=0;s->page=0;s->cinema=CINE_GOOD;
+    } else if(s->ended && s->ending==STORY_END_NEUTRAL){
+        s->finale_frame=0;s->dialogue=0;s->page=0;s->cinema=CINE_FINALE;
+        s->life_stage=STORY_LIFE_FINALE;
+    } else talk(s,D_RETURN);
 }
 /* Two attack waves with four clearly telegraphed speech-bubble hazards each.
    Players dodge LEFT/RIGHT in three projected lanes; A parries for six frames. */
@@ -433,7 +437,11 @@ static void interact(Story *s) {
     case 'R':
         if (s->life_stage == STORY_LIFE_LAST_WORK) {
             s->life_stage=STORY_LIFE_FINALE;s->finale_frame=0;
-            s->scene=STORY_SCENE_NONE;s->dirty=1;talk(s,D_NEUTRAL_PAINT);
+            s->scene=STORY_SCENE_NONE;s->dirty=1;
+            /* A timed in-scene subtitle replaces the blocking opening dialogue.
+               The music and animation therefore start together even if nobody
+               presses A for the next 72 seconds. */
+            s->dialogue=0;s->page=0;s->cinema=CINE_FINALE;s->cinema_frame=0;
         } else if (s->life_stage == STORY_LIFE_FINALE) {
             /* The final cutscene is already playing: no restarting it. */
         } else if (s->life_stage >= STORY_LIFE_CLINIC) {
@@ -498,11 +506,24 @@ void story_tick(Story *s, uint16_t keys) {
             }
         }
     }
-    if (s->life_stage==STORY_LIFE_FINALE && !s->dialogue && !s->ended) {
-        if (s->finale_frame<450) ++s->finale_frame;
-        if (s->finale_frame>=450) {
-            s->ended=1;s->ending=STORY_END_NEUTRAL;s->dirty=1;
-            talk(s,D_NEUTRAL_END);
+    /* Ending pictures are authored over the COMPLETE score, not just the
+       original 450-frame animation. Keep one shot clock through the chorus,
+       verse returns and the good-only coda. Input cannot accidentally skip
+       the performance or leave the camera on a static credit card. */
+    if (!s->dialogue && (
+          (s->life_stage==STORY_LIFE_FINALE && !s->ended) ||
+          (s->ended && s->ending==STORY_END_GOOD &&
+           s->finale_frame<STORY_GOOD_FINAL_FRAMES))) {
+        unsigned limit=s->ending==STORY_END_GOOD?
+            STORY_GOOD_FINAL_FRAMES:STORY_END_SCORE_FRAMES;
+        if (s->finale_frame<limit) ++s->finale_frame;
+        if (s->finale_frame>=limit) {
+            if (s->ending==STORY_END_GOOD)talk(s,D_GOOD_END);
+            else {
+                s->ended=1;s->ending=STORY_END_NEUTRAL;
+                talk(s,D_NEUTRAL_END);
+            }
+            s->dirty=1;
         }
         return;
     }
@@ -533,7 +554,8 @@ void story_tick(Story *s, uint16_t keys) {
             s->choosing=0;
             if (s->choice==0 && (s->flags & STORY_FULL)==STORY_FULL) {
                 s->ended=1;s->ending=STORY_END_GOOD;
-                talk(s,D_GOOD_END);
+                s->finale_frame=0;s->dialogue=0;s->page=0;
+                s->cinema=CINE_GOOD;s->cinema_frame=0;
             } else if (s->choice==0) {
                 /* Adequate progress, but not 100%: keep living and crafting.
                    The neutral ending is delayed by active, numbered game days. */

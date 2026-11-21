@@ -42,8 +42,7 @@ and CD-quality audio remain in the BORE projects.
 - No heap, PCM buffers, new framebuffers, per-frame instrument synthesis,
   file streaming or dynamic allocations. Playback is only a handful of PSG
   writes on eighth-note changes.
-- Existing scene volume/fade automation is retained, including the fade during
-  Danny's final rooftop scene.
+- During HERE TODAY, the score retains its volume instead of fading away after seven seconds; neutral and reserved bad audio end quietly, and good alone receives the coda.
 
 ## Validation
 
@@ -82,3 +81,11 @@ mid-song seek state is deliberately not serialized in v3 saves.
 Host tests: `music_motifs_test.c`, `music_engine_test.c`, and
 `music_ending_test.c`. Actual GBA emulator and hardware performance testing
 is still required.
+
+## Extended synchronized ending films
+
+See `docs/ENDING_CINEMATICS.md`. The camera sequences now cover the complete
+4,350-VBlank *Here Today* performance rather than 450 VBlanks, with separately
+authored 960-VBlank coda visuals after the good ending. Saved endings replay
+both the one-shot audio and timed pictures from zero to prevent mismatched
+resume states.

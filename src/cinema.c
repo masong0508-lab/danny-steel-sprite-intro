@@ -314,7 +314,32 @@ void cinema_draw(uint8_t *p,unsigned scene,unsigned tick,unsigned page,unsigned 
  case CINE_GOOD:
   if(page<2){roof(p,t,1);canvas(p,72,19,t,1);actor(p,45,72,1,t,1);}
   else if(page<5){recordshop(p,t);if(page==4)actor(p,101,73,2,t,0);}
-  else{roof(p,t,1);canvas(p,67,19,t,0);actor(p,49,73,2,t,0);}
+  else if(page==5){
+    /* Someone stays with Danny's artwork after he is gone. */
+    roof(p,t,1);canvas(p,67,19,t,0);actor(p,49,73,2,t,0);
+  }else if(page==6){
+    /* A small record-release concert: parallax fixtures, a crowd with
+       different timed silhouettes, no extra sprite allocations. */
+    city(p,t,1);rect(p,0,35,120,45,3);
+    for(int i=0;i<5;i++){
+       int x=8+i*24+(int)(t/90)%3;
+       rect(p,x,16,5,29,21);stroke(p,x+2,19,60,39,18);
+    }
+    rect(p,20,45,80,3,16);rect(p,26,28,68,17,14);
+    disk(p,61,35,6,4);disk(p,61,35,3,20);
+    for(int i=0;i<17;i++){
+       int x=i*8-3,y=68+(i%3)*3+((int)(t/16+i)&1);
+       disk(p,x,y,4,i%4?24:16);rect(p,x-3,y+2,7,12,i%3?3:21);
+    }
+  }else{
+    city(p,t,1);rect(p,0,59,120,21,9);
+    for(int i=0;i<6;i++){
+      int x=9+i*19, y=47+(i%3)*2;
+      rect(p,x,y,11,13,21);rect(p,x+2,y+2,7,9,20);
+      disk(p,x+5,y+6,3,3);disk(p,x+5,y+6,1,26);
+      if((t/10+i)&1)rect(p,x+2,y+2,2,1,18);
+    }
+  }
   break;
  case CINE_DAY:
   roof(p,t,0);canvas(p,72,19,t,0);actor(p,49,72,1,t,3);
@@ -367,5 +392,62 @@ void cinema_draw(uint8_t *p,unsigned scene,unsigned tick,unsigned page,unsigned 
  if(t<8&&scene!=CINE_FINALE){
   int bar=(8-(int)t)/2;
   rect(p,0,0,120,bar,3);rect(p,0,80-bar,120,bar,3);
+ }
+}
+
+
+/* Long-form ending storyboard. Each shot holds an identifiable location and
+   slowly moves within it. Scene changes follow sections of the 20-phrase
+   HERE TODAY score; do not pin the last 65 seconds to a static image. */
+typedef struct { uint16_t until; uint8_t scene, page; } EndingShot;
+static const EndingShot neutral_shots[] = {
+ {370,CINE_FINALE,0}, {810,CINE_FINALE,0},
+ {1130,CINE_LETTER,1}, {1590,CINE_MARA,2},
+ {2010,CINE_BORE,1}, {2490,CINE_MUSIC,0},
+ {2870,CINE_FINALE,0}, {3250,CINE_FINALE,0},
+ {3650,CINE_FINALE,0}, {4050,CINE_FINALE,0},
+ {4350,CINE_FINALE,0}
+};
+static const EndingShot good_shots[] = {
+ {530,CINE_ART,1}, {1080,CINE_MUSIC,1},
+ {1560,CINE_MARA,2}, {2050,CINE_BORE,2},
+ {2600,CINE_GOOD,3}, {3200,CINE_GOOD,4},
+ {3730,CINE_GOOD,3}, {4350,CINE_GOOD,5},
+ /* Here Today resolves at 4350: a separate 16-second coda begins. */
+ {4610,CINE_GOOD,3}, {4890,CINE_GOOD,6},
+ {5140,CINE_GOOD,7}, {5310,CINE_GOOD,3}
+};
+static unsigned pick_shot(const EndingShot *v,unsigned count,unsigned frame){
+ for(unsigned i=0;i<count;i++)if(frame<v[i].until)return i;
+ return count-1;
+}
+unsigned cinema_ending_shot(unsigned ending,unsigned frame){
+ if(ending==1)return pick_shot(good_shots,
+        sizeof(good_shots)/sizeof(good_shots[0]),frame);
+ return pick_shot(neutral_shots,
+        sizeof(neutral_shots)/sizeof(neutral_shots[0]),frame);
+}
+void cinema_ending_draw(uint8_t *p,unsigned ending,unsigned frame){
+ unsigned good=ending==1;
+ const EndingShot *shots=good?good_shots:neutral_shots;
+ unsigned shot=cinema_ending_shot(ending,frame);
+ unsigned begin=shot?shots[shot-1].until:0;
+ unsigned local=frame>begin?frame-begin:0;
+ unsigned scene=shots[shot].scene;
+ if(!good && scene==CINE_FINALE){
+   /* Preserve Danny's final position and the physical paint-covered canvas
+      across return cuts. The actual collapse happens only in shot 0. */
+   cinema_draw(p,scene,frame,0,frame<420?frame:420);
+ } else if(good && scene==CINE_GOOD){
+   cinema_draw(p,scene,100+local,shots[shot].page,0);
+ } else {
+   cinema_draw(p,scene,100+local,shots[shot].page,0);
+ }
+ /* Fixed locations and reversible transitions; no fake zooms or teleporting
+    props. A short letterbox dissolve marks memory/epilogue changes. */
+ if(local<10 && shot>0){
+   int bar=(10-(int)local)/2;
+   rect(p,0,0,120,bar,3);
+   rect(p,0,80-bar,120,bar,3);
  }
 }

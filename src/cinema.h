@@ -9,5 +9,9 @@ enum {
  CINE_FINALE, CINE_DAY, CINE_REBRAND
 };
 #define CINE_COUNT 21
+/* Timed final montage uses real BORE cues and the same established sets.
+   Only the good route includes the separate 16-second coda. */
+void cinema_ending_draw(uint8_t *pixels, unsigned ending, unsigned frame);
+unsigned cinema_ending_shot(unsigned ending, unsigned frame);
 void cinema_draw(uint8_t *pixels, unsigned scene, unsigned tick,
                  unsigned page, unsigned finale_frame);
