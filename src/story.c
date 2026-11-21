@@ -764,8 +764,11 @@ static void talk(Story *s, uint8_t id) {
 void story_new(Story *s, int slot) {
     *s = (Story){0};
     studio_reset(); /* a new game starts with a clean optional tune */
-    s->x = 12; s->y = 13; s->prev_x = s->x; s->prev_y = s->y;
-    s->facing = 3; s->slot = (uint8_t)(slot & 1);
+    /* The Potheads opening now lands at its ACTUAL storefront; the first
+       controllable frame starts beside the same facade seen in the film.
+       Only a fresh game's spawn changes; old saves preserve coordinates. */
+    s->x = 20; s->y = 11; s->prev_x = s->x; s->prev_y = s->y;
+    s->facing = 0; s->slot = (uint8_t)(slot & 1);
     s->day_number = 1;
     s->energy=3;s->spark=1;s->bond=1;
     talk(s, D_OPEN); s->dirty = 1;
