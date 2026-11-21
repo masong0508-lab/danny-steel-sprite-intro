@@ -29,6 +29,7 @@ static void at(Story *s,char station){
  case 'W':stand(s,6,12,3);break;
  case 'H':stand(s,7,3,3);break;
  case 'F':stand(s,8,12,3);break;
+ case 'K':stand(s,15,5,0);break;
  case 'B':stand(s,19,4,1);break;
  default:assert(!"bad station");
  }
