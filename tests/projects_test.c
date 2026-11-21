@@ -70,7 +70,10 @@ int main(void){
  begin(&s,'m',0);assert(s.song_steps==4);
  opening(&s,"MASTER COPY SAVED.");done(&s);
  unsigned memories=s.daily_memories,work=s.work;
- press(&s,A);opening(&s,"MASTER COPY SAVED.");done(&s);
+ press(&s,A);assert(s.activity=='E');render(&s);
+ /* After completing the master, LISTEN stays one easy choice away.
+    Advanced editor is optional, never a forced progression screen. */
+ press(&s,A);opening(&s,"An old BORE theme");done(&s);
  assert(s.song_steps==4&&s.daily_memories==memories&&s.work==work);
  stand(&s,11,8,3);s.daily_mask|=STORY_DAY_CLERK;
  press(&s,A);opening(&s,"This recording");done(&s);
