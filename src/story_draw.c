@@ -534,17 +534,25 @@ static void dialogue_card(uint8_t *p,const Story *s,const StoryPage *page,int co
         text(p,110,74,"A",20,1);
     }
 }
-static void ending_caption(uint8_t *p,unsigned ending,unsigned rescue,unsigned f){
+static void ending_caption(uint8_t *p,unsigned ending,unsigned rescue,
+                           unsigned f,unsigned harm,unsigned music_master){
  const char *a=0,*b=0;
  if(ending==STORY_END_GOOD){
-   if(f<530){a="DANNY MADE ONE LAST PROMISE";b="TO FINISH WHAT HE BEGAN";}
-   else if(f<1080){a="HE LEFT SOME SONGS BEHIND";b="AND THE BORE DEMOS TOO";}
+   if(f<530){
+     a=harm?"HE STILL OWED AN APOLOGY":"DANNY MADE ONE LAST PROMISE";
+     b=harm?"HE DID NOT GET A CLEAN SLATE":"TO FINISH WHAT HE BEGAN";
+   }else if(f<1080){
+     a="HE LEFT SOME SONGS BEHIND";
+     b=harm?"NOT EVERY RECORD WAS HONEST":"AND THE BORE DEMOS TOO";
+   }
    else if(f<1560){a="MARA REMEMBERED HIS LAUGH";b="EVEN ON QUIET MORNINGS";}
-   else if(f<2050){a="HIS NAME WAS FILED AWAY";b="BUT NOT HIS MUSIC";}
+   else if(f<2050){a="HIS NAME WAS FILED AWAY";
+     b=harm?"HIS ACTIONS WERE FILED TOO":"BUT NOT HIS MUSIC";}
    else if(f<2600){a="AFTER DANNY WAS GONE";b="SOMEONE FOUND THE RECORDINGS";}
    else if(f<3200){a="THE SONGS FOUND LISTENERS";b="FAR BEYOND THE OLD QUARTER";}
    else if(f<3730){a="MILLIONS OF RECORDS SOLD";b="THE BORE GAMES FOUND FANS";}
-   else if(f<4350){a="HE NEVER SAW THEIR SUCCESS";b="BUT PEOPLE HEARD HIS VOICE";}
+   else if(f<4350){a="HE NEVER SAW THEIR SUCCESS";
+     b=harm?"MARA TOLD THE WHOLE STORY":"BUT PEOPLE HEARD HIS VOICE";}
    else if(f<4890){a="ONE MORE SONG FOR DANNY";b="CLOSER TO THE END";}
    else if(f<5140){a="THE CITY KEPT PLAYING";b="THE MUSIC KEPT TRAVELING";}
    else{a="THE LAST DAYS OF DANNY STEEL";b="GOOD END / A LEGACY";}
@@ -568,7 +576,8 @@ static void ending_caption(uint8_t *p,unsigned ending,unsigned rescue,unsigned f
    else if(f<1130){a="BEFORE / A LETTER FROM HOME";b="SOMEBODY HAD WAITED";}
    else if(f<1590){a="BEFORE / MARA AND DANNY";b="LAUGHED AT THE BAD JOKES";}
    else if(f<2010){a="BEFORE / THE BORE OFFICE";b="CERTIFIED THAT HE EXISTED";}
-   else if(f<2490){a="BEFORE / THE MUSIC STUDIO";b="AN UNFINISHED SONG";}
+   else if(f<2490){a="BEFORE / THE MUSIC STUDIO";
+     b=music_master?"A FINISHED MASTER TAPE":"AN UNFINISHED SONG";}
    else if(f<2870){a="MARA RETURNED TO THE ROOF";b="THE PAINTING REMAINED";}
    else if(f<3250){a="SHE FOUND A FOLDED NOTE";b="BESIDE THE PAINT SUPPLIES";}
    else if(f<3650){a="SOME WORDS WERE LEFT UNSAID";b="BUT THE LETTER REMAINED";}
@@ -601,7 +610,9 @@ void story_draw(const Story *s,int frame,uint8_t *p) {
                 STORY_GOOD_FINAL_FRAMES:STORY_END_SCORE_FRAMES)){
             box(p,0,72,120,8,21);
             text(p,3,74,"START / RETURN TO MENU",20,29);
-        }else ending_caption(p,ending,s->rescue_stage,s->finale_frame);
+        }else ending_caption(p,ending,s->rescue_stage,s->finale_frame,
+                            (unsigned)story_bad_count(s),
+                            s->song_steps>=STORY_PROJECT_DONE);
         return;
     }
     if(s->life_stage==STORY_LIFE_FINALE) {
