@@ -27,6 +27,13 @@ jobs:
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c src/hd_canvas.c src/hd_menu.c src/hd_world.c src/hd_overlay.c src/menu_ink.c tests/hd_graphics_test.c -o /tmp/danny_native_graphics_test
           /tmp/danny_native_graphics_test
+      - name: Validate native perspective, six-tab studio, story scenes and pixel safety
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
+            src/story.c src/studio.c src/hd_canvas.c src/hd_world.c \
+            src/hd_perspective.c src/hd_cinema.c src/hd_studio.c \
+            src/hd_overlay.c tests/hd_nextgen_test.c -o /tmp/danny_hd_nextgen
+          /tmp/danny_hd_nextgen
       - name: Test story progression and map accessibility
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c tests/story_test.c -o /tmp/danny_story_test
