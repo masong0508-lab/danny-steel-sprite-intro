@@ -41,7 +41,7 @@ static void sky(uint8_t *p,unsigned t){
  hd_rect(p,162,113,78,6,HD_BRICK);
  hd_line(p,162,112,240,112,HD_STONE_LIT);
  /* Wet pavement, curb and irregular granite: no giant flat chessboard. */
- for(int y=117;y<160;y++)
+ for(int y=116;y<160;y++)
    hd_rect(p,0,y,240,1,y<124?HD_STONE_DARK:y<144?HD_WET:HD_ROAD);
  hd_line(p,0,123,239,123,HD_STONE);
  hd_line(p,0,125,239,125,HD_ROAD_COOL);
