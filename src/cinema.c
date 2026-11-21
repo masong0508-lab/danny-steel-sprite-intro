@@ -556,9 +556,11 @@ static void cinema_draw_stage(uint8_t *p,unsigned scene,unsigned tick,
      recordshop(p,t);
      if(page==4){
        int x=travel(110,96,beat,10,85);
-       actor(p,x,73,2,t,beat<96?2:3);
-       rect(p,87,46,9,9,14);rect(p,89,48,5,5,20);
-       disk(p,91,50,2,22);
+       /* The physical sleeve remains on a real shelf while Mara's left
+          hand arrives at exactly the sleeve's lower-right edge. */
+       rect(p,74,51,9,9,14);rect(p,76,53,5,5,20);
+       disk(p,78,55,2,22);
+       actor(p,x,73,2,t,beat<96?2:4);
      }
    }
   else if(page==5){
@@ -724,6 +726,38 @@ static void neutral_rooftop_beat(uint8_t *p,unsigned shot,unsigned local,
    pixel(p,4,53,(world/70u)&1u?18:7);
  }
 }
+
+/* The good ending revisits one real record shop at three different moments:
+   discovery, growing audience and the quiet final coda. Add only small
+   foreground props to the LEFT of the turntable so continuous record
+   rotation at x60 remains untouched across a musical shot boundary. */
+static void good_recordshop_beat(uint8_t *p,unsigned shot,unsigned local,
+                                 unsigned world){
+ if(shot==4u){
+   /* The discovered master gets a sleeve and a dedicated shelf. */
+   rect(p,6,45,29,3,14);rect(p,8,47,3,12,14);rect(p,31,47,3,12,14);
+   paper(p,14,38,14,7,2);
+ }else if(shot==6u){
+   /* A growing rack of copies, all on the SAME lower shop shelf. */
+   rect(p,6,54,37,3,14);
+   for(int i=0;i<5;i++){
+     rect(p,9+i*6,44,5,10,(i&1)?25:20);
+     rect(p,10+i*6,46,3,4,14);
+   }
+ }else if(shot==8u){
+   /* After the first part of the score, Mara listens in the shop. */
+   rect(p,6,55,28,3,14);
+   paper(p,9,48,14,7,2);
+   actor(p,travel(-12,28,local,12u,98u),74,2,world,
+         local<115u?2:5);
+ }else if(shot==11u){
+   /* Bookend the concert with an intimate, stationary listener. */
+   rect(p,6,55,32,3,14);
+   paper(p,12,46,14,7,2);
+   actor(p,30,74,2,world,6);
+ }
+}
+
 /* Failure implies unanswered contact; successful rescue must NEVER depict
    Mara as missing. The same rooftop set instead holds a returned letter. */
 static void bad_rooftop_beat(uint8_t *p,unsigned shot,unsigned local,
@@ -817,6 +851,9 @@ void cinema_ending_draw_context(uint8_t *p,unsigned ending,unsigned frame,
  }else{
    /* Do not restart city or record spindle on a musical cut. */
    cinema_draw_stage(p,scene,100u+frame,local,shots[shot].page,0);
+   if(ending==1u && scene==CINE_GOOD && shots[shot].page>=3u &&
+      shots[shot].page<=4u)
+      good_recordshop_beat(p,shot,local,frame);
    if(ending==3u && scene==CINE_BAD)
       bad_rooftop_beat(p,shot,local,frame,mara_safe);
  }
