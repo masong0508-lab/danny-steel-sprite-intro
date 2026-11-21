@@ -54,7 +54,8 @@ int main(void){
  }
  check();
  story_new(&s,0);
- prepare();hd_game_overlay(view.pixels,&s);
+ prepare();memset(view.pixels,HD_ROAD,HD_BYTES);
+ hd_game_overlay(view.pixels,&s);
  check();
  assert(view.pixels[103*HD_W+8]==HD_COPPER);
  assert(menu_erase_step(0,0,1)==0);
