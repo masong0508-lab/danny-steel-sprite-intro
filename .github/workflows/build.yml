@@ -55,6 +55,10 @@ jobs:
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/story_draw.c src/cinema.c tests/rescue_route_test.c -o /tmp/danny_rescue_route_test
           /tmp/danny_rescue_route_test
+      - name: Test Mara's hopeful unanswered phone, delayed realization and two-day save continuity
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/story_draw.c src/cinema.c src/story_save.c src/rescue_save.c tests/hope_phone_test.c -o /tmp/danny_hope_phone_test
+          /tmp/danny_hope_phone_test
       - name: Verify safe, checksummed per-slot Mara rescue persistence
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/rescue_save.c tests/rescue_save_test.c -o /tmp/danny_rescue_save_test

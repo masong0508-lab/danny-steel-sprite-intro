@@ -16,11 +16,32 @@ safe-house door, OPEN is the default and rescues Mara. LEAVE is the explicit
 failure choice. Taking the fourth distinct bad action while she is missing
 also fails the rescue.
 
-The failed rescue is conveyed only by an empty café, an extinguished light
-and unanswered messages. **Mara's death or other harm is never shown or
-confirmed.** A separate ending sequence plays Here Today in full with no
-good-ending coda. All alternate ending scenes use the existing 120x80
-palette-indexed framebuffer and authored world locations.
+The failed rescue now unfolds as a **playable two-day unanswered-phone
+subplot**, not an immediate bad-ending film:
+
+- **Day 0 — hope.** At the unlit safe house, an unidentified caller tells
+  Danny that Mara *will* answer if he gives her a day. He keeps the phone
+  close. The promise is deliberately unverified, not evidence that she is
+  safe or a guaranteed future call.
+- **Day 1 — realization.** After a full 4-minute in-game day, there has
+  been no return call. The caller admits the report was unverified, and a
+  witness says Mara **still has not been recovered**. Danny understands
+  he was led on but keeps hoping she may answer.
+- **Day 2 — ending.** Only after another full playable day does the bad
+  ending begin. Mara's fate remains explicitly *unknown*.
+
+During this time, the café phone, witness, terminal and pocket notebook
+(**R**) offer follow-up lines. The goal arrow points toward the café
+phone and the HUD tracks each numbered day. **Pause and dialogue freeze
+the clock**, so a player cannot be cut off mid-conversation. A fourth
+bad check while Mara is missing follows the same delay; the fourth
+check *after successfully saving her* still leads to its separate
+immediate bad ending that makes clear Mara is alive.
+
+**Mara's death or other harm is never shown or confirmed.** The full
+Here Today film plays without the good-only coda. All alternate ending
+scenes use the existing 120x80 palette-indexed framebuffer and authored
+world locations.
 
 Saving Mara preserves her survival and restores access to the bus. With all
 five main objectives completed, GO can lead to the good ending; with the
@@ -53,3 +74,18 @@ missing. The appointment, day progress, and eventual neutral ending become
 available again immediately after rescue. The last rooftop painting likewise
 cannot bypass the rescue. Ordinary world time may pass during the search,
 but time by itself never fails the mission.
+
+## Hope subplot save compatibility
+
+No new SRAM fields were introduced. For a failed rescue, the existing
+`day_number` and `day_frame` bytes record the hope chapter's two-day
+countdown, including day zero. The rescue stage still lives in its original
+eight-byte checksummed companion record. The life-clinic clock is disabled
+on this failed route so Mara cannot appear incorrectly at an appointment.
+The game restores the day counter after loading and autosaves it every
+600 frames. Older saves without the rescue extension still work.
+
+`tests/hope_phone_test.c` and `tests/rescue_route_test.c` cover the
+promised reply, delayed recognition of no verified recovery, witnesses,
+phone, notebook, two-day clock, unchanged saved-Mara ending, SRAM codec,
+and palette/framebuffer guards.

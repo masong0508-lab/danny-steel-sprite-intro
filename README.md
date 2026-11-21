@@ -211,3 +211,12 @@ discovery, releases, listeners and an intimate final coda. Bad-ending
 rooftop visuals distinguish an unanswered phone when Mara is missing
 from her confirmed survival after the rescue. See docs/ENDING_CINEMATICS.md
 and tests/ending_storyboard_test.c.
+
+### Mara's unanswered phone: an unverified promise
+A failed rescue now has a **two-day playable hope subplot** instead of
+jumping immediately to the bad ending. Someone promises Mara will call.
+One day later Danny finds there is still no verified recovery. He keeps
+his phone available; another day passes before the bad-ending film.
+Visit the café phone, witness or terminal, or press R for the notebook.
+Mara's death is never implied or confirmed. Existing saved clocks persist
+the story. See docs/MARA_RESCUE.md and tests/hope_phone_test.c.
