@@ -31,7 +31,8 @@ jobs:
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
             src/story.c src/studio.c src/hd_canvas.c src/hd_world.c \
-            src/hd_world_atlas.c tests/hd_world_atlas_test.c \
+            src/hd_world_atlas.c src/hd_isometric.c src/hd_isometric_atlas.c \
+            tests/hd_world_atlas_test.c \
             -o /tmp/danny_world_atlas_test
           /tmp/danny_world_atlas_test
       - name: Validate native isometric walkability, occlusion, pixels, weather and town locations
