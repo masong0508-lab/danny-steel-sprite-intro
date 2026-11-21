@@ -3,6 +3,7 @@
 #include "story_draw.h"
 #include "gba.h"
 #include "music.h"
+#include "story_save.h"
 
 #define REG_BG2PA R16(0x04000020)
 #define REG_BG2PB R16(0x04000022)
@@ -10,12 +11,9 @@
 #define REG_BG2PD R16(0x04000026)
 #define REG_BG2X (*(volatile u32 *)0x04000028)
 #define REG_BG2Y (*(volatile u32 *)0x0400002C)
-#define SAVE_LEN 28
-#define V3_SAVE_LEN 24
-#define LEGACY_SAVE_LEN 13
-#define V2_SAVE_LEN 16
-#define SAVE_STRIDE 32
-#define SAVE_VER 4
+#define SAVE_LEN STORY_SAVE_BYTES
+#define SAVE_STRIDE STORY_SAVE_STRIDE
+#define SAVE_VER STORY_SAVE_VER
 static volatile u8 *const save_ram = (volatile u8 *)0x0E000000;
 const char story_sram_id[] __attribute__((used)) = "SRAM_V113";
 static Story game;
@@ -46,36 +44,17 @@ static unsigned scene_music_cue(void){
 
 static int read_slot(int slot,u8 *buf){
     if((unsigned)slot>1u)return 0;
-    unsigned hash=0x6D;
-    for(int i=0;i<SAVE_LEN;i++)buf[i]=save_ram[slot*SAVE_STRIDE+i];
-    if(buf[0]!='D'||buf[1]!='S'||buf[2]!='T'||buf[3]!='2')return 0;
-    /* Preserve original saves: V1 has a 13-byte record; V2 adds optional
-       cult quest milestones without touching Danny's primary quest flags. */
-    int len=buf[4]==1?LEGACY_SAVE_LEN:buf[4]==2?V2_SAVE_LEN:buf[4]==3?V3_SAVE_LEN:buf[4]==SAVE_VER?SAVE_LEN:0;
-    if(!len)return 0;
-    for(int i=0;i<len-1;i++)hash^=buf[i];
-    if(buf[len-1]!=hash)return 0;
-    if(story_solid(buf[5],buf[6])) {
-        /* A previous valid save can occupy a newly-added NPC location.
-           Relocate only those known new actors, never accept a bad wall tile. */
+    u8 raw[SAVE_LEN];
+    for(unsigned i=0;i<SAVE_LEN;i++)raw[i]=save_ram[slot*SAVE_STRIDE+i];
+    if(!story_save_decode(raw,buf))return 0;
+    if(story_solid(buf[5],buf[6])){
+        /* Repair saves from a map before newer NPCs were introduced. */
         char t=story_tile(buf[5],buf[6]);
         if(t=='R') ++buf[6];
-        else if(t=='P'||t=='V'||t=='Q'||t=='S'||t=='W'||t=='H'||t=='M'||t=='K') --buf[5];
+        else if(t=='P'||t=='V'||t=='Q'||t=='S'||t=='W'||
+                t=='H'||t=='M'||t=='K') --buf[5];
         else return 0;
         if(story_solid(buf[5],buf[6]))return 0;
-    }
-    if(len==LEGACY_SAVE_LEN){buf[12]=buf[13]=buf[14]=0;}
-    /* Version 1/2 finales were immediate choices, unlike the new stories;
-       keep all quest progress and let old players choose again. */
-    if(len<V3_SAVE_LEN){
-        buf[10]=0;buf[11]=0;
-        for(int i=15;i<V3_SAVE_LEN;i++)buf[i]=0;
-        buf[16]=1; /* day 1 */
-    }
-    if(len<SAVE_LEN){
-        /* v3 stored its old checksum at 23. Replace with default energy;
-           preserve daily bits, clock, and all flags during migration. */
-        buf[23]=3;buf[24]=1;buf[25]=1;buf[26]=0;
     }
     return 1;
 }
@@ -85,16 +64,10 @@ void play_erase_slot(int slot){
     for(int i=0;i<SAVE_STRIDE;i++)save_ram[slot*SAVE_STRIDE+i]=0xFF;
 }
 static void write_save(void){
-    u8 b[SAVE_LEN]={'D','S','T','2',SAVE_VER,game.x,game.y,game.facing,game.view,game.flags,
-        game.ended,game.ending,game.cult_stage,game.cult_pre_wins,game.cult_post_wins,
-        game.life_stage,game.day_number,(u8)game.day_frame,(u8)(game.day_frame>>8),
-        (u8)game.finale_frame,(u8)(game.finale_frame>>8),
-        game.daily_mask,game.daily_memories,game.energy,game.spark,
-        game.bond,game.work,0};
-    unsigned hash=0x6D;
-    for(int i=0;i<SAVE_LEN-1;i++)hash^=b[i];
-    b[SAVE_LEN-1]=(u8)hash;
-    for(int i=0;i<SAVE_LEN;i++)save_ram[game.slot*SAVE_STRIDE+i]=b[i];
+    u8 b[SAVE_LEN];
+    story_save_encode(&game,b);
+    for(unsigned i=0;i<SAVE_LEN;i++)
+        save_ram[game.slot*SAVE_STRIDE+i]=b[i];
     game.dirty=0;
 }
 static void draw_hidden(int page){
@@ -122,6 +95,9 @@ void play_enter(int want_load,int slot){
         game.spark=b[24]>STORY_STAT_MAX?STORY_STAT_MAX:b[24];
         game.bond=b[25]>STORY_STAT_MAX?STORY_STAT_MAX:b[25];
         game.work=b[26]>99?99:b[26];
+        game.song_steps=b[27]>STORY_PROJECT_DONE?STORY_PROJECT_DONE:b[27];
+        game.art_steps=b[28]>STORY_PROJECT_DONE?STORY_PROJECT_DONE:b[28];
+        game.project_style=b[29]&(STORY_STYLE_SONG_SOFT|STORY_STYLE_ART_WARM);
         if(game.finale_frame>STORY_GOOD_FINAL_FRAMES)game.finale_frame=0;
         if(game.life_stage==STORY_LIFE_FINALE ||
            (game.ended && game.ending==STORY_END_GOOD)) {
