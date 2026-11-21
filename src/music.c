@@ -5,6 +5,7 @@
 #include "data.h"
 #endif
 #include "music_motifs.h"
+#include "studio.h"
 
 /* One 262144-Hz free-running hardware clock. No streaming, samples, interrupts,
  * synthesis buffers or per-frame floating-point work. The title uses its
@@ -74,7 +75,7 @@ void music_begin_ending(unsigned ending){
 }
 unsigned music_ending_phase(void){return ending_phase;}
 void music_set_cue(unsigned cue){
-    if(cue>=MUSIC_CUE_COUNT)cue=MUSIC_CUE_STREETS;
+    if(cue>MUSIC_CUE_STUDIO)cue=MUSIC_CUE_STREETS;
     if(ending_phase){
         /* Explicit return to title is the only way to cancel the ending. */
         if(cue!=MUSIC_CUE_TITLE)return;
@@ -128,7 +129,8 @@ static void play(const MusEv *e){
 }
 static void play_motif(unsigned cue,unsigned step){
     MotifBeat n;
-    music_motif_step(cue,step,&n);
+    if(cue==MUSIC_CUE_STUDIO)studio_motif_step(step,&n);
+    else music_motif_step(cue,step,&n);
     if(n.lead>0){
         REG_SND1CNT=((unsigned)n.volume<<12)|(5<<8)|((unsigned)n.duty<<6);
         REG_SND1FREQ=0x8000|sq_rate((unsigned)n.lead);
@@ -210,7 +212,8 @@ void music_poll(void){
                 cue_step=0;
             }
             play_motif(active_cue,cue_step++);
-            cue_next+=music_motif_ticks(active_cue);
+            cue_next+=active_cue==MUSIC_CUE_STUDIO?
+                      studio_ticks():music_motif_ticks(active_cue);
             if(ending_phase==2 && cue_step>=64u){
                 music_stop();ending_phase=3;break;
             }
