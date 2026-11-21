@@ -110,6 +110,12 @@ int main(void){
  uint32_t door_early=film(&s,CINE_RESCUE_SAVED,80u,1u);
  uint32_t door_late=film(&s,CINE_RESCUE_SAVED,240u,2u);
  assert(door_early!=door_late);
+ /* A saved Mara and Danny are actually together by the final beat.
+    A doorway and two separated characters are not a reunion. */
+ uint32_t contact=film(&s,CINE_RESCUE_SAVED,265u,2u);
+ assert(contact!=door_early);
+ assert(color(130,118)==HD_SKIN_LIT ||
+        color(130,118)==HD_SKIN);
  puts("cinematic staging: letter, ink stamp, Mara cafe, bus, easel and");
  puts("rescue-aware clinic, 240x160 palette, frame bounds and reunion OK");
  return 0;

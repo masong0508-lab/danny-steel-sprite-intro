@@ -159,6 +159,7 @@ static void safehouse(uint8_t *p,unsigned t,int scene){
   /* No teleport: the wood leaf rotates into its archway and Mara waits
      behind it until the opening actually reveals the room. */
   hd_rect(p,151,21,65,100,HD_INK);
+  int mara_x=178;
   if(open){
    hd_rect(p,155,25,57,92,HD_GLASS);
    hd_rect(p,160,31,49,85,HD_STONE_DARK);
@@ -170,6 +171,7 @@ static void safehouse(uint8_t *p,unsigned t,int scene){
     unsigned move=t>145u?t-145u:0u;
     if(move>95u)move=95u;
     int mx=178-(int)(move*36u/95u);
+    mara_x=mx;
     hd_ellipse(p,mx,145,16,3,HD_SHADOW);
     hd_actor_stage(p,mx,145,2,t,t>=145u?2:t>=123u?1:0);
    }
@@ -178,7 +180,26 @@ static void safehouse(uint8_t *p,unsigned t,int scene){
   hd_rect(p,156,27,56-open,88,HD_BRICK_DARK);
   hd_rect(p,155,57,60-open,2,HD_COPPER);
   if(open<20)hd_rect(p,204-open/2,82,5,5,HD_LAMP);
-  hd_actor_stage(p,63,144,1,t,t<67u?2:t<107u?3:0);
+  /* After confirming Mara is there, Danny crosses the floor toward her.
+     Both characters advance in world-space, not as detached hand cutouts. */
+  int danny_x=63;
+  if(scene==CINE_RESCUE_SAVED && t>145u){
+   unsigned approach=t-145u;
+   if(approach>100u)approach=100u;
+   danny_x=63+(int)(approach*59u/100u);
+  }
+  hd_actor_stage(p,danny_x,144,1,t,
+                 scene==CINE_RESCUE_SAVED && t>=145u && t<245u?
+                 2:t<67u?2:t<107u?3:0);
+  if(scene==CINE_RESCUE_SAVED && t>=205u &&
+     mara_x-danny_x<=45){
+   /* Both hands share the contact point, including in late reaction
+      frames, rather than snapping to a separate 'hug' illustration. */
+   int left=danny_x+16,right=mara_x-15;
+   hd_line(p,left,117,right,117,HD_SKIN);
+   hd_line(p,left,118,right,118,HD_SKIN_LIT);
+   hd_ellipse(p,(left+right)/2,118,3,2,HD_SKIN_LIT);
+  }
   if(open){
    /* Practical hall light and reflected threshold share the opening. */
    hd_line(p,156,118,200,118,HD_LAMP);

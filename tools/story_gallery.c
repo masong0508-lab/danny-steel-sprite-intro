@@ -113,6 +113,7 @@ int main(int argc,char **argv){
  s.rescue_stage=STORY_RESCUE_SAVED;
  s.cinema=CINE_RESCUE_SAVED;
  write_frame("05n_rescue_reunion",&s,225);
+ write_frame("05t_rescue_contact",&s,265);
  s.rescue_stage=STORY_RESCUE_NONE;
  /* Story-conditioned photographic cuts at full native GBA resolution. */
  s.cinema=CINE_LETTER;s.page=3;
