@@ -22,7 +22,9 @@ static void heading(uint8_t *p,const Story *s){
  hd_rect(p,0,140,HD_W,20,HD_INK);
  hd_rect(p,0,140,HD_W,1,HD_COPPER);
  hd_rect(p,8,145,3,10,HD_GOLD);
- hd_text(p,17,147,"A TALK",HD_PAPER,1,1);
+ hd_text(p,17,147,
+         s->x==20u&&s->y==11u&&s->facing==0u?
+         "A SHIFT":"A TALK",HD_PAPER,1,1);
  hd_text(p,88,147,"L CAMERA",HD_STONE_LIT,1,1);
  hd_text(p,167,147,"R JOURNAL",HD_STONE_LIT,1,0);
 }
