@@ -32,7 +32,7 @@ static void direction(unsigned scene,unsigned pg,int x0,int y0,int x1,int y1){
  draw_scene(scene,160,pg,160);
  assert(difference(earlier,out.pixels,x0,y0,x1,y1)>=9u);
  draw_scene(scene,160,pg,160);
- assert(!memcmp(earlier,out.pixels,sizeof(earlier))==0); /* not a frozen scene */
+ assert(memcmp(earlier,out.pixels,sizeof(earlier))!=0); /* not a frozen scene */
 }
 int main(void){
  story_draw_init();

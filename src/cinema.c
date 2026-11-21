@@ -507,11 +507,14 @@ void cinema_draw(uint8_t *p,unsigned scene,unsigned tick,unsigned page,unsigned 
     rect(p,78,24,25,31,20);
     rect(p,78+open,24,25-open,31,14);
     rect(p,79+open,25,20-open,29,22);
-    int dx=travel(42,57,t,12,64);
-    int mx=travel(93,75,t,38,71);
-    actor(p,dx,72,1,t,t<74?2:focus>=1?3:1);
-    actor(p,mx,72,2,t,t<100?2:focus>=1?4:1);
-    if(t>=108)stroke(p,dx+18,57,mx-18,57,31);
+    /* They approach from separated, grounded positions: only once the door
+       has opened does Mara enter the shot. Hands meet without crossing. */
+    int dx=travel(30,50,t,12,79);
+    int mx=travel(93,89,t,50,72);
+    actor(p,dx,72,1,t,t<92?2:focus>=1?3:1);
+    if(t>=45u)
+        actor(p,mx,72,2,t,t<118?2:focus>=1?4:1);
+    if(t>=123u)stroke(p,dx+19,57,mx-20,57,31);
     break;
    }
  case CINE_BAD:
