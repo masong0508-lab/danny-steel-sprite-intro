@@ -43,18 +43,28 @@ static void disk(uint8_t *p,int x,int y,int r,int c){
 static void city(uint8_t *p,unsigned t,int dusk){
  for(int y=0;y<H;y++)rect(p,0,y,W,1,y<19?(dusk?17:26):y<38?(dusk?25:27):y<53?29:9);
  disk(p,97,13,dusk?6:8,dusk?18:20);
- for(int i=0;i<4;i++){
-  int x=12+i*31-(int)((t/18+i*6)%41);
+ /* Clouds wrap behind the camera: no sudden teleport on a visible frame. */
+ unsigned cloud_shift=(t/24u)%160u;
+ for(int i=0;i<5;i++){
+  int x=(int)(((unsigned)(i*35+45)+160u-cloud_shift)%160u)-29;
+  if(x>=W||x+24<=0)continue;
   rect(p,x,9+(i&1)*4,24,2,dusk?29:20);
   rect(p,x+5,7+(i&1)*4,14,2,dusk?29:20);
  }
- for(int i=0;i<16;i++){
-  int x=i*10-3-((int)(t/85)%11),ht=14+((i*13+3)%22);
+ /* Repeating skyline has period 16*10=160; no sudden height changes
+    at the modulo seam, and invisible buildings are skipped. */
+ int skyline_shift=(int)((t/85u)%160u);
+ for(int i=-1;i<29;i++){
+  int index=i&15;
+  int x=i*10-3-skyline_shift;
+  if(x>=W||x+10<=0)continue;
+  int ht=14+((index*13+3)%22);
   rect(p,x,52-ht,10,ht,29);
   rect(p,x+2,53-ht,2,1,4);
   for(int j=0;j<4;j++){
    int wy=53-ht+5+j*6;
-   if(wy<51&&((i+j+(int)(t/80))&3)!=0)pixel(p,x+3,wy,dusk?18:7);
+   if(wy<51&&((index+j+(int)(t/80u))&3)!=0)
+    pixel(p,x+3,wy,dusk?18:7);
   }
  }
  /* Rooftop water towers, antenna and cabling; static at a given camera angle. */
@@ -65,11 +75,16 @@ static void city(uint8_t *p,unsigned t,int dusk){
   rect(p,cx-5,43,10,6,14);rect(p,cx-4,42,8,1,22);
   pixel(p,cx,24,((t/37+i)&1)?18:7);
  }
- for(int i=0;i<7;i++){
-  int x=i*23-12-((int)(t/110)%8),ht=13+((i*7)%16);
+ int near_shift=(int)((t/110u)%184u);
+ for(int i=-1;i<15;i++){
+  int index=i&7;
+  int x=i*23-12-near_shift;
+  if(x>=W||x+22<=0)continue;
+  int ht=13+((index*7)%16);
   rect(p,x,57-ht,22,ht,3);
-  for(int w=3;w<20;w+=6)for(int y=60-ht+4;y<53;y+=7)
-   rect(p,x+w,y,2,2,dusk?7:18);
+  for(int w=3;w<20;w+=6)
+   for(int y=60-ht+4;y<53;y+=7)
+    rect(p,x+w,y,2,2,dusk?7:18);
  }
 }
 static void street(uint8_t *p,unsigned t,int dusk){
@@ -102,11 +117,14 @@ static void interior(uint8_t *p,int mode,unsigned t){
  for(int x=0;x<W;x+=20){rect(p,x,0,1,53,mode==1?23:29);}
  rect(p,8,9,47,37,3);rect(p,11,12,41,31,26);
  /* A genuine view onto the same animated Old Quarter. */
+ /* The view from this window stays spatially anchored, while distant
+    lights animate quietly instead of shifting the entire street. */
  for(int i=0;i<6;i++){
-  int x=11+i*8-((int)t/95%5),h=(i*9+7)%19+7;
+  int x=11+i*8,h=(i*9+7)%19+7;
   rect(p,x,44-h,8,h,29);
   if(i&1)rect(p,x+3,40-h,2,2,18);
  }
+ if((t/180u)&1u)rect(p,24,28,2,2,18);
  rect(p,8,42,47,3,14);rect(p,30,9,2,36,14);
  rect(p,0,52,W,2,mode==2?13:14);
 }
@@ -279,10 +297,21 @@ static void studio(uint8_t *p,unsigned t){
  rect(p,73,13,37,38,4);rect(p,75,15,33,34,17);
  rect(p,82,22,18,20,14);disk(p,91,31,9,3);disk(p,91,31,5,10);
  disk(p,91,31,2,20);
- for(int i=0;i<4;i++)rect(p,80+i*6,45,3,2,((t/12+i)&1)?18:7);
+ for(int i=0;i<4;i++){
+  unsigned period=(t/7u+(unsigned)i*5u)%24u;
+  int level=(int)(period>12u?24u-period:period);
+  rect(p,80+i*6,45-level/3,3,2+level/3,level>6?18:7);
+ }
  furniture(p,15,51,94,14);
- disk(p,45,49,13,3);disk(p,45,49,9,22);disk(p,45,49,2,20);
- stroke(p,61,44,55+((int)t/25%3),46,20);
+ disk(p,45,49,13,3);disk(p,45,49,9,22);
+ static const int8_t spokes[8][2]={
+  {6,0},{4,4},{0,6},{-4,4},{-6,0},{-4,-4},{0,-6},{4,-4}
+ };
+ unsigned phase=(t/9u)&7u;
+ int dx=spokes[phase][0],dy=spokes[phase][1];
+ stroke(p,45-dx,49-dy,45+dx,49+dy,20);
+ disk(p,45,49,2,20);
+ stroke(p,61,44,55+(int)((t/25u)%3u),46,20);
 }
 static void clinic(uint8_t *p,unsigned t,int last){
  interior(p,0,t);
