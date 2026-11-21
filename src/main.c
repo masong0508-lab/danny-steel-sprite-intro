@@ -43,14 +43,14 @@ static u16 warm_mix(u16 light,u16 shadow,int amount) {
           ((b+((((shadow>>10)&31)-b)*amount)/16)<<10));
 }
 static void title_prompt_breathe(int tick) {
-    /* Only BG1's bank 13 is modulated; the distressed title in bank 14
+    /* Only BG1's bank 15 is modulated; the distressed title in bank 14
        remains steady. Slower, always-readable breathing replaces blinking. */
     int phase=tick%144;
     if(phase>72)phase=144-phase;
     int dark=7-phase*6/72;
-    PAL16[209]=text_pal[1];
-    PAL16[210]=warm_mix(text_pal[2],0x294a,dark);
-    PAL16[211]=warm_mix(text_pal[3],0x294a,dark/2);
+    PAL16[241]=text_pal[1];
+    PAL16[242]=warm_mix(text_pal[2],0x294a,dark);
+    PAL16[243]=warm_mix(text_pal[3],0x294a,dark/2);
 }
 static void scroll_pos(int *sx, int *sy) {
     *sx = clampi(BGS_MAX_X / 2 + ((BGS_MAX_X / 2 * sin12(ph_x)) >> 12), 0, BGS_MAX_X);
@@ -64,7 +64,7 @@ static void title_setup(void) {
     for (int i = 0; i < 224; i++) PAL16[i] = bg_pal[i];
     for (int i = 0; i < 16; i++) {
         PAL16[224 + i] = text_pal[i];      // bank 14: steady hand-distressed title
-        PAL16[208 + i] = text_pal[i];      // bank 13: slowly breathing invitation
+        PAL16[240 + i] = text_pal[i];      // bank 15: slowly breathing invitation
     }
     volatile u32 *tt = (volatile u32 *)(VRAM8 + 3 * 0x4000);              // charblock 3 = text tiles
     for (int i = 0; i < text_tile_count * 8; i++) tt[i] = text_tiles[i];
@@ -73,7 +73,7 @@ static void title_setup(void) {
     for (int r = 0; r < TITLE_TH; r++) for (int c = 0; c < TITLE_TW; c++) m0[(TITLE_ROW + r) * 32 + c] = title_map[r * TITLE_TW + c];
     for (int r = 0; r < PRESS_TH; r++) for (int c = 0; c < PRESS_TW; c++) {
         u16 tile=press_map[r * PRESS_TW + c];
-        m1[(PRESS_ROW + r) * 32 + c]= tile ? (u16)((tile & 0x0FFF) | (13 << 12)) : 0;
+        m1[(PRESS_ROW + r) * 32 + c]= tile ? (u16)((tile & 0x0FFF) | (15 << 12)) : 0;
     }
     ph_x = ph_y = 0; frames = 0; was_down = 1;
     int sx, sy; scroll_pos(&sx, &sy);
