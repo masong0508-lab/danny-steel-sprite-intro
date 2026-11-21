@@ -390,20 +390,26 @@ void cinema_draw(uint8_t *p,unsigned scene,unsigned tick,unsigned page,unsigned 
   studio(p,t);actor(p,20,69,1,t,focus==2?3:1);
   for(int i=0;i<5;i++)rect(p,81+i*5,16,2,2+((int)(t/9)+i)%6,((t/17+i)&1)?7:18);
   break;
- case CINE_ART:
-  roof(p,t,0);canvas(p,70,20,t,1);
-  actor(p,45,76,1,t,3);
-  stroke(p,60,50,73,41,31);stroke(p,73,41,77,36,14);
-  break;
+ case CINE_ART: {
+    roof(p,t,0);canvas(p,70,20,t,1);
+    int x=travel(37,46,t,7,45);
+    actor(p,x,76,1,t,t<53?2:3);
+    if(t>=53){stroke(p,x+20,60,76,35,14);pixel(p,76,35+(int)((t/13)&1),18);}
+    break;
+   }
  case CINE_SERVER:
   server(p,t,0);actor(p,17,70,1,t,focus>=2?3:0);
   break;
  case CINE_WITNESS:
-  street(p,t,1);
-  rect(p,52,54,61,3,14);rect(p,58,57,4,9,14);rect(p,103,57,4,9,14);
-  actor(p,38,69,1,t,focus&1?0:1);
-  actor(p,78,69,4,t,focus==0?0:1);
-  break;
+    street(p,t,1);
+    rect(p,52,54,61,3,14);rect(p,58,57,4,9,14);
+    rect(p,103,57,4,9,14);
+    actor(p,travel(28,39,t,12,51),72,1,t,t<63?2:focus&1?1:0);
+    actor(p,78,72,4,t,focus>=1?4:1);
+    /* The witness's physical written clue is handed to Danny. */
+    rect(p,58,58,7,4,20);
+    if(focus>=1){rect(p,60,59,3,1,18);}
+    break;
  case CINE_SAFE:
   safehouse(p,t);
   actor(p,33,67,1,t,focus>=1?0:1);
@@ -412,19 +418,24 @@ void cinema_draw(uint8_t *p,unsigned scene,unsigned tick,unsigned page,unsigned 
  case CINE_BACKUP:
   server(p,t,1);actor(p,19,70,1,t,focus>=2?0:3);
   break;
- case CINE_NOTICE:
-  street(p,t,0);
-  actor(p,44,70,1,t,focus>=1?0:1);
-  /* Notification appears on a tangible phone, held by Danny. */
-  rect(p,64,24,19,28,3);rect(p,66,26,15,24,25);
-  rect(p,68,30,11,4,20);rect(p,69,36,9,1,16);
-  if((t/13)&1)rect(p,69,41,8,2,18);
-  stroke(p,53,47,64,44,31);
-  break;
+ case CINE_NOTICE: {
+    street(p,t,0);
+    int x=travel(32,43,t,9,65);
+    actor(p,x,72,1,t,t<70?2:3);
+    /* Held phone follows his hand, not a floating large overlay. */
+    int px=x+21,py=52;
+    rect(p,px,py,9,14,3);rect(p,px+2,py+2,5,10,25);
+    rect(p,px+3,py+3,3,2,20);
+    if((t/18)&1)pixel(p,px+4,py+8,18);
+    break;
+   }
  case CINE_CLINIC:
-  clinic(p,t,0);actor(p,40,69,1,t,focus==2?0:1);
-  actor(p,86,67,3,t,focus&1?3:1);
-  break;
+    clinic(p,t,0);
+    actor(p,travel(35,43,t,8,59),72,1,t,t<65?2:focus==2?0:1);
+    actor(p,86,72,6,t,focus>=1?4:1);
+    rect(p,81,53,17,2,20);
+    if(focus>=1)stroke(p,87,52,89,48,31);
+    break;
  case CINE_FOLLOWUP:
   street(p,t,1);
   rect(p,11,14,67,44,21);rect(p,17,19,54,32,20);
@@ -433,11 +444,11 @@ void cinema_draw(uint8_t *p,unsigned scene,unsigned tick,unsigned page,unsigned 
   actor(p,104,71,2,t,focus&1?0:1);
   break;
  case CINE_LAST_CLINIC:
-  clinic(p,t,1);
-  actor(p,30,69,1,t,focus>=2?0:1);
-  actor(p,58,69,2,t,focus>=2?3:0);
-  actor(p,100,68,3,t,focus&1?3:0);
-  break;
+    clinic(p,t,1);
+    actor(p,30,72,1,t,focus>=2?0:1);
+    actor(p,58,72,2,t,focus>=2?4:0);
+    actor(p,101,72,6,t,focus&1?4:1);
+    break;
  case CINE_GOOD:
   if(page<2){roof(p,t,1);canvas(p,72,19,t,1);actor(p,45,72,1,t,1);}
   else if(page<5){recordshop(p,t);if(page==4)actor(p,101,73,2,t,0);}
@@ -480,20 +491,30 @@ void cinema_draw(uint8_t *p,unsigned scene,unsigned tick,unsigned page,unsigned 
    rect(p,81,62,13,2,14);rect(p,84,64,2,7,14);
    rect(p,91,64,2,7,14);
    break;
- case CINE_RESCUE_DOOR:
-   safehouse(p,t);
-   rect(p,76,22,29,35,3);rect(p,78,24,25,31,14);
-   rect(p,80,25,21,28,22);pixel(p,97,43,18);
-   if((t/17)&1)rect(p,79,25,23,2,18);
-   actor(p,39,72,1,t,1);
-   break;
-  case CINE_RESCUE_SAVED:
-   safehouse(p,t);
-   rect(p,76,22,29,35,3);rect(p,78,24,25,31,20);
-   actor(p,44+pan/2,72,1,t,1);
-   actor(p,84-pan/2,72,2,t,1);
-   break;
-  case CINE_BAD:
+ case CINE_RESCUE_DOOR: {
+    safehouse(p,t);
+    rect(p,76,22,29,35,3);rect(p,78,24,25,31,14);
+    rect(p,80,25,21,28,22);pixel(p,97,43,18);
+    int x=travel(38,59,t,6,70);
+    actor(p,x,72,1,t,t<76?2:3);
+    if(t>84 && ((t/24)&1))pixel(p,97,43,7);
+    break;
+   }
+ case CINE_RESCUE_SAVED: {
+    safehouse(p,t);
+    rect(p,76,22,29,35,3);
+    int open=travel(0,16,t,15,47);
+    rect(p,78,24,25,31,20);
+    rect(p,78+open,24,25-open,31,14);
+    rect(p,79+open,25,20-open,29,22);
+    int dx=travel(42,57,t,12,64);
+    int mx=travel(93,75,t,38,71);
+    actor(p,dx,72,1,t,t<74?2:focus>=1?3:1);
+    actor(p,mx,72,2,t,t<100?2:focus>=1?4:1);
+    if(t>=108)stroke(p,dx+18,57,mx-18,57,31);
+    break;
+   }
+ case CINE_BAD:
    roof(p,t,1);canvas(p,71,21,t,0);
    actor(p,41,76,1,t,0);
    rect(p,14,66,11,4,14);rect(p,17,63,5,3,18);
