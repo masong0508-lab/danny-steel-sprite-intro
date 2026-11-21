@@ -45,7 +45,8 @@ int main(void){
  assert(s.work==4&&s.energy==2&&s.spark==3);
  done(&s);
  /* Repeating an activity today never earns progress twice. */
- stand(&s,14,7,3);press(&s,A);assert(!s.activity);done(&s);
+ stand(&s,14,7,3);press(&s,A);assert(s.activity=='r');
+ press(&s,B);assert(!s.activity);
  assert(s.work==4&&s.daily_memories==3);
  /* Exhaustion never blocks a choice or ends the game. */
  s.daily_mask=(uint8_t)(s.daily_mask & ~STORY_DAY_ART);s.energy=0;
@@ -69,8 +70,10 @@ int main(void){
   assert(count>=2&&!strcmp(pages[0].line1,"You never have to"));}
  done(&s);
  s.work=9;s.daily_mask|=STORY_DAY_MUSIC;stand(&s,19,8,3);press(&s,A);
+ assert(s.activity=='m');press(&s,B);
+ s.song_steps=STORY_PROJECT_DONE;press(&s,A);
  {int count=0;const StoryPage *pages=story_pages(&s,&count);
-  assert(count>=2&&!strcmp(pages[0].line1,"The new arrangement"));}
+  assert(count>=2&&!strcmp(pages[0].line1,"MASTER COPY SAVED."));}
  done(&s);
  /* The measured canvas and music sets change as work is completed. */
  {uint8_t before[120*80],after[120*80];

@@ -143,3 +143,14 @@ bond and crafted work respond to actions; no resource can block an ending,
 doctor visit or story objective. The HUD is shared across map and first-person
 views. Save v4 is 28 bytes within the original 32-byte slot stride and retains
 v1–v3 compatibility. See docs/DAILY_MOMENTS.md and tests/life_choices_test.c.
+
+### Optional interactive creative projects (SRAM v5)
+The BORE tape and rooftop canvas are now independently persistent four-stage
+projects rather than counters. Returning to a creative workstation after its
+daily moment offers BUILD/REVISE-style options; LEFT/RIGHT and A confirm,
+B cancels. Real studio and canvas details appear as the work progresses,
+and completed pieces unlock additional BORE clerk and Mara conversations.
+Morning and closing-time dialogue makes their daily routine more believable
+without hiding NPCs. New SRAM v5 uses 31 of the same 32 bytes per slot and
+migrates v1–v4. Tests validate project completion, visual frame bounds,
+appointments, endings, and save checksums.

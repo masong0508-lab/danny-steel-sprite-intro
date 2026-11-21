@@ -39,6 +39,14 @@ jobs:
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/story_draw.c src/cinema.c tests/life_choices_test.c -o /tmp/danny_life_choices_test
           /tmp/danny_life_choices_test
+      - name: Test two persistent creative projects and time-of-day dialogue
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/story_draw.c src/cinema.c tests/projects_test.c -o /tmp/danny_projects_test
+          /tmp/danny_projects_test
+      - name: Validate all SRAM v1-v5 migrations, checksum and slot bounds
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story_save.c tests/save_codec_test.c -o /tmp/danny_save_codec_test
+          /tmp/danny_save_codec_test
       - name: Test numbered-day neutral finale and the good epilogue
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/story_draw.c src/cinema.c tests/ending_test.c -o /tmp/danny_ending_test

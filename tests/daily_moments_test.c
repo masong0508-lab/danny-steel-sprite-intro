@@ -46,7 +46,7 @@ int main(void){
  assert(s.flags&STORY_MUSIC);done(&s);
  assert((s.daily_mask&STORY_DAY_ALL)==STORY_DAY_ALL);
  assert(s.daily_mask&STORY_DAY_RECAP&&s.daily_memories==5);
- goal(&s,14,6,"REST");
+ goal(&s,14,6,"ART WORK");
  s.day_frame=STORY_DAY_FRAMES-1;story_tick(&s,0);
  assert(s.day_number==2&&s.life_stage==STORY_LIFE_CLINIC&&s.daily_mask==0);
  goal(&s,16,5,"CLINIC");done(&s);
