@@ -33,6 +33,10 @@ static void render(unsigned kind,Story *s,unsigned frame){
          hd_cinema_draw(pixels,s,160u+frame);break;
   case 10:s->cinema=CINE_FOLLOWUP;s->page=1u;
           hd_cinema_draw(pixels,s,130u+frame);break;
+  case 11:s->cinema=CINE_GOOD;s->page=3u;
+          hd_cinema_draw(pixels,s,2900u+frame);break;
+  case 12:s->cinema=CINE_GOOD;s->page=6u;
+          hd_cinema_draw(pixels,s,4750u+frame);break;
   default:assert(0);
  }
 }
@@ -41,11 +45,11 @@ int main(void){
   "overhead town","240-column 3D","Mara scene","rescue scene",
   "Studio notes","score-length ending","ROM illustrated arena",
   "Potheads opening","Mara close-up","Doctor close-up",
-  "Clinic entrance"
+  "Clinic entrance","Record shop finale","Memorial concert"
  };
  const unsigned frames=18u;
  studio_reset();
- for(unsigned scene=0;scene<11;scene++){
+ for(unsigned scene=0;scene<13;scene++){
   Story s;story_new(&s,0);
   s.x=12;s.y=13;s.facing=3;s.prev_x=s.x;s.prev_y=s.y;
   s.cinema=CINE_NONE;s.dialogue=0;s.activity=0;

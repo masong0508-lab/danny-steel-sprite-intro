@@ -238,6 +238,13 @@ int main(int argc,char **argv){
  write_frame("25_good_ending_recordshop",&s,2900);
  s.finale_frame=4750u;
  write_frame("26_good_ending_concert",&s,4750);
+ /* Direct native renderer frames of the same real finale locations.
+    These expose prop staging before the timecoded subtitle overlay. */
+ s.ended=0;s.cinema=CINE_GOOD;s.page=3;
+ write_frame("25a_recordstore_cinematic",&s,2910);
+ s.page=6;
+ write_frame("26a_memorial_concert_cinematic",&s,4760);
+ s.ended=1;s.cinema=CINE_NONE;
  s.ending=STORY_END_BAD;s.rescue_stage=STORY_RESCUE_LOST;
  s.finale_frame=990u;
  write_frame("27_bad_unanswered_cafe",&s,990);

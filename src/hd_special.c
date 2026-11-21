@@ -45,9 +45,12 @@ static void inside(uint8_t *p,unsigned t,int window){
  hd_rect(p,130,21,100,4,HD_COPPER);
 }
 static void rainy_lane(uint8_t *p,unsigned t){
- for(int y=0;y<160;y++)
-  hd_rect(p,0,y,240,1,y<30?19:y<75?HD_GLASS:
-                               y<105?HD_STONE_DARK:HD_ROAD);
+ /* Four pixel-identical city bands replace 160 tiny rect calls per shot.
+    Keep all rain, building silhouettes and narrative placements intact. */
+ hd_rect(p,0,0,240,30,19);
+ hd_rect(p,0,30,240,45,HD_GLASS);
+ hd_rect(p,0,75,240,30,HD_STONE_DARK);
+ hd_rect(p,0,105,240,55,HD_ROAD);
  for(int i=0;i<14;i++){
   int x=i*19-7,h=26+(int)(hash((unsigned)i,8u)%28u);
   hd_rect(p,x,109-h,19,h,HD_BRICK_DARK);
@@ -299,46 +302,134 @@ static void rooftop(uint8_t *p,unsigned t,int paint,int ending_state){
 }
 static void good_record(uint8_t *p,unsigned t){
  inside(p,t,1);
+ /* Warm listening-room key light, stock-shelf brackets, and actual
+    album-cover identities. Eight identical disc symbols read like a
+    debug grid rather than a record shop; the variation is intentional. */
+ hd_rect(p,130,10,103,16,HD_SHADOW);
+ hd_rect(p,133,12,98,13,HD_BARK);
+ hd_rect(p,135,14,94,9,HD_BRICK_DARK);
+ hd_text(p,140,15,"DANNY'S MASTER",HD_PAPER,1,0);
+ hd_line(p,132,26,231,26,HD_GOLD);
+ hd_line(p,188,0,188,10,HD_BARK);
+ hd_rect(p,178,10,21,4,HD_COPPER);
+ hd_rect(p,181,14,15,3,HD_GOLD);
+ hd_rect(p,184,17,9,2,HD_LAMP);
+ hd_rect(p,130,30,104,67,HD_SHADOW);
+ hd_rect(p,132,31,100,64,HD_STONE_DARK);
  for(int i=0;i<8;i++){
   int x=133+(i%4)*25,y=33+(i/4)*32;
+  unsigned paper=i%3==0?HD_GLASS:i%3==1?HD_LEAF_DARK:
+                 HD_BRICK_LIT;
   hd_rect(p,x,y,21,26,HD_BARK);
-  hd_rect(p,x+2,y+2,17,22,HD_GLASS);
+  hd_rect(p,x+2,y+2,17,22,paper);
+  hd_rect(p,x+2,y+2,17,2,i&1?HD_COPPER:HD_GOLD);
   hd_ellipse(p,x+10,y+12,7,7,HD_INK);
-  hd_ellipse(p,x+10,y+12,2,2,HD_GOLD);
+  hd_ellipse(p,x+10,y+12,3,3,HD_PAPER);
+  hd_ellipse(p,x+10,y+12,1,1,HD_GOLD);
+  hd_line(p,x+3,y+21,x+16,y+21,HD_STONE_LIT);
+  if(i&1)hd_pixel(p,x+5,y+7,HD_LAMP);
  }
+ hd_rect(p,133,62,98,2,HD_COPPER);
+ hd_rect(p,133,94,98,3,HD_BARK);
  hd_rect(p,18,109,207,9,HD_BARK);
+ hd_rect(p,18,109,207,2,HD_COPPER);
  hd_rect(p,25,118,7,36,HD_BARK);
  hd_rect(p,209,118,7,36,HD_BARK);
+ hd_rect(p,35,121,164,26,HD_BRICK_DARK);
+ for(int i=0;i<6;i++){
+  int x=52+i*24;
+  hd_rect(p,x,127,18,14,HD_BARK);
+  hd_rect(p,x+3,129,12,9,i&1?HD_BRICK:HD_LEAF_DARK);
+  hd_line(p,x+4,135,x+12,135,HD_COPPER);
+ }
+ /* Record turntable has its own platter, spindle and anchored tonearm. */
  hd_ellipse(p,83,108,37,13,HD_INK);
  hd_ellipse(p,83,108,30,10,HD_STONE_DARK);
- hd_ellipse(p,83,108,6,3,HD_GOLD);
+ hd_ellipse(p,83,108,25,8,HD_ROAD_COOL);
+ hd_ellipse(p,83,108,5,4,HD_GOLD);
+ hd_pixel(p,83,108,HD_PAPER);
  int angle=(int)(t/16u&3u);
  hd_line(p,83,108,83+((angle&1)?7:-7),105,HD_PAPER);
  hd_line(p,132,87,117,100,HD_COPPER);
  hd_rect(p,132,84,4,14,HD_COPPER);
+ hd_rect(p,130,84,8,3,HD_GOLD);
+ /* A copy of Danny's record in Mara's hand remains a physical prop,
+    not a floating speech icon or a rewritten ending. */
+ hd_rect(p,60,94,16,22,HD_INK);
+ hd_rect(p,62,95,12,18,HD_GLASS_LIT);
+ hd_ellipse(p,68,104,5,5,HD_INK);
+ hd_pixel(p,68,104,HD_GOLD);
  hd_actor_stage(p,43,143,2,t,5);
- hd_text(p,144,15,"DANNY'S MASTER",HD_PAPER,1,0);
 }
 static void concert(uint8_t *p,unsigned t){
  rainy_lane(p,t);
- hd_rect(p,0,82,240,53,HD_INK);
- hd_rect(p,22,38,196,8,HD_BRICK);
- hd_rect(p,24,43,4,52,HD_BRICK);
- hd_rect(p,212,43,4,52,HD_BRICK);
+ /* This is an *in-world* memorial performance, not a faceless void.
+    Architectural truss, hung banner, powered monitors and a visible
+    audience create actual stage depth at 240x160 on one framebuffer. */
+ hd_rect(p,0,83,240,46,HD_INK);
+ hd_rect(p,17,78,206,42,HD_BRICK_DARK);
+ for(int k=0;k<9;k++)
+  hd_rect(p,22+k*24,81,19,30,k&1?HD_STONE_DARK:HD_BRICK_DARK);
+ hd_rect(p,19,118,202,8,HD_BARK);
+ hd_rect(p,20,120,200,4,HD_COPPER);
+ hd_rect(p,18,38,205,8,HD_BRICK);
+ hd_rect(p,21,42,4,67,HD_BRICK);
+ hd_rect(p,215,42,4,67,HD_BRICK);
+ hd_rect(p,29,48,182,2,HD_GOLD);
+ hd_rect(p,75,20,90,18,HD_INK);
+ hd_rect(p,77,22,86,14,HD_BRICK_DARK);
+ hd_line(p,79,23,161,23,HD_COPPER);
+ hd_text(p,82,26,"ONE MORE SONG",HD_PAPER,1,0);
  for(int i=0;i<5;i++){
-  int x=31+i*43;
-  hd_rect(p,x,42,5,10,HD_GOLD);
-  hd_line(p,x+2,52,116+(int)(t/50u&3u)*2,101,
+  int x=28+i*43;
+  int sway=(int)((t/54u+(unsigned)i)&3u);
+  hd_rect(p,x,42,7,10,HD_GOLD);
+  hd_rect(p,x+2,53,3,3,HD_LAMP);
+  hd_line(p,x+3,55,118+sway*3,95,
           i&1?HD_GLASS_LIT:HD_LAMP);
+  hd_line(p,x+4,55,118+sway*3+1,95,
+          i&1?HD_STONE_LIT:HD_COPPER);
  }
- hd_rect(p,18,119,202,10,HD_BRICK_DARK);
- for(int i=0;i<19;i++){
-  int x=i*14-6;
-  int y=141+(int)(((unsigned)(i*7)+t/23u)&3u);
-  hd_ellipse(p,x,y,7,7,i%3u?HD_STONE_DARK:HD_HAIR);
-  hd_rect(p,x-6,y+4,13,19,i%4u?HD_GLASS:HD_BRICK);
+ /* Stage infrastructure and instruments stay behind the performers. */
+ for(int i=0;i<2;i++){
+  int x=i?197:22;
+  hd_rect(p,x,82,20,35,HD_INK);
+  hd_rect(p,x+2,85,16,29,HD_STONE_DARK);
+  hd_ellipse(p,x+10,95,6,6,HD_SHADOW);
+  hd_ellipse(p,x+10,108,5,5,HD_INK);
+  hd_ellipse(p,x+10,108,2,2,HD_COPPER);
  }
- hd_actor_stage(p,121,121,3,t,1);
+ hd_ellipse(p,167,111,21,12,HD_SHADOW);
+ hd_ellipse(p,167,106,13,12,HD_BARK);
+ hd_ellipse(p,167,106,10,9,HD_GLASS);
+ hd_line(p,167,97,167,86,HD_COPPER);
+ hd_ellipse(p,167,97,3,3,HD_GOLD);
+ hd_rect(p,151,112,3,9,HD_COPPER);
+ hd_rect(p,182,112,3,9,HD_COPPER);
+ hd_rect(p,42,112,39,6,HD_BARK);
+ hd_rect(p,45,108,12,4,HD_STONE_LIT);
+ hd_rect(p,63,108,11,4,HD_STONE_LIT);
+ /* Mara steps into the spotlight to introduce the record in memory
+    of Danny. The clerk supports from stage left, rather than making
+    Danny inexplicably appear alive at his own posthumous tribute. */
+ hd_actor_stage(p,75,119,3,t,0);
+ hd_actor_stage(p,121,122,2,t,1);
+ hd_line(p,130,93,130,117,HD_COPPER);
+ hd_ellipse(p,130,92,3,3,HD_INK);
+ hd_pixel(p,130,92,HD_PAPER);
+ hd_line(p,130,118,125,122,HD_STONE);
+ hd_rect(p,86,116,21,5,HD_SHADOW);
+ hd_line(p,89,116,103,116,HD_STONE_LIT);
+ /* The near row of audience heads occupies the *foreground* rather
+    than appearing only beneath the final-film subtitles. */
+ for(int i=0;i<15;i++){
+  int x=i*17-5;
+  int bob=(int)(((unsigned)(i*7)+t/26u)&3u);
+  int yy=117+bob;
+  hd_ellipse(p,x,yy,7,5,(i&1)?HD_HAIR:HD_STONE_DARK);
+  hd_rect(p,x-6,yy+3,13,16,(i%3)?HD_GLASS:HD_BRICK);
+  if(i%4==0)hd_line(p,x+6,yy+6,x+10,yy-6,HD_SKIN);
+ }
 }
 int hd_special_cinema_draw(uint8_t *p,const Story *s,unsigned t){
  switch(s->cinema){

@@ -61,8 +61,11 @@ workflow. It is not a request to produce standalone concept art.
 1. Compare the revamped bust portraits at native 1× and screenshot 4×
    against the prior floating-oval composition, then adjust jaw/neck
    and clothing connections as necessary.
-2. Improve depth and foreground occlusion across unfinished endgame
-   interiors and the actual final film, not just the introduction.
+2. Review the expanded record-store finale and memorial concert at native
+   1× and 4×. The record store has varied sleeves, a warm listening light,
+   and an anchored turntable; the concert now has a lit truss, real
+   instruments, speakers, and foreground patrons. Neither should imply
+   Danny is alive at his own posthumous legacy performance.
 3. Measured GBA emulator FPS / VRAM budget; scale back decorative
    loops if any cinematic scene exceeds the per-frame budget.
 4. Exact rotoscope of Danny's Potheads dance when the original reference

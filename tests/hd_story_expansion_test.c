@@ -41,6 +41,27 @@ int main(void){
   }
  }
  assert(count>=96u);
+ /* The final tribute is not a blank stage: recordshop and concert
+    must be different real sets with light, albums and a performer. */
+ s.cinema=CINE_GOOD;s.page=3;s.ended=0;
+ clear();hd_cinema_draw(frame.pixels,&s,2910u);
+ unsigned record_store=checksum(),warm_record=0;
+ for(int y=20;y<99;y++)for(int x=133;x<231;x++){
+  unsigned c=frame.pixels[y*HD_W+x];
+  if(c==HD_GOLD||c==HD_COPPER||c==HD_PAPER)warm_record++;
+ }
+ assert(warm_record>80u);
+ s.page=6;
+ clear();hd_cinema_draw(frame.pixels,&s,4760u);
+ unsigned memorial_stage=checksum(),stage_light=0;
+ for(int y=20;y<120;y++)for(int x=18;x<223;x++){
+  unsigned c=frame.pixels[y*HD_W+x];
+  if(c==HD_GOLD||c==HD_LAMP||c==HD_GLASS_LIT)stage_light++;
+ }
+ assert(memorial_stage!=record_store&&stage_light>70u);
+ /* The stage remains animated instead of becoming a static victory card. */
+ clear();hd_cinema_draw(frame.pixels,&s,4830u);
+ assert(checksum()!=memorial_stage);
  /* The endings must follow the original director's shot mapping; rescuing
     Mara changes the visible scene, but not the timing or score length. */
  unsigned endings[3]={STORY_END_GOOD,STORY_END_NEUTRAL,STORY_END_BAD};
