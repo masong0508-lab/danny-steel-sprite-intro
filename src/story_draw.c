@@ -420,6 +420,11 @@ static void risk_menu(uint8_t *p,const Story *s){
     }
     panel(p,40,80);
     text(p,4,43,name,20,26);
+    if(s->risk_menu!='H'){
+        char count[]="BAD 0/4";
+        count[4]=(char)('0'+story_bad_count(s));
+        text(p,88,43,count,18,4);
+    }
     if(s->risk_menu=='H'){
         text(p,4,53,"LEFT OPEN / RIGHT LEAVE",20,28);
     }else{

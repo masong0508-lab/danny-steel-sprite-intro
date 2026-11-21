@@ -126,7 +126,7 @@ enum { D_NONE, D_OPEN, D_LETTER, D_LETTER_AGAIN, D_CLERK_LOCKED, D_CLERK, D_CLER
        D_BAD_LETTER, D_BAD_CLERK, D_BAD_MUSIC, D_BAD_SERVER,
        D_MARA_MISSING, D_MARA_ABSENT, D_RESCUE_WITNESS,
        D_RESCUE_TRACE, D_RESCUE_SAVED, D_RESCUE_LOST,
-       D_RESCUE_AFTERSHOCK, D_BAD_END, D_RESCUE_NOTES_1,
+       D_RESCUE_AFTERSHOCK, D_BAD_END, D_BAD_END_SAVED, D_RESCUE_NOTES_1,
        D_RESCUE_NOTES_2, D_RESCUE_NOTES_3, D_RESCUE_NOTES_SAVED,
        D_BUS_RESCUE };
 #define SCRIPT(name, ...) static const StoryPage name[] = { __VA_ARGS__ }
@@ -493,6 +493,11 @@ SCRIPT(d_bad_end,
  {"NARRATOR", "Only the quiet", "where her voice had been."},
  {"NARRATOR", "Danny's last days", "slipped into silence."},
  {"BAD END", "The city kept", "its unanswered calls."});
+SCRIPT(d_bad_end_saved,
+ {"NARRATOR", "Mara returned home.", "She was safe."},
+ {"NARRATOR", "Danny's next choice", "broke the trust left."},
+ {"NARRATOR", "His last days", "ended in silence."},
+ {"BAD END", "The city had lost", "too many promises."});
 SCRIPT(d_rescue_notes_1,
  {"POCKET NOTEBOOK", "MARA IS MISSING.", "WITNESS: WEST CAFE."});
 SCRIPT(d_rescue_notes_2,
@@ -538,7 +543,8 @@ static const struct { const StoryPage *pages; uint8_t count; } scripts[] = {
   SEQ(d_bad_letter), SEQ(d_bad_clerk), SEQ(d_bad_music), SEQ(d_bad_server),
   SEQ(d_mara_missing), SEQ(d_mara_absent), SEQ(d_rescue_witness),
   SEQ(d_rescue_trace), SEQ(d_rescue_saved), SEQ(d_rescue_lost),
-  SEQ(d_rescue_aftershock), SEQ(d_bad_end), SEQ(d_rescue_notes_1),
+  SEQ(d_rescue_aftershock), SEQ(d_bad_end), SEQ(d_bad_end_saved),
+  SEQ(d_rescue_notes_1),
   SEQ(d_rescue_notes_2), SEQ(d_rescue_notes_3), SEQ(d_rescue_notes_saved),
   SEQ(d_bus_rescue)
 };
@@ -604,7 +610,7 @@ static uint8_t cinematics_for_dialogue(uint8_t d){
     case D_RESCUE_WITNESS: return CINE_WITNESS;
     case D_RESCUE_LOST: return CINE_RESCUE_DOOR;
     case D_RESCUE_SAVED: return CINE_RESCUE_SAVED;
-    case D_BAD_END: return CINE_BAD;
+    case D_BAD_END: case D_BAD_END_SAVED: return CINE_BAD;
     case D_BUS_RESCUE: return CINE_BUS;
     default: return CINE_NONE;
     }
@@ -1052,7 +1058,9 @@ void story_tick(Story *s, uint16_t keys) {
         if (s->finale_frame<limit) ++s->finale_frame;
         if (s->finale_frame>=limit) {
             if (s->ending==STORY_END_GOOD)talk(s,D_GOOD_END);
-            else if(s->ending==STORY_END_BAD)talk(s,D_BAD_END);
+            else if(s->ending==STORY_END_BAD)
+                talk(s,s->rescue_stage==STORY_RESCUE_AFTERSHOCK?
+                     D_BAD_END_SAVED:D_BAD_END);
             else {
                 s->ended=1;s->ending=STORY_END_NEUTRAL;
                 talk(s,D_NEUTRAL_END);
