@@ -6,9 +6,10 @@ enum {
  CINE_BUS, CINE_STAY, CINE_MUSIC, CINE_ART, CINE_SERVER,
  CINE_WITNESS, CINE_SAFE, CINE_BACKUP, CINE_NOTICE,
  CINE_CLINIC, CINE_FOLLOWUP, CINE_LAST_CLINIC, CINE_GOOD,
- CINE_FINALE, CINE_DAY, CINE_REBRAND
+ CINE_FINALE, CINE_DAY, CINE_REBRAND,
+ CINE_MARA_EMPTY, CINE_RESCUE_DOOR, CINE_RESCUE_SAVED, CINE_BAD
 };
-#define CINE_COUNT 21
+#define CINE_COUNT 25
 /* Timed final montage uses real BORE cues and the same established sets.
    Only the good route includes the separate 16-second coda. */
 void cinema_ending_draw(uint8_t *pixels, unsigned ending, unsigned frame);

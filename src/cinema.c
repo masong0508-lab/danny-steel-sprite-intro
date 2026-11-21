@@ -434,7 +434,35 @@ void cinema_draw(uint8_t *p,unsigned scene,unsigned tick,unsigned page,unsigned 
  case CINE_REBRAND:
   server(p,t,1);actor(p,24,70,1,t,0);
   break;
- case CINE_FINALE: {
+ case CINE_MARA_EMPTY:
+   street(p,t,1);
+   rect(p,3,16,32,38,14);rect(p,6,20,26,29,23);
+   rect(p,7,18,23,7,18);rect(p,9,25,21,4,22);
+   rect(p,54,54,38,3,14);rect(p,61,57,4,12,14);
+   rect(p,84,57,4,12,14);
+   rect(p,75,50,7,4,20);rect(p,78,48,3,2,18);
+   actor(p,42+pan/2,72,1,t,0);
+   break;
+  case CINE_RESCUE_DOOR:
+   safehouse(p,t);
+   rect(p,76,22,29,35,3);rect(p,78,24,25,31,14);
+   rect(p,80,25,21,28,22);pixel(p,97,43,18);
+   if((t/17)&1)rect(p,79,25,23,2,18);
+   actor(p,39,72,1,t,1);
+   break;
+  case CINE_RESCUE_SAVED:
+   safehouse(p,t);
+   rect(p,76,22,29,35,3);rect(p,78,24,25,31,20);
+   actor(p,44+pan/2,72,1,t,1);
+   actor(p,84-pan/2,72,2,t,1);
+   break;
+  case CINE_BAD:
+   roof(p,t,1);canvas(p,71,21,t,0);
+   actor(p,41,76,1,t,0);
+   rect(p,14,66,11,4,14);rect(p,17,63,5,3,18);
+   if((t/50)&1)rect(p,0,3,120,1,3);
+   break;
+  case CINE_FINALE: {
   /* Twelve coherent shots along one fixed rooftop composition. The camera
      drifts but never teleports objects or changes the skyline direction. */
   int f=(int)final;
@@ -506,6 +534,15 @@ static const EndingShot good_shots[] = {
  {4610,CINE_GOOD,3}, {4890,CINE_GOOD,6},
  {5140,CINE_GOOD,7}, {5310,CINE_GOOD,3}
 };
+
+static const EndingShot bad_shots[] = {
+ {350,CINE_BAD,0}, {780,CINE_LETTER,1},
+ {1190,CINE_MARA,2}, {1650,CINE_SERVER,1},
+ {2070,CINE_RESCUE_DOOR,1}, {2490,CINE_BAD,0},
+ {2900,CINE_BORE,1}, {3320,CINE_MUSIC,1},
+ {3670,CINE_BAD,0}, {4030,CINE_REBRAND,1},
+ {4350,CINE_BAD,0}
+};
 static unsigned pick_shot(const EndingShot *v,unsigned count,unsigned frame){
  for(unsigned i=0;i<count;i++)if(frame<v[i].until)return i;
  return count-1;
@@ -513,12 +550,14 @@ static unsigned pick_shot(const EndingShot *v,unsigned count,unsigned frame){
 unsigned cinema_ending_shot(unsigned ending,unsigned frame){
  if(ending==1)return pick_shot(good_shots,
         sizeof(good_shots)/sizeof(good_shots[0]),frame);
+ if(ending==3)return pick_shot(bad_shots,
+        sizeof(bad_shots)/sizeof(bad_shots[0]),frame);
  return pick_shot(neutral_shots,
         sizeof(neutral_shots)/sizeof(neutral_shots[0]),frame);
 }
 void cinema_ending_draw(uint8_t *p,unsigned ending,unsigned frame){
  unsigned good=ending==1;
- const EndingShot *shots=good?good_shots:neutral_shots;
+ const EndingShot *shots=good?good_shots:ending==3?bad_shots:neutral_shots;
  unsigned shot=cinema_ending_shot(ending,frame);
  unsigned begin=shot?shots[shot-1].until:0;
  unsigned local=frame>begin?frame-begin:0;
