@@ -10,6 +10,11 @@ on:
 permissions:
   contents: write
 
+# A gallery capture is valid only for the newest revision of its branch.
+concurrency:
+  group: danny-steel-visuals-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   capture:
     runs-on: ubuntu-24.04
@@ -61,5 +66,9 @@ jobs:
           git add docs/screenshots
           if ! git diff --cached --quiet; then
             git commit -m "docs: capture actual mGBA and game-renderer screenshots [skip ci]"
+            # Source commits can advance while mGBA is capturing. Fast-forward
+            # first; never force-push or discard new game code.
+            git fetch origin "${GITHUB_REF_NAME}"
+            git rebase "origin/${GITHUB_REF_NAME}"
             git push origin "HEAD:${GITHUB_REF_NAME}"
           fi
