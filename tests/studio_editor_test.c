@@ -49,6 +49,9 @@ int main(void){
  s.day_frame=STORY_DAY_FRAMES-1u;
  for(int i=0;i<120;i++)story_tick(&s,0);
  assert(s.day_frame==STORY_DAY_FRAMES-1u);
+ /* Subsequent menu tests should not artificially hit the next morning
+    on exit; clinic/day rollover is already covered separately. */
+ s.day_frame=120u;
  /* SONG setup actually changes tempo and feel. */
  uint32_t oldticks=studio_ticks();
  press(&s,UP);assert(studio_ticks()!=oldticks);
@@ -68,10 +71,6 @@ int main(void){
  unsigned order_before=studio_patch()->order[1];
  studio_motif_step(8u,&before);
  press(&s,UP);studio_motif_step(8u,&after);
- if(before.lead==after.lead)
-  fprintf(stderr,"order %u -> %u, note0=%u, lead %d -> %d, tab=%u cursor=%u\\n",
-   order_before,studio_patch()->order[1],studio_patch()->notes[0],
-   (int)before.lead,(int)after.lead,(unsigned)s.studio_tab,(unsigned)s.studio_cursor);
  assert(studio_patch()->order[1]!=order_before);
  assert(before.lead!=after.lead);
  guard(&s);
