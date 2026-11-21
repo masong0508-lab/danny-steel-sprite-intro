@@ -310,6 +310,15 @@ static void pot_bellipse(uint8_t *p,int x,int foot,int scale,
  hd_ellipse(p,pot_local(x,px,scale),pot_local(foot,py,scale),
             pot_size(rx,scale),pot_size(ry,scale),ink);
 }
+/* Deliberately irregular painted characters, not one mechanically
+   perfect screen-font strip. No additional font atlas or ROM image. */
+static void pot_handletter(uint8_t *p,int x,int y,const char *word,
+                           unsigned ink){
+ for(int i=0;word[i]&&i<9;i++){
+  char letter[2]={word[i],0};
+  hd_text(p,x+i*6,y+(i*7+1)%3-1,letter,ink,1,0);
+ }
+}
 static void pot_banana(uint8_t *p,int cx,int cy,int z,unsigned t){
  PotPose a=pot_motion(t);
  int x=pot_pt(cx,98-120,z),foot=pot_pt(cy,101-80,z);
@@ -320,9 +329,27 @@ static void pot_banana(uint8_t *p,int cx,int cy,int z,unsigned t){
  pot_bline(p,x,foot,sc, 5,-17,a.rf,a.rh-2,HD_INK);
  pot_brect(p,x,foot,sc,a.lf-6,a.lh-3,13,4,HD_INK);
  pot_brect(p,x,foot,sc,a.rf-6,a.rh-3,13,4,HD_INK);
- pot_bellipse(p,x,foot,sc,a.lean/2,-34+a.bob,15,20,HD_INK);
- pot_bellipse(p,x,foot,sc,a.lean/2,-34+a.bob,12,18,HD_GOLD);
- pot_bellipse(p,x,foot,sc,a.lean/2-6,-34+a.bob,3,14,HD_LAMP);
+ /* A tall, asymmetrical curved BANANA rather than an egg-shaped mascot.
+    The central face aperture is inset into the yellow outer shell. */
+ pot_bellipse(p,x,foot,sc,a.lean/2+2,-37+a.bob,16,23,HD_INK);
+ pot_bellipse(p,x,foot,sc,a.lean/2+2,-37+a.bob,13,21,HD_GOLD);
+ pot_bellipse(p,x,foot,sc,a.lean/2-5,-36+a.bob,4,17,HD_LAMP);
+ pot_bline(p,x,foot,sc,a.lean/2-10,-57+a.bob,
+           a.lean/2-16,-43+a.bob,HD_INK);
+ pot_bline(p,x,foot,sc,a.lean/2-16,-43+a.bob,
+           a.lean/2-13,-26+a.bob,HD_INK);
+ pot_bline(p,x,foot,sc,a.lean/2-13,-26+a.bob,
+           a.lean/2-4,-15+a.bob,HD_INK);
+ pot_bline(p,x,foot,sc,a.lean/2+11,-59+a.bob,
+           a.lean/2+18,-44+a.bob,HD_INK);
+ pot_bline(p,x,foot,sc,a.lean/2+18,-44+a.bob,
+           a.lean/2+15,-27+a.bob,HD_INK);
+ pot_bline(p,x,foot,sc,a.lean/2+15,-27+a.bob,
+           a.lean/2+6,-16+a.bob,HD_INK);
+ pot_bline(p,x,foot,sc,a.lean/2+11,-58+a.bob,
+           a.lean/2+16,-41+a.bob,HD_LAMP);
+ pot_bline(p,x,foot,sc,a.lean/2+16,-41+a.bob,
+           a.lean/2+12,-28+a.bob,HD_LAMP);
  /* Seamed, asymmetrical banana silhouette. The dark seam tracks the
     connected torso, rather than wobbling independently of the skeleton. */
  pot_bline(p,x,foot,sc,a.lean/2+8,-50+a.bob,
@@ -339,8 +366,10 @@ static void pot_banana(uint8_t *p,int cx,int cy,int z,unsigned t){
  pot_bellipse(p,x,foot,sc,a.lean,-56+a.bob,11,13,HD_INK);
  pot_bellipse(p,x,foot,sc,a.lean,-56+a.bob,9,12,HD_LAMP);
  pot_bellipse(p,x,foot,sc,a.lean,-54+a.bob,6,7,HD_SKIN_LIT);
- pot_bline(p,x,foot,sc,a.lean-2,-67+a.bob,a.lean-5,-72+a.bob,HD_PAPER);
- pot_bline(p,x,foot,sc,a.lean-1,-68+a.bob,a.lean+4,-73+a.bob,HD_GOLD);
+ /* Curled dark stem makes the fruit shape legible at 1x LCD scale. */
+ pot_bline(p,x,foot,sc,a.lean-3,-66+a.bob,a.lean-8,-75+a.bob,HD_BARK);
+ pot_bline(p,x,foot,sc,a.lean-8,-75+a.bob,a.lean-4,-77+a.bob,HD_INK);
+ pot_bline(p,x,foot,sc,a.lean-1,-68+a.bob,a.lean+3,-72+a.bob,HD_GOLD);
  /* A little sweat and a neutral, weathered expression: he's working,
     not delighted with the suit. The face remains recognizable in profile. */
  pot_bline(p,x,foot,sc,a.lean-5,-60+a.bob,
@@ -376,8 +405,10 @@ static void pot_banana(uint8_t *p,int cx,int cy,int z,unsigned t){
  hd_line(p,bx+1,by+1,bx+1,by+bh-2,HD_COPPER);
  if(z>=215){
   hd_rect(p,bx+5,by+5,bw-10,8,HD_LAMP);
-  hd_text(p,bx+7,by+5,"POTHEADS",HD_INK,1,0);
-  hd_text(p,bx+10,by+18,"COME IN",HD_INK,1,0);
+  pot_handletter(p,bx+5,by+5,"POTHEADS",HD_INK);
+  pot_handletter(p,bx+8,by+18,"COME IN",HD_INK);
+  hd_line(p,bx+7,by+14,bx+43,by+13,HD_COPPER);
+  hd_pixel(p,bx+42,by+17,HD_RED_SHADE);
   hd_line(p,bx+43,by+26,bx+49,by+26,HD_RED_SHADE);
   hd_line(p,bx+46,by+23,bx+49,by+26,HD_RED_SHADE);
   hd_line(p,bx+46,by+29,bx+49,by+26,HD_RED_SHADE);
@@ -392,6 +423,77 @@ static void pot_banana(uint8_t *p,int cx,int cy,int z,unsigned t){
  pot_bellipse(p,x,foot,sc,a.rx,a.ry,3,3,HD_PAPER);
  pot_bline(p,x,foot,sc,a.rx,a.ry,a.rx+5,a.ry-2,HD_INK);
 }
+
+/* A genuinely overhead establishing view of the same Potheads block.
+   It reveals the storefront as the camera cranes down, using a bounded
+   scanline wipe instead of a second framebuffer or per-pixel alpha blend. */
+static void pot_air_rect(uint8_t *p,int top,int x,int y,int w,int h,unsigned ink){
+ if(y<0){h+=y;y=0;}
+ if(y+h>top)h=top-y;
+ if(h>0&&w>0)hd_rect(p,x,y,w,h,ink);
+}
+static void pot_air_scale(uint8_t *p,int top,int z,
+                          int x,int y,int w,int h,unsigned ink){
+ pot_air_rect(p,top,pot_pt(120,x-120,z),pot_pt(80,y-80,z),
+              pot_size(w,z),pot_size(h,z),ink);
+}
+static void pot_aerial(uint8_t *p,unsigned t){
+ if(t>=98u)return;
+ /* The roof/ground split sweeps upward as the camera tilts toward street
+    level. At frame 0 it is an actual top-down street, not a tiny facade. */
+ int top=t<46u?160:160-ease(0,160,t,46,52);
+ if(top<=0)return;
+ int z=ease(168,276,t,0,98);
+ pot_air_rect(p,top,0,0,240,160,HD_ROAD_COOL);
+ for(int i=0;i<14;i++){
+  int x=i*21-16;
+  pot_air_rect(p,top,x,0,2,160,HD_ROAD);
+  pot_air_rect(p,top,0,i*13,240,1,HD_STONE_DARK);
+ }
+ /* Cross street and pavements are measured around a single central
+    roof: neighboring blocks are contiguous, never random voxels. */
+ pot_air_scale(p,top,z,-20,94,280,15,HD_STONE);
+ pot_air_scale(p,top,z,-20,109,280,61,HD_ROAD);
+ pot_air_scale(p,top,z,-20,92,280,3,HD_PLASTER_LIT);
+ for(int i=0;i<10;i++){
+  pot_air_scale(p,top,z,13+i*26,142,13,2,HD_STONE_LIT);
+  pot_air_scale(p,top,z,14+i*25,101,12,1,HD_ROAD_LIGHT);
+ }
+ for(int i=0;i<3;i++){
+  int bx=i==0?-38:i==1?181:4;
+  int by=i==2?-47:12;
+  pot_air_scale(p,top,z,bx+3,by+4,64,70,HD_SHADOW);
+  pot_air_scale(p,top,z,bx,by,64,70,HD_BRICK_DARK);
+  pot_air_scale(p,top,z,bx+3,by+3,57,64,i==2?HD_STONE:HD_BRICK);
+  for(int v=0;v<4;v++){
+   pot_air_scale(p,top,z,bx+8+v*13,by+8,7,15,HD_ROAD_COOL);
+   pot_air_scale(p,top,z,bx+8+v*13,by+38,7,9,HD_GLASS);
+  }
+  pot_air_scale(p,top,z,bx+8,by+53,48,3,HD_COPPER);
+ }
+ /* The Potheads roof, light-wells, sign-facing green parapet and curb. */
+ pot_air_scale(p,top,z,75,30,104,68,HD_INK);
+ pot_air_scale(p,top,z,79,34,96,58,HD_BRICK_DARK);
+ for(int k=0;k<7;k++){
+  pot_air_scale(p,top,z,83+k*13,40,7,42,
+                k&1?HD_BRICK:HD_STONE_DARK);
+  pot_air_scale(p,top,z,85+k*13,37,3,2,HD_COPPER);
+ }
+ pot_air_scale(p,top,z,83,68,88,9,HD_STONE);
+ pot_air_scale(p,top,z,91,71,22,3,HD_ROAD_LIGHT);
+ pot_air_scale(p,top,z,137,71,26,3,HD_ROAD_LIGHT);
+ pot_air_scale(p,top,z,78,88,99,8,HD_LEAF_DARK);
+ pot_air_scale(p,top,z,82,91,91,3,HD_LEAF);
+ /* At this altitude the banana suit is a tiny yellow silhouette with
+    a matching pavement shadow and a separate paper sign. */
+ pot_air_scale(p,top,z,110,111,9,3,HD_SHADOW);
+ pot_air_scale(p,top,z,113,104,5,8,HD_GOLD);
+ pot_air_scale(p,top,z,113,103,3,3,HD_LAMP);
+ pot_air_scale(p,top,z,119,105,12,7,HD_PAPER);
+ pot_air_scale(p,top,z,120,107,10,1,HD_BARK);
+ if(top<160)pot_air_rect(p,top,0,top-2,240,2,HD_COPPER);
+}
+
 static void potheads_open(uint8_t *p,unsigned t){
  /* 0-132: a continuous bird's-eye descent; then an unbroken dance.
     Page advance never resets the camera or sign's position. */
@@ -399,6 +501,7 @@ static void potheads_open(uint8_t *p,unsigned t){
  int cx=ease(97,120,t,0,132),cy=ease(106,80,t,0,132);
  pot_city(p,t,z,cx,cy);
  pot_banana(p,cx,cy,z,t);
+ pot_aerial(p,t); /* overhead-to-street tilt, no extra canvas */
 }
 
 static void cafe(uint8_t *p,unsigned t){

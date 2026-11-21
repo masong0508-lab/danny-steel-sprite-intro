@@ -12,17 +12,20 @@ fantasy stage or a substitute for Danny's artistic ambitions.
 
 ## Staging at native 240x160
 
-1. **0–76 frames:** distant bird's-eye-style approach. Repeated roof
-   silhouettes, street grid, and short-shadowed scale cues establish a
-   lived-in neighborhood and the location's place in it.
-2. **76–132 frames:** continuously eased descent to the real Potheads
+1. **0–46 frames:** a real overhead view of the Potheads block and its
+   neighboring roofs, pavement, road markings and tiny banana signholder.
+   The aerial camera scales toward the same physical storefront.
+2. **46–98 frames:** a bounded upward scanline wipe reveals the street-level
+   facade under the overhead shot, like a crane dropping into the block.
+   This is a one-framebuffer transition, never a second bitmap.
+3. **98–132 frames:** continuously eased descent to the real Potheads
    awning, doorway, green fascia and sidewalk. Danny emerges as the
    foreground focus, already tethered to his hand-painted sign.
-3. **132+ frames:** full-resolution hero composition. The lettered
+4. **132+ frames:** full-resolution hero composition. The lettered
    *POTHEADS / COME IN* placard remains connected to the raised hand.
    The camera holds during the dance so faces and handwritten words
    remain readable beneath the original dialogue overlay.
-4. **Eight sampled poses:** arms, body lean, bob and heel steps blend with
+5. **Eight sampled poses:** arms, body lean, bob and heel steps blend with
    fixed-point Hermite interpolation. Both the elbow-to-hand skeleton
    and sign are rendered from the same transformed joint coordinates.
    This is *an authored rotoscope-ready approximation*, **not** a

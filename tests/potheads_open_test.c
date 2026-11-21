@@ -98,6 +98,7 @@ static void verify_work_not_wishful_thinking(void){
 }
 int main(void){
  assert(paint(0u,0u,1)!=paint(54u,0u,1));
+ assert(paint(54u,0u,1)!=paint(98u,0u,1)); /* aerial-to-facade tilt */
  assert(paint(54u,0u,1)!=paint(132u,0u,1));
  assert(paint(145u,0u,1)!=paint(181u,0u,1));
  for(unsigned pose=0;pose<8;pose++){
