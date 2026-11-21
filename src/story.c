@@ -1055,11 +1055,13 @@ static void interact(Story *s) {
             /* The Promise checkmark is granted only after the actual
                promise scene, never from small talk or a menu. */
             if (!(s->flags & STORY_MARA)) {
+                /* The promise is not granted until the player actually
+                   finishes and confirms Danny's answer with A. */
                 talk(s,D_MARA);
-                s->flags |= STORY_MARA;s->dirty=1;
-            } else if(story_bad_count(s)>=2)talk(s,D_MARA_WARNING);
+            } else if(can_make_memory(s) &&
+                      !(s->daily_mask&STORY_DAY_MARA))moment_menu(s,'F');
+            else if(story_bad_count(s)>=2)talk(s,D_MARA_WARNING);
             else if(story_bad_count(s)==1)talk(s,D_MARA_CONCERN);
-            else if(can_make_memory(s) && !(s->daily_mask&STORY_DAY_MARA))moment_menu(s,'F');
             else if(can_make_memory(s) && s->art_steps>=STORY_PROJECT_DONE)
                 talk(s,D_MARA_GALLERY);
             else if(can_make_memory(s) && s->bond>=4)talk(s,D_ACT_MARA_CLOSE);
@@ -1278,6 +1280,12 @@ void story_tick(Story *s, uint16_t keys) {
             if ((pressed & A) && s->page + 1 < count) ++s->page;
             else {
                 int ready = s->dialogue == D_BUS_READY && (pressed & A);
+                /* B skips an unfinished conversation; no promise check.
+                   Only A on Danny's final spoken answer earns it. */
+                if(s->dialogue==D_MARA && (pressed&A) &&
+                   !(s->flags&STORY_MARA)){
+                    s->flags|=STORY_MARA;s->dirty=1;
+                }
                 s->dialogue = 0; s->page = 0; s->scene=STORY_SCENE_NONE;
                 if(!ready && !s->ended && s->life_stage!=STORY_LIFE_FINALE)s->cinema=CINE_NONE;
                 if (ready) { s->choosing = 1; s->choice = 0; }
