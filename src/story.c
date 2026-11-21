@@ -6,17 +6,17 @@
 static const char *const town[STORY_H] = {
 "########################",
 "#......................#",
-"#...TT............TT...#",
+"#...TT.H..........TT...#",
 "#..TTTT...####....TT...#",
 "#.........#AA#.........#",
-"#...L.....#..#.....B...#",
-"#.........####.........#",
-"#......................#",
+"#...L.....#..#..K..B...#",
+"#.........####R........#",
+"#..P.......C.....V.M.S.#",
 "#...,,,,,,,,,,,,,,,,...#",
 "#..T,,,......,,,T.gg...#",
 "#..TT,,......,,TT.gg####",
-"#...g,,.F....,,......#.#",
-"#...g,,,,,,,,,,......#.#",
+"#...g,W.F....,,......#.#",
+"#...g,,,,,,,,,,...Q..#.#",
 "#..TT.......D....gg..#.#",
 "#..TT............~~~...#",
 "#...............~~~~...#",
@@ -25,21 +25,11 @@ static const char *const town[STORY_H] = {
 };
 
 char story_tile(int x, int y) {
-    if (x < 0 || y < 0 || x >= STORY_W || y >= STORY_H) return '#';
-    /* C is the BORE clerk: outside the closed archive on the plaza. */
-    if (x == 11 && y == 7) return 'C';
-    /* Three persistent fandom hecklers; positions are identical in 2D and 3D. */
-    if (x == 3 && y == 7) return 'P';
-    if (x == 17 && y == 7) return 'V';
-    if (x == 18 && y == 12) return 'Q';
-    /* Fictional Mirror Orchard terminal, witness and an offline safe house. */
-    if (x == 21 && y == 7) return 'S';
-    if (x == 6 && y == 11) return 'W';
-    if (x == 7 && y == 2) return 'H';
-    /* Art studio, music archive and outpatient clinic are all walkable anchors. */
-    if (x == 14 && y == 6) return 'R';
-    if (x == 19 && y == 7) return 'M';
-    if (x == 16 && y == 5) return 'K';
+    if ((unsigned)x >= STORY_W || (unsigned)y >= STORY_H) return '#';
+    /* All gameplay entities have fixed tile locations. Store the exact
+       original decorated grid directly: the old ten coordinate branches
+       ran once for EVERY wall ray and floor sample. Save RAM and cycles
+       while preserving the existing interaction and collision positions. */
     return town[y][x];
 }
 int story_goal(const Story *s, int *x, int *y, const char **label) {
