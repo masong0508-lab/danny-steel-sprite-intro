@@ -27,22 +27,30 @@ jobs:
       - name: Render gameplay and authored story scenes using game code
         run: |
           mkdir -p docs/screenshots
-          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc             src/story.c src/studio.c src/story_draw.c src/cinema.c             tools/story_gallery.c -o /tmp/danny_story_gallery
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
+            src/story.c src/studio.c src/story_draw.c src/cinema.c \
+            src/hd_canvas.c src/hd_menu.c src/hd_world.c src/hd_overlay.c \
+            tools/story_gallery.c -o /tmp/danny_story_gallery
           /tmp/danny_story_gallery docs/screenshots
           for f in docs/screenshots/*.ppm; do
-            convert "$f" -filter point -resize 400% "${f%.ppm}.png"
+            convert "$f" -filter point -resize 200% "${f%.ppm}.png"
             rm "$f"
           done
+      - name: Compile this revision's playable ROM for mGBA capture
+        run: |
+          docker run --rm -v "$PWD:/work" -w /work devkitpro/devkitarm make
       - name: Run the current playable ROM in headless mGBA
         run: |
-          /tmp/gba-rom-debugger/bin/gba-walk dist/danny_steel_title.gba docs/screenshots             run:1650 snap:01_title             press:START:2 run:95 snap:02_main_menu             press:A:2 run:95 snap:03_save_slots             press:A:2 run:120 snap:04_story_in_emulator
+          /tmp/gba-rom-debugger/bin/gba-walk danny_steel_title.gba docs/screenshots             run:1650 snap:01_title             press:START:2 run:95 snap:02_main_menu             press:A:2 run:95 snap:03_save_slots             press:A:2 run:120 snap:04_story_in_emulator
           for f in docs/screenshots/0[1-4]_*.png; do
             convert "$f" -filter point -resize 200% "$f"
           done
       - name: Verify dimensions and save contact sheet
         run: |
           identify -format '%f %wx%h\n' docs/screenshots/*.png
-          montage docs/screenshots/*.png -tile 3x -geometry 480x320+6+6             -background '#171919' docs/screenshots/contact_sheet.png
+          # Exclude the previous contact sheet: it must not appear as tile 13.
+          montage docs/screenshots/[0-9][0-9]_*.png -tile 3x -geometry 480x320+6+6 \
+            -background '#171919' docs/screenshots/contact_sheet.png
       # The repository stores the images directly; Actions artifact upload is
       # intentionally omitted because this account has reached its quota.
       - name: Publish screenshots into this branch

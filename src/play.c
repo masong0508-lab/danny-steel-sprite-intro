@@ -6,6 +6,7 @@
 #include "story_save.h"
 #include "rescue_save.h"
 #include "studio.h"
+#include "hd_canvas.h"
 
 #define REG_BG2PA R16(0x04000020)
 #define REG_BG2PB R16(0x04000022)
@@ -19,7 +20,6 @@
 static volatile u8 *const save_ram = (volatile u8 *)0x0E000000;
 const char story_sram_id[] __attribute__((used)) = "SRAM_V113";
 static Story game;
-static u32 pixels[120*80/4] __attribute__((section(".ewram"), aligned(4)));
 static int shown_page, pending, pending_page, clock_ticks, save_cooldown;
 
 /* Shared musical language for Danny and BORE. The same cue is heard in the
@@ -87,11 +87,32 @@ static void write_save(void){
     game.dirty=0;
 }
 static void draw_hidden(int page){
-    story_draw(&game,clock_ticks,(u8*)pixels);
-    volatile u32 *dest=(volatile u32*)(VRAM8+(page?0xA000:0));
-    for(int y=0;y<80;y++){
-        for(int x=0;x<30;x++)dest[y*60+x]=pixels[y*30+x];
+    int native_map=!game.view && game.scene==STORY_SCENE_NONE &&
+        game.cinema==CINE_NONE && !game.battle && !game.ended &&
+        game.life_stage!=STORY_LIFE_FINALE &&
+        game.activity!=STORY_ACT_STUDIO &&
+        !(game.paused && (game.choice & 0x80u));
+    if(native_map){
+        hd_world_draw((u8*)hd_shared_frame,&game,(unsigned)clock_ticks);
+    }else{
+        /* The legacy shots remain valid while menus/world art move to
+           native pixels. In-place reverse expansion does not allocate a
+           second framebuffer, nor does it overwrite unread source rows. */
+        Story visual=game;
+        if(visual.dialogue && !game.ended && !game.battle &&
+           game.life_stage!=STORY_LIFE_FINALE &&
+           game.activity!=STORY_ACT_STUDIO)
+            visual.dialogue=0;
+        story_draw(&visual,clock_ticks,(u8*)hd_shared_frame);
+        hd_upscale_inplace((u8*)hd_shared_frame);
     }
+    if(!game.ended && !game.battle &&
+       game.life_stage!=STORY_LIFE_FINALE &&
+       game.activity!=STORY_ACT_STUDIO &&
+       !(game.paused && (game.choice & 0x80u)))
+        hd_game_overlay((u8*)hd_shared_frame,&game);
+    volatile u32 *dest=(volatile u32*)(VRAM8+(page?0xA000:0));
+    for(unsigned i=0;i<HD_BYTES/4u;i++)dest[i]=hd_shared_frame[i];
 }
 void play_enter(int want_load,int slot){
     u8 b[SAVE_LEN];
@@ -159,9 +180,10 @@ void play_enter(int want_load,int slot){
     else music_set_cue(scene_music_cue());
     clock_ticks=0;shown_page=0;pending=0;pending_page=0;save_cooldown=0;
     REG_DISPCNT=0;REG_BLDCNT=0;REG_BLDY=0;
-    for(int i=0;i<256;i++)PAL16[i]=i<32?story_palette[i]:0;
+    for(int i=0;i<256;i++)PAL16[i]=i<32?story_palette[i]:
+                         i<64?hd_extra_palette[i-32]:0;
     for(int i=0;i<128;i++)((volatile u16*)0x07000000)[i*4]=0x0200;
-    REG_BG2PA=128; REG_BG2PB=0; REG_BG2PC=0; REG_BG2PD=128;
+    REG_BG2PA=256; REG_BG2PB=0; REG_BG2PC=0; REG_BG2PD=256;
     REG_BG2X=0;REG_BG2Y=0;REG_BGCNT(2)=0;
     draw_hidden(0);
     REG_DISPCNT=4|DCNT_BG2;
