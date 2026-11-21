@@ -17,9 +17,15 @@ static void write_frame(const char *name,const Story *s,unsigned t){
  char filename[700];
  snprintf(filename,sizeof(filename),"%s/%s.ppm",outdir,name);
  memset(canvas,0,sizeof canvas);
- if(!s->view && s->cinema==CINE_NONE && s->scene==STORY_SCENE_NONE &&
-    !s->ended && !s->battle && s->activity!=STORY_ACT_STUDIO){
-  hd_world_draw(canvas,s,t);
+ if(s->activity==STORY_ACT_STUDIO){
+  hd_studio_draw(canvas,s,t);
+ }else if(!s->ended && !s->battle && s->life_stage!=STORY_LIFE_FINALE &&
+          s->cinema==CINE_NONE && s->scene==STORY_SCENE_NONE){
+  if(s->view)hd_first_person_draw(canvas,s,t);
+  else hd_world_draw(canvas,s,t);
+ }else if(!s->ended && !s->battle && s->life_stage!=STORY_LIFE_FINALE &&
+          hd_cinema_supports(s->cinema)){
+  hd_cinema_draw(canvas,s,t);
  }else{
   Story visual=*s;
   if(visual.dialogue && !visual.ended && visual.life_stage!=STORY_LIFE_FINALE)
