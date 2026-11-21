@@ -915,16 +915,72 @@ void hd_cinema_draw(uint8_t *p,const Story *s,unsigned t){
   }
   case CINE_CLINIC:clinic(p,s,t,0);break;
   case CINE_LAST_CLINIC:clinic(p,s,t,1);break;
-  case CINE_FOLLOWUP:
+  case CINE_FOLLOWUP:{
+   /* A recognizable clinic on the SAME rainy Old Quarter street: an
+      awning with physical depth, lit vestibule, backlit clinic name,
+      accessible entrance, and grounded warm/cool wet-stone reflections.
+      Three editorial framings make Danny's appointment meaningful. */
    street(p,t,1);
-   hd_rect(p,16,66,102,48,HD_PLASTER);
-   hd_rect(p,22,74,90,37,HD_STONE);
-   hd_rect(p,57,82,42,29,HD_GLASS);
-   hd_text(p,35,69,"CLINIC",HD_INK,1,1);
-   hd_rect(p,72,84,2,26,HD_COPPER);
-   actor(p,ease(139,156,t,12,74),142,1,t,t<89?2:1);
-   actor(p,ease(193,212,t,23,78),142,2,t,t<104?2:5);
+   hd_rect(p,10,47,119,66,HD_INK);
+   hd_rect(p,13,49,113,61,HD_PLASTER);
+   hd_rect(p,15,53,109,7,HD_STONE_DARK);
+   hd_rect(p,17,55,105,3,HD_GLASS_LIT);
+   hd_text(p,33,52,"CLINIC",HD_PAPER,1,0);
+   hd_rect(p,19,63,16,36,HD_BARK);
+   hd_rect(p,21,65,12,32,HD_GLASS_LIT);
+   hd_line(p,22,77,31,77,HD_PAPER);
+   hd_rect(p,41,61,72,45,HD_SHADOW);
+   hd_rect(p,44,64,66,40,HD_GLASS);
+   hd_rect(p,47,66,60,35,HD_STONE_DARK);
+   hd_rect(p,50,69,54,31,HD_GLASS_LIT);
+   hd_rect(p,75,67,2,35,HD_STONE);
+   hd_rect(p,52,79,21,19,HD_GLASS);
+   hd_rect(p,80,79,22,19,HD_GLASS);
+   hd_rect(p,70,85,4,2,HD_COPPER);
+   hd_rect(p,79,85,4,2,HD_COPPER);
+   hd_line(p,44,106,110,106,HD_PAPER);
+   hd_rect(p,40,108,75,4,HD_STONE_LIT);
+   /* Ceiling lights and a plant are visible THROUGH the glazed door.
+      The silhouettes are fixed relative to the building, not the actor. */
+   hd_rect(p,55,71,38,2,HD_GOLD);
+   hd_rect(p,61,75,21,1,HD_PAPER);
+   hd_rect(p,86,85,5,14,HD_BARK);
+   hd_line(p,88,86,88,76,HD_LEAF_DARK);
+   hd_line(p,88,80,82,77,HD_LEAF_LIT);
+   hd_line(p,88,80,94,73,HD_LEAF);
+   /* External clinic sign projects away from the masonry with brackets. */
+   hd_rect(p,117,61,17,23,HD_INK);
+   hd_rect(p,119,63,13,19,HD_PAPER);
+   hd_rect(p,124,65,3,16,HD_RED);
+   hd_rect(p,121,71,9,4,HD_RED);
+   hd_line(p,111,64,118,64,HD_COPPER);
+   hd_line(p,111,83,118,83,HD_COPPER);
+   /* Exterior arrival hall: benches, drain and a sheltered pavement
+      reflection converge toward the door rather than floating in space. */
+   hd_rect(p,7,107,29,3,HD_BARK);
+   hd_rect(p,11,110,3,17,HD_BARK);
+   hd_rect(p,30,110,3,17,HD_BARK);
+   hd_rect(p,14,103,16,3,HD_COPPER);
+   hd_line(p,41,117,105,117,HD_STONE_LIT);
+   hd_line(p,52,123,97,123,HD_ROAD_LIGHT);
+   hd_line(p,61,132,87,132,HD_REFLECT);
+   for(int j=0;j<4;j++){
+    int px=46+j*18;
+    hd_line(p,px,116,px-4,131,HD_STONE_DARK);
+   }
+   int danny=ease(139,156,t,12,74);
+   int mara=ease(193,212,t,23,78);
+   /* Shot/reverse-shot is tied to spoken meaning. Page 0 establishes
+      the appointment, then Mara's offer, then Danny asking for company.
+      Background actors remain grounded when the foreground reacts. */
+   int mara_close=page==1u&&t>=91u;
+   int danny_close=page>=2u&&t>=172u;
+   if(danny_close)hd_actor_closeup(p,157,145,1,t,7);
+   else actor(p,danny,142,1,t,t<89u?2:page>=2u?7:0);
+   if(mara_close)hd_actor_closeup(p,176,145,2,t,5);
+   else actor(p,mara,142,2,t,t<104u?2:5);
    break;
+  }
   default:
    if(!hd_special_cinema_draw(p,s,t))street(p,t,1);
    break;

@@ -698,6 +698,7 @@ static uint16_t dialogue_shot_beat(unsigned script,unsigned page){
  static const uint16_t bus[]={0u,118u,183u};
  static const uint16_t canvas[]={0u,198u};
  static const uint16_t doctor[]={0u,124u,158u,200u};
+ static const uint16_t followup[]={0u,98u,183u};
  static const uint16_t reunion4[]={0u,100u,170u,250u};
  static const uint16_t reunion3[]={0u,128u,250u};
  const uint16_t *beats=0;unsigned length=0;
@@ -709,6 +710,8 @@ static uint16_t dialogue_shot_beat(unsigned script,unsigned page){
   case D_ART:beats=canvas;length=2u;break;
   case D_DOCTOR_FIRST:case D_DOCTOR_LAST:
    beats=doctor;length=4u;break;
+  case D_DOCTOR_RETURN:
+   beats=followup;length=3u;break;
   case D_RESCUE_SAVED:beats=reunion4;length=4u;break;
   case D_RESCUE_SAVED_TRUST:case D_RESCUE_SAVED_ART:
    beats=reunion3;length=3u;break;

@@ -101,6 +101,17 @@ int main(void){
  (void)film(&s,CINE_BORE,140u,2u);
  unsigned after=color((int)stamp_x,(int)stamp_y);
  assert(before!=after);
+ /* Doctor's follow-up has a real fixed glazed clinic entrance,
+    wayfinding cross and readable changing reaction shots. Each frame
+    stays in the one guarded Mode-4 buffer with no new RGB arrays. */
+ uint32_t follow0=film(&s,CINE_FOLLOWUP,183u,0u);
+ unsigned fixed_copper=color(111,64);
+ uint32_t follow1=film(&s,CINE_FOLLOWUP,183u,1u);
+ assert(follow0!=follow1);
+ assert(color(111,64)==fixed_copper);
+ uint32_t follow2=film(&s,CINE_FOLLOWUP,183u,2u);
+ assert(follow1!=follow2 && follow0!=follow2);
+ assert(color(111,64)==fixed_copper);
  /* The same cafe is distinct from the archival city street, and
     the actors continue moving until their table blocking is finished. */
  uint32_t cafe0=film(&s,CINE_MARA,35u,0u);
