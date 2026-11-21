@@ -16,7 +16,7 @@ on:
       - "src/hd_world.c"
       - "src/hd_isometric.c"
       - "src/hd_facade_art.c"
-      - "src/hd_isometric_atlas.c src/hd_facade_art.c"
+      - "src/hd_isometric_atlas.c"
       - "src/hd_world_atlas.c"
   workflow_dispatch:
 
@@ -48,7 +48,7 @@ jobs:
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
             src/story.c src/studio.c src/story_draw.c src/cinema.c \
             src/hd_canvas.c src/hd_menu.c src/hd_world.c src/hd_world_atlas.c \
-            src/hd_isometric.c src/hd_isometric_atlas.c src/hd_overlay.c \
+            src/hd_isometric.c src/hd_isometric_atlas.c src/hd_facade_art.c src/hd_overlay.c \
             src/hd_perspective.c src/hd_studio.c src/hd_cinema.c \
             src/hd_actor.c src/hd_special.c src/hd_ending.c \
             src/hd_arena.c src/hd_arena_art.c \
