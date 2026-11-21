@@ -65,8 +65,14 @@ int main(void){
  press(&s,R);assert(s.studio_tab==STUDIO_ORDER);
  press(&s,RIGHT);assert(s.studio_cursor==1u);
  MotifBeat before,after;
+ unsigned order_before=studio_patch()->order[1];
  studio_motif_step(8u,&before);
  press(&s,UP);studio_motif_step(8u,&after);
+ if(before.lead==after.lead)
+  fprintf(stderr,"order %u -> %u, note0=%u, lead %d -> %d, tab=%u cursor=%u\\n",
+   order_before,studio_patch()->order[1],studio_patch()->notes[0],
+   (int)before.lead,(int)after.lead,(unsigned)s.studio_tab,(unsigned)s.studio_cursor);
+ assert(studio_patch()->order[1]!=order_before);
  assert(before.lead!=after.lead);
  guard(&s);
  press(&s,R);assert(s.studio_tab==STUDIO_LYRICS);
