@@ -10,11 +10,12 @@
 #define REG_BG2PD R16(0x04000026)
 #define REG_BG2X (*(volatile u32 *)0x04000028)
 #define REG_BG2Y (*(volatile u32 *)0x0400002C)
-#define SAVE_LEN 24
+#define SAVE_LEN 28
+#define V3_SAVE_LEN 24
 #define LEGACY_SAVE_LEN 13
 #define V2_SAVE_LEN 16
 #define SAVE_STRIDE 32
-#define SAVE_VER 3
+#define SAVE_VER 4
 static volatile u8 *const save_ram = (volatile u8 *)0x0E000000;
 const char story_sram_id[] __attribute__((used)) = "SRAM_V113";
 static Story game;
@@ -50,7 +51,7 @@ static int read_slot(int slot,u8 *buf){
     if(buf[0]!='D'||buf[1]!='S'||buf[2]!='T'||buf[3]!='2')return 0;
     /* Preserve original saves: V1 has a 13-byte record; V2 adds optional
        cult quest milestones without touching Danny's primary quest flags. */
-    int len=buf[4]==1?LEGACY_SAVE_LEN:buf[4]==2?V2_SAVE_LEN:buf[4]==SAVE_VER?SAVE_LEN:0;
+    int len=buf[4]==1?LEGACY_SAVE_LEN:buf[4]==2?V2_SAVE_LEN:buf[4]==3?V3_SAVE_LEN:buf[4]==SAVE_VER?SAVE_LEN:0;
     if(!len)return 0;
     for(int i=0;i<len-1;i++)hash^=buf[i];
     if(buf[len-1]!=hash)return 0;
@@ -66,10 +67,15 @@ static int read_slot(int slot,u8 *buf){
     if(len==LEGACY_SAVE_LEN){buf[12]=buf[13]=buf[14]=0;}
     /* Version 1/2 finales were immediate choices, unlike the new stories;
        keep all quest progress and let old players choose again. */
-    if(len<SAVE_LEN){
+    if(len<V3_SAVE_LEN){
         buf[10]=0;buf[11]=0;
-        for(int i=15;i<SAVE_LEN;i++)buf[i]=0;
+        for(int i=15;i<V3_SAVE_LEN;i++)buf[i]=0;
         buf[16]=1; /* day 1 */
+    }
+    if(len<SAVE_LEN){
+        /* v3 stored its old checksum at 23. Replace with default energy;
+           preserve daily bits, clock, and all flags during migration. */
+        buf[23]=3;buf[24]=1;buf[25]=1;buf[26]=0;
     }
     return 1;
 }
@@ -83,7 +89,8 @@ static void write_save(void){
         game.ended,game.ending,game.cult_stage,game.cult_pre_wins,game.cult_post_wins,
         game.life_stage,game.day_number,(u8)game.day_frame,(u8)(game.day_frame>>8),
         (u8)game.finale_frame,(u8)(game.finale_frame>>8),
-        game.daily_mask,game.daily_memories,0};
+        game.daily_mask,game.daily_memories,game.energy,game.spark,
+        game.bond,game.work,0};
     unsigned hash=0x6D;
     for(int i=0;i<SAVE_LEN-1;i++)hash^=b[i];
     b[SAVE_LEN-1]=(u8)hash;
@@ -111,6 +118,10 @@ void play_enter(int want_load,int slot){
         game.finale_frame=(u16)(b[19]|((unsigned)b[20]<<8));
         game.daily_mask=b[21]&(STORY_DAY_ALL|STORY_DAY_RECAP);
         game.daily_memories=b[22]>99?99:b[22];
+        game.energy=b[23]>STORY_STAT_MAX?STORY_STAT_MAX:b[23];
+        game.spark=b[24]>STORY_STAT_MAX?STORY_STAT_MAX:b[24];
+        game.bond=b[25]>STORY_STAT_MAX?STORY_STAT_MAX:b[25];
+        game.work=b[26]>99?99:b[26];
         if(game.finale_frame>STORY_GOOD_FINAL_FRAMES)game.finale_frame=0;
         if(game.life_stage==STORY_LIFE_FINALE ||
            (game.ended && game.ending==STORY_END_GOOD)) {

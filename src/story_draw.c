@@ -379,6 +379,23 @@ static void panel(uint8_t *p,int top,int bottom){
 }
 /* Short, staged caption beats; the audio remains the master timing.
    Unlike a blocking textbox these never wait for A during a 72-second cue. */
+/* One compact menu is reused for all five locations in either camera mode. */
+static void activity_menu(uint8_t *p,const Story *s){
+    const char *where="",*left="",*right="";
+    switch(s->activity){
+    case 'F':where="MARA / AN AFTERNOON";left="WALK";right="TALK";break;
+    case 'L':where="LETTER / WHAT NOW";left="WRITE";right="KEEP";break;
+    case 'C':where="BORE / ANOTHER FORM";left="FILE";right="JOKE";break;
+    case 'M':where="MUSIC / A NEW TAKE";left="RECORD";right="LISTEN";break;
+    default:where="ROOFTOP / THE SKY";left="PAINT";right="REST";break;
+    }
+    panel(p,45,80);
+    text(p,4,48,where,18,26);
+    text(p,13,58,left,s->activity_choice?22:20,10);
+    text(p,69,58,right,s->activity_choice?20:22,10);
+    text(p,s->activity_choice?61:4,58,">",18,1);
+    text(p,4,69,"LEFT/RIGHT A DO B BACK",20,28);
+}
 static void ending_caption(uint8_t *p,unsigned ending,unsigned f){
  const char *a=0,*b=0;
  if(ending==STORY_END_GOOD){
@@ -479,6 +496,8 @@ void story_draw(const Story *s,int frame,uint8_t *p) {
             text(p,4,68,d->line2,20,28);
             text(p,91,74,"A NEXT",22,7);
         }
+    } else if(s->activity){
+        activity_menu(p,s);
     } else if(s->choosing){
         panel(p,49,80);text(p,4,53,"THE LAST BUS LEAVES.",20,28);
         text(p,4,62,s->choice?"GO    > STAY":" > GO    STAY",18,28);
@@ -491,8 +510,13 @@ void story_draw(const Story *s,int frame,uint8_t *p) {
         box(p,0,72,120,8,21);
         if(s->life_stage==STORY_LIFE_WAIT ||
            s->life_stage==STORY_LIFE_FOLLOWUP_WAIT){
-            char hint[]="A TALK  MOMENTS 0/5";
-            hint[16]=(char)('0'+memories_today(s));
+            char hint[]="A ACT 0/5 E0 S0 B0 W00";
+            hint[6]=(char)('0'+memories_today(s));
+            hint[11]=(char)('0'+s->energy);
+            hint[14]=(char)('0'+s->spark);
+            hint[17]=(char)('0'+s->bond);
+            hint[20]=(char)('0'+s->work/10);
+            hint[21]=(char)('0'+s->work%10);
             text(p,3,74,hint,20,29);
         } else text(p,3,74,s->ended?"START / RETURN TO MENU":
              s->life_stage==STORY_LIFE_FINALE?"THE LAST PAINTING":
