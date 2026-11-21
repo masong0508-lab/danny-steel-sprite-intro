@@ -100,7 +100,9 @@ enum { D_NONE, D_OPEN, D_LETTER, D_LETTER_AGAIN, D_CLERK_LOCKED, D_CLERK, D_CLER
        D_NOTE_VISIT, D_NOTE_FOLLOWUP, D_NOTE_CANVAS,
        D_DAY_MARA, D_DAY_MARA_AFTER, D_DAY_LETTER, D_DAY_LETTER_AFTER,
        D_DAY_CLERK, D_DAY_CLERK_AFTER, D_DAY_MUSIC, D_DAY_MUSIC_AFTER,
-       D_DAY_PAINT, D_DAY_PAINT_AFTER, D_DAY_RECAP, D_DAY_RECAP_AFTER };
+       D_DAY_PAINT, D_DAY_PAINT_AFTER, D_DAY_RECAP, D_DAY_RECAP_AFTER,
+       D_ACT_MARA_TALK, D_ACT_LETTER_KEEP, D_ACT_CLERK_JOKE,
+       D_ACT_MUSIC_LISTEN, D_ACT_ART_REST };
 #define SCRIPT(name, ...) static const StoryPage name[] = { __VA_ARGS__ }
 SCRIPT(d_open,
  {"DANNY", "The last bus leaves", "at sundown. Of course."},
@@ -338,6 +340,27 @@ SCRIPT(d_day_recap_after,
  {"ANOTHER DAY", "The music played.", "The sky moved on."},
  {"MARA", "Tomorrow isn't", "a receipt to keep."},
  {"DANNY", "No. Just another", "morning, if it comes."});
+/* The right-hand daily options restore energy rather than punishing fatigue. */
+SCRIPT(d_act_mara_talk,
+ {"MARA", "You do not have to", "be funny today."},
+ {"DANNY", "Well, that saves", "my worst material."},
+ {"MARA", "We can just sit", "and talk awhile."});
+SCRIPT(d_act_letter_keep,
+ {"DANNY", "Some memories are", "not letters to send."},
+ {"OLD LETTER", "He kept the page", "where it could dry."},
+ {"DANNY", "I still know the", "shape of that light."});
+SCRIPT(d_act_clerk_joke,
+ {"DANNY", "Is this the line", "for existing loudly?"},
+ {"BORE CLERK", "Wrong queue. That", "one has a bell."},
+ {"DANNY", "You laughed. I'll", "file that under joy."});
+SCRIPT(d_act_music_listen,
+ {"ARCHIVE TAPE", "An old BORE theme", "plays back softly."},
+ {"DANNY", "The rest between", "notes is part of it."},
+ {"DANNY", "Maybe I can just", "listen this time."});
+SCRIPT(d_act_art_rest,
+ {"ROOFTOP", "Danny sets the", "brush beside him."},
+ {"DANNY", "I could paint all", "the hours away."},
+ {"DANNY", "Or watch the sky", "paint itself awhile."});
 #undef SCRIPT
 #define SEQ(name) {name, (uint8_t)(sizeof(name) / sizeof((name)[0]))}
 static const struct { const StoryPage *pages; uint8_t count; } scripts[] = {
@@ -360,7 +383,9 @@ static const struct { const StoryPage *pages; uint8_t count; } scripts[] = {
  SEQ(d_note_visit), SEQ(d_note_followup), SEQ(d_note_canvas),
  SEQ(d_day_mara), SEQ(d_day_mara_after), SEQ(d_day_letter), SEQ(d_day_letter_after),
  SEQ(d_day_clerk), SEQ(d_day_clerk_after), SEQ(d_day_music), SEQ(d_day_music_after),
- SEQ(d_day_paint), SEQ(d_day_paint_after), SEQ(d_day_recap), SEQ(d_day_recap_after)
+ SEQ(d_day_paint), SEQ(d_day_paint_after), SEQ(d_day_recap), SEQ(d_day_recap_after),
+  SEQ(d_act_mara_talk), SEQ(d_act_letter_keep), SEQ(d_act_clerk_joke),
+  SEQ(d_act_music_listen), SEQ(d_act_art_rest)
 };
 const StoryPage *story_pages(const Story *s, int *count) {
     unsigned id = s->dialogue;
@@ -402,6 +427,11 @@ static uint8_t cinematics_for_dialogue(uint8_t d){
     case D_DAY_MUSIC: case D_DAY_MUSIC_AFTER: return CINE_MUSIC;
     case D_DAY_PAINT: case D_DAY_PAINT_AFTER: return CINE_ART;
     case D_DAY_RECAP: case D_DAY_RECAP_AFTER: return CINE_DAY;
+    case D_ACT_MARA_TALK: return CINE_MARA;
+    case D_ACT_LETTER_KEEP: return CINE_LETTER;
+    case D_ACT_CLERK_JOKE: return CINE_BORE;
+    case D_ACT_MUSIC_LISTEN: return CINE_MUSIC;
+    case D_ACT_ART_REST: return CINE_ART;
     default: return CINE_NONE;
     }
 }
@@ -414,6 +444,7 @@ void story_new(Story *s, int slot) {
     s->x = 12; s->y = 13; s->prev_x = s->x; s->prev_y = s->y;
     s->facing = 3; s->slot = (uint8_t)(slot & 1);
     s->day_number = 1;
+    s->energy=3;s->spark=1;s->bond=1;
     talk(s, D_OPEN); s->dirty = 1;
 }
 void story_resume(Story *s, int slot, int x, int y, int facing, int view, int flags, int ended, int ending) {
@@ -513,6 +544,71 @@ static int remember(Story *s,unsigned bit){
     s->dirty=1;
     return 1;
 }
+/* Choices carry small, visible benefits, never failure or ending gates. */
+static void moment_menu(Story *s,unsigned station){
+    s->activity=(uint8_t)station;s->activity_choice=0;
+    s->cinema=(uint8_t)(station=='F'?CINE_MARA:station=='L'?CINE_LETTER:
+        station=='C'?CINE_BORE:station=='M'?CINE_MUSIC:CINE_ART);
+    s->cinema_frame=0;
+}
+static void stat_gain(uint8_t *v,unsigned gain){
+    unsigned sum=(unsigned)*v+gain;
+    *v=(uint8_t)(sum>STORY_STAT_MAX?STORY_STAT_MAX:sum);
+}
+static void work_gain(Story *s,unsigned gain){
+    unsigned sum=(unsigned)s->work+gain;
+    s->work=(uint8_t)(sum>99u?99u:sum);
+}
+static int exert(Story *s){
+    if(!s->energy)return 0;
+    --s->energy;return 1;
+}
+static void finish_moment(Story *s){
+    unsigned station=s->activity,option=s->activity_choice;
+    unsigned bit=station=='F'?STORY_DAY_MARA:station=='L'?STORY_DAY_LETTER:
+        station=='C'?STORY_DAY_CLERK:station=='M'?STORY_DAY_MUSIC:STORY_DAY_ART;
+    s->activity=STORY_ACT_NONE;s->activity_choice=0;
+    if(!remember(s,bit))return;
+    switch(station){
+    case 'F':
+        if(option){stat_gain(&s->energy,1);stat_gain(&s->bond,1);talk(s,D_ACT_MARA_TALK);}
+        else {exert(s);stat_gain(&s->bond,2);talk(s,s->life_stage==STORY_LIFE_FOLLOWUP_WAIT?
+              D_DAY_MARA_AFTER:D_DAY_MARA);}
+        break;
+    case 'L':
+        if(option){stat_gain(&s->energy,1);stat_gain(&s->spark,1);talk(s,D_ACT_LETTER_KEEP);}
+        else {exert(s);stat_gain(&s->spark,2);talk(s,s->life_stage==STORY_LIFE_FOLLOWUP_WAIT?
+              D_DAY_LETTER_AFTER:D_DAY_LETTER);}
+        break;
+    case 'C':
+        if(option){stat_gain(&s->energy,1);stat_gain(&s->bond,1);talk(s,D_ACT_CLERK_JOKE);}
+        else {exert(s);stat_gain(&s->spark,1);talk(s,s->life_stage==STORY_LIFE_FOLLOWUP_WAIT?
+              D_DAY_CLERK_AFTER:D_DAY_CLERK);}
+        break;
+    case 'M':
+        if(option){stat_gain(&s->energy,1);stat_gain(&s->spark,1);talk(s,D_ACT_MUSIC_LISTEN);}
+        else {
+            int enough=exert(s);
+            work_gain(s,1u+(unsigned)enough+(s->spark>=4u));
+            stat_gain(&s->spark,1);
+            talk(s,s->life_stage==STORY_LIFE_FOLLOWUP_WAIT?
+                 D_DAY_MUSIC_AFTER:D_DAY_MUSIC);
+        }
+        if(!(s->flags&STORY_MUSIC)){s->flags|=STORY_MUSIC;s->dirty=1;}
+        break;
+    default:
+        if(option){stat_gain(&s->energy,2);stat_gain(&s->spark,1);talk(s,D_ACT_ART_REST);}
+        else {
+            int enough=exert(s);
+            work_gain(s,1u+(unsigned)enough+(s->spark>=4u));
+            stat_gain(&s->spark,1);
+            talk(s,s->life_stage==STORY_LIFE_FOLLOWUP_WAIT?
+                 D_DAY_PAINT_AFTER:D_DAY_PAINT);
+        }
+        break;
+    }
+    s->dirty=1;
+}
 static void interact(Story *s) {
     const int dx[] = {1,0,-1,0}, dy[] = {0,1,0,-1};
     char c = story_tile(s->x + dx[s->facing], s->y + dy[s->facing]);
@@ -524,18 +620,14 @@ static void interact(Story *s) {
     }
     switch (c) {
     case 'L':
-        if(remember(s,STORY_DAY_LETTER))
-            talk(s,s->life_stage==STORY_LIFE_FOLLOWUP_WAIT?
-                D_DAY_LETTER_AFTER:D_DAY_LETTER);
+        if(can_make_memory(s) && !(s->daily_mask&STORY_DAY_LETTER))moment_menu(s,'L');
         else talk(s,(s->flags & STORY_HOME) ? D_LETTER_AGAIN : D_LETTER);
         if (!(s->flags & STORY_HOME)) { s->flags |= STORY_HOME; s->dirty = 1; }
         break;
     case 'C':
         if (!(s->flags & STORY_HOME)) talk(s, D_CLERK_LOCKED);
         else {
-            if(remember(s,STORY_DAY_CLERK))
-                talk(s,s->life_stage==STORY_LIFE_FOLLOWUP_WAIT?
-                    D_DAY_CLERK_AFTER:D_DAY_CLERK);
+            if(can_make_memory(s) && !(s->daily_mask&STORY_DAY_CLERK))moment_menu(s,'C');
             else talk(s,(s->flags & STORY_STAMP) ? D_CLERK_AGAIN : D_CLERK);
             if (!(s->flags & STORY_STAMP)) { s->flags |= STORY_STAMP; s->dirty = 1; }
         }
@@ -543,9 +635,7 @@ static void interact(Story *s) {
     case 'F':
         if (!(s->flags & STORY_STAMP)) talk(s, D_MARA_LOCKED);
         else {
-            if(remember(s,STORY_DAY_MARA))
-                talk(s,s->life_stage==STORY_LIFE_FOLLOWUP_WAIT?
-                    D_DAY_MARA_AFTER:D_DAY_MARA);
+            if(can_make_memory(s) && !(s->daily_mask&STORY_DAY_MARA))moment_menu(s,'F');
             else talk(s,(s->flags & STORY_MARA) ? D_MARA_AGAIN : D_MARA);
             if (!(s->flags & STORY_MARA)) { s->flags |= STORY_MARA; s->dirty = 1; }
         }
@@ -554,14 +644,10 @@ static void interact(Story *s) {
         talk(s, ((s->flags & STORY_ALL) == STORY_ALL && !s->life_stage) ? D_BUS_READY : D_BUS_LOCKED);
         break;
     case 'M':
-        if (!(s->flags & STORY_MUSIC)) {
-            s->flags |= STORY_MUSIC; s->dirty=1;
-            (void)remember(s,STORY_DAY_MUSIC);
-            talk(s,D_MUSIC);
-        } else if(remember(s,STORY_DAY_MUSIC))
-            talk(s,s->life_stage==STORY_LIFE_FOLLOWUP_WAIT?
-                D_DAY_MUSIC_AFTER:D_DAY_MUSIC);
-        else talk(s,D_MUSIC_AGAIN);
+        if(can_make_memory(s) && !(s->daily_mask&STORY_DAY_MUSIC))moment_menu(s,'M');
+        else if (!(s->flags & STORY_MUSIC)) {
+            s->flags |= STORY_MUSIC; s->dirty=1; talk(s,D_MUSIC);
+        } else talk(s,D_MUSIC_AGAIN);
         break;
     case 'R':
         if (s->life_stage == STORY_LIFE_LAST_WORK) {
@@ -578,9 +664,7 @@ static void interact(Story *s) {
             talk(s,D_ART_LAST_LOCKED);
         } else if (s->life_stage == STORY_LIFE_WAIT ||
                    s->life_stage == STORY_LIFE_FOLLOWUP_WAIT) {
-            if(remember(s,STORY_DAY_ART))
-                talk(s,s->life_stage==STORY_LIFE_FOLLOWUP_WAIT?
-                    D_DAY_PAINT_AFTER:D_DAY_PAINT);
+            if(!(s->daily_mask&STORY_DAY_ART))moment_menu(s,'R');
             else talk(s,D_ART_DAY);
         } else if (!(s->flags & STORY_ART)) {
             s->flags |= STORY_ART;s->dirty=1;talk(s,D_ART);
@@ -629,9 +713,10 @@ void story_tick(Story *s, uint16_t keys) {
             s->day_frame=0;
             if (s->day_number<99) ++s->day_number;
             s->daily_mask=0; /* optional moments reset every morning */
+            stat_gain(&s->energy,2);
             s->dirty=1;
         }
-        if (!s->dialogue && !s->battle && !s->choosing) {
+        if (!s->dialogue && !s->battle && !s->choosing && !s->activity) {
             if (s->life_stage==STORY_LIFE_WAIT && s->day_number>=2) {
                 s->life_stage=STORY_LIFE_CLINIC;
                 s->scene=STORY_SCENE_NOTICE;s->dirty=1;talk(s,D_MEDICAL_NOTICE);
@@ -686,6 +771,12 @@ void story_tick(Story *s, uint16_t keys) {
     if (s->ended) {
         /* An ending is a stable scene, not a doorway back into gameplay. */
         if (pressed & START) s->quit=1;
+        return;
+    }
+    if(s->activity){
+        if(pressed&(LEFT|RIGHT|UP|DOWN))s->activity_choice^=1u;
+        if(pressed&B){s->activity=STORY_ACT_NONE;s->cinema=CINE_NONE;}
+        else if(pressed&A)finish_moment(s);
         return;
     }
     if (s->choosing) {
