@@ -42,6 +42,20 @@ static char original_tile(int x,int y){
 }
 static struct {uint8_t guard[32],pixels[HD_BYTES],tail[32];} reference,optimized;
 static unsigned original_attempts,new_attempts;
+static unsigned old_axis_pixel_visits,axis_span_count;
+static int ref_abs(int v){return v<0?-v:v;}
+static void old_line(uint8_t *p,int x,int y,int xx,int yy,unsigned ink){
+ int dx=ref_abs(xx-x),dy=ref_abs(yy-y);
+ int sx=x<xx?1:-1,sy=y<yy?1:-1,err=dx-dy;
+ for(;;){
+  hd_pixel(p,x,y,ink);
+  if(y==yy||x==xx)old_axis_pixel_visits++;
+  if(x==xx&&y==yy)break;
+  int twice=2*err;
+  if(twice>-dy){err-=dy;x+=sx;}
+  if(twice<dx){err+=dx;y+=sy;}
+ }
+}
 static void old_ellipse(uint8_t *p,int cx,int cy,int rx,int ry,unsigned color){
  if(rx<1||ry<1)return;
  for(int y=-ry;y<=ry;y++){
@@ -119,6 +133,25 @@ int main(void){
     }
    }
   }
+ /* Actual old Bresenham vs new axis span implementation, including
+    reversed lines, offscreen clipping, points and mixed diagonals. */
+ const int coords[]={-17,-1,0,1,10,68,119,159,239,240,265};
+ unsigned line_cases=0;
+ for(unsigned i=0;i<11u;i++)for(unsigned j=0;j<11u;j++)
+  for(int variant=0;variant<3;variant++){
+   int x1=coords[i],x2=coords[j],y1,y2;
+   if(variant==0){y1=y2=coords[(i+j)%11u];axis_span_count++;}
+   else if(variant==1){
+    x1=x2=coords[(i+j)%11u];y1=coords[i];y2=coords[j];
+    axis_span_count++;
+   }else{y1=coords[j];y2=coords[i];}
+   reset_buffers();
+   old_line(reference.pixels,x1,y1,x2,y2,HD_COPPER);
+   hd_line(optimized.pixels,x1,y1,x2,y2,HD_COPPER);
+   assert(memcmp(reference.pixels,optimized.pixels,HD_BYTES)==0);
+   guards();line_cases++;
+  }
+ assert(line_cases==363u);
  assert(new_divisions<old_divisions);
  assert(new_attempts<original_attempts);
  printf("immutable map %u cells matched legacy at all edges\n",cells);
@@ -126,5 +159,9 @@ int main(void){
         old_divisions,new_divisions);
  printf("integer ellipses %u exact framebuffer matches; radius checks %u -> %u\n",
         tested,original_attempts,new_attempts);
+ printf("clipped line strokes %u exact framebuffer matches; %u axis spans\n",
+        line_cases,axis_span_count);
+ printf("old axis pixel visits: %u; optimized axis spans have one clipped fill\n",
+        old_axis_pixel_visits);
  return 0;
 }
