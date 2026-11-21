@@ -8,6 +8,8 @@ on:
       - "src/hd_studio.c"
       - "src/hd_perspective.c"
       - "src/hd_cinema.c"
+      - "src/hd_canvas.c"
+      - "src/hd_overlay.c"
       - "src/story.c"
       - "src/hd_world.c"
       - "tests/potheads_open_test.c"
