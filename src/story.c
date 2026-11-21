@@ -134,7 +134,8 @@ enum { D_NONE, D_OPEN, D_LETTER, D_LETTER_AGAIN, D_CLERK_LOCKED, D_CLERK, D_CLER
        D_MARA_CONCERN, D_MARA_WARNING, D_BAD_MUSIC_MASTER,
        D_GOOD_END_SCARS, D_RESCUE_LOST_REMOTE,
        D_SHIFT_EARLY, D_SHIFT_DONE, D_SHIFT_REPEAT,
-       D_SHIFT_TIRED, D_SHIFT_PAUSED };
+       D_SHIFT_TIRED, D_SHIFT_PAUSED,
+       D_DOCTOR_RETURN_ALONE };
 #define SCRIPT(name, ...) static const StoryPage name[] = { __VA_ARGS__ }
 /* The banana-sign shift is practical income, not Danny's calling. He is
    grateful for the stability without pretending to enjoy mascot work. */
@@ -313,6 +314,13 @@ SCRIPT(d_doctor_return,
  {"DAY THREE", "Your follow-up", "is scheduled today."},
  {"MARA", "I'll come in.", "Or wait outside."},
  {"DANNY", "Come in. I don't", "want to hear alone."});
+/* When the search has ended without verified recovery, the doctor still
+   needs Danny, but Mara cannot promise to accompany him. Her condition
+   is deliberately UNKNOWN, not assumed fatal. */
+SCRIPT(d_doctor_return_alone,
+ {"DAY THREE", "The follow-up", "is still today."},
+ {"DANNY", "No confirmed word", "about Mara. Not yet."},
+ {"DANNY", "I'll see the doctor", "and keep looking."});
 SCRIPT(d_doctor_last,
  {"DOCTOR", "The cancer has", "spread. I'm sorry."},
  {"DOCTOR", "We can help you", "through the pain."},
@@ -677,7 +685,8 @@ static const struct { const StoryPage *pages; uint8_t count; } scripts[] = {
   SEQ(d_mara_concern), SEQ(d_mara_warning), SEQ(d_bad_music_master),
   SEQ(d_good_end_scars), SEQ(d_rescue_lost_remote),
   SEQ(d_shift_early), SEQ(d_shift_done), SEQ(d_shift_repeat),
-  SEQ(d_shift_tired), SEQ(d_shift_paused)
+  SEQ(d_shift_tired), SEQ(d_shift_paused),
+  SEQ(d_doctor_return_alone)
 };
 const StoryPage *story_pages(const Story *s, int *count) {
     unsigned id = s->dialogue;
@@ -710,7 +719,7 @@ static uint16_t dialogue_shot_beat(unsigned script,unsigned page){
   case D_ART:beats=canvas;length=2u;break;
   case D_DOCTOR_FIRST:case D_DOCTOR_LAST:
    beats=doctor;length=4u;break;
-  case D_DOCTOR_RETURN:
+  case D_DOCTOR_RETURN:case D_DOCTOR_RETURN_ALONE:
    beats=followup;length=3u;break;
   case D_RESCUE_SAVED:beats=reunion4;length=4u;break;
   case D_RESCUE_SAVED_TRUST:case D_RESCUE_SAVED_ART:
@@ -743,7 +752,8 @@ static uint8_t cinematics_for_dialogue(uint8_t d){
     case D_CULT_RUN: case D_CULT_LOSE: return CINE_SERVER;
     case D_MEDICAL_NOTICE: return CINE_NOTICE;
     case D_DOCTOR_FIRST: return CINE_CLINIC;
-    case D_DOCTOR_RETURN: return CINE_FOLLOWUP;
+    case D_DOCTOR_RETURN: case D_DOCTOR_RETURN_ALONE:
+       return CINE_FOLLOWUP;
     case D_DOCTOR_LAST: return CINE_LAST_CLINIC;
     case D_GOOD_END: case D_GOOD_END_SCARS: return CINE_GOOD;
     case D_NEUTRAL_START: return CINE_DAY;
@@ -1355,7 +1365,9 @@ void story_tick(Story *s, uint16_t keys) {
                 s->scene=STORY_SCENE_NOTICE;s->dirty=1;talk(s,D_MEDICAL_NOTICE);
             } else if (s->life_stage==STORY_LIFE_FOLLOWUP_WAIT && s->day_number>=3) {
                 s->life_stage=STORY_LIFE_FINAL_CLINIC;
-                s->scene=STORY_SCENE_NOTICE;s->dirty=1;talk(s,D_DOCTOR_RETURN);
+                s->scene=STORY_SCENE_NOTICE;s->dirty=1;
+                talk(s,s->rescue_stage==STORY_RESCUE_LOST?
+                     D_DOCTOR_RETURN_ALONE:D_DOCTOR_RETURN);
             } else if(can_make_memory(s) &&
                       (s->daily_mask&STORY_DAY_ALL)==STORY_DAY_ALL &&
                       !(s->daily_mask&STORY_DAY_RECAP)) {

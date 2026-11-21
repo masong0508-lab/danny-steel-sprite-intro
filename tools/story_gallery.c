@@ -142,6 +142,9 @@ int main(int argc,char **argv){
  write_frame("05za_followup_mara",&s,113);
  s.page=2;
  write_frame("05zb_followup_danny",&s,202);
+ s.rescue_stage=STORY_RESCUE_LOST;s.page=1;
+ write_frame("05zc_followup_alone",&s,113);
+ s.rescue_stage=STORY_RESCUE_NONE;
  s.cinema=CINE_NONE;s.scene=STORY_SCENE_NONE;s.view=0;
  /* The first controllable view is now the same storefront as the film. */
  stand(&s,20,11,0);

@@ -76,6 +76,27 @@ static void verify_reachable_editorial_cuts(void){
     must show both people at the same point of contact. */
  s.life_stage=STORY_LIFE_NONE;s.rescue_stage=STORY_RESCUE_SAVED;
  visit(&s,7,3,3);beats(&s,CINE_RESCUE_SAVED,reunion,4u);
+ /* A day-three failed rescue must not speak through Mara or draw her. */
+ Story lost;story_new(&lost,1);
+ button(&lost,2u);
+ lost.rescue_stage=STORY_RESCUE_LOST;
+ lost.life_stage=STORY_LIFE_FOLLOWUP_WAIT;
+ lost.day_number=3u;lost.day_frame=0u;
+ story_tick(&lost,0u);
+ assert(lost.dialogue!=0u&&lost.cinema==CINE_FOLLOWUP);
+ int count=0;const StoryPage *lines=story_pages(&lost,&count);
+ assert(count==3 && strstr(lines[1].line1,"No confirmed")!=NULL);
+ assert(strcmp(lines[1].speaker,"DANNY")==0);
+ /* When she is safe, the normal follow-up still lets her participate. */
+ Story safe;story_new(&safe,1);
+ button(&safe,2u);
+ safe.rescue_stage=STORY_RESCUE_SAVED;
+ safe.life_stage=STORY_LIFE_FOLLOWUP_WAIT;
+ safe.day_number=3u;safe.day_frame=0u;
+ story_tick(&safe,0u);
+ assert(safe.dialogue!=0u&&safe.cinema==CINE_FOLLOWUP);
+ lines=story_pages(&safe,&count);
+ assert(count==3 && strcmp(lines[1].speaker,"MARA")==0);
 }
 int main(void){
  verify_reachable_editorial_cuts();
@@ -112,6 +133,13 @@ int main(void){
  uint32_t follow2=film(&s,CINE_FOLLOWUP,183u,2u);
  assert(follow1!=follow2 && follow0!=follow2);
  assert(color(111,64)==fixed_copper);
+ /* The unresolved disappearance is never staged as a happy reunion. */
+ s.rescue_stage=STORY_RESCUE_LOST;
+ uint32_t alone1=film(&s,CINE_FOLLOWUP,183u,1u);
+ assert(alone1!=follow1);
+ uint32_t alone2=film(&s,CINE_FOLLOWUP,183u,2u);
+ assert(alone2==alone1);
+ s.rescue_stage=STORY_RESCUE_NONE;
  /* The same cafe is distinct from the archival city street, and
     the actors continue moving until their table blocking is finished. */
  uint32_t cafe0=film(&s,CINE_MARA,35u,0u);

@@ -973,12 +973,23 @@ void hd_cinema_draw(uint8_t *p,const Story *s,unsigned t){
    /* Shot/reverse-shot is tied to spoken meaning. Page 0 establishes
       the appointment, then Mara's offer, then Danny asking for company.
       Background actors remain grounded when the foreground reacts. */
-   int mara_close=page==1u&&t>=91u;
+   int absent=(s->rescue_stage>=STORY_RESCUE_MISSING&&
+               s->rescue_stage<=STORY_RESCUE_TRACE)||
+               s->rescue_stage==STORY_RESCUE_LOST;
+   int mara_close=!absent&&page==1u&&t>=91u;
    int danny_close=page>=2u&&t>=172u;
-   if(danny_close)hd_actor_closeup(p,157,145,1,t,7);
-   else actor(p,danny,142,1,t,t<89u?2:page>=2u?7:0);
-   if(mara_close)hd_actor_closeup(p,176,145,2,t,5);
-   else actor(p,mara,142,2,t,t<104u?2:5);
+   if(absent){
+    /* The single actor cannot duplicate himself or silently confirm
+       Mara's safety while the unanswered-phone plot is unresolved. */
+    if(page>=1u&&t>=91u)
+     hd_actor_closeup(p,176,145,1,t,7);
+    else actor(p,danny,142,1,t,t<89u?2:7);
+   }else{
+    if(danny_close)hd_actor_closeup(p,157,145,1,t,7);
+    else actor(p,danny,142,1,t,t<89u?2:page>=2u?7:0);
+    if(mara_close)hd_actor_closeup(p,176,145,2,t,5);
+    else actor(p,mara,142,2,t,t<104u?2:5);
+   }
    break;
   }
   default:
