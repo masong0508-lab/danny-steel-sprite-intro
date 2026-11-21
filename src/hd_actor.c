@@ -7,9 +7,14 @@
    one x / foot anchor, no separately animated floating limbs. */
 void hd_actor_stage(uint8_t *p,int x,int feet,int role,unsigned frame,int emotion){
  int walk=emotion==2;
- int footstep=walk?(int)(frame/9u&1u):0;
- int motion=walk?footstep:((int)(frame/38u&1u));
- int fy=feet+(walk?0:motion);
+ /* Four-phase planted-stride cycle (left / gather / right / gather),
+    avoiding the former two-frame mirrored shuffle. Ankles and sleeve
+    counter-swing share one phase while the floor contact never floats. */
+ unsigned phase=(frame/8u)&3u;
+ int stride=walk?(phase==0u?-4:phase==2u?4:0):0;
+ int lift=walk?(phase&1u?1:0):0;
+ int motion=walk?0:((int)(frame/38u&1u));
+ int fy=feet+motion;
  unsigned coat=role==1?HD_RED:
                role==2?HD_GLASS:
                role==3?HD_STONE_LIT:
@@ -28,10 +33,15 @@ void hd_actor_stage(uint8_t *p,int x,int feet,int role,unsigned frame,int emotio
  int hand_y=fy-28;
  /* Subtle pool of stage/lamplight, with anchored contact shadow. */
  hd_ellipse(p,x+1,feet+2,18,3,HD_SHADOW);
- hd_line(p,x-6,fy-12,x-6+(walk?footstep*4:0),fy-3,HD_INK);
- hd_line(p,x+6,fy-12,x+6-(walk?footstep*4:0),fy-3,HD_INK);
- hd_rect(p,x-10+(walk?footstep*3:0),fy-4,10,4,HD_INK);
- hd_rect(p,x+2-(walk?footstep*3:0),fy-4,10,4,HD_INK);
+ hd_line(p,x-6,fy-12,x-6+stride,fy-3-lift,HD_INK);
+ hd_line(p,x+6,fy-12,x+6-stride,fy-3-(walk?1-lift:0),HD_INK);
+ hd_rect(p,x-10+stride,fy-4-lift,10,4,HD_INK);
+ hd_rect(p,x+2-stride,fy-4-(walk?1-lift:0),10,4,HD_INK);
+ if(walk){
+  hd_line(p,x-7+stride,fy-3-lift,x-1+stride,fy-3-lift,HD_STONE);
+  hd_line(p,x+3-stride,fy-3-(1-lift),
+          x+9-stride,fy-3-(1-lift),HD_STONE);
+ }
  hd_rect(p,x-8,fy-20,7,9,HD_BRICK_DARK);
  hd_rect(p,x+2,fy-20,7,9,HD_INK);
  hd_rect(p,x-7,fy-22,14,2,HD_COPPER);
@@ -47,18 +57,28 @@ void hd_actor_stage(uint8_t *p,int x,int feet,int role,unsigned frame,int emotio
  hd_line(p,x+1,fy-35,x+1,fy-23,dark);
  hd_pixel(p,x+2,fy-32,HD_GOLD);
  hd_pixel(p,x+2,fy-28,HD_GOLD);
+ /* Fabric folds follow the moving shoulders without re-scaling faces.
+    Sided lapels / cuffs prevent the torso reading as one flat slab. */
+ hd_line(p,x-10,fy-42,x-7,fy-24,light);
+ hd_line(p,x+10,fy-42,x+8,fy-25,dark);
+ hd_rect(p,x-12,fy-32,3,1,HD_COPPER);
+ hd_rect(p,x+10,fy-31,3,1,HD_SHADOW);
  /* Sleeves and hands. Poses rotate around shoulder; no detached palms. */
  int sx=x+12,sy=fy-42,ex=x+16,ey=hand_y;
  if(emotion==3){ex=x+23;ey=fy-49;}
  else if(emotion==7){ex=x+19;ey=fy-57;}
+ else if(emotion==5){ex=x+21;ey=fy-39;}
+ else if(emotion==2){ex=x+16-stride;ey=fy-31-lift;}
  else if(emotion==1){ex=x+19;ey=fy-37+(int)(frame/10u&1u)*2;}
  hd_line(p,sx,sy,ex,ey,dark);
  hd_line(p,sx-1,sy,ex-1,ey,coat);
  hd_rect(p,ex-2,ey-2,5,4,HD_SKIN);
  hd_pixel(p,ex+1,ey-1,HD_SKIN_LIT);
- hd_line(p,x-12,fy-43,x-17,hand_y+(walk?footstep*2:0),coat);
- hd_line(p,x-13,fy-42,x-17,hand_y+(walk?footstep*2:0),dark);
- hd_rect(p,x-19,hand_y-1+(walk?footstep*2:0),5,5,HD_SKIN);
+ int other_x=x-17+(walk?stride:0);
+ int other_y=hand_y+(walk?lift*2:0);
+ hd_line(p,x-12,fy-43,other_x,other_y,coat);
+ hd_line(p,x-13,fy-42,other_x,other_y,dark);
+ hd_rect(p,other_x-2,other_y-1,5,5,HD_SKIN);
  /* Neck and shoulders sit behind the head, restoring proper silhouette. */
  hd_rect(p,x-3,fy-52,7,9,HD_SKIN);
  hd_rect(p,x-5,fy-47,4,5,light);
@@ -123,7 +143,10 @@ void hd_actor_stage(uint8_t *p,int x,int feet,int role,unsigned frame,int emotio
   hd_rect(p,x-3,fy-50,6,1,HD_BRICK_DARK);
   if(role==2)hd_pixel(p,x+4,fy-51,HD_BRICK_LIT);
  }
- if(emotion==7){
+ if(emotion==5){
+  /* Reassuring/reflective gestures stay near the chest, not in space. */
+  hd_line(p,x+21,fy-39,x+9,fy-42,HD_SKIN);
+ }else if(emotion==7){
   /* The reaching hand touches the hairline rather than floating. */
   hd_line(p,x+19,fy-57,x+6,fy-61,HD_SKIN);
  }
