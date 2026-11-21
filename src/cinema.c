@@ -634,8 +634,8 @@ static void cinema_draw_stage(uint8_t *p,unsigned scene,unsigned tick,
    roof(p,t,1);canvas(p,71,21,t,0);
    actor(p,41,76,1,t,7);
    rect(p,14,66,11,4,14);rect(p,17,63,5,3,18);
-   rect(p,17,57,8,11,3);rect(p,19,59,4,6,25);
-   if((t/90u)&1u)pixel(p,21,61,18);
+   /* The unresolved phone / returned note is selected by the ending
+      director so rescued Mara is never shown as missing. */
    break;
   case CINE_FINALE: {
   /* Twelve coherent shots along one fixed rooftop composition. The camera
@@ -692,6 +692,61 @@ static void cinema_draw_stage(uint8_t *p,unsigned scene,unsigned tick,
 void cinema_draw(uint8_t *p,unsigned scene,unsigned tick,
                  unsigned page,unsigned final){
  cinema_draw_stage(p,scene,tick,tick,page,final);
+}
+
+
+/* Final five neutral shots are a connected aftermath, not five repeated
+   copies of the motionless roof. The real painting remains at the same
+   coordinates in EVERY shot; Mara moves in from the actual left stairs,
+   notices Danny's folded note and carries it toward the finished canvas.
+   The note changes hands at musical cuts, never floats over anyone. */
+static void neutral_rooftop_beat(uint8_t *p,unsigned shot,unsigned local,
+                                 unsigned world){
+ if(shot<6u)return;
+ int x=shot==6u?travel(-13,25,local,24u,132u):
+       shot==7u?29:shot==8u?31:shot==9u?35:38;
+ int pose=shot==6u?(local<160u?2:7):
+          shot==7u?(local<90u?7:4):
+          shot==8u?6:shot==9u?5:6;
+ /* The note lies where Danny left his supplies; the hand meets it.
+    Subsequent montage cuts show it tucked against Mara's chest. */
+ if(shot<=7u)paper(p,10,58,11,6,1);
+ actor(p,x,73,2,world,pose);
+ if(shot>=8u){
+   paper(p,x-7,53,9,5,2);
+   if(shot==10u)pixel(p,x-3,55,18);
+ }
+ /* Camera emphasis changes through lamps/railings at the edge,
+    without erasing the painting or altering the rooftop geography. */
+ if(shot>=9u){
+   rect(p,2,54,3,21,14);
+   rect(p,2,54,15,2,14);
+   pixel(p,4,53,(world/70u)&1u?18:7);
+ }
+}
+/* Failure implies unanswered contact; successful rescue must NEVER depict
+   Mara as missing. The same rooftop set instead holds a returned letter. */
+static void bad_rooftop_beat(uint8_t *p,unsigned shot,unsigned local,
+                             unsigned world,unsigned mara_safe){
+ if(mara_safe){
+   /* A folded thank-you card stands on the same art-supply shelf. */
+   paper(p,16,57,11,8,1);
+   rect(p,17,64,9,1,14);
+   if(shot>=8u){rect(p,30,65,16,2,14);pixel(p,34,64,20);}
+ }else{
+   /* The unanswered phone glows beside an empty chair. It provides no
+      explicit information about Mara's physical fate. */
+   rect(p,17,57,8,11,3);rect(p,19,59,4,6,25);
+   if((world/90u)&1u)pixel(p,21,61,18);
+   if(shot>=5u){
+     rect(p,30,61,13,2,14);
+     rect(p,32,63,2,8,14);rect(p,40,63,2,8,14);
+   }
+ }
+ if(shot>=8u && local<85u){
+   /* A held reaction beat; no random shake or dramatic teleport. */
+   rect(p,7,58,5,11,14);
+ }
 }
 
 /* Long-form ending storyboard. Each shot holds an identifiable location and
@@ -758,9 +813,12 @@ void cinema_ending_draw_context(uint8_t *p,unsigned ending,unsigned frame,
  if(!good && scene==CINE_FINALE){
    /* Sky and city continue moving; Danny stays in the last pose reached. */
    cinema_draw_stage(p,scene,frame,frame,0,frame<420u?frame:420u);
+   if(ending==2u)neutral_rooftop_beat(p,shot,local,frame);
  }else{
-   /* Crucially, do not restart the whole city and record spindle each cut. */
+   /* Do not restart city or record spindle on a musical cut. */
    cinema_draw_stage(p,scene,100u+frame,local,shots[shot].page,0);
+   if(ending==3u && scene==CINE_BAD)
+      bad_rooftop_beat(p,shot,local,frame,mara_safe);
  }
  /* Film-gate cut at score section boundaries: no fake pixel zoom or extra
     framebuffer. The same authored world location persists inside each shot. */
