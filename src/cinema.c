@@ -22,6 +22,18 @@ static void stroke(uint8_t *p,int x0,int y0,int x1,int y1,int c){
  for(;;){pixel(p,x0,y0,c);if(x0==x1&&y0==y1)break;
  int e=err*2;if(e>-dy){err-=dy;x0+=sx;}if(e<dx){err+=dx;y0+=sy;}}
 }
+/* Timed easing gives each actor a start, travel beat and held pose. */
+static int travel(int from,int to,unsigned t,unsigned start,unsigned duration){
+ if(t<=start)return from;
+ if(t-start>=duration)return to;
+ unsigned q=(t-start)*256u/duration;
+ unsigned eased=q*q*(768u-2u*q)>>16;
+ return from+(to-from)*(int)eased/256;
+}
+static int breathe(unsigned t){
+ unsigned pos=t%144u;
+ return pos<72u?(int)pos/18-2:2-(int)(pos-72u)/18;
+}
 static void disk(uint8_t *p,int x,int y,int r,int c){
  for(int yy=-r;yy<=r;yy++)for(int xx=-r;xx<=r;xx++)
   if(xx*xx+yy*yy<=r*r)pixel(p,x+xx,y+yy,c);
@@ -69,6 +81,21 @@ static void street(uint8_t *p,unsigned t,int dusk){
  /* Street lamp anchored to the same city and cross-street. */
  rect(p,109,19,2,40,14);rect(p,104,19,8,2,14);disk(p,108,20,3,dusk?18:7);
 }
+/* One identifiable café, whether Mara is present or missing. */
+static void cafe(uint8_t *p,unsigned t){
+ street(p,t,1);
+ rect(p,3,16,33,39,14);rect(p,6,20,27,29,23);
+ rect(p,7,18,24,7,18);rect(p,9,25,21,4,22);
+ rect(p,9,32,10,15,3);rect(p,21,32,10,15,3);
+ rect(p,11,34,6,10,25);rect(p,23,34,6,10,25);
+ rect(p,18,28,2,20,14);rect(p,5,52,32,2,7);
+ for(int i=0;i<4;i++)rect(p,5+i*8,15,4,3,i&1?18:14);
+}
+static void cafe_table(uint8_t *p,int cup){
+ rect(p,52,59,18,2,14);rect(p,60,61,2,9,14);
+ if(cup){rect(p,59,55,6,4,20);pixel(p,66,57,18);
+  if(cup==2)pixel(p,61,54,26);}
+}
 static void interior(uint8_t *p,int mode,unsigned t){
  int wall=mode==0?17:mode==1?21:mode==2?12:8;
  rect(p,0,0,W,H,wall);rect(p,0,54,W,26,mode==2?11:9);
@@ -85,7 +112,7 @@ static void interior(uint8_t *p,int mode,unsigned t){
 }
 static void paper(uint8_t *p,int x,int y,int w,int h,int blink){
  rect(p,x+1,y+1,w,h,3);rect(p,x,y,w,h,20);
- for(int i=0;i<4;i++)rect(p,x+3,y+4+i*4,w-6,1,i==blink%4?18:22);
+ for(int i=0;i<4 && 4+i*4<h;i++)rect(p,x+3,y+4+i*4,w-6,1,i==blink%4?18:22);
 }
 static void furniture(uint8_t *p,int x,int y,int w,int c){
  rect(p,x+1,y,w-2,4,7);rect(p,x,y,w,3,c);
@@ -175,11 +202,20 @@ static void actor(uint8_t *p,int x,int foot,int role,unsigned t,int gesture){
  else rect(p,x-2,foot-29+bob,4,1,role==2?16:23);
  /* Arms are attached to shoulders; hand never floats at head level. */
  if(gesture==3){
-  stroke(p,x+8,shoulder+4,x+17,shoulder-2+((int)(t/13)&1),coat);
-  stroke(p,x+17,shoulder-2,x+20,shoulder-4,skin);
-  disk(p,x+20,shoulder-4,2,skin);
-  stroke(p,x-8,shoulder+4,x-11,shoulder+15,coat);
-  disk(p,x-11,shoulder+15,2,skin);
+   int wrist=shoulder+11+((int)(t/18)&1);
+   stroke(p,x+8,shoulder+4,x+16,wrist-2,coat);
+   stroke(p,x+16,wrist-2,x+20,wrist,skin);
+   disk(p,x+20,wrist,2,skin);
+   stroke(p,x-8,shoulder+4,x-11,shoulder+15,coat);
+   disk(p,x-11,shoulder+15,2,skin);
+  }else if(gesture==4){
+   int wrist=shoulder+11+((int)(t/18)&1);
+   stroke(p,x-8,shoulder+4,x-16,wrist-2,coat);
+   stroke(p,x-16,wrist-2,x-20,wrist,skin);
+   disk(p,x-20,wrist,2,skin);
+   stroke(p,x+8,shoulder+4,x+11,shoulder+15,coat);
+   disk(p,x+11,shoulder+15,2,skin);
+  
  }else if(gesture==1){
   stroke(p,x+8,shoulder+4,x+13,shoulder-2+((int)(t/12)&3),coat);
   disk(p,x+13,shoulder-2+((int)(t/12)&3),2,skin);
@@ -298,8 +334,7 @@ static void recordshop(uint8_t *p,unsigned t){
 void cinema_draw(uint8_t *p,unsigned scene,unsigned tick,unsigned page,unsigned final){
  if(scene>=CINE_COUNT)scene=CINE_NONE;
  unsigned t=tick;
- int a=(int)(t/24)%3;
- int pan=(int)(t/70)%7-3;
+ int pan=breathe(t);
  int focus=(int)(page&3u);
  if(scene==CINE_FINALE)t=final;
  switch(scene){
@@ -309,32 +344,37 @@ void cinema_draw(uint8_t *p,unsigned scene,unsigned tick,unsigned page,unsigned 
   actor(p,32,67,1,t,2);
   rect(p,2,39,26,12,14);rect(p,3,40,24,10,22);
   break;
- case CINE_LETTER:
-  street(p,t,1);
-  rect(p,3,15,56,43,14);rect(p,5,18,52,38,23);
-  rect(p,13,24,18,29,3);rect(p,16,26,12,24,17);
-  rect(p,41,24,10,11,4);rect(p,43,26,6,7,26);
-  rect(p,36,43,17,2,14);
-  actor(p,69+pan/2,72,1,t,focus>=2?1:0);
-  paper(p,40+(a&1),50-(int)focus,12,8,focus);
-  break;
+ case CINE_LETTER: {
+   street(p,t,1);
+   rect(p,3,15,56,43,14);rect(p,5,18,52,38,23);
+   rect(p,13,24,18,29,3);rect(p,16,26,12,24,17);
+   rect(p,41,24,10,11,4);rect(p,43,26,6,7,26);
+   rect(p,36,51,34,3,14);rect(p,39,54,3,13,14);
+   rect(p,60,54,3,13,14);
+   paper(p,46,50,13,7,focus);
+   int x=travel(81,76,t,8,38);
+   actor(p,x,72,1,t,focus>=1?4:t<48?2:0);
+   if(focus>=1){stroke(p,x-20,56,57,53,31);rect(p,49,51,7,1,18);}
+   break;
+  }
  case CINE_BORE:
-  interior(p,1,t);
-  rect(p,65,4,47,8,3);rect(p,67,6,43,4,18);
-  furniture(p,20,53,91,14);
-  paper(p,52,49,22,10,focus);
-  actor(p,31,65,1,t,focus&1?1:0);
-  actor(p,96,60,3,t,focus==2?3:1);
-  if(focus>=2){rect(p,59,43,13,7,16);rect(p,61,45,9,3,20);}
-  break;
- case CINE_MARA:
-  street(p,t,1);
-  rect(p,3,16,32,38,14);rect(p,6,20,26,29,23);
-  rect(p,7,18,23,7,18);rect(p,9,25,21,4,22);
-  actor(p,44+pan/2,67,1,t,focus&1?1:0);
-  actor(p,79-pan/2,67,2,t,focus&1?0:1);
-  if(focus>=2){stroke(p,57,45,66,44,20);disk(p,66,44,2,31);}
-  break;
+   interior(p,1,t);
+   rect(p,65,4,47,8,3);rect(p,67,6,43,4,18);
+   furniture(p,20,53,91,14);
+   paper(p,58,49,18,7,focus);
+   rect(p,78,49,6,5,14);rect(p,79,47,4,3,18);
+   if(focus>=2){rect(p,64,50,9,4,16);rect(p,66,51,5,2,20);}
+   actor(p,travel(28,33,t,10,36),68,1,t,focus&1?1:0);
+   actor(p,96,66,3,t,focus>=1?4:0);
+   break;
+ case CINE_MARA: {
+   cafe(p,t);cafe_table(p,2);
+   int dx=travel(34,43,t,12,55),mx=travel(95,83,t,18,57);
+   actor(p,dx,72,1,t,t<65?2:focus==1?1:focus>=2?3:0);
+   actor(p,mx,72,2,t,t<70?2:focus==0?1:focus>=2?4:0);
+   if(focus>=2){rect(p,62,57,5,3,20);rect(p,63,58,3,1,18);}
+   break;
+  }
  case CINE_BUS:
   street(p,t,1);
   bus(p,15+((t/60)%2),21,t);
@@ -435,15 +475,12 @@ void cinema_draw(uint8_t *p,unsigned scene,unsigned tick,unsigned page,unsigned 
   server(p,t,1);actor(p,24,70,1,t,0);
   break;
  case CINE_MARA_EMPTY:
-   street(p,t,1);
-   rect(p,3,16,32,38,14);rect(p,6,20,26,29,23);
-   rect(p,7,18,23,7,18);rect(p,9,25,21,4,22);
-   rect(p,54,54,38,3,14);rect(p,61,57,4,12,14);
-   rect(p,84,57,4,12,14);
-   rect(p,75,50,7,4,20);rect(p,78,48,3,2,18);
-   actor(p,42+pan/2,72,1,t,0);
+   cafe(p,t);cafe_table(p,1);
+   actor(p,travel(36,42,t,20,58),72,1,t,t<68?2:0);
+   rect(p,81,62,13,2,14);rect(p,84,64,2,7,14);
+   rect(p,91,64,2,7,14);
    break;
-  case CINE_RESCUE_DOOR:
+ case CINE_RESCUE_DOOR:
    safehouse(p,t);
    rect(p,76,22,29,35,3);rect(p,78,24,25,31,14);
    rect(p,80,25,21,28,22);pixel(p,97,43,18);
@@ -500,11 +537,12 @@ void cinema_draw(uint8_t *p,unsigned scene,unsigned tick,unsigned page,unsigned 
  }
  default:street(p,t,0);break;
  }
- /* Sparse, subtle film grain: no random sprite shake, no wasted VRAM. */
- for(int i=0;i<4;i++){
-  int x=((int)t/6+i*29+13)%120, y=(i*13+7)%46;
-  pixel(p,x,y,(i&1)?29:22);
- }
+ /* Sparse grain stays at the film border, never across character eyes. */
+  for(int i=0;i<2;i++){
+   int x=(int)((t/12u+i*47u)%120u);
+   pixel(p,x,i?1:0,i?29:22);
+  }
+  
  /* A two-frame top/bottom eyelid wipe on scene introductions (not flicker). */
  if(t<8&&scene!=CINE_FINALE){
   int bar=(8-(int)t)/2;
