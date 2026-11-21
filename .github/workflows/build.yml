@@ -43,6 +43,21 @@ jobs:
             src/hd_ending.c tests/hd_story_expansion_test.c \
             -o /tmp/danny_hd_story_expansion
           /tmp/danny_hd_story_expansion
+      - name: Prove pixel-identical geometry, town coordinates and exact wall-projection rounding
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
+            src/story.c src/studio.c src/hd_canvas.c \
+            tests/native_perf_equivalence_test.c -o /tmp/danny_perf_equivalence
+          /tmp/danny_perf_equivalence
+      - name: Profile per-scene host render costs without confusing them with GBA FPS
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
+            src/story.c src/studio.c src/cinema.c src/hd_canvas.c \
+            src/hd_world.c src/hd_perspective.c src/hd_studio.c \
+            src/hd_cinema.c src/hd_actor.c src/hd_special.c \
+            src/hd_ending.c tests/render_cost_probe.c \
+            -o /tmp/danny_render_cost
+          /tmp/danny_render_cost
       - name: Test story progression and map accessibility
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c tests/story_test.c -o /tmp/danny_story_test
@@ -154,6 +169,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: make
+      - name: Enforce static RAM headroom and report real linked memory use
+        run: |
+          # GNU ld provides the exact section sizes. The devkitARM container
+          # does not ship arm-none-eabi-size in every revision.
+          map=danny_steel_title.map
+          test -s "$map"
+          ewram_hex="$(awk '$1==".ewram" && $2 ~ /^0x02/ {print $3;exit}' "$map")"
+          iwram_hex="$(awk '$1==".iwram" && $2 ~ /^0x03/ {print $3;exit}' "$map")"
+          bss_hex="$(awk '$1==".bss" && $2 ~ /^0x03/ {print $3;exit}' "$map")"
+          data_hex="$(awk '$1==".data" && $2 ~ /^0x03/ {print $3;exit}' "$map")"
+          test -n "$ewram_hex" && test -n "$iwram_hex" &&
+          test -n "$bss_hex" && test -n "$data_hex"
+          ewram=$((ewram_hex))
+          iwram=$((iwram_hex))
+          bss=$((bss_hex))
+          data=$((data_hex))
+          static_iwram=$((iwram+bss+data))
+          echo "EWRAM static: $ewram bytes (limit 196608 / 262144 physical)"
+          echo "IWRAM BSS: $bss; data: $data; explicit IWRAM: $iwram"
+          echo "IWRAM static total: $static_iwram bytes (limit 24576 / 32768 physical)"
+          test "$ewram" -le 196608
+          # Leave at least 8 KiB for the main stack/interrupt headroom.
+          test "$static_iwram" -le 24576
+          echo "ROM bytes:"
+          wc -c danny_steel_title.gba
       - name: Publish playable ROM to main (no artifact quota needed)
         run: |
           cd "$GITHUB_WORKSPACE"

@@ -69,6 +69,18 @@ void hd_rect(uint8_t *p,int x,int y,int w,int h,unsigned c){
 }
 static int abs_i(int n){return n<0?-n:n;}
 void hd_line(uint8_t *p,int x,int y,int xx,int yy,unsigned c){
+ /* City mortar, train rails and menu rules draw thousands of axis-aligned
+    pixels. One clipped span preserves every Bresenham pixel but avoids
+    repeatedly stepping and bounds-checking the same horizontal/vertical
+    line. Arbitrary diagonals still use the original painter. */
+ if(y==yy){
+  hd_rect(p,x<xx?x:xx,y,abs_i(xx-x)+1,1,c);
+  return;
+ }
+ if(x==xx){
+  hd_rect(p,x,y<yy?y:yy,1,abs_i(yy-y)+1,c);
+  return;
+ }
  int dx=abs_i(xx-x),dy=abs_i(yy-y),sx=x<xx?1:-1,sy=y<yy?1:-1,err=dx-dy;
  for(;;){
   hd_pixel(p,x,y,c);
@@ -80,10 +92,18 @@ void hd_line(uint8_t *p,int x,int y,int xx,int yy,unsigned c){
 }
 void hd_ellipse(uint8_t *p,int cx,int cy,int rx,int ry,unsigned c){
  if(rx<1||ry<1)return;
+ /* Exactly the same integer ellipse as the original pixel painter.
+    Its scanline radius grows monotonically toward the center, then
+    shrinks. Carry it between rows: O(rx + ry) comparisons rather than
+    searching from zero for each of the (2*ry+1) scanlines. */
+ int rx2=rx*rx,ry2=ry*ry,width=0;
  for(int y=-ry;y<=ry;y++){
-  /* integer ellipse, avoids float, sqrt and a new graphics dependency */
-  int numerator=rx*rx*(ry*ry-y*y),width=0;
-  while((width+1)*(width+1)*ry*ry<=numerator)width++;
+  int numerator=rx2*(ry2-y*y);
+  if(y<=0){
+   while((width+1)*(width+1)*ry2<=numerator)width++;
+  }else{
+   while(width*width*ry2>numerator)width--;
+  }
   hd_rect(p,cx-width,cy+y,width*2+1,1,c);
  }
 }
