@@ -113,7 +113,13 @@ enum { D_NONE, D_OPEN, D_LETTER, D_LETTER_AGAIN, D_CLERK_LOCKED, D_CLERK, D_CLER
        D_PROJECT_SONG_2, D_PROJECT_SONG_3, D_PROJECT_SONG_DONE,
        D_PROJECT_ART_2, D_PROJECT_ART_3, D_PROJECT_ART_DONE,
        D_MARA_MORNING, D_MARA_CLOSING, D_CLERK_CLOSING,
-       D_MARA_GALLERY, D_CLERK_SONG };
+       D_MARA_GALLERY, D_CLERK_SONG,
+       D_BAD_LETTER, D_BAD_CLERK, D_BAD_MUSIC, D_BAD_SERVER,
+       D_MARA_MISSING, D_MARA_ABSENT, D_RESCUE_WITNESS,
+       D_RESCUE_TRACE, D_RESCUE_SAVED, D_RESCUE_LOST,
+       D_RESCUE_AFTERSHOCK, D_BAD_END, D_RESCUE_NOTES_1,
+       D_RESCUE_NOTES_2, D_RESCUE_NOTES_3, D_RESCUE_NOTES_SAVED,
+       D_BUS_RESCUE };
 #define SCRIPT(name, ...) static const StoryPage name[] = { __VA_ARGS__ }
 SCRIPT(d_open,
  {"DANNY", "The last bus leaves", "at sundown. Of course."},
@@ -429,6 +435,67 @@ SCRIPT(d_clerk_song,
  {"BORE CLERK", "This recording", "is officially BORE."},
  {"DANNY", "I finally made", "a usable master."},
  {"BORE CLERK", "Filed under", "SONGS WORTH KEEPING."});
+
+/* Four optional harmful decisions require deliberate B + RIGHT + A.
+   Mara's fate is never shown or described explicitly if rescue fails. */
+SCRIPT(d_bad_letter,
+ {"DANNY", "I hid the reply", "when it mattered."},
+ {"DANNY", "Nobody deserves", "to wait for a lie."});
+SCRIPT(d_bad_clerk,
+ {"BORE CLERK", "That forged record", "has a real owner."},
+ {"DANNY", "I thought it was", "only paperwork."});
+SCRIPT(d_bad_music,
+ {"ARCHIVE TAPE", "THE DEMO WAS ERASED.", "NO BACKUP HERE."},
+ {"DANNY", "I cannot laugh", "that one off."});
+SCRIPT(d_bad_server,
+ {"TERMINAL", "PRIVATE NAME POSTED.", "RETRACTING IS HARD."},
+ {"DANNY", "I just made life", "harder for someone."});
+SCRIPT(d_mara_missing,
+ {"MARA'S CAFE", "The door is open.", "Her coat is gone."},
+ {"DANNY", "Her cup is warm.", "This is not right."},
+ {"PHONE MESSAGE", "MIRROR ORCHARD.", "CHECK THE WITNESS."},
+ {"DANNY", "Find Mara. First.", "No more shortcuts."});
+SCRIPT(d_mara_absent,
+ {"MARA'S CAFE", "The kettle is on.", "No answer inside."},
+ {"DANNY", "She would never", "leave it this way."});
+SCRIPT(d_rescue_witness,
+ {"WITNESS", "Mara was taken.", "I heard the van."},
+ {"WITNESS", "Check the terminal", "for the old trace."},
+ {"DANNY", "I'll keep your", "name safe this time."});
+SCRIPT(d_rescue_trace,
+ {"TERMINAL", "SIGNAL VERIFIED.", "OLD SAFE HOUSE."},
+ {"DANNY", "North of the", "letterbox. I know it."},
+ {"DANNY", "I'll open the", "door and find Mara."});
+SCRIPT(d_rescue_saved,
+ {"MARA", "You actually", "found me."},
+ {"DANNY", "I should have", "listened sooner."},
+ {"MARA", "We still have", "a way home."},
+ {"DANNY", "Let's go back.", "Together this time."});
+SCRIPT(d_rescue_lost,
+ {"SAFE HOUSE", "The light went out.", "No one answered."},
+ {"DANNY", "I went away.", "I cannot undo it."},
+ {"PHONE", "Calls unanswered.", "No word of Mara."});
+SCRIPT(d_rescue_aftershock,
+ {"TERMINAL", "FOURTH BAD CHECK.", "THE DAMAGE SPREADS."},
+ {"MARA", "I'm safe now.", "But not all is well."},
+ {"DANNY", "I had another", "chance. I wasted it."});
+SCRIPT(d_bad_end,
+ {"NARRATOR", "There was no", "certain word of Mara."},
+ {"NARRATOR", "Only the quiet", "where her voice had been."},
+ {"NARRATOR", "Danny's last days", "slipped into silence."},
+ {"BAD END", "The city kept", "its unanswered calls."});
+SCRIPT(d_rescue_notes_1,
+ {"POCKET NOTEBOOK", "MARA IS MISSING.", "WITNESS: WEST CAFE."});
+SCRIPT(d_rescue_notes_2,
+ {"POCKET NOTEBOOK", "TERMINAL: EAST", "MIRROR ORCHARD."});
+SCRIPT(d_rescue_notes_3,
+ {"POCKET NOTEBOOK", "SAFE HOUSE: NORTH", "OPEN THE DOOR."});
+SCRIPT(d_rescue_notes_saved,
+ {"POCKET NOTEBOOK", "MARA IS SAFE.", "BAD CHECKS REMAIN."},
+ {"DANNY", "One more bad choice", "could end it."});
+SCRIPT(d_bus_rescue,
+ {"DRIVER", "Back for a ticket?", "There's still time."},
+ {"DANNY", "Mara made it home.", "I can still choose."});
 #undef SCRIPT
 #define SEQ(name) {name, (uint8_t)(sizeof(name) / sizeof((name)[0]))}
 static const struct { const StoryPage *pages; uint8_t count; } scripts[] = {
@@ -458,7 +525,13 @@ static const struct { const StoryPage *pages; uint8_t count; } scripts[] = {
   SEQ(d_project_song_2), SEQ(d_project_song_3), SEQ(d_project_song_done),
   SEQ(d_project_art_2), SEQ(d_project_art_3), SEQ(d_project_art_done),
   SEQ(d_mara_morning), SEQ(d_mara_closing), SEQ(d_clerk_closing),
-  SEQ(d_mara_gallery), SEQ(d_clerk_song)
+  SEQ(d_mara_gallery), SEQ(d_clerk_song),
+  SEQ(d_bad_letter), SEQ(d_bad_clerk), SEQ(d_bad_music), SEQ(d_bad_server),
+  SEQ(d_mara_missing), SEQ(d_mara_absent), SEQ(d_rescue_witness),
+  SEQ(d_rescue_trace), SEQ(d_rescue_saved), SEQ(d_rescue_lost),
+  SEQ(d_rescue_aftershock), SEQ(d_bad_end), SEQ(d_rescue_notes_1),
+  SEQ(d_rescue_notes_2), SEQ(d_rescue_notes_3), SEQ(d_rescue_notes_saved),
+  SEQ(d_bus_rescue)
 };
 const StoryPage *story_pages(const Story *s, int *count) {
     unsigned id = s->dialogue;
@@ -514,6 +587,16 @@ static uint8_t cinematics_for_dialogue(uint8_t d){
     case D_MARA_MORNING: case D_MARA_CLOSING:
     case D_MARA_GALLERY: return CINE_MARA;
     case D_CLERK_CLOSING: return CINE_BORE;
+    case D_BAD_LETTER: return CINE_LETTER;
+    case D_BAD_CLERK: return CINE_BORE;
+    case D_BAD_MUSIC: return CINE_MUSIC;
+    case D_BAD_SERVER: case D_RESCUE_TRACE: case D_RESCUE_AFTERSHOCK: return CINE_SERVER;
+    case D_MARA_MISSING: case D_MARA_ABSENT: return CINE_MARA_EMPTY;
+    case D_RESCUE_WITNESS: return CINE_WITNESS;
+    case D_RESCUE_LOST: return CINE_RESCUE_DOOR;
+    case D_RESCUE_SAVED: return CINE_RESCUE_SAVED;
+    case D_BAD_END: return CINE_BAD;
+    case D_BUS_RESCUE: return CINE_BUS;
     default: return CINE_NONE;
     }
 }

@@ -33,7 +33,19 @@
 #define STORY_GOOD_FINAL_FRAMES (STORY_END_SCORE_FRAMES + STORY_END_CODA_FRAMES)
 #define STORY_END_GOOD 1
 #define STORY_END_NEUTRAL 2
-#define STORY_END_BAD 3 /* reserved for the later branching chapter */
+#define STORY_END_BAD 3
+#define STORY_BAD_LETTER 1u
+#define STORY_BAD_CLERK 2u
+#define STORY_BAD_MUSIC 4u
+#define STORY_BAD_SERVER 8u
+#define STORY_BAD_THRESHOLD 3u
+#define STORY_RESCUE_NONE 0u
+#define STORY_RESCUE_MISSING 1u
+#define STORY_RESCUE_WITNESS 2u
+#define STORY_RESCUE_TRACE 3u
+#define STORY_RESCUE_SAVED 4u
+#define STORY_RESCUE_LOST 5u
+#define STORY_RESCUE_AFTERSHOCK 6u
 #define STORY_LIFE_NONE 0
 #define STORY_LIFE_WAIT 1
 #define STORY_LIFE_CLINIC 2
@@ -65,6 +77,8 @@ typedef struct {
     uint8_t energy, spark, bond, work; /* saved resources */
     uint8_t song_steps, art_steps, project_style; /* SRAM v5; stages 0..4 */
     uint8_t activity, activity_choice; /* transient daily choice menu */
+    uint8_t bad_mask, rescue_stage; /* companion SRAM record */
+    uint8_t risk_menu, risk_choice; /* confirmed ethical choices */
     uint16_t day_frame, finale_frame;
     /* Cinematic shots are transient; saves retain story flags, not camera frames. */
     uint8_t cinema;
@@ -86,3 +100,5 @@ const StoryPage *story_pages(const Story *s, int *count);
 /* Deterministic enemy tells and waves: shared by logic, renderer and host tests. */
 int story_attack_lane(const Story *s, int beat);
 const char *story_enemy_name(const Story *s);
+
+int story_bad_count(const Story *s);
