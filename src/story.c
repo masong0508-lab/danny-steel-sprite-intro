@@ -142,23 +142,25 @@ enum { D_NONE, D_OPEN, D_LETTER, D_LETTER_AGAIN, D_CLERK_LOCKED, D_CLERK, D_CLER
        D_HOPE_NOTE_WAIT, D_HOPE_NOTE_LATE };
 #define SCRIPT(name, ...) static const StoryPage name[] = { __VA_ARGS__ }
 SCRIPT(d_open,
- {"DANNY", "The last bus leaves", "at sundown. Of course."},
- {"DANNY", "Even the apocalypse", "has a timetable."},
- {"DANNY", "Find what matters.", "Then make a choice."});
+ {"DANNY", "Last bus tonight.", "Doctor called again."},
+ {"DANNY", "I can face a letter", "before test results."},
+ {"DANNY", "Then Mara. Music.", "One thing at a time."});
 SCRIPT(d_letter,
- {"OLD LETTER", "Dear Danny, I left", "the porch light on."},
- {"OLD LETTER", "The power company", "took it. I tried."},
- {"DANNY", "Somebody waited.", "I should remember."});
+ {"OLD LETTER", "I left the porch", "light on for you."},
+ {"OLD LETTER", "The bill went up.", "I left it on anyway."},
+ {"DANNY", "Somebody made room", "for me. I left."},
+ {"DANNY", "I can at least", "write back."});
 SCRIPT(d_letter_again,
  {"DANNY", "That little letter", "weighs a whole ton."});
 SCRIPT(d_clerk_locked,
  {"BORE CLERK", "Form B-2 requires", "proof you existed."},
  {"BORE CLERK", "Try looking for", "a letter from home."});
 SCRIPT(d_clerk,
- {"BORE CLERK", "Welcome to the BORE", "Continuity Office."},
- {"BORE CLERK", "We're not ending", "reality. Budget cuts."},
- {"BORE CLERK", "ONE EXISTENCE,", "PROVISIONALLY OKAY."},
- {"DANNY", "They stamped my", "ticket for tomorrow."});
+ {"BORE CLERK", "We keep records", "when people forget."},
+ {"DANNY", "You saved a blank", "file for me?"},
+ {"BORE CLERK", "One existence,", "provisionally okay."},
+ {"DANNY", "What about the old", "BORE music reels?"},
+ {"BORE CLERK", "In the archive.", "Names still attached."});
 SCRIPT(d_clerk_again,
  {"BORE CLERK", "Do not fold the", "universe in half."},
  {"BORE CLERK", "The warranty is", "very specific."});
@@ -166,19 +168,20 @@ SCRIPT(d_mara_locked,
  {"MARA", "You're leaving?", "You always do that."},
  {"MARA", "Talk to the clerk.", "Make it official."});
 SCRIPT(d_mara,
- {"MARA", "You still laugh", "when you're scared."},
- {"DANNY", "Only because my", "knees are louder."},
- {"MARA", "Promise me you'll", "keep the good bits."},
- {"DANNY", "I will. Even the", "terrible jokes."});
+ {"MARA", "You only joke like", "that when scared."},
+ {"DANNY", "Then I'm a very", "funny man tonight."},
+ {"MARA", "You can leave. Just", "don't vanish on me."},
+ {"DANNY", "I'll tell you first.", "You have my word."},
+ {"MARA", "And keep the song.", "The silly one."});
 SCRIPT(d_mara_again,
  {"MARA", "Whatever happens,", "do not forget us."});
 SCRIPT(d_bus_locked,
- {"DRIVER", "LAST BUS: TOMORROW.", "NO REFUNDS: YESTERDAY."},
- {"DRIVER", "You still have", "unfinished goodbyes."});
+ {"DRIVER", "Last bus tonight.", "Seats still open."},
+ {"DRIVER", "Your ticket is fine.", "Your goodbyes aren't."});
 SCRIPT(d_bus_ready,
- {"DRIVER", "Ticket, letter,", "promise. That's all."},
- {"DRIVER", "There's a seat out", "or a street to stay."},
- {"DANNY", "Either way, today", "was real."});
+ {"DRIVER", "Your stamp checks out.", "One seat. One choice."},
+ {"DRIVER", "Leaving won't erase", "what happened here."},
+ {"DANNY", "No. But I'll take", "the truth with me."});
 SCRIPT(d_end_go,
  {"DANNY", "The city got small", "behind the window."},
  {"DANNY", "I didn't lose it.", "I brought it with me."},
@@ -259,9 +262,10 @@ SCRIPT(d_cult_notes_3,
 SCRIPT(d_cult_notes_4,
  {"POCKET NOTEBOOK", "People helped. Logs", "saved. Server lives."});
 SCRIPT(d_music,
- {"ARCHIVE TAPE", "Unused BORE songs.", "They still play."},
- {"DANNY", "Somebody might like", "these someday."},
- {"DANNY", "I should finish", "the missing track."});
+ {"ARCHIVE TAPE", "BORE REEL 07", "ROUGH TRACK INTACT."},
+ {"DANNY", "My old song still", "sounds like me."},
+ {"DANNY", "I'll leave a copy", "with my name on it."},
+ {"ARCHIVE TAPE", "COPY REGISTERED.", "KEEP THE ORIGINAL."});
 SCRIPT(d_music_again,
  {"DANNY", "The tape survived.", "Not the cassette case."});
 SCRIPT(d_art,
@@ -276,45 +280,45 @@ SCRIPT(d_art_last_locked,
  {"DANNY", "The doctors haven't", "finished talking."},
  {"DANNY", "My canvas can wait", "a little longer."});
 SCRIPT(d_neutral_start,
- {"DAY ONE", "Danny stays behind", "for an ordinary day."},
- {"DANNY", "I did enough to", "leave. Not all of it."},
- {"DANNY", "I'll keep painting", "while the buses run."},
- {"POCKET NOTEBOOK", "At familiar places", "A opens two choices."},
- {"POCKET NOTEBOOK", "E energy  S spark", "B bond  W work."});
+ {"DAY ONE", "Danny missed the bus", "and stayed in town."},
+ {"DANNY", "The clinic called.", "I kept not calling."},
+ {"DANNY", "I can't stop time.", "I can spend it."},
+ {"POCKET NOTEBOOK", "Familiar places", "offer two choices."},
+ {"POCKET NOTEBOOK", "E energy S spark", "B bond W work."});
 SCRIPT(d_medical_notice,
- {"DAY TWO", "A clinic message", "arrived this morning."},
- {"DANNY", "The test results?", "I had forgotten."},
+ {"DAY TWO", "The clinic left", "another message."},
+ {"DANNY", "I still haven't", "returned the first."},
  {"CLINIC", "Please come in.", "We need to talk."});
 SCRIPT(d_doctor_first,
- {"DOCTOR", "The tests show a", "serious illness."},
- {"DOCTOR", "We have more to", "discuss next visit."},
- {"DANNY", "I thought I had", "years, not days."},
- {"DOCTOR", "Tell someone you", "trust. Don't go alone."});
+ {"DOCTOR", "The tests show", "a serious illness."},
+ {"DOCTOR", "We need more scans.", "I can't guess time."},
+ {"DANNY", "I've been dodging", "these calls all week."},
+ {"DOCTOR", "Bring someone you", "trust next time."});
 SCRIPT(d_doctor_return,
- {"DAY THREE", "A final appointment", "is scheduled today."},
- {"MARA", "I'll go with you.", "No jokes required."},
- {"DANNY", "I brought two.", "Just in case."});
+ {"DAY THREE", "Your follow-up", "is scheduled today."},
+ {"MARA", "I'll come in.", "Or wait outside."},
+ {"DANNY", "Come in. I don't", "want to hear alone."});
 SCRIPT(d_doctor_last,
- {"DOCTOR", "The cancer is far", "advanced. I'm sorry."},
- {"DOCTOR", "We can support you", "through what comes."},
- {"MARA", "We can sit here as", "long as you need."},
- {"DANNY", "I'd like to go", "finish my painting."});
+ {"DOCTOR", "The cancer has", "spread. I'm sorry."},
+ {"DOCTOR", "We can help you", "through the pain."},
+ {"MARA", "Want me to stay?", "I have nowhere else."},
+ {"DANNY", "For a while. Then", "I want the roof."});
 SCRIPT(d_neutral_paint,
  {"ROOFTOP", "Danny returned to", "the unfinished sky."},
- {"DANNY", "One last bit of", "light. Right there."},
- {"DANNY", "I never did learn", "when to stop."});
+ {"DANNY", "The clinic didn't", "promise tomorrow."},
+ {"DANNY", "I can give this", "corner some light."});
 SCRIPT(d_neutral_end,
- {"NARRATOR", "The brush slipped", "from his hand."},
- {"NARRATOR", "Danny collapsed onto", "his last painting."},
- {"MARA", "He died with paint", "still on his hands."},
- {"NEUTRAL END", "The city carried", "his colors onward."});
+ {"NARRATOR", "The last brush fell", "on the quiet roof."},
+ {"NARRATOR", "Danny never stood", "up again."},
+ {"MARA", "I found his letter", "beside the paints."},
+ {"NEUTRAL END", "He left us a sky", "we could recognize."});
 SCRIPT(d_good_end,
- {"DANNY", "The canvas is dry.", "The music is safe."},
- {"YEARS LATER", "Danny was gone by", "the time it happened."},
- {"RECORD STORE", "His unreleased BORE", "songs sold millions."},
- {"RECORD STORE", "The games and album", "topped the charts."},
- {"MARA", "He never heard the", "crowds sing along."},
- {"GOOD END", "But the songs found", "somewhere to live."});
+ {"YEARS LATER", "The bus was only", "the beginning."},
+ {"MARA", "He lived beyond", "that last night."},
+ {"BORE CLERK", "We kept the demos.", "He asked us to."},
+ {"RECORD STORE", "Mara released them", "after he was gone."},
+ {"RECORD STORE", "The songs reached", "millions of people."},
+ {"GOOD END", "He never heard", "their final chorus."});
 SCRIPT(d_day_notes,
  {"POCKET NOTEBOOK", "The bus can wait.", "The roof cannot."},
  {"POCKET NOTEBOOK", "Read, walk, paint.", "The day continues."},
@@ -475,79 +479,80 @@ SCRIPT(d_clinic_rescue,
  {"DANNY", "Mara is missing.", "I have to find her."},
  {"RECEPTION", "We'll keep your", "place for you."});
 SCRIPT(d_bad_warning_2,
- {"DANNY", "Another wrong choice", "made a real mess."},
- {"UNKNOWN TEXT", "MARA IS NOT", "OUT OF REACH."},
+ {"DANNY", "Two small wrongs.", "They didn't stay small."},
+ {"UNKNOWN TEXT", "MARA'S CAFE IS", "ON THEIR LIST."},
  {"POCKET NOTEBOOK", "TWO BAD CHECKS.", "STOP BEFORE THREE."});
 SCRIPT(d_mara_missing,
- {"MARA'S CAFE", "The door is open.", "Her coat is gone."},
- {"DANNY", "Her cup is warm.", "This is not right."},
- {"PHONE MESSAGE", "MIRROR ORCHARD.", "CHECK THE WITNESS."},
- {"DANNY", "Find Mara. First.", "No more shortcuts."});
+ {"MARA'S CAFE", "Her chair is empty.", "The cup is untouched."},
+ {"DANNY", "She would have left", "some kind of note."},
+ {"PHONE MESSAGE", "A WITNESS SAW A VAN.", "NEAR MIRROR ORCHARD."},
+ {"DANNY", "A lead, not proof.", "I'll ask in person."});
 SCRIPT(d_mara_absent,
- {"MARA'S CAFE", "The kettle is on.", "No answer inside."},
- {"DANNY", "She would never", "leave it this way."});
+ {"MARA'S CAFE", "The kettle has", "gone cold again."},
+ {"DANNY", "I'll check the trail", "before I guess."});
 SCRIPT(d_rescue_witness,
- {"WITNESS", "Mara was taken.", "I heard the van."},
- {"WITNESS", "Check the terminal", "for the old trace."},
- {"DANNY", "I'll keep your", "name safe this time."});
+ {"WITNESS", "I saw a van.", "Someone forced her in."},
+ {"WITNESS", "I lost the plate.", "Try the terminal."},
+ {"DANNY", "I won't put your", "name online."});
 SCRIPT(d_rescue_trace,
- {"TERMINAL", "SIGNAL VERIFIED.", "OLD SAFE HOUSE."},
- {"DANNY", "North of the", "letterbox. I know it."},
- {"DANNY", "I'll open the", "door and find Mara."});
+ {"TERMINAL", "LAST VAN SIGNAL:", "OLD SAFE HOUSE."},
+ {"TERMINAL", "VEHICLE LOCATION.", "NOT PROOF OF MARA."},
+ {"DANNY", "A lead, not proof.", "I'm going there."});
 SCRIPT(d_rescue_saved,
- {"MARA", "You actually", "found me."},
- {"DANNY", "I should have", "listened sooner."},
- {"MARA", "We still have", "a way home."},
- {"DANNY", "Let's go back.", "Together this time."});
+ {"MARA", "You found me.", "I heard your steps."},
+ {"DANNY", "I thought I'd be", "too late."},
+ {"MARA", "Don't make a speech.", "Just help me stand."},
+ {"DANNY", "I'm sorry.", "Let's get you home."});
 SCRIPT(d_rescue_lost,
  {"SAFE HOUSE", "The light went out.", "No answer came."},
  {"UNKNOWN CALLER", "She will call you.", "Just give it a day."},
- {"DANNY", "You said she would", "answer. All right."},
- {"DANNY", "I'll keep my phone", "near. She'll call."});
+ {"DANNY", "You sound so sure.", "I need you right."},
+ {"DANNY", "I'll keep the phone", "on. She can call."});
 /* The unverified caller sounds reassuring, but the game does not portray
    an unreturned call as evidence of death or confirmed harm. */
 SCRIPT(d_hope_realize,
  {"PHONE", "A day has passed.", "No return call."},
- {"UNKNOWN CALLER", "That last message", "was not verified."},
+ {"UNKNOWN CALLER", "I passed on a rumor.", "I never checked."},
  {"WITNESS", "Mara still has not", "been recovered."},
- {"DANNY", "I was told she'd", "answer me by now."},
- {"DANNY", "I don't know where", "she is. Not yet."},
+ {"DANNY", "You sounded certain.", "I wanted you right."},
+ {"DANNY", "The trail ends here.", "Not her story."},
  {"DANNY", "I'll keep the line", "open. Just in case."});
 SCRIPT(d_hope_phone_wait,
  {"PHONE", "CALL STILL PENDING.", "No reply yet."},
- {"DANNY", "They said she'd", "answer. I believe it."});
+ {"DANNY", "They sounded sure.", "I needed that."});
 SCRIPT(d_hope_phone_late,
  {"PHONE", "NO VERIFIED UPDATE.", "Calls unanswered."},
- {"DANNY", "She hasn't been", "found. I still hope."});
+ {"DANNY", "I know a promise", "isn't proof."},
+ {"DANNY", "But keep ringing.", "I'll be here."});
 SCRIPT(d_hope_witness,
  {"WITNESS", "They promised news.", "I can't confirm it."},
- {"WITNESS", "No recovery report", "has come through."});
+ {"WITNESS", "No signed recovery", "report exists."});
 SCRIPT(d_hope_terminal,
  {"TERMINAL", "LOCATION UNKNOWN.", "NO VERIFIED TRACE."},
- {"DANNY", "I can't turn hope", "into a location."});
+ {"DANNY", "The last van ping", "wasn't Mara's voice."});
 SCRIPT(d_hope_door,
  {"SAFE HOUSE", "The door is shut.", "The light is off."},
  {"DANNY", "I still have no", "answer. Not yet."});
 SCRIPT(d_hope_note_wait,
  {"POCKET NOTEBOOK", "AWAIT MARA'S CALL.", "PROMISE UNVERIFIED."},
- {"DANNY", "Keep the phone on.", "She could still call."});
+ {"DANNY", "Keep the phone on.", "No guessing."});
 SCRIPT(d_hope_note_late,
  {"POCKET NOTEBOOK", "MARA NOT RECOVERED.", "NO VERIFIED UPDATE."},
- {"DANNY", "I know what I", "don't know. I hope."});
+ {"DANNY", "Hope isn't proof.", "Neither is silence."});
 SCRIPT(d_rescue_aftershock,
- {"TERMINAL", "FOURTH BAD CHECK.", "THE DAMAGE SPREADS."},
- {"MARA", "I'm safe now.", "But not all is well."},
- {"DANNY", "I had another", "chance. I wasted it."});
+ {"DANNY", "I crossed that line", "again, on purpose."},
+ {"MARA", "I'm home. I'm safe.", "It isn't all right."},
+ {"DANNY", "You were right", "to expect better."});
 SCRIPT(d_bad_end,
  {"NARRATOR", "There was no", "certain word of Mara."},
- {"NARRATOR", "Only the quiet", "where her voice had been."},
- {"NARRATOR", "Danny's last days", "slipped into silence."},
- {"BAD END", "The city kept", "its unanswered calls."});
+ {"DANNY", "I waited because", "someone said she'd call."},
+ {"NARRATOR", "No answer came.", "That settled nothing."},
+ {"BAD END", "The line stayed open", "past the last frame."});
 SCRIPT(d_bad_end_saved,
  {"NARRATOR", "Mara returned home.", "She was safe."},
- {"NARRATOR", "Danny's next choice", "broke the trust left."},
- {"NARRATOR", "His last days", "ended in silence."},
- {"BAD END", "The city had lost", "too many promises."});
+ {"MARA", "I was found. That", "didn't fix everything."},
+ {"DANNY", "I asked for trust", "and spent it again."},
+ {"BAD END", "Not every second", "chance gets a third."});
 SCRIPT(d_rescue_notes_1,
  {"POCKET NOTEBOOK", "MARA IS MISSING.", "WITNESS: WEST CAFE."});
 SCRIPT(d_rescue_notes_2,
@@ -558,8 +563,9 @@ SCRIPT(d_rescue_notes_saved,
  {"POCKET NOTEBOOK", "MARA IS SAFE.", "BAD CHECKS REMAIN."},
  {"DANNY", "One more bad choice", "could end it."});
 SCRIPT(d_bus_rescue,
- {"DRIVER", "Back for a ticket?", "There's still time."},
- {"DANNY", "Mara made it home.", "I can still choose."});
+ {"DRIVER", "Back for a ticket?", "There is still time."},
+ {"DANNY", "Mara made it home.", "That mattered more."},
+ {"DRIVER", "So did what you did", "before she vanished."});
 /* Good marks alter the rescue itself: deeds change what NPCs know and say.
    These are pure consequences of existing progress, never grind gates. */
 SCRIPT(d_rescue_witness_trust,
@@ -567,13 +573,13 @@ SCRIPT(d_rescue_witness_trust,
  {"WITNESS", "I trust you with", "Mara's trail now."},
  {"WITNESS", "The terminal has", "the last known stop."});
 SCRIPT(d_rescue_saved_trust,
- {"MARA", "I knew you would", "keep looking for me."},
- {"DANNY", "You trusted me", "even after that."},
- {"MARA", "Come on. Let's", "get back to the cafe."});
+ {"MARA", "You kept looking.", "I heard your steps."},
+ {"DANNY", "I should've listened", "before all this."},
+ {"MARA", "We can talk later.", "Please take me home."});
 SCRIPT(d_rescue_saved_art,
- {"MARA", "You found me.", "We can go home."},
- {"DANNY", "Your painting is", "waiting at the roof."},
- {"MARA", "Show me that sky", "when we get back."});
+ {"MARA", "You found me.", "I want to go home."},
+ {"DANNY", "The roof painting", "is waiting for you."},
+ {"MARA", "I'd like to see it", "when we're ready."});
 #undef SCRIPT
 #define SEQ(name) {name, (uint8_t)(sizeof(name) / sizeof((name)[0]))}
 static const struct { const StoryPage *pages; uint8_t count; } scripts[] = {
