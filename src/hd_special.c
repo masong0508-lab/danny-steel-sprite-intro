@@ -164,13 +164,28 @@ static void safehouse(uint8_t *p,unsigned t,int scene){
    hd_rect(p,160,31,49,85,HD_STONE_DARK);
    hd_rect(p,167,39,32,56,HD_PLASTER);
    hd_rect(p,170,42,26,50,HD_BRICK_DARK);
-   if(t>=76u)hd_actor_stage(p,178,145,2,t,t>=123u?1:0);
+   if(t>=76u){
+    /* Mara steps out from the same revealed room as its door opens.
+       Advancing the pose never teleports her across the threshold. */
+    unsigned move=t>145u?t-145u:0u;
+    if(move>95u)move=95u;
+    int mx=178-(int)(move*36u/95u);
+    hd_ellipse(p,mx,145,16,3,HD_SHADOW);
+    hd_actor_stage(p,mx,145,2,t,t>=145u?2:t>=123u?1:0);
+   }
   }
   hd_rect(p,153,23,63-open,96,HD_BARK);
   hd_rect(p,156,27,56-open,88,HD_BRICK_DARK);
   hd_rect(p,155,57,60-open,2,HD_COPPER);
   if(open<20)hd_rect(p,204-open/2,82,5,5,HD_LAMP);
   hd_actor_stage(p,63,144,1,t,t<67u?2:t<107u?3:0);
+  if(open){
+   /* Practical hall light and reflected threshold share the opening. */
+   hd_line(p,156,118,200,118,HD_LAMP);
+   hd_rect(p,156,119,44,3,HD_STONE_LIT);
+   for(int i=0;i<4;i++)
+    hd_line(p,161+i*9,122,154+i*11,141,HD_REFLECT);
+  }
  }else{
   hd_actor_stage(p,49,144,1,t,0);
   hd_actor_stage(p,113,144,4,t,t>78u?1:0);
