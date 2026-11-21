@@ -39,3 +39,4 @@ void hd_actor_stage(uint8_t *p,int x,int feet,int role,unsigned frame,int emotio
 int hd_special_cinema_draw(uint8_t *p,const Story *s,unsigned frame);
 int hd_special_supports(unsigned scene);
 void hd_ending_draw(uint8_t *p,const Story *s,unsigned frame);
+void hd_arena_draw(uint8_t *p,const Story *s,unsigned frame);
