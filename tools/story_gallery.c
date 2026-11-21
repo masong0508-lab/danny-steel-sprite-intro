@@ -93,6 +93,27 @@ int main(int argc,char **argv){
  s.page=3;
  write_frame("05f_potheads_after_hours",&s,300);
  done(&s);
+ /* Engine-produced performance frames; these are not Photoshop mockups.
+    Additional story scenes share camera rigs and all their world props. */
+ s.cinema=CINE_LETTER;s.dialogue=0;s.page=2;
+ write_frame("05g_letter_reach",&s,140);
+ s.cinema=CINE_BORE;s.page=2;
+ write_frame("05h_bore_stamp",&s,140);
+ s.cinema=CINE_MARA;s.page=2;
+ write_frame("05i_mara_table",&s,140);
+ s.cinema=CINE_BUS;s.page=2;
+ write_frame("05j_bus_boarding",&s,160);
+ s.cinema=CINE_ART;s.page=2;
+ write_frame("05k_rooftop_brush",&s,215);
+ s.cinema=CINE_LAST_CLINIC;s.page=2;
+ s.rescue_stage=STORY_RESCUE_NONE;
+ write_frame("05l_clinic_last_visit",&s,170);
+ s.rescue_stage=STORY_RESCUE_MISSING;
+ write_frame("05m_clinic_mara_missing",&s,170);
+ s.rescue_stage=STORY_RESCUE_SAVED;
+ s.cinema=CINE_RESCUE_SAVED;
+ write_frame("05n_rescue_reunion",&s,225);
+ s.rescue_stage=STORY_RESCUE_NONE;
  s.cinema=CINE_NONE;s.scene=STORY_SCENE_NONE;s.view=0;
  /* The first controllable view is now the same storefront as the film. */
  stand(&s,20,11,0);
