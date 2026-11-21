@@ -149,11 +149,11 @@ int main(int argc,char **argv){
  s.finale_frame=4750u;
  write_frame("26_good_ending_concert",&s,4750);
  s.ending=STORY_END_BAD;s.rescue_stage=STORY_RESCUE_LOST;
- s.finale_frame=1250u;
- write_frame("27_bad_unanswered_cafe",&s,1250);
+ s.finale_frame=990u;
+ write_frame("27_bad_unanswered_cafe",&s,990);
  s.rescue_stage=STORY_RESCUE_AFTERSHOCK;
- s.finale_frame=2110u;
- write_frame("28_bad_saved_rescue_door",&s,2110);
+ s.finale_frame=1930u;
+ write_frame("28_bad_saved_rescue_door",&s,1930);
  puts("Actual Danny Steel story renderer gallery generated");
  return 0;
 }
