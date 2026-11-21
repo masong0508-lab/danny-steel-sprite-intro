@@ -6,6 +6,29 @@ A small, original bittersweet comedy-adventure, with a BORE-universe continuity-
 
 The city is closing, the last bus is leaving, and Danny is trying to determine which pieces of yesterday are worth carrying into tomorrow. Read a letter from home, have the BORE Continuity Office validate your existence, and speak to Mara before deciding whether to board the bus or remain behind. Finishing the optional music and art objectives raises *primary-story* completion to 100%, while the Mirror Orchard investigation remains independent. The prose is intentionally a little sad beneath the bureaucracy and bad jokes; the BORE reference is a light crossover and does not attempt to rewrite the larger game's canon.
 
+## Potheads: newly staged opening and optional shifts
+
+**NEW GAME** now opens on a descending view of Potheads, then Danny in a
+banana costume dancing with his deliberately superimposed, hand-painted
+sidewalk sign. The 240x160 film uses a connected eight-pose animation,
+visible storefront architecture, moving pedestrians and a steady
+close-up. Danny does **not** love the mascot job: he is grateful it pays
+the rent, which makes it possible to pursue music and painting after
+hours. The seven dialogue beats preserve the underlying doctor/Mara/bus
+story rather than turning the opening into a career tutorial.
+
+At the real shop in Old Quarter, stand at (20,11), face east toward the
+facade and press **A SHIFT**. During ordinary life-sim days you can do
+one optional shift for +2 work and -1 energy; it never gates the chapter
+or forces Danny to enjoy the job. The interaction is deliberately
+disabled during Mara's unresolved missing-person crisis. The shop,
+dialogue, shift cue, native animation tests and renderer-derived
+screenshots all run from the same game code. A literal
+frame-by-frame trace from the user's dance reference is **not yet**
+implemented; the pose timeline is designed to accept it.
+
+See [the opening direction and engine notes](docs/POTHEADS_OPENING.md).
+
 ## Controls
 
 * **Title:** START for main menu.
