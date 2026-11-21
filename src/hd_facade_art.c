@@ -382,3 +382,30 @@ void hd_facade_wall(uint8_t *p,int sx,int sy,int height,
   }
  }
 }
+
+/* Compact 3x5 painted sign lettering in the raycast's original 256x256
+   wall texel space. This is a shop frontage, NOT the reference handheld
+   promotional sign reserved for the rotoscoping milestone. */
+int hd_potheads_wall_ink(int u,int v){
+ static const uint8_t letters[8][5]={
+  {7,5,7,4,4}, /* P */
+  {7,5,5,5,7}, /* O */
+  {7,2,2,2,2}, /* T */
+  {5,5,7,5,5}, /* H */
+  {7,4,6,4,7}, /* E */
+  {2,5,7,5,5}, /* A */
+  {6,5,5,5,6}, /* D */
+  {7,4,7,1,7}  /* S */
+ };
+ if(u<48||u>=208||v<64||v>=116)return -1;
+ if(v<70||v>=110)return HD_LEAF;
+ if(u<55||u>=202||v<73||v>=104)return HD_LEAF_DARK;
+ if(v>=76&&v<96&&u>=64&&u<192){
+  unsigned column=(unsigned)(u-64)>>2u;
+  unsigned row=(unsigned)(v-76)>>2u;
+  unsigned glyph=column>>2u,within=column&3u;
+  if(within<3u && row<5u && ((letters[glyph][row]>>(2u-within))&1u))
+   return HD_PAPER;
+ }
+ return HD_LEAF_DARK;
+}
