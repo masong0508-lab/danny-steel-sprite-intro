@@ -80,10 +80,18 @@ void hd_line(uint8_t *p,int x,int y,int xx,int yy,unsigned c){
 }
 void hd_ellipse(uint8_t *p,int cx,int cy,int rx,int ry,unsigned c){
  if(rx<1||ry<1)return;
+ /* Exactly the same integer ellipse as the original pixel painter.
+    Its scanline radius grows monotonically toward the center, then
+    shrinks. Carry it between rows: O(rx + ry) comparisons rather than
+    searching from zero for each of the (2*ry+1) scanlines. */
+ int rx2=rx*rx,ry2=ry*ry,width=0;
  for(int y=-ry;y<=ry;y++){
-  /* integer ellipse, avoids float, sqrt and a new graphics dependency */
-  int numerator=rx*rx*(ry*ry-y*y),width=0;
-  while((width+1)*(width+1)*ry*ry<=numerator)width++;
+  int numerator=rx2*(ry2-y*y);
+  if(y<=0){
+   while((width+1)*(width+1)*ry2<=numerator)width++;
+  }else{
+   while(width*width*ry2>numerator)width--;
+  }
   hd_rect(p,cx-width,cy+y,width*2+1,1,c);
  }
 }
