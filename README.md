@@ -17,8 +17,10 @@ the rent, which makes it possible to pursue music and painting after
 hours. The seven dialogue beats preserve the underlying doctor/Mara/bus
 story rather than turning the opening into a career tutorial.
 
-At the real shop in Old Quarter, stand at (20,11), face east toward the
-facade and press **A SHIFT**. During ordinary life-sim days you can do
+The camera now hands off directly to gameplay at the same shop: new games
+start on the adjacent walkable pavement at (20,11), facing east. Existing
+save positions are not moved. At Potheads, face the facade and press
+**A SHIFT**. During ordinary life-sim days you can do
 one optional shift for +2 work and -1 energy; it never gates the chapter
 or forces Danny to enjoy the job. The interaction is deliberately
 disabled during Mara's unresolved missing-person crisis. The shop,
