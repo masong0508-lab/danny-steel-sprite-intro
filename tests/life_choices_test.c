@@ -72,8 +72,12 @@ int main(void){
  s.work=9;s.daily_mask|=STORY_DAY_MUSIC;stand(&s,19,8,3);press(&s,A);
  assert(s.activity=='m');press(&s,B);
  s.song_steps=STORY_PROJECT_DONE;press(&s,A);
+ /* Once mastered, the clear LISTEN / STUDIO menu replaces a redundant
+    repeated success popup. The easy listening path remains available. */
+ assert(s.activity=='E'&&s.activity_choice==0);
+ press(&s,A);
  {int count=0;const StoryPage *pages=story_pages(&s,&count);
-  assert(count>=2&&!strcmp(pages[0].line1,"MASTER COPY SAVED."));}
+  assert(count>=2&&!strcmp(pages[0].line1,"An old BORE theme"));}
  done(&s);
  /* The measured canvas and music sets change as work is completed. */
  {uint8_t before[120*80],after[120*80];
