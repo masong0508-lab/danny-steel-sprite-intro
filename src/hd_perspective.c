@@ -101,9 +101,13 @@ static void wall_column(uint8_t *p,int x,int top,int bottom,char type,
  int tree=type=='T';
  unsigned base=tree?HD_LEAF_DARK:type=='A'?HD_BRICK:HD_BRICK_DARK;
  if(forward>1200)base=tree?HD_LEAF_DARK:HD_STONE_DARK;
+ /* The older painter performed a software integer division for EVERY
+    wall pixel. ARM7TDMI has no hardware divider. Quotient/remainder
+    DDA produces precisely floor((y-top)*256/height) per scanline, but
+    pays for the division only twice per wall column. */
+ int v=0,major=256/height,minor=256%height,error=0;
  for(int y=top;y<bottom;y++){
   if((unsigned)y>=140u)break;
-  int v=(y-top)*256/height;
   unsigned c=base;
   if(tree){
    if(v>178 && u>91 && u<162)c=HD_BARK;
@@ -128,6 +132,9 @@ static void wall_column(uint8_t *p,int x,int top,int bottom,char type,
     c=HD_BRICK_LIT;
   }
   p[y*HD_W+x]=(uint8_t)c;
+  v+=major;
+  error+=minor;
+  if(error>=height){v++;error-=height;}
  }
  if(top>18 && top<140)hd_pixel(p,x,top,tree?HD_LEAF_LIT:HD_STONE_LIT);
 }
