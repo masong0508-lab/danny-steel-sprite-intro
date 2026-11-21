@@ -31,6 +31,7 @@ where the fast path changes.
 | Tree canopy, actor shadow and record ellipses | Every raster row restarted width search from zero | Carry monotonic radius upward/downward through the ellipse | Identical pixels, fewer integer multiplications/iterations |
 | First-person facade wall-column textures | Software integer division on every shaded wall pixel | Compute quotient and remainder once per wall column; advance an exact integer remainder accumulator per pixel | Identical wall texture coordinate and shading, far fewer divisions |
 | Immutable town collision/art tiles | 10 independent location coordinate branches on every `story_tile` call | Encode the same 10 static overlays directly in the original 24x18 tile literals | Identical walkability, location IDs and NPC placement with fewer branches on every map lookup |
+| Street grout, menu rules and architectural line strokes | Bresenham stepping and bounds checks for every single axis-aligned pixel | One clipped horizontal or vertical fill; preserve original Bresenham for diagonals | Identical raster, fewer pixel loops for frequent straight strokes |
 
 These optimizations preserve the game's semantic input and timed
 animation behavior. In particular, they do **not** skip gameplay
@@ -43,8 +44,9 @@ detail for a fake performance claim.
   town tiles, including out-of-range behavior; verifies every texture
   coordinate for wall heights 1–150 against the original per-pixel
   quotient; and compares all 38,400 pixels for **500** clipped and
-  unclipped ellipse shapes against the original routine with untouched
-  reference drawing code.
+  unclipped ellipse shapes, plus **363** horizontal, vertical, diagonal,
+  reversed and clipped line strokes, against the original routines
+  with untouched reference drawing code.
 - Existing tests continue to cover native 2D/3D/cinema/studio/palette
   bounds, complete story routes, rescue outcomes, save migrations,
   audio continuity, cutscene timing, ending score and GBA ROM compilation.
