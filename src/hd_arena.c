@@ -88,6 +88,7 @@ static void hud(uint8_t *p,const Story *s){
  const char *era=s->cult_stage>=CULT_RESOLVED?"AFTER":
                  s->cult_stage?"DURING":"BEFORE";
  hd_text(p,196,4,era,HD_STONE_LIT,1,0);
+ hd_text(p,155,15,"FOCUS",HD_STONE_LIT,1,0);
  for(int i=0;i<4;i++){
   int x=192+i*11;
   hd_rect(p,x,17,8,5,i<s->battle_focus?HD_GOLD:HD_STONE_DARK);
@@ -99,8 +100,14 @@ static void hud(uint8_t *p,const Story *s){
   badge(p,5,141,"FACTS",s->battle_choice==0);
   badge(p,84,141,"CARE",s->battle_choice==1);
   badge(p,163,141,"EXIT",s->battle_choice==2);
-  hd_rect(p,3,30,234,10,HD_INK);
-  hd_text(p,8,32,"LEFT RIGHT CHOOSE    A PICK    B EXIT",HD_STONE_LIT,1,0);
+  /* Separate analog placards live beside the subject instead of
+     a full-width banner cropping the rival's hair, hat or costume ears. */
+  hd_rect(p,4,34,72,12,HD_INK);
+  hd_rect(p,4,34,72,1,HD_COPPER);
+  hd_text(p,8,37,"LEFT/RIGHT",HD_STONE_LIT,1,0);
+  hd_rect(p,164,34,72,12,HD_INK);
+  hd_rect(p,164,34,72,1,HD_COPPER);
+  hd_text(p,168,37,"A PICK B EXIT",HD_STONE_LIT,1,0);
  }else{
   char wave[]="ROUND 1/2";
   wave[6]=(char)('1'+(s->battle_progress&1u));
