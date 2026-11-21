@@ -87,3 +87,22 @@ cartridge-resident multi-pose rotoscoping sequence. The dance must read
 as a credible person moving with a cumbersome sign, with visible
 contact feet, consistent costume proportions and no effect on
 player control or saving before the cutscene concludes.
+
+## Verified graphics-first milestone
+
+[PR #11](https://github.com/masong0508-lab/danny-steel-sprite-intro/pull/11)
+merged the authored storefronts, the two-camera Potheads identity and
+the respectful, income-conscious opening characterization into main.
+
+The change passed the complete GitHub host regression suite, the
+devkitARM cartridge build and the full screenshot workflow. The branch
+ROM was **814,908 bytes** and preserved **38,400 bytes static EWRAM**
+plus **8,900 bytes static IWRAM**. The latest images are numbered 37–39
+in the gallery, including the readable green Potheads blade sign and
+matching first-person wall signage.
+
+The storefront and revised lines are **implemented**. The user-supplied
+dance MP4 has **not** yet been transferred into the game as traced
+animation and there is no new zoom cutscene in this milestone. More
+complex movement should follow measured real-GBA frame pacing and an
+actual frame-by-frame review of that supplied footage.
