@@ -45,8 +45,14 @@ shows its full meaning.
 - **D-pad Left/Right:** select a note, phrase or SONG setting.
 - **D-pad Up/Down:** raise/lower pitch or change the current setting.
 - **A:** set/cycle the selected item; in NOTES, toggle a rest. On LIVE, toggle playback.
-- **SELECT:** play/stop the *actual edited PSG sequence* from any tab.
+- **SELECT:** play/stop the *actual edited PSG sequence* from any tab. Preview transitions are immediate rather than waiting for the current scene-music phrase.
 - **B:** exit to the game without discarding changes; **START** exits to pause.
+
+NOTES identifies the selected step and pitch (including **REST**);
+ORDER numbers the four sections; and PERFORM shows which of those four
+sections is currently being heard, with an explicit PLAY/STOP prompt.
+The live PSG player silences channels on rests and absent accompaniment,
+so removing a part no longer leaves notes hanging.
 
 No hidden touchscreen gestures, cryptic abbreviations without a label,
 nonfunctional preview button or multi-step confirmation chains.
@@ -83,4 +89,8 @@ behaviour, real note/phrase/harmony changes, audible PSG cue routing,
 per-slot serialization/checksum/corruption, pause and ending music
 priority, guarded 2D/3D 120x80 render targets and the original project
 and story routes. Real hardware/emulator capture is still needed for
-objective frame-time and sound-level measurements.
+objective frame-time and sound-level measurements. Additional host
+regressions verify immediate studio playback/stop, hardware PSG silence
+on rest steps, named pitch display and the four-section playhead. These
+improvements preserve the same bitmap resolution, SRAM sidecar layout,
+and four GBA PSG channels.
