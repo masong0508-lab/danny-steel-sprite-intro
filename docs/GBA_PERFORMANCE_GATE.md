@@ -21,8 +21,9 @@ where the fast path changes.
   but input-driven changes redraw immediately.
 - All 24 authored cinema scene types, the Advanced Studio and the
   timecoded ending montage have higher-resolution artwork. Optional
-  combat still uses its 120x80 compatibility renderer; the original
-  gameplay and hitbox tests remain mandatory.
+  combat now also renders at 240x160 via ROM-resident illustrations;
+  the original gameplay and hitbox tests remain mandatory. This
+  later upgrade is described in `NATIVE_MIRROR_ORCHARD.md`.
 
 ## Exact-pixel optimization performed
 
@@ -51,8 +52,9 @@ detail for a fake performance claim.
   bounds, complete story routes, rescue outcomes, save migrations,
   audio continuity, cutscene timing, ending score and GBA ROM compilation.
 - `tests/render_cost_probe.c` prints per-mode average host CPU render
-  time for overhead, perspective, Mara scene, rescue scene, notes and
-  endings. This is an *informational regression indicator on the CI
+  time for overhead, perspective, Mara scene, rescue scene, notes,
+  endings and native Mirror Orchard combat. This is an *informational
+  regression indicator on the CI
   runner*, **not** an ARM7TDMI hardware benchmark or measured FPS.
 - The devkitARM build emits a GNU linker `.map` file and CI reports
   linked sections plus binary bytes, without requiring the unavailable
