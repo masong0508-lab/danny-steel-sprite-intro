@@ -76,7 +76,24 @@ static void rainy_lane(uint8_t *p,unsigned t){
  for(int k=0;k<4;k++)
   hd_line(p,204+k*7,126,198+k*9,146,
            k==1?HD_REFLECT:HD_ROAD_LIGHT);
- (void)t;
+ /* Depth-aware rain is painted AFTER the distant skyline but BEFORE
+    the actual people/props. Coarse integer phase shifts keep the weather
+    alive in story cutscenes without an overlay texture, heap allocation
+    or expensive full-screen per-pixel effects. */
+ for(int i=0;i<14;i++){
+  int x=((i*43+(int)(hash((unsigned)i,47u)%19u)+
+          (int)(t/3u))%256)-8;
+  int y=6+((i*17+(int)(t/4u))%79);
+  hd_line(p,x,y,x-2,y+5,i%4==0?HD_REFLECT:HD_GLASS_LIT);
+ }
+ /* Small puddle highlights are anchored to the stone joints. Only
+    their reflected gleam changes with the frame, not the street grid. */
+ for(int i=0;i<5;i++){
+  int x=27+i*46,y=133+(i*5)%18;
+  hd_line(p,x-7,y,x+6,y,HD_ROAD_LIGHT);
+  if(((t/18u+(unsigned)i)&3u)==0u)
+   hd_line(p,x-4,y+2,x+3,y+2,HD_REFLECT);
+ }
 }
 static void paper(uint8_t *p,int x,int y,int w,int h,unsigned t){
  hd_rect(p,x+2,y+2,w,h,HD_SHADOW);

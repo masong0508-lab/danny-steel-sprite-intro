@@ -44,6 +44,10 @@ workflow. It is not a request to produce standalone concept art.
   effect layers or giant literal image arrays.
 - Scene effects must be bounded deterministic draw commands. Prefer
   short integer and rect/line operations, clipped through hd_canvas.
+  The Old Quarter's exterior scenes use a small number of deterministic
+  rain streaks and anchored puddle reflections, drawn between the
+  backdrop and actors. The rain moves over time but cannot drift the
+  architecture or spawn new bitmaps.
   The dusk backdrop is now rendered as six contiguous stripes rather
   than 160 per-line rectangles (154 fewer draw-call setups per shot),
   preserving its original sky/ground cutoffs and palette values.

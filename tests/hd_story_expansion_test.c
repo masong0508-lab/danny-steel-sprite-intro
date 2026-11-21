@@ -41,6 +41,29 @@ int main(void){
   }
  }
  assert(count>=96u);
+ /* The Old Quarter is genuinely rainy and its upper sky carries moving
+    near-plane streaks. Fixed buildings cannot fake this temporal check.
+    Re-rendering the same instant must be fully deterministic. */
+ s.cinema=CINE_WITNESS;s.page=0;
+ clear();hd_cinema_draw(frame.pixels,&s,28u);
+ uint32_t sky_before=2166136261u;
+ unsigned rain_before=0u;
+ for(int y=6;y<31;y++)for(int x=6;x<234;x++){
+  uint8_t c=frame.pixels[y*HD_W+x];
+  sky_before=(sky_before^c)*16777619u;
+  if(c==HD_REFLECT||c==HD_GLASS_LIT)rain_before++;
+ }
+ assert(rain_before>10u);
+ clear();hd_cinema_draw(frame.pixels,&s,72u);
+ uint32_t sky_after=2166136261u;
+ for(int y=6;y<31;y++)for(int x=6;x<234;x++)
+  sky_after=(sky_after^frame.pixels[y*HD_W+x])*16777619u;
+ assert(sky_before!=sky_after);
+ clear();hd_cinema_draw(frame.pixels,&s,28u);
+ uint32_t sky_repeat=2166136261u;
+ for(int y=6;y<31;y++)for(int x=6;x<234;x++)
+  sky_repeat=(sky_repeat^frame.pixels[y*HD_W+x])*16777619u;
+ assert(sky_before==sky_repeat);
  /* The final tribute is not a blank stage: recordshop and concert
     must be different real sets with light, albums and a performer. */
  s.cinema=CINE_GOOD;s.page=3;s.ended=0;

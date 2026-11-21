@@ -241,14 +241,22 @@ jobs:
           echo "ROM bytes:"
           wc -c danny_steel_title.gba
       - name: Publish playable ROM to main (no artifact quota needed)
+        if: github.ref == 'refs/heads/main'
         run: |
           cd "$GITHUB_WORKSPACE"
-          printf 'Publish workspace: '; pwd
-          ls -ld .git || true
-          git rev-parse --show-toplevel || true
-          mkdir -p dist
-          cp danny_steel_title.gba dist/danny_steel_title.gba
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          printf 'Publish workspace: '; pwd
+          git rev-parse --show-toplevel
+          mkdir -p dist
+          # Preserve the verified binary outside the working tree while
+          # switching onto main. A tracked older ROM would otherwise
+          # block checkout with "local changes would be overwritten".
+          cp danny_steel_title.gba /tmp/danny_verified_rom.gba
+          if git ls-files --error-unmatch dist/danny_steel_title.gba >/dev/null 2>&1; then
+            git restore --source=HEAD --staged --worktree -- dist/danny_steel_title.gba
+          else
+            rm -f dist/danny_steel_title.gba
+          fi
           # Screenshot CI can legitimately advance main after this run
           # starts. Its image-only commit is safe to publish a ROM on top
           # of; ANY source/workflow/tool change is not. Compare trees,
@@ -264,6 +272,7 @@ jobs:
             fi
           fi
           git -C "$GITHUB_WORKSPACE" checkout -q -B rom-publisher "$current_main"
+          cp /tmp/danny_verified_rom.gba dist/danny_steel_title.gba
           git -C "$GITHUB_WORKSPACE" config user.name "github-actions[bot]"
           git -C "$GITHUB_WORKSPACE" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git -C "$GITHUB_WORKSPACE" add -f dist/danny_steel_title.gba
