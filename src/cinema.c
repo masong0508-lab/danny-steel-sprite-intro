@@ -356,10 +356,12 @@ static void recordshop(uint8_t *p,unsigned t){
  disk(p,60,38,20,3);disk(p,60,38,17,22);
  disk(p,60,38,12,3);disk(p,60,38,7,18);
  static const int8_t label[8][2]={
-  {5,0},{4,4},{0,5},{-4,4},{-5,0},{-4,-4},{0,-5},{4,-4}
+  {9,0},{6,6},{0,9},{-6,6},{-9,0},{-6,-6},{0,-9},{6,-6}
  };
  unsigned phase=(t/17u)&7u;
- stroke(p,60,38,60+label[phase][0],38+label[phase][1],20);
+ /* A moving lacquer glint is long enough to read at native GBA
+    resolution, and runs across the record's actual groove circle. */
+ stroke(p,60,38,60+label[phase][0],38+label[phase][1],7);
  disk(p,60,38,3,20);
  rect(p,94,31,4,20,7);rect(p,94,30,12,2,20);
  rect(p,9,8,100,5,21);
