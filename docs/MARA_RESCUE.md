@@ -89,3 +89,12 @@ The game restores the day counter after loading and autosaves it every
 promised reply, delayed recognition of no verified recovery, witnesses,
 phone, notebook, two-day clock, unchanged saved-Mara ending, SRAM codec,
 and palette/framebuffer guards.
+
+## Route-origin staging rule
+
+A failed **safe-house** choice begins the hope chapter at the real house.
+A fourth harmful check selected **elsewhere**, before the house is
+visited, instead begins with a call about a lead going quiet. It must
+not stage Danny at the safe-house door or claim he personally searched
+it. Both routes keep Mara's fate unconfirmed and use the same existing
+save-compatible, playable two-day phone timeline.
