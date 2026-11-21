@@ -4,6 +4,7 @@
 #include "gba.h"
 #include "music.h"
 #include "story_save.h"
+#include "rescue_save.h"
 
 #define REG_BG2PA R16(0x04000020)
 #define REG_BG2PB R16(0x04000022)
@@ -62,12 +63,18 @@ int play_slot_valid(int slot){u8 b[SAVE_LEN];return read_slot(slot,b);}
 void play_erase_slot(int slot){
     if((unsigned)slot>1u)return;
     for(int i=0;i<SAVE_STRIDE;i++)save_ram[slot*SAVE_STRIDE+i]=0xFF;
+    for(unsigned i=0;i<RESCUE_EXT_LEN;i++)
+        save_ram[RESCUE_EXT_OFFSET+slot*RESCUE_EXT_LEN+i]=0xFF;
 }
 static void write_save(void){
     u8 b[SAVE_LEN];
     story_save_encode(&game,b);
     for(unsigned i=0;i<SAVE_LEN;i++)
         save_ram[game.slot*SAVE_STRIDE+i]=b[i];
+    u8 extension[RESCUE_EXT_LEN];
+    rescue_save_encode(game.slot,game.bad_mask,game.rescue_stage,extension);
+    for(unsigned i=0;i<RESCUE_EXT_LEN;i++)
+        save_ram[RESCUE_EXT_OFFSET+game.slot*RESCUE_EXT_LEN+i]=extension[i];
     game.dirty=0;
 }
 static void draw_hidden(int page){
@@ -98,13 +105,23 @@ void play_enter(int want_load,int slot){
         game.song_steps=b[27]>STORY_PROJECT_DONE?STORY_PROJECT_DONE:b[27];
         game.art_steps=b[28]>STORY_PROJECT_DONE?STORY_PROJECT_DONE:b[28];
         game.project_style=b[29]&(STORY_STYLE_SONG_SOFT|STORY_STYLE_ART_WARM);
+        if(b[4]==SAVE_VER){
+            u8 extension[RESCUE_EXT_LEN],bad_mask=0,rescue_stage=0;
+            for(unsigned i=0;i<RESCUE_EXT_LEN;i++)
+                extension[i]=save_ram[RESCUE_EXT_OFFSET+game.slot*RESCUE_EXT_LEN+i];
+            if(rescue_save_decode(game.slot,extension,&bad_mask,&rescue_stage)){
+                game.bad_mask=bad_mask;game.rescue_stage=rescue_stage;
+            }
+        }
         if(game.finale_frame>STORY_GOOD_FINAL_FRAMES)game.finale_frame=0;
         if(game.life_stage==STORY_LIFE_FINALE ||
-           (game.ended && game.ending==STORY_END_GOOD)) {
+           (game.ended && (game.ending==STORY_END_GOOD ||
+                          game.ending==STORY_END_BAD))) {
             /* The one-shot score starts from the beginning on SRAM resume;
                replay the matching film rather than desynchronizing it. */
             game.finale_frame=0;game.dialogue=0;game.page=0;
-            game.cinema=game.ending==STORY_END_GOOD?CINE_GOOD:CINE_FINALE;
+            game.cinema=game.ending==STORY_END_GOOD?CINE_GOOD:
+                        game.ending==STORY_END_BAD?CINE_BAD:CINE_FINALE;
             game.cinema_frame=0;
         }
         /* Upgrade old slots with the new checksum and version on next autosave. */
