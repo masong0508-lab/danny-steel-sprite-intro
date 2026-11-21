@@ -101,6 +101,18 @@ static void tree(uint8_t *p,int x,int y,unsigned seed,unsigned tick){
  }
  if((tick/29u+seed)%9u==0)hd_pixel(p,x+5,y-6,HD_STONE_LIT);
 }
+static void streetlamp(uint8_t *p,int x,int y,unsigned frame){
+ /* A practical street fixture in the actual map, with restrained glow. */
+ hd_ellipse(p,x,y+2,9,3,HD_SHADOW);
+ hd_rect(p,x-1,y-34,3,35,HD_INK);
+ hd_rect(p,x-3,y-35,7,2,HD_COPPER);
+ hd_rect(p,x-5,y-33,11,4,HD_BARK);
+ hd_rect(p,x-4,y-32,9,3,HD_LAMP);
+ hd_line(p,x-5,y-29,x-10,y-23,HD_ROAD_LIGHT);
+ hd_line(p,x+6,y-29,x+10,y-23,HD_ROAD_LIGHT);
+ if((frame/43u)&1u)hd_pixel(p,x,y-31,HD_PAPER);
+ hd_line(p,x-3,y,x+5,y,HD_COPPER);
+}
 static void prop(uint8_t *p,int x,int y,char c,unsigned tick){
  if(c=='L'){ /* a physical, folded letter beside the porch */
   hd_ellipse(p,x+1,y+4,7,3,HD_SHADOW);
@@ -145,7 +157,7 @@ static void prop(uint8_t *p,int x,int y,char c,unsigned tick){
   hd_rect(p,x-2,y-8,4,5,HD_GLASS_LIT);
  }else if(c=='F'||c=='C'||c=='P'||c=='V'||c=='Q'||c=='W'){
   (void)tick;
-  unsigned coat=c=='F'?HD_BRICK_LIT:c=='C'?HD_GLASS:c=='P'?HD_COPPER:
+  unsigned coat=c=='F'?HD_GLASS_LIT:c=='C'?HD_GLASS:c=='P'?HD_COPPER:
                 c=='V'?HD_BRICK:c=='Q'?HD_BRICK_DARK:HD_LEAF;
   int bob=(int)(tick/17u&1u);
   hd_ellipse(p,x,y+3,8,3,HD_SHADOW);
@@ -154,6 +166,11 @@ static void prop(uint8_t *p,int x,int y,char c,unsigned tick){
   hd_rect(p,x-6,y-15+bob,12,11,coat);
   hd_rect(p,x-4,y-25+bob,9,9,HD_SKIN);
   hd_rect(p,x-4,y-26+bob,10,4,c=='F'?HD_HAIR:HD_SHADOW);
+  if(c=='F'){
+   hd_rect(p,x-5,y-23+bob,2,10,HD_HAIR);
+   hd_rect(p,x+5,y-23+bob,2,9,HD_HAIR);
+   hd_rect(p,x-2,y-15+bob,4,3,HD_SKIN_LIT);
+  }
   hd_pixel(p,x+2,y-21+bob,HD_INK);
   hd_rect(p,x-8,y-13+bob,2,8,coat);
   hd_rect(p,x+6,y-13+bob,2,8,coat);
@@ -173,6 +190,8 @@ static void player(uint8_t *p,int x,int y,unsigned facing,unsigned tick){
  hd_rect(p,x-4,y-28+bob,9,10,HD_SKIN);
  hd_rect(p,x-5,y-30+bob,10,5,HD_HAIR);
  hd_rect(p,x-5,y-25+bob,2,5,HD_HAIR);
+ hd_pixel(p,x-3,y-27+bob,HD_BRICK_LIT);
+ hd_rect(p,x-3,y-19+bob,6,2,HD_HAIR);
  if(facing==1){hd_pixel(p,x+3,y-23+bob,HD_INK);}
  else if(facing==3){hd_pixel(p,x-2,y-23+bob,HD_INK);}
  else if(facing==2){
@@ -210,6 +229,7 @@ void hd_world_draw(uint8_t *p,const Story *s,unsigned frame){
   else if(c=='L'||c=='C'||c=='F'||c=='B'||c=='P'||c=='V'||
           c=='Q'||c=='S'||c=='W'||c=='H'||c=='R'||c=='M'||
           c=='K'||c=='D')prop(p,sx+8,sy+17,c,frame);
+  if(wx==17 && wy==13)streetlamp(p,sx+8,sy+15,frame);
  }
  int dx=0,dy=0;
  if(s->anim){dx=(int)(s->prev_x-s->x)*s->anim*4;dy=(int)(s->prev_y-s->y)*s->anim*4;}
