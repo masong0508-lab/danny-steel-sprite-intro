@@ -28,21 +28,21 @@ int main(void){
  Story s;story_new(&s,0);done(&s);s.flags=STORY_ALL;
  s.life_stage=STORY_LIFE_WAIT;s.day_number=1;s.day_frame=0;
  goal(&s,8,11,"MARA");
- stand(&s,8,12);press(&s,A);
+ stand(&s,8,12);press(&s,A);assert(s.activity=='F');press(&s,A);
  assert(s.daily_mask==STORY_DAY_MARA&&s.daily_memories==1&&s.cinema==CINE_MARA);
  render(&s);done(&s);
  stand(&s,8,12);press(&s,A);done(&s);
  assert(s.daily_memories==1);
  goal(&s,5,5,"LETTER");
- stand(&s,5,5);s.facing=2;press(&s,A);
+ stand(&s,5,5);s.facing=2;press(&s,A);assert(s.activity=='L');press(&s,A);
  assert(s.cinema==CINE_LETTER);done(&s);
  assert(s.daily_mask==(STORY_DAY_MARA|STORY_DAY_LETTER));
  goal(&s,11,7,"BORE");
- stand(&s,11,8);press(&s,A);assert(s.cinema==CINE_BORE);done(&s);
+ stand(&s,11,8);press(&s,A);assert(s.activity=='C');press(&s,A);assert(s.cinema==CINE_BORE);done(&s);
  goal(&s,14,6,"PAINT");
- stand(&s,14,7);press(&s,A);assert(s.cinema==CINE_ART);done(&s);
+ stand(&s,14,7);press(&s,A);assert(s.activity=='R');press(&s,A);assert(s.cinema==CINE_ART);done(&s);
  goal(&s,19,7,"MUSIC");
- stand(&s,19,8);press(&s,A);assert(s.cinema==CINE_MUSIC);
+ stand(&s,19,8);press(&s,A);assert(s.activity=='M');press(&s,A);assert(s.cinema==CINE_MUSIC);
  assert(s.flags&STORY_MUSIC);done(&s);
  assert((s.daily_mask&STORY_DAY_ALL)==STORY_DAY_ALL);
  assert(s.daily_mask&STORY_DAY_RECAP&&s.daily_memories==5);
@@ -53,7 +53,7 @@ int main(void){
  stand(&s,15,5);s.facing=0;press(&s,A);done(&s);
  assert(s.life_stage==STORY_LIFE_FOLLOWUP_WAIT);goal(&s,8,11,"MARA");
  /* Ordinary painting remains possible BETWEEN the medical appointments. */
- stand(&s,14,7);press(&s,A);
+ stand(&s,14,7);press(&s,A);assert(s.activity=='R');press(&s,A);
  assert(s.daily_mask==STORY_DAY_ART&&s.cinema==CINE_ART);
  int n;const StoryPage *pages=story_pages(&s,&n);
  assert(n==3&&!strcmp(pages[1].line1,"Leave some space"));

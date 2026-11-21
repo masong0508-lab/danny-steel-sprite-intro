@@ -135,3 +135,11 @@ activity mask and cumulative moments. No save format or slot stride changed,
 and all old saves begin with zero moments. No framebuffer or heap allocation was
 added. See `docs/DAILY_MOMENTS.md`; a dedicated host test checks day reset,
 post-clinic dialogue, optionality, objective targeting and 2D/3D render guards.
+
+### Daily choices and creative work (v4)
+Five repeatable optional daily moments now offer two responses each. A opens
+a contextual choice, LEFT/RIGHT selects, A confirms, B cancels. Energy, spark,
+bond and crafted work respond to actions; no resource can block an ending,
+doctor visit or story objective. The HUD is shared across map and first-person
+views. Save v4 is 28 bytes within the original 32-byte slot stride and retains
+v1–v3 compatibility. See docs/DAILY_MOMENTS.md and tests/life_choices_test.c.

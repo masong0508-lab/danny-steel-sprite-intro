@@ -25,3 +25,33 @@ Host regression: `tests/daily_moments_test.c` covers all five actions, unique
 once-per-day counting, changing medical-stage dialogue, all-day reset, clinic
 priority, uninterrupted optionality, camera views and framebuffer guards.
 There are no extra sample buffers, heap allocations, textures or framebuffers.
+
+## Two-way choices with small, readable consequences (SRAM v4)
+
+At any unfinished daily location, **A** opens a two-option menu.
+**LEFT/RIGHT** changes the selection, **A** confirms, and **B** cancels
+without recording a memory or changing stats.
+
+| Place | First option | Second option |
+| --- | --- | --- |
+| Mara | WALK: energy -1, bond +2 | TALK: energy +1, bond +1 |
+| Letter | WRITE: energy -1, spark +2 | KEEP: energy +1, spark +1 |
+| BORE clerk | FILE: energy -1, spark +1 | JOKE: energy +1, bond +1 |
+| Music archive | RECORD: work +1 to +3, spark +1 | LISTEN: energy +1, spark +1 |
+| Rooftop | PAINT: work +1 to +3, spark +1 | REST: energy +2, spark +1 |
+
+Energy, spark and bond have an upper limit of five. Work accumulates up to
+99 and is not tied to Danny's illness or any ending. More spark can improve
+a recording or brushstroke. With energy at zero, creating still progresses
+at a gentle pace. Two energy points regenerate each morning.
+Daily activities are completely optional, repeatable the next day, and
+never gate a clinic visit or cause a failure ending.
+
+The bottom HUD displays moments and **E**nergy, **S**park, **B**ond,
+**W**ork in both camera modes.
+
+The 28-byte v4 save still fits the original 32-byte SRAM slot stride,
+with v1/v2/v3 migration. Bytes 21/22 retain the old daily mask and
+memory count, while new bytes 23–26 store the four stats. A v3 checksum
+is never mistaken for a stat. No heap, sample buffers or framebuffer
+allocation is added.
