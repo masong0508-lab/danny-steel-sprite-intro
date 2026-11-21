@@ -6,22 +6,34 @@
 #include "story.h"
 #include "story_draw.h"
 #include "studio.h"
+#include "hd_canvas.h"
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-static uint8_t canvas[120*80];
+static uint8_t canvas[HD_BYTES];
 static char outdir[512];
 static void write_frame(const char *name,const Story *s,unsigned t){
  char filename[700];
  snprintf(filename,sizeof(filename),"%s/%s.ppm",outdir,name);
  memset(canvas,0,sizeof canvas);
- story_draw(s,(int)t,canvas);
+ if(!s->view && s->cinema==CINE_NONE && s->scene==STORY_SCENE_NONE &&
+    !s->ended && !s->battle && s->activity!=STORY_ACT_STUDIO){
+  hd_world_draw(canvas,s,t);
+ }else{
+  Story visual=*s;
+  if(visual.dialogue && !visual.ended && visual.life_stage!=STORY_LIFE_FINALE)
+    visual.dialogue=0;
+  story_draw(&visual,(int)t,canvas);
+  hd_upscale_inplace(canvas);
+ }
+ hd_game_overlay(canvas,s);
  FILE *f=fopen(filename,"wb");if(!f){perror(filename);return;}
- fprintf(f,"P6\n120 80\n255\n");
- for(unsigned i=0;i<120u*80u;i++){
-  assert(canvas[i]<32u);
-  uint16_t p=story_palette[canvas[i]];
+ fprintf(f,"P6\n240 160\n255\n");
+ for(unsigned i=0;i<HD_BYTES;i++){
+  assert(canvas[i]<64u);
+  uint16_t p=canvas[i]<32u?story_palette[canvas[i]]:
+                            hd_extra_palette[canvas[i]-32u];
   uint8_t rgb[3]={(uint8_t)((p&31u)*255u/31u),
      (uint8_t)(((p>>5)&31u)*255u/31u),
      (uint8_t)(((p>>10)&31u)*255u/31u)};
