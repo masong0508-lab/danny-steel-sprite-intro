@@ -35,6 +35,14 @@ static void set_sky(uint8_t *p,unsigned tick,int facing,int cx,int cy){
   int ht=17+(int)(texel((unsigned)(i+33),23u)%22u);
   hd_rect(p,x,79-ht,23,ht,HD_STONE_DARK);
   hd_rect(p,x+3,79-ht-2,18,2,HD_ROAD);
+  /* Sloped overlapping roofs add believable street silhouettes. */
+  hd_line(p,x-2,79-ht,x+10,73-ht,HD_STONE_DARK);
+  hd_line(p,x+10,73-ht,x+25,79-ht,HD_STONE_DARK);
+  hd_line(p,x+1,79-ht,x+21,79-ht,HD_STONE);
+  if((i&3)==0){
+   hd_rect(p,x+14,69-ht,3,10,HD_ROAD_COOL);
+   hd_rect(p,x+13,68-ht,6,2,HD_STONE_DARK);
+  }
   for(int w=3;w<21;w+=7)for(int h=7;h<ht-2;h+=9){
    if((texel((unsigned)(i+41+w),(unsigned)h+35u)&3u)!=0u)
     hd_rect(p,x+w,79-ht+h,2,3,(tick/180u+i+w)%5u==0u?HD_LAMP:HD_GLASS);
@@ -119,19 +127,29 @@ static void wall_column(uint8_t *p,int x,int top,int bottom,char type,
    /* Facade windows fixed to wall texture coordinates, not screen x.
       Floor breaks, mortar and stone relief persist as camera moves. */
    int window=u>=53&&u<=202&&v>=57&&v<=163;
+   int door=u>=101&&u<=160&&v>=165;
    if(v<15)c=HD_PLASTER_LIT;
    else if(v<22 || v>238)c=HD_STONE_DARK;
-   else if(v%51<4)c=HD_BRICK_DARK;
-   else if(u%61<4)c=HD_BRICK_LIT;
-   else if(window){
+   else if((v&31)<3)c=HD_BRICK_DARK;
+   else if((u&31)<3)c=HD_BRICK_LIT;
+   else if(door){
+    if(u<106||u>155)c=HD_COPPER;
+    else if(v<170)c=HD_STONE_DARK;
+    else if(u>129&&u<133)c=HD_BRICK_DARK;
+    else c=((tx+ty)&1)?HD_BARK:HD_BRICK_DARK;
+    if(u>=143&&u<=147&&v>=204&&v<=208)c=HD_LAMP;
+   }else if(window){
     if(u<60||u>196||v<65||v>154)c=HD_COPPER;
     else if(u>=124&&u<=132)c=HD_BRICK_DARK;
     else if(v>=102&&v<=109)c=HD_BRICK_DARK;
+    else if(v<92&&u>140&&u<153)c=HD_LAMP;
+    else if((u&31)<2)c=HD_COPPER;
     else c=((tx+ty)&1)?HD_GLASS_LIT:HD_GLASS;
    }else if((texel((unsigned)(u>>4)+(unsigned)(tx+40),
                          (unsigned)(v>>4)+(unsigned)(ty+40))&7u)==0u)
     c=HD_BRICK_LIT;
   }
+  if(v>225&&(u&15)==1)c=HD_STONE;
   p[y*HD_W+x]=(uint8_t)c;
   v+=major;
   error+=minor;
@@ -292,4 +310,12 @@ void hd_first_person_draw(uint8_t *p,const Story *s,unsigned tick){
  floor_render(p,s,camx,camy,fx,fy,rx,ry,tick);
  cast_walls(p,camx,camy,fx,fy,rx,ry);
  render_billboards(p,camx,camy,fx,fy,rx,ry,tick);
+ /* Sparse rain, never an extra framebuffer or effect allocation. */
+ for(unsigned i=0;i<24u;i++){
+  unsigned v=texel(i+31u,i*7u+41u);
+  int x=(int)((v+tick*2u)%252u)-8;
+  int y=20+(int)(((v>>9)+tick*3u)%116u);
+  hd_line(p,x,y,x-2,y+4+(int)(i&3u),
+          (i&3u)==0u?HD_STONE_LIT:HD_GLASS_LIT);
+ }
 }
