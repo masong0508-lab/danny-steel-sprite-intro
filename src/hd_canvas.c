@@ -117,3 +117,14 @@ void hd_copy_120_to_240(uint8_t *out,const uint8_t *in){
   }
  }
 }
+
+/* Backward traversal makes this safe with source and destination using the
+   same 38,400-byte EWRAM allocation. The source 9,600 pixels occupy its
+   beginning; already-read pixels are overwritten, never pending pixels. */
+void hd_upscale_inplace(uint8_t *p){
+ for(int y=79;y>=0;y--)for(int x=119;x>=0;x--){
+  uint8_t ink=p[y*120+x];
+  int i=(y*2)*HD_W+x*2;
+  p[i]=ink;p[i+1]=ink;p[i+HD_W]=ink;p[i+HD_W+1]=ink;
+ }
+}
