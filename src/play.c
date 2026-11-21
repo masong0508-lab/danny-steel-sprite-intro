@@ -99,6 +99,10 @@ static void draw_hidden(int page){
         /* Preserve the original 72.5s musical storyboard, while painting
            native scene art and the identical timecoded narrative captions. */
         hd_ending_draw((u8*)hd_shared_frame,&game,game.finale_frame);
+    }else if(game.battle){
+        /* Full native-resolution Mirror Orchard arena, with physical
+           240x160 ROM scenes and original three-lane game mechanics. */
+        hd_arena_draw((u8*)hd_shared_frame,&game,(unsigned)clock_ticks);
     }else if(game.activity==STORY_ACT_STUDIO){
         hd_studio_draw((u8*)hd_shared_frame,&game,(unsigned)clock_ticks);
     }else if(native_map){
