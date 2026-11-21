@@ -5,6 +5,9 @@ on:
     paths:
       - ".github/workflows/screenshots.yml"
       - "tools/story_gallery.c"
+      - "src/hd_studio.c"
+      - "src/hd_perspective.c"
+      - "src/hd_cinema.c"
   workflow_dispatch:
 
 permissions:
