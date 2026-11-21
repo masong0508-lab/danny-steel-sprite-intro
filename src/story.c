@@ -128,7 +128,7 @@ enum { D_NONE, D_OPEN, D_LETTER, D_LETTER_AGAIN, D_CLERK_LOCKED, D_CLERK, D_CLER
        D_RESCUE_TRACE, D_RESCUE_SAVED, D_RESCUE_LOST,
        D_RESCUE_AFTERSHOCK, D_BAD_END, D_BAD_END_SAVED, D_RESCUE_NOTES_1,
        D_RESCUE_NOTES_2, D_RESCUE_NOTES_3, D_RESCUE_NOTES_SAVED,
-       D_BUS_RESCUE };
+       D_BUS_RESCUE, D_BAD_WARNING_2 };
 #define SCRIPT(name, ...) static const StoryPage name[] = { __VA_ARGS__ }
 SCRIPT(d_open,
  {"DANNY", "The last bus leaves", "at sundown. Of course."},
@@ -459,6 +459,10 @@ SCRIPT(d_bad_music,
 SCRIPT(d_bad_server,
  {"TERMINAL", "PRIVATE NAME POSTED.", "RETRACTING IS HARD."},
  {"DANNY", "I just made life", "harder for someone."});
+SCRIPT(d_bad_warning_2,
+ {"DANNY", "Another wrong choice", "made a real mess."},
+ {"UNKNOWN TEXT", "MARA IS NOT", "OUT OF REACH."},
+ {"POCKET NOTEBOOK", "TWO BAD CHECKS.", "STOP BEFORE THREE."});
 SCRIPT(d_mara_missing,
  {"MARA'S CAFE", "The door is open.", "Her coat is gone."},
  {"DANNY", "Her cup is warm.", "This is not right."},
@@ -546,7 +550,7 @@ static const struct { const StoryPage *pages; uint8_t count; } scripts[] = {
   SEQ(d_rescue_aftershock), SEQ(d_bad_end), SEQ(d_bad_end_saved),
   SEQ(d_rescue_notes_1),
   SEQ(d_rescue_notes_2), SEQ(d_rescue_notes_3), SEQ(d_rescue_notes_saved),
-  SEQ(d_bus_rescue)
+  SEQ(d_bus_rescue), SEQ(d_bad_warning_2)
 };
 const StoryPage *story_pages(const Story *s, int *count) {
     unsigned id = s->dialogue;
@@ -612,6 +616,7 @@ static uint8_t cinematics_for_dialogue(uint8_t d){
     case D_RESCUE_SAVED: return CINE_RESCUE_SAVED;
     case D_BAD_END: case D_BAD_END_SAVED: return CINE_BAD;
     case D_BUS_RESCUE: return CINE_BUS;
+    case D_BAD_WARNING_2: return CINE_NOTICE;
     default: return CINE_NONE;
     }
 }
@@ -870,6 +875,8 @@ static void commit_bad(Story *s,char target){
     }else if(count==STORY_BAD_THRESHOLD &&
              s->rescue_stage==STORY_RESCUE_NONE){
         s->rescue_stage=STORY_RESCUE_MISSING;talk(s,D_MARA_MISSING);
+    }else if(count==2u && s->rescue_stage==STORY_RESCUE_NONE){
+        talk(s,D_BAD_WARNING_2);
     }else talk(s,target=='L'?D_BAD_LETTER:target=='C'?D_BAD_CLERK:
                target=='M'?D_BAD_MUSIC:D_BAD_SERVER);
 }

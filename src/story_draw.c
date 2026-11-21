@@ -429,7 +429,13 @@ static void risk_menu(uint8_t *p,const Story *s){
         text(p,4,53,"LEFT OPEN / RIGHT LEAVE",20,28);
     }else{
         text(p,4,52,act,20,18);
-        text(p,4,60,"RIGHT = BAD CHECK +1",18,28);
+        text(p,4,60,s->rescue_stage==STORY_RESCUE_SAVED?
+           "FOURTH CHECK = BAD END":
+           s->rescue_stage>=STORY_RESCUE_MISSING?
+           "FOURTH CHECK FAILS RESCUE":
+           story_bad_count(s)==2?
+           "NEXT CHECK RISKS MARA":
+           "RIGHT = BAD CHECK +1",18,28);
     }
     text(p,4,69,s->risk_choice?
         (s->risk_menu=='H'?" > LEAVE   A CONFIRM":" > DO IT   A CONFIRM"):

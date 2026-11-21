@@ -77,7 +77,10 @@ static void setup_three(Story *s){
  render(s,0);press(s,A);assert(!s->risk_menu&&!s->bad_mask);
  bad(s,'L');assert(story_bad_count(s)==1);close_pages(s);
  at(s,'L');press(s,B);assert(!s->risk_menu);
- bad(s,'C');assert(story_bad_count(s)==2);close_pages(s);
+ bad(s,'C');assert(story_bad_count(s)==2);
+ {int n=0;const StoryPage *pages=story_pages(s,&n);
+  assert(n==3&&!strcmp(pages[2].line2,"STOP BEFORE THREE."));}
+ close_pages(s);
  bad(s,'M');assert(story_bad_count(s)==3);
  assert(s->rescue_stage==STORY_RESCUE_MISSING);close_pages(s);
  /* Idle time cannot secretly fail a mission. */
