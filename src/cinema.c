@@ -353,10 +353,17 @@ static void recordshop(uint8_t *p,unsigned t){
   rect(p,x+4,23,6,19,(x%3)?16:25);
  }
  furniture(p,8,56,104,14);
- disk(p,60,38,20,3);disk(p,60,38,17,22);disk(p,60,38,12,3);disk(p,60,38,7,18);disk(p,60,38,3,20);
+ disk(p,60,38,20,3);disk(p,60,38,17,22);
+ disk(p,60,38,12,3);disk(p,60,38,7,18);
+ static const int8_t label[8][2]={
+  {5,0},{4,4},{0,5},{-4,4},{-5,0},{-4,-4},{0,-5},{4,-4}
+ };
+ unsigned phase=(t/17u)&7u;
+ stroke(p,60,38,60+label[phase][0],38+label[phase][1],20);
+ disk(p,60,38,3,20);
  rect(p,94,31,4,20,7);rect(p,94,30,12,2,20);
  rect(p,9,8,100,5,21);
- if((t/15)&1)rect(p,19,9,7,3,18);
+ rect(p,19,9,7,3,(t/160u)&1u?18:7);
 }
 /* Camera framing: wide -> two-shot -> actor reaction -> detail. The world and
    object positions remain coherent: panning is limited to a few pixels. */
@@ -504,24 +511,36 @@ void cinema_draw(uint8_t *p,unsigned scene,unsigned tick,unsigned page,unsigned 
     break;
  case CINE_GOOD:
   if(page<2){roof(p,t,1);canvas(p,72,19,t,1);actor(p,45,72,1,t,1);}
-  else if(page<5){recordshop(p,t);if(page==4)actor(p,101,73,2,t,0);}
+  else if(page<5){
+     recordshop(p,t);
+     if(page==4){
+       int x=travel(110,96,t,10,85);
+       actor(p,x,73,2,t,t<96?2:3);
+       rect(p,87,46,9,9,14);rect(p,89,48,5,5,20);
+       disk(p,91,50,2,22);
+     }
+   }
   else if(page==5){
     /* Someone stays with Danny's artwork after he is gone. */
-    roof(p,t,1);canvas(p,67,19,t,0);actor(p,49,73,2,t,0);
+    roof(p,t,1);canvas(p,67,19,t>=400u?400u:t,1);
+     actor(p,travel(41,50,t,14,79),73,2,t,t<94?2:0);
   }else if(page==6){
-    /* A small record-release concert: parallax fixtures, a crowd with
-       different timed silhouettes, no extra sprite allocations. */
-    city(p,t,1);rect(p,0,35,120,45,3);
-    for(int i=0;i<5;i++){
-       int x=8+i*24+(int)(t/90)%3;
-       rect(p,x,16,5,29,21);stroke(p,x+2,19,60,39,18);
-    }
-    rect(p,20,45,80,3,16);rect(p,26,28,68,17,14);
-    disk(p,61,35,6,4);disk(p,61,35,3,20);
-    for(int i=0;i<17;i++){
+     /* Moving lights remain anchored to a visible concert truss. */
+     city(p,t,1);rect(p,0,35,120,45,3);
+     for(int i=0;i<5;i++){
+       int x=8+i*24;
+       rect(p,x,16,5,29,21);
+       int swing=breathe(t+(unsigned)i*35u);
+       stroke(p,x+2,19,59+swing*4,43,18);
+     }
+     rect(p,20,45,80,3,16);rect(p,26,28,68,17,14);
+     rect(p,49,41,24,4,22);
+     actor(p,60,50,3,t,1);
+     for(int i=0;i<17;i++){
        int x=i*8-3,y=68+(i%3)*3+((int)(t/16+i)&1);
-       disk(p,x,y,4,i%4?24:16);rect(p,x-3,y+2,7,12,i%3?3:21);
-    }
+       disk(p,x,y,4,i%4?24:16);
+       rect(p,x-3,y+2,7,12,i%3?3:21);
+     }
   }else{
     city(p,t,1);rect(p,0,59,120,21,9);
     for(int i=0;i<6;i++){
@@ -574,7 +593,8 @@ void cinema_draw(uint8_t *p,unsigned scene,unsigned tick,unsigned page,unsigned 
    roof(p,t,1);canvas(p,71,21,t,0);
    actor(p,41,76,1,t,0);
    rect(p,14,66,11,4,14);rect(p,17,63,5,3,18);
-   if((t/50)&1)rect(p,0,3,120,1,3);
+   rect(p,17,57,8,11,3);rect(p,19,59,4,6,25);
+   if((t/90u)&1u)pixel(p,21,61,18);
    break;
   case CINE_FINALE: {
   /* Twelve coherent shots along one fixed rooftop composition. The camera
