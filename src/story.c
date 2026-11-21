@@ -177,7 +177,7 @@ SCRIPT(d_mara,
  {"MARA", "And keep the song.", "The silly one."});
 SCRIPT(d_mara_again,
  {"MARA", "Do you still have", "time for a walk?"},
- {"DANNY", "I do now."});
+ {"DANNY", "I do now.", "No rush today."});
 /* One or two deliberately harmful choices affect Mara's trust *before*
    disappearance. Neither line presumes which site the player damaged. */
 SCRIPT(d_mara_concern,
