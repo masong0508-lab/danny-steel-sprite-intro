@@ -59,8 +59,10 @@ void hd_pixel(uint8_t *p,int x,int y,unsigned c){
 }
 void hd_rect(uint8_t *p,int x,int y,int w,int h,unsigned c){
  int x2=x+w,y2=y+h;
- if(x<0)x=0;if(y<0)y=0;
- if(x2>HD_W)x2=HD_W;if(y2>HD_H)y2=HD_H;
+ if(x<0)x=0;
+ if(y<0)y=0;
+ if(x2>HD_W)x2=HD_W;
+ if(y2>HD_H)y2=HD_H;
  if(x>=x2||y>=y2)return;
  for(int yy=y;yy<y2;yy++)memset(p+yy*HD_W+x,(int)c,(unsigned)(x2-x));
 }
@@ -89,7 +91,8 @@ int hd_text_width(const char *s,int scale,int track){
  return n?(n*(5*scale+track)-track):0;
 }
 void hd_text(uint8_t *p,int x,int y,const char *s,unsigned ink,int scale,int track){
- if(scale<1)scale=1;if(scale>2)scale=2;
+ if(scale<1)scale=1;
+ if(scale>2)scale=2;
  for(int ch=0;s[ch]&&ch<55;ch++){
   char c=s[ch];if(c>='a'&&c<='z')c=(char)(c-32);
   unsigned n=c>='A'&&c<='Z'?(unsigned)(c-'A'):c>='0'&&c<='9'?(unsigned)(26+c-'0'):36u;
