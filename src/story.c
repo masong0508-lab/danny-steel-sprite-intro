@@ -941,6 +941,15 @@ static void interact(Story *s) {
         }else talk(s,s->work>=8?D_ACT_MUSIC_PROGRESS:D_MUSIC_AGAIN);
         break;
     case 'R':
+        /* The missing-person rescue takes priority even after the last
+           clinic visit; the player cannot accidentally bypass the crisis. */
+        if(s->rescue_stage>=STORY_RESCUE_MISSING &&
+           s->rescue_stage<=STORY_RESCUE_TRACE){
+            talk(s,s->rescue_stage==STORY_RESCUE_MISSING?D_RESCUE_NOTES_1:
+                   s->rescue_stage==STORY_RESCUE_WITNESS?D_RESCUE_NOTES_2:
+                   D_RESCUE_NOTES_3);
+            break;
+        }
         if (s->life_stage == STORY_LIFE_LAST_WORK) {
             s->life_stage=STORY_LIFE_FINALE;s->finale_frame=0;
             s->scene=STORY_SCENE_NONE;s->dirty=1;
@@ -1019,7 +1028,8 @@ void story_tick(Story *s, uint16_t keys) {
     if (s->cinema && !s->paused && s->cinema_frame < 65530) ++s->cinema_frame;
     /* One step is exactly one VBlank, including dialogue. Pause freezes the
        clock. Day transitions never steal controls during a fight or textbox. */
-    if (s->life_stage >= STORY_LIFE_WAIT && s->life_stage <= STORY_LIFE_LAST_WORK && !s->paused) {
+    if (!s->ended && s->life_stage >= STORY_LIFE_WAIT &&
+        s->life_stage <= STORY_LIFE_LAST_WORK && !s->paused) {
         if (++s->day_frame >= STORY_DAY_FRAMES) {
             s->day_frame=0;
             if (s->day_number<99) ++s->day_number;
@@ -1108,6 +1118,9 @@ void story_tick(Story *s, uint16_t keys) {
             s->choosing=0;
             if (s->choice==0 && (s->flags & STORY_FULL)==STORY_FULL) {
                 s->ended=1;s->ending=STORY_END_GOOD;
+                /* An early happy-route choice after a rescue must stop the
+                   numbered-day clinic clock during the complete ending film. */
+                s->life_stage=STORY_LIFE_NONE;s->scene=STORY_SCENE_NONE;
                 s->finale_frame=0;s->dialogue=0;s->page=0;
                 s->cinema=CINE_GOOD;s->cinema_frame=0;
             } else if (s->choice==0) {

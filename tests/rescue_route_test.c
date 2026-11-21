@@ -97,6 +97,17 @@ int main(void){
  s.flags=STORY_FULL;bus(&s);
  assert(s.ended&&s.ending==STORY_END_GOOD);
  render(&s,280);
+ /* A mid-day rescue followed by GO must not let the day's doctor notice
+    interrupt the unskippable 88.5-second good ending film. */
+ Story saved_good;setup_three(&saved_good);rescue(&saved_good);
+ saved_good.flags=STORY_FULL;
+ saved_good.life_stage=STORY_LIFE_WAIT;
+ saved_good.day_frame=STORY_DAY_FRAMES-1;
+ bus(&saved_good);
+ assert(saved_good.ended&&saved_good.ending==STORY_END_GOOD);
+ assert(saved_good.life_stage==STORY_LIFE_NONE);
+ story_tick(&saved_good,0);
+ assert(saved_good.dialogue==0&&saved_good.ending==STORY_END_GOOD);
  Story neutral;setup_three(&neutral);rescue(&neutral);
  neutral.flags=STORY_ALL;bus(&neutral);
  assert(!neutral.ended&&neutral.life_stage==STORY_LIFE_WAIT);
@@ -126,6 +137,16 @@ int main(void){
  story_tick(&after,0);assert(after.dialogue);
  {int count=0;const StoryPage *p=story_pages(&after,&count);
   assert(count==4&&!strcmp(p[0].line1,"Mara returned home."));}
+ /* The last painting cannot bypass the rescue after the final clinic visit. */
+ Story final_day;setup_three(&final_day);
+ final_day.life_stage=STORY_LIFE_LAST_WORK;
+ at(&final_day,'H'); /* the wrong door before clues should not open rescue */
+ press(&final_day,A);assert(final_day.rescue_stage==STORY_RESCUE_MISSING);
+ close_pages(&final_day);
+ stand(&final_day,14,7,3);press(&final_day,A);
+ assert(final_day.rescue_stage==STORY_RESCUE_MISSING);
+ assert(final_day.life_stage==STORY_LIFE_LAST_WORK&&!final_day.ended);
+ close_pages(&final_day);
  assert(sizeof(Story)<64);
  puts("Mara: 4 intentional checks, cancel, 3-step rescue, optional fail, saved second chances, 2 bad endings and guarded film OK");
  return 0;
