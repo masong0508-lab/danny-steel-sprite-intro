@@ -47,6 +47,10 @@ jobs:
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story_save.c tests/save_codec_test.c -o /tmp/danny_save_codec_test
           /tmp/danny_save_codec_test
+      - name: Test live consequence checklist, accessible journal UI and reactive rescue scenes
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/story_draw.c src/cinema.c tests/consequence_journal_test.c -o /tmp/danny_consequences_test
+          /tmp/danny_consequences_test
       - name: Check Mara kidnapping, rescue, both bad-ending outcomes and restored good/neutral routes
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/story_draw.c src/cinema.c tests/rescue_route_test.c -o /tmp/danny_rescue_route_test

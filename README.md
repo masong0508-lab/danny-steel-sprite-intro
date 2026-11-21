@@ -166,3 +166,13 @@ Rescuing Mara reopens neutral/good options at the bus; choosing another
 harmful check afterward can still cause a bad ending that correctly notes
 Mara's survival. An eight-byte checksummed SRAM extension stores this
 branch without changing legacy v5 slot layout. See docs/MARA_RESCUE.md.
+
+### Life Record: actual gameplay consequences, not save/checksum marks
+While exploring, press **START** and **R** to view an accessible three-page
+list of 15 live game conditions: main story, work/relationships/community,
+and consequential bad choices plus Mara's survival. **R** changes page,
+**B** closes the record, **START** resumes play. Checks are derived
+directly from existing quest flags and state; no additional SRAM marks or
+loading-time dependency. Choices preview their stat effects, and earlier
+investigation, trust and art milestones influence later rescue conversations.
+See docs/CONSEQUENCES.md and tests/consequence_journal_test.c.
