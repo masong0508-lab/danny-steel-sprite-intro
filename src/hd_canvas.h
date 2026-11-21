@@ -35,3 +35,7 @@ void hd_studio_draw(uint8_t *p,const Story *s,unsigned frame);
 int hd_cinema_supports(unsigned scene);
 void hd_cinema_draw(uint8_t *p,const Story *s,unsigned frame);
 void hd_game_overlay(uint8_t *p,const Story *s);
+void hd_actor_stage(uint8_t *p,int x,int feet,int role,unsigned frame,int emotion);
+int hd_special_cinema_draw(uint8_t *p,const Story *s,unsigned frame);
+int hd_special_supports(unsigned scene);
+void hd_ending_draw(uint8_t *p,const Story *s,unsigned frame);

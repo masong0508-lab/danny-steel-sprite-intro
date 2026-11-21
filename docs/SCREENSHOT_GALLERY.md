@@ -9,9 +9,9 @@ executing it in headless mGBA, sending
 START/A inputs to navigate its opening title and new-game menus.
 They were upscaled with nearest-neighbour interpolation for legibility.
 
-**Gameplay/story engine frames:** the remaining thirteen images are made by
-the exact production C rendering functions, including `hd_world_draw`,
-`hd_first_person_draw`, `hd_cinema_draw` and `hd_studio_draw`,
+**Gameplay/story engine frames:** the remaining twenty-four images are made by
+the exact production C rendering functions, including `hd_world_draw`, `hd_first_person_draw`, `hd_cinema_draw`,
+`hd_studio_draw`, `hd_special_cinema_draw` and `hd_ending_draw`,
 compiled for a desktop host with the identical game art and palettes. These frames were
 captured at carefully chosen story beats; they are *representative
 screenshots of the code*, not a claim that one uninterrupted live run
@@ -45,6 +45,30 @@ with printed narrative choices and no rotating-square or gray-video overlay.
 | Mara's café | ![Mara conversation](screenshots/09_story_mara_cafe.png) |
 | Last bus | ![Bus scene](screenshots/10_story_last_bus.png) |
 
+## Additional authored scenes and ending shots
+
+The images below depict explicit story conditions for visual verification.
+They are **not** presented as one continuous playthrough or proof that a
+given ending occurs without meeting its game-state requirements.
+
+| Scene | Actual renderer capture |
+| --- | --- |
+| Witness meeting and handoff | ![Witness and clue](screenshots/18_story_witness_handoff.png) |
+| Server archive evidence room | ![Server archive](screenshots/19_story_archive_terminal.png) |
+| Safe-house visit | ![Safe-house](screenshots/20_story_safehouse.png) |
+| Unanswered café, no confirmed recovery | ![Unanswered cafe](screenshots/21_story_mara_missing_cafe.png) |
+| Closed rescue door | ![Closed apartment door](screenshots/22_story_closed_rescue_door.png) |
+| Successful rescue, door opening | ![Rescued Mara](screenshots/23_story_rescue_saved.png) |
+| Neutral ending's rooftop memories | ![Mara and the painting](screenshots/24_neutral_rooftop_memories.png) |
+| Good ending's record-store legacy | ![Master record](screenshots/25_good_ending_recordshop.png) |
+| Good ending's live coda | ![Concert](screenshots/26_good_ending_concert.png) |
+| Unresolved bad-ending café | ![No reply at the cafe](screenshots/27_bad_unanswered_cafe.png) |
+| Bad ending after a successful rescue | ![Open doorway](screenshots/28_bad_saved_rescue_door.png) |
+
+These keep the original conditional outcomes: the unresolved route
+does not show Mara safely returning, and the rescued route does not
+present her as missing. Captions are from the original timed script.
+
 ## Unlockable Advanced Studio
 
 | Song controls | Note editor | Arrangement |
@@ -58,6 +82,7 @@ with printed narrative choices and no rotating-square or gray-video overlay.
 Capture source: `tools/story_gallery.c` and
 `.github/workflows/screenshots.yml`. The main menu, overhead view, first-person streets, twelve key cinematic
 sets and the six-tab Studio now render at native 240x160 GBA resolution.
-Specialized endings, battles and some rarer investigations still use the
-low-resolution fallback until they receive their own art pass. All final pictures are displayed at
+All 24 authored cinematic scene types and the three score-length ending
+montages now render at native 240x160. The separate Mirror Orchard
+combat arena still uses its original, tested 120x80 gameplay renderer. All final pictures are displayed at
 2x their GBA size using nearest-neighbour scaling. No images are mockups.

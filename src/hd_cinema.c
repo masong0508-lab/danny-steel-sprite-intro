@@ -10,7 +10,7 @@ int hd_cinema_supports(unsigned scene){
   case CINE_MUSIC:case CINE_ART:case CINE_NOTICE:
   case CINE_CLINIC:case CINE_FOLLOWUP:case CINE_LAST_CLINIC:
    return 1;
-  default:return 0;
+  default:return hd_special_supports(scene);
  }
 }
 static unsigned hash(int x,int y){
@@ -115,48 +115,9 @@ static void bus(uint8_t *p,int x,int y,unsigned t){
  hd_rect(p,x+104,y+23,6,5,(t/32u)&1u?HD_LAMP:HD_PLASTER_LIT);
  hd_rect(p,x+9,y+29,18,2,HD_LAMP);
 }
+/* All narrative characters share one connected skeletal renderer. */
 static void actor(uint8_t *p,int x,int feet,int who,unsigned t,int emotion){
- /* Stable proportions: 16 px skull, coat, sleeves, attached hands,
-    asymmetric pose and shadow; eyes/lips respond to actual story page. */
- int step=(int)(t/10u&1u),bob=emotion==2?step:((int)(t/39u)&1);
- unsigned coat=who==1?HD_RED:who==2?HD_GLASS:who==3?HD_STONE_LIT:
-              who==4?HD_LEAF:HD_PLASTER;
- unsigned shade=who==1?HD_RED_SHADE:who==2?HD_GLASS_LIT:
-              who==3?HD_ROAD_COOL:HD_LEAF_DARK;
- int y=feet+bob;
- hd_ellipse(p,x,y+1,14,3,HD_SHADOW);
- hd_rect(p,x-9-step,y-19,7,18,HD_INK);
- hd_rect(p,x+2+step,y-19,7,18,HD_INK);
- hd_rect(p,x-12,y-45,25,27,shade);
- hd_rect(p,x-10,y-44,21,25,coat);
- hd_rect(p,x-11,y-45,24,3,HD_COPPER);
- hd_line(p,x-1,y-42,x-1,y-22,who==1?HD_BRICK_LIT:HD_PAPER);
- hd_rect(p,x-15,y-39,4,19,coat);
- hd_rect(p,x+12,y-39,4,19,shade);
- if(emotion==3 || emotion==7){
-  hd_line(p,x+13,y-39,x+21,y-50,shade);
-  hd_ellipse(p,x+21,y-50,3,3,HD_SKIN_LIT);
- }else if(emotion==1){
-  hd_line(p,x+13,y-38,x+18,y-33,coat);
-  hd_ellipse(p,x+18,y-33,3,3,HD_SKIN_LIT);
- }
- hd_rect(p,x-8,y-61,17,18,HD_SKIN);
- hd_rect(p,x-8,y-62,17,7,who==2?HD_HAIR:HD_STONE_DARK);
- hd_rect(p,x-10,y-59,4,11,who==2?HD_HAIR:HD_STONE_DARK);
- if(who==2)hd_rect(p,x+7,y-58,4,18,HD_HAIR);
- if(who==3)hd_rect(p,x+4,y-58,6,4,HD_STONE);
- hd_rect(p,x-5,y-53,2,2,HD_INK);
- hd_rect(p,x+4,y-53,2,2,HD_INK);
- if(emotion==7){
-  hd_line(p,x-6,y-57,x-2,y-55,HD_INK);
-  hd_line(p,x+2,y-55,x+6,y-57,HD_INK);
- }
- hd_rect(p,x-2,y-48,5,1,HD_BRICK_DARK);
- if(emotion==1&&(t/9u&1u))hd_rect(p,x-2,y-48,5,3,HD_BRICK_DARK);
- if(who==3){
-  hd_rect(p,x+4,y-37,6,8,HD_PAPER);
-  hd_rect(p,x+5,y-35,4,1,HD_COPPER);
- }
+ hd_actor_stage(p,x,feet,who,t,emotion);
 }
 static void cafe(uint8_t *p,unsigned t){
  street(p,t,1);
@@ -360,7 +321,9 @@ void hd_cinema_draw(uint8_t *p,const Story *s,unsigned t){
    actor(p,ease(139,156,t,12,74),142,1,t,t<89?2:1);
    actor(p,ease(193,212,t,23,78),142,2,t,t<104?2:5);
    break;
-  default:street(p,t,1);break;
+  default:
+   if(!hd_special_cinema_draw(p,s,t))street(p,t,1);
+   break;
  }
  /* Filmic edge line only; the native subtitle layer owns the readable
     bottom panel. Original scene script governs which line is spoken. */

@@ -50,7 +50,9 @@ int main(void){
  unsigned n=0;
  for(unsigned sc=1;sc<CINE_COUNT;sc++){
   int supported=hd_cinema_supports(sc);
-  if(sc==CINE_GOOD||sc==CINE_FINALE||sc==CINE_BAD)assert(!supported);
+  if(sc==CINE_GOOD||sc==CINE_FINALE||sc==CINE_BAD)assert(supported);
+  /* All 24 narrative location types have native 240x160 graphics now. */
+  assert(supported);
   if(!supported)continue;
   s.cinema=(uint8_t)sc;
   for(unsigned page=0;page<3;page++){
