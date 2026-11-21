@@ -47,9 +47,10 @@ static int ref_abs(int v){return v<0?-v:v;}
 static void old_line(uint8_t *p,int x,int y,int xx,int yy,unsigned ink){
  int dx=ref_abs(xx-x),dy=ref_abs(yy-y);
  int sx=x<xx?1:-1,sy=y<yy?1:-1,err=dx-dy;
+ int axis=x==xx||y==yy;
  for(;;){
   hd_pixel(p,x,y,ink);
-  if(y==yy||x==xx)old_axis_pixel_visits++;
+  if(axis)old_axis_pixel_visits++;
   if(x==xx&&y==yy)break;
   int twice=2*err;
   if(twice>-dy){err-=dy;x+=sx;}
