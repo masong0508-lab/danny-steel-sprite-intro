@@ -50,6 +50,7 @@ jobs:
           git rev-parse --show-toplevel || true
           mkdir -p dist
           cp danny_steel_title.gba dist/danny_steel_title.gba
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git -C "$GITHUB_WORKSPACE" config user.name "github-actions[bot]"
           git -C "$GITHUB_WORKSPACE" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git -C "$GITHUB_WORKSPACE" add -f dist/danny_steel_title.gba
