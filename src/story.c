@@ -134,10 +134,13 @@ enum { D_NONE, D_OPEN, D_LETTER, D_LETTER_AGAIN, D_CLERK_LOCKED, D_CLERK, D_CLER
        D_MARA_CONCERN, D_MARA_WARNING, D_BAD_MUSIC_MASTER,
        D_GOOD_END_SCARS, D_RESCUE_LOST_REMOTE };
 #define SCRIPT(name, ...) static const StoryPage name[] = { __VA_ARGS__ }
+/* The banana-sign shift is practical income, not Danny's calling. He is
+   grateful for the stability without pretending to enjoy mascot work. */
 SCRIPT(d_open,
- {"DANNY", "Good shift outside", "Potheads today."},
- {"DANNY", "That sign job pays", "the rent. I like it."},
- {"DANNY", "After work, my", "sketches and songs."},
+ {"DANNY", "Another afternoon", "in the banana suit."},
+ {"DANNY", "I don't love this gig.", "But it pays the rent."},
+ {"DANNY", "That counts for a lot.", "I'm grateful it does."},
+ {"DANNY", "After hours, I get", "to make my own art."},
  {"DANNY", "Last bus tonight.", "Doctor called again."},
  {"DANNY", "I can face a letter", "before test results."},
  {"DANNY", "Then Mara. Music.", "One thing at a time."});
