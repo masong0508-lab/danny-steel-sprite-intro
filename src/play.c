@@ -92,7 +92,14 @@ static void draw_hidden(int page){
         game.life_stage!=STORY_LIFE_FINALE &&
         game.activity!=STORY_ACT_STUDIO &&
         !(game.paused && (game.choice & 0x80u));
-    if(game.activity==STORY_ACT_STUDIO){
+    if(game.life_stage==STORY_LIFE_FINALE ||
+       (game.ended&&(game.ending==STORY_END_GOOD ||
+                     game.ending==STORY_END_NEUTRAL ||
+                     game.ending==STORY_END_BAD))){
+        /* Preserve the original 72.5s musical storyboard, while painting
+           native scene art and the identical timecoded narrative captions. */
+        hd_ending_draw((u8*)hd_shared_frame,&game,game.finale_frame);
+    }else if(game.activity==STORY_ACT_STUDIO){
         hd_studio_draw((u8*)hd_shared_frame,&game,(unsigned)clock_ticks);
     }else if(native_map){
         hd_world_draw((u8*)hd_shared_frame,&game,(unsigned)clock_ticks);
