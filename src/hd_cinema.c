@@ -119,6 +119,223 @@ static void bus(uint8_t *p,int x,int y,unsigned t){
 static void actor(uint8_t *p,int x,int feet,int who,unsigned t,int emotion){
  hd_actor_stage(p,x,feet,who,t,emotion);
 }
+
+/* POTHEADS OPENING
+   The same location as town cell (21,11), seen through a descending camera.
+   GBA-friendly pasted-paper art: no video frames, heap, extra framebuffer or
+   new OBJ tiles. The choreography is an authored eight-pose rotoscope-ready
+   timeline; a source-video trace can replace its joint measurements later. */
+static int pot_pt(int center,int coord,int zoom){
+ return center+(coord*zoom+(coord>=0?128:-128))/256;
+}
+static int pot_size(int size,int zoom){
+ int v=(size*zoom+128)/256;return v<1?1:v;
+}
+static void pot_rect(uint8_t *p,int cx,int cy,int z,
+                     int x,int y,int w,int h,unsigned ink){
+ int xx=pot_pt(cx,x-120,z), yy=pot_pt(cy,y-80,z);
+ hd_rect(p,xx,yy,pot_size(w,z),pot_size(h,z),ink);
+}
+static void pot_line(uint8_t *p,int cx,int cy,int z,
+                     int x,int y,int xx,int yy,unsigned ink){
+ hd_line(p,pot_pt(cx,x-120,z),pot_pt(cy,y-80,z),
+         pot_pt(cx,xx-120,z),pot_pt(cy,yy-80,z),ink);
+}
+static void pot_city(uint8_t *p,unsigned t,int z,int cx,int cy){
+ hd_rect(p,0,0,240,160,HD_STONE_DARK);
+ for(int y=0;y<102;y+=7)
+  hd_rect(p,0,y,240,1,y&1?HD_ROAD_COOL:HD_STONE);
+ /* Behind the location: compressed roof rows retain the bird's-eye
+    footprint while the camera closes in toward its street-level awning. */
+ for(int i=0;i<7;i++){
+  int x=i*43-85,roof=16+(i*17)%15;
+  pot_rect(p,cx,cy,z,x,-32,41,roof+40,HD_BRICK_DARK);
+  pot_line(p,cx,cy,z,x,-32,x+20,-44,HD_STONE_LIT);
+  pot_line(p,cx,cy,z,x+20,-44,x+41,-32,HD_COPPER);
+  for(int j=0;j<3;j++)
+   pot_rect(p,cx,cy,z,x+6+j*12,9,5,7,
+            ((i+j+(int)(t/75u))&3)?HD_GLASS:HD_LAMP);
+ }
+ /* Pavement perspective: diagonals converge on Danny, never on the HUD. */
+ pot_rect(p,cx,cy,z,-25,100,293,65,HD_ROAD_COOL);
+ pot_rect(p,cx,cy,z,-25,98,293,3,HD_COPPER);
+ for(int i=0;i<11;i++){
+  int x=-34+i*31;
+  pot_line(p,cx,cy,z,x,101,x-19,161,HD_ROAD);
+  pot_line(p,cx,cy,z,x,123,x+24,123,HD_STONE);
+ }
+ /* Three-dimensional facade / pitched roof / attached business sign. */
+ pot_rect(p,cx,cy,z,38,18,174,83,HD_INK);
+ pot_rect(p,cx,cy,z,42,21,166,77,HD_BRICK_DARK);
+ for(int y=31;y<97;y+=8){
+  pot_line(p,cx,cy,z,43,y,207,y,HD_BRICK);
+  for(int x=49+(y/8%2)*11;x<206;x+=22)
+   pot_line(p,cx,cy,z,x,y,x,y+7,HD_STONE_DARK);
+ }
+ pot_rect(p,cx,cy,z,34,15,185,10,HD_STONE_DARK);
+ pot_line(p,cx,cy,z,34,15,120,-2,HD_STONE_LIT);
+ pot_line(p,cx,cy,z,120,-2,219,15,HD_STONE_LIT);
+ for(int i=0;i<8;i++)
+  pot_line(p,cx,cy,z,39+i*23,15,68+i*16,3,HD_COPPER);
+ /* Forest-green shop fascia is built INTO the brickwork. */
+ pot_rect(p,cx,cy,z,72,30,116,25,HD_INK);
+ pot_rect(p,cx,cy,z,75,32,110,21,HD_LEAF_DARK);
+ pot_rect(p,cx,cy,z,77,34,106,17,HD_LEAF);
+ pot_rect(p,cx,cy,z,80,37,100,11,HD_BRICK_DARK);
+ if(z>=184)
+  hd_text(p,pot_pt(cx,99-120,z),pot_pt(cy,39-80,z),
+          "POTHEADS",HD_PAPER,1,1);
+ else
+  for(int i=0;i<8;i++)
+   pot_rect(p,cx,cy,z,102+i*7,39,4,6,HD_PAPER);
+ /* Window frames, inventory silhouettes, real door and hanging canopy. */
+ for(int i=0;i<2;i++){
+  int x=i?145:59;
+  pot_rect(p,cx,cy,z,x,67,52,31,HD_INK);
+  pot_rect(p,cx,cy,z,x+3,70,46,25,HD_GLASS);
+  pot_rect(p,cx,cy,z,x+6,72,15,17,HD_LEAF_DARK);
+  pot_rect(p,cx,cy,z,x+25,75,17,14,HD_STONE);
+  pot_line(p,cx,cy,z,x+25,69,x+25,96,HD_COPPER);
+  pot_line(p,cx,cy,z,x+2,91,x+50,91,HD_COPPER);
+ }
+ pot_rect(p,cx,cy,z,114,65,26,35,HD_INK);
+ pot_rect(p,cx,cy,z,118,69,18,30,HD_GLASS_LIT);
+ pot_rect(p,cx,cy,z,119,71,16,28,HD_GLASS);
+ pot_line(p,cx,cy,z,127,70,127,99,HD_COPPER);
+ pot_rect(p,cx,cy,z,131,84,2,2,HD_GOLD);
+ pot_rect(p,cx,cy,z,52,57,153,7,HD_LEAF_DARK);
+ for(int x=55;x<200;x+=18)
+  pot_rect(p,cx,cy,z,x,59,10,4,HD_LEAF_LIT);
+ pot_line(p,cx,cy,z,45,101,211,101,HD_PLASTER_LIT);
+ pot_line(p,cx,cy,z,43,103,214,103,HD_SHADOW);
+ /* Two tiny street details make the sign job feel inhabited, not staged. */
+ pot_rect(p,cx,cy,z,202,80,3,21,HD_BARK);
+ pot_rect(p,cx,cy,z,198,78,11,5,HD_GOLD);
+ pot_rect(p,cx,cy,z,35,90,10,10,HD_BARK);
+ pot_rect(p,cx,cy,z,37,87,6,4,HD_LEAF);
+}
+typedef struct {
+ signed char lean,bob,lx,ly,rx,ry,lf,lh,rf,rh;
+} PotPose;
+/* Frame-to-frame hand, heel and body measurements may be replaced by
+   exact reference-video rotoscope samples without altering the renderer. */
+static const PotPose pot_dance[8]={
+ { 0, 0,-21,-29,26,-43,-10, 0, 10, 0},
+ { 3,-2,-27,-35,30,-46,-14,-5, 13, 0},
+ { 7,-3,-17,-46,32,-43, -5, 0, 18,-6},
+ { 6, 0,-27,-24,28,-37,-13, 0, 11, 0},
+ { 0,-2,-29,-37,26,-45,-17,-5,  9, 0},
+ {-6,-3,-19,-45,25,-44, -8, 0, 18,-6},
+ {-7, 0,-29,-26,28,-40,-14, 0, 10, 0},
+ {-2,-1,-18,-32,26,-44,-11,-4, 13, 0}
+};
+static int pot_lerp(int a,int b,unsigned m){
+ return a+((b-a)*(int)m)/12;
+}
+static PotPose pot_motion(unsigned t){
+ if(t<76u)return pot_dance[0];
+ unsigned beat=(t-76u)/12u,i=beat&7u,f=(t-76u)%12u;
+ PotPose a=pot_dance[i],b=pot_dance[(i+1u)&7u];
+ PotPose r={
+  (signed char)pot_lerp(a.lean,b.lean,f),
+  (signed char)pot_lerp(a.bob,b.bob,f),
+  (signed char)pot_lerp(a.lx,b.lx,f),
+  (signed char)pot_lerp(a.ly,b.ly,f),
+  (signed char)pot_lerp(a.rx,b.rx,f),
+  (signed char)pot_lerp(a.ry,b.ry,f),
+  (signed char)pot_lerp(a.lf,b.lf,f),
+  (signed char)pot_lerp(a.lh,b.lh,f),
+  (signed char)pot_lerp(a.rf,b.rf,f),
+  (signed char)pot_lerp(a.rh,b.rh,f)
+ };
+ return r;
+}
+static int pot_local(int origin,int v,int scale){
+ return origin+(v*scale+(v>=0?128:-128))/256;
+}
+static void pot_bline(uint8_t *p,int x,int foot,int scale,
+                      int ax,int ay,int bx,int by,unsigned ink){
+ hd_line(p,pot_local(x,ax,scale),pot_local(foot,ay,scale),
+         pot_local(x,bx,scale),pot_local(foot,by,scale),ink);
+}
+static void pot_brect(uint8_t *p,int x,int foot,int scale,
+                      int px,int py,int w,int h,unsigned ink){
+ hd_rect(p,pot_local(x,px,scale),pot_local(foot,py,scale),
+         pot_size(w,scale),pot_size(h,scale),ink);
+}
+static void pot_bellipse(uint8_t *p,int x,int foot,int scale,
+                         int px,int py,int rx,int ry,unsigned ink){
+ hd_ellipse(p,pot_local(x,px,scale),pot_local(foot,py,scale),
+            pot_size(rx,scale),pot_size(ry,scale),ink);
+}
+static void pot_banana(uint8_t *p,int cx,int cy,int z,unsigned t){
+ PotPose a=pot_motion(t);
+ int x=pot_pt(cx,98-120,z),foot=pot_pt(cy,101-80,z);
+ int sc=z; /* every limb and paper corner uses one shared camera anchor */
+ pot_bellipse(p,x,foot,sc,0,1,20,3,HD_SHADOW);
+ /* Feet stay fixed to the sidewalk; small lifted heels describe steps. */
+ pot_bline(p,x,foot,sc,-5,-17,a.lf,a.lh-2,HD_INK);
+ pot_bline(p,x,foot,sc, 5,-17,a.rf,a.rh-2,HD_INK);
+ pot_brect(p,x,foot,sc,a.lf-6,a.lh-3,13,4,HD_INK);
+ pot_brect(p,x,foot,sc,a.rf-6,a.rh-3,13,4,HD_INK);
+ pot_bellipse(p,x,foot,sc,a.lean/2,-34+a.bob,15,20,HD_INK);
+ pot_bellipse(p,x,foot,sc,a.lean/2,-34+a.bob,12,18,HD_GOLD);
+ pot_bellipse(p,x,foot,sc,a.lean/2-6,-34+a.bob,3,14,HD_LAMP);
+ pot_bline(p,x,foot,sc,-8+a.lean/2,-49+a.bob,
+           -18+a.lean/2,-41+a.bob,HD_PAPER);
+ pot_bline(p,x,foot,sc, 8+a.lean/2,-48+a.bob,
+            15+a.lean/2,-42+a.bob,HD_LAMP);
+ pot_bellipse(p,x,foot,sc,a.lean,-56+a.bob,11,13,HD_INK);
+ pot_bellipse(p,x,foot,sc,a.lean,-56+a.bob,9,12,HD_LAMP);
+ pot_bellipse(p,x,foot,sc,a.lean,-54+a.bob,6,7,HD_SKIN_LIT);
+ pot_bline(p,x,foot,sc,a.lean-2,-67+a.bob,a.lean-5,-72+a.bob,HD_PAPER);
+ pot_bline(p,x,foot,sc,a.lean-1,-68+a.bob,a.lean+4,-73+a.bob,HD_GOLD);
+ pot_brect(p,x,foot,sc,a.lean-4,-57+a.bob,2,2,HD_INK);
+ pot_brect(p,x,foot,sc,a.lean+3,-57+a.bob,2,2,HD_INK);
+ pot_bline(p,x,foot,sc,a.lean-2,-51+a.bob,a.lean+3,-50+a.bob,HD_BRICK_DARK);
+ /* The sign arm is visibly connected: the paper overlay never floats. */
+ pot_bline(p,x,foot,sc,-9,-44+a.bob,a.lx,a.ly,HD_INK);
+ pot_bline(p,x,foot,sc,-8,-43+a.bob,a.lx,a.ly,HD_GOLD);
+ pot_bline(p,x,foot,sc, 9,-44+a.bob,a.rx,a.ry,HD_INK);
+ pot_bline(p,x,foot,sc,10,-43+a.bob,a.rx,a.ry,HD_GOLD);
+ pot_bellipse(p,x,foot,sc,a.lx,a.ly,3,3,HD_PAPER);
+ int bx=pot_local(x,a.rx+3,sc),by=pot_local(foot,a.ry-21,sc);
+ int bw=pot_size(56,sc),bh=pot_size(34,sc);
+ /* Screenprinted cardboard, deliberately superimposed like a 2-D
+    collage, but attached to Danny's grip and shadowed into the shot. */
+ hd_rect(p,bx+pot_size(3,sc),by+pot_size(3,sc),bw,bh,HD_SHADOW);
+ hd_rect(p,bx-1,by-1,bw+2,bh+2,HD_INK);
+ hd_rect(p,bx,by,bw,bh,HD_PAPER);
+ hd_rect(p,bx+1,by+1,bw-2,pot_size(3,sc),HD_GOLD);
+ hd_line(p,bx,by+bh-1,bx+bw-1,by+bh-2,HD_BARK);
+ hd_line(p,bx+1,by+1,bx+1,by+bh-2,HD_COPPER);
+ if(z>=215){
+  hd_rect(p,bx+5,by+5,bw-10,8,HD_LAMP);
+  hd_text(p,bx+7,by+5,"POTHEADS",HD_INK,1,0);
+  hd_text(p,bx+10,by+18,"COME IN",HD_INK,1,0);
+  hd_line(p,bx+43,by+26,bx+49,by+26,HD_RED_SHADE);
+  hd_line(p,bx+46,by+23,bx+49,by+26,HD_RED_SHADE);
+  hd_line(p,bx+46,by+29,bx+49,by+26,HD_RED_SHADE);
+  hd_rect(p,bx+4,by+1,7,3,HD_STONE_LIT); /* masking tape */
+  hd_rect(p,bx+bw-11,by+bh-3,7,2,HD_STONE_LIT);
+ }else{
+  for(int j=0;j<3;j++)
+   hd_rect(p,bx+pot_size(6,sc),by+pot_size(6+j*8,sc),
+           bw-pot_size(17,sc),pot_size(2,sc),j==1?HD_BARK:HD_INK);
+ }
+ /* Grip is in FRONT of the sign, and its shoulder stays behind the board. */
+ pot_bellipse(p,x,foot,sc,a.rx,a.ry,3,3,HD_PAPER);
+ pot_bline(p,x,foot,sc,a.rx,a.ry,a.rx+5,a.ry-2,HD_INK);
+}
+static void potheads_open(uint8_t *p,unsigned t){
+ /* 0-132: a continuous bird's-eye descent; then an unbroken dance.
+    Page advance never resets the camera or sign's position. */
+ int z=ease(96,256,t,0,132);
+ int cx=ease(101,120,t,0,132),cy=ease(100,80,t,0,132);
+ pot_city(p,t,z,cx,cy);
+ pot_banana(p,cx,cy,z,t);
+}
+
 static void cafe(uint8_t *p,unsigned t){
  street(p,t,1);
  hd_rect(p,4,42,102,70,HD_BRICK_DARK);
@@ -268,12 +485,7 @@ void hd_cinema_draw(uint8_t *p,const Story *s,unsigned t){
  unsigned sc=s->cinema,page=s->page;
  switch(sc){
   case CINE_OPEN:
-   street(p,t,0);
-   bus(p,ease(258,125,t,0,130),71,t);
-   actor(p,ease(68,86,t,12,65),140,1,t,t<75?2:0);
-   hd_rect(p,214,94,3,26,HD_BARK);
-   hd_rect(p,205,88,22,9,HD_COPPER);
-   hd_text(p,209,89,"BUS",HD_INK,1,0);
+   potheads_open(p,t);
    break;
   case CINE_LETTER:
    street(p,t,1);
