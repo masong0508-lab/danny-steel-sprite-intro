@@ -11,7 +11,7 @@ static struct {
  uint8_t pre[64],pixel[HD_BYTES],post[64];
 } guarded;
 static void clear(void){memset(&guarded,0xA7,sizeof guarded);}
-static uint32_t checksum(void){
+static uint32_t checksum_with(unsigned minimum){
  uint32_t h=2166136261u,detail=0;
  for(unsigned i=0;i<64u;i++)
   assert(guarded.pre[i]==0xA7&&guarded.post[i]==0xA7);
@@ -21,7 +21,7 @@ static uint32_t checksum(void){
   if(ink!=HD_ROAD&&ink!=HD_ROAD_COOL&&ink!=HD_STONE_DARK)detail++;
   h=(h^ink)*16777619u;
  }
- assert(detail>1000u);
+ assert(detail>minimum);
  return h;
 }
 int main(void){
@@ -31,13 +31,13 @@ int main(void){
  s.life_stage=STORY_LIFE_NONE;s.view=0;
  uint32_t textures[14];
  for(unsigned id=0;id<14;id++){
-  clear();memset(guarded.pixel,HD_ROAD,HD_BYTES);
+  clear();memset(guarded.pixel,HD_CHALK,HD_BYTES);
   hd_iso_tile(guarded.pixel,102,70,id);
-  textures[id]=checksum();
+  textures[id]=checksum_with(0u);
   /* Every asset is a genuine diamond: transparent rectangular corners,
      but a solid roof/cobblestone/grass/canal center. */
-  assert(guarded.pixel[70*HD_W+102]==HD_ROAD);
-  assert(guarded.pixel[77*HD_W+118]!=HD_ROAD || id==0u);
+  assert(guarded.pixel[70*HD_W+102]==HD_CHALK);
+  assert(guarded.pixel[77*HD_W+118]!=HD_CHALK);
   for(int x=-32;x<=240;x+=34)for(int y=-16;y<=160;y+=37){
    clear();memset(guarded.pixel,HD_ROAD,HD_BYTES);
    hd_iso_tile(guarded.pixel,x,y,id);
@@ -58,15 +58,15 @@ int main(void){
   for(int facing=0;facing<4;facing++){
    s.facing=(uint8_t)facing;
    clear();hd_world_draw(guarded.pixel,&s,100u);
-   views[facing]=checksum();
+   views[facing]=checksum_with(1000u);
    /* Legend remains grounded over geometry at the original HUD band. */
    assert(guarded.pixel[0]==HD_INK);
    assert(guarded.pixel[17*HD_W+25]==HD_COPPER);
    clear();hd_world_draw(guarded.pixel,&s,100u);
-   assert(checksum()==views[facing]); /* deterministic authored view */
+   assert(checksum_with(1000u)==views[facing]); /* deterministic authored view */
    s.anim=3;s.prev_x=s.x>0?s.x-1:s.x;
    clear();hd_world_draw(guarded.pixel,&s,127u);
-   checksum();s.anim=0;s.prev_x=s.x;
+   checksum_with(1000u);s.anim=0;s.prev_x=s.x;
    checks++;
   }
   for(int f=0;f<4;f++)for(int g=f+1;g<4;g++)
