@@ -202,9 +202,9 @@ void hd_world_draw(uint8_t *p,const Story *s,unsigned frame){
  int bx=(int)s->x-7,by=(int)s->y-4;
  /* Draw one extra tile on each edge to avoid camera seams. */
  for(int y=-1;y<=10;y++)for(int x=-1;x<=15;x++)
-  ground(p,x*16-8,y*16-1,bx+x,by+y,frame);
+  ground(p,x*16,y*16-1,bx+x,by+y,frame);
  for(int y=-1;y<=10;y++)for(int x=-1;x<=15;x++){
-  int wx=bx+x,wy=by+y,sx=x*16-8,sy=y*16-1;
+  int wx=bx+x,wy=by+y,sx=x*16,sy=y*16-1;
   char c=story_tile(wx,wy);
   if(c=='T')tree(p,sx+8,sy+8,noise((unsigned)(wx+100),(unsigned)(wy+100)),frame);
   else if(c=='L'||c=='C'||c=='F'||c=='B'||c=='P'||c=='V'||
