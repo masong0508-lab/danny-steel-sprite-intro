@@ -158,7 +158,7 @@ void hd_actor_stage(uint8_t *p,int x,int feet,int role,unsigned frame,int emotio
 void hd_actor_closeup(uint8_t *p,int x,int base,int role,
                       unsigned frame,int emotion){
  unsigned jacket=role==1?HD_RED:role==2?HD_GLASS:
-                 role==3?HD_STONE_LIT:role==4?HD_LEAF_DARK:HD_PLASTER;
+                 role==3?HD_STONE_LIT:role==4?HD_LEAF_DARK:HD_PAPER;
  unsigned rim=role==1?HD_RED_SHADE:role==2?HD_GLASS:
               role==3?HD_STONE_DARK:HD_LEAF_DARK;
  unsigned hair=role==2?HD_HAIR:role==3?HD_STONE_DARK:
@@ -181,13 +181,36 @@ void hd_actor_closeup(uint8_t *p,int x,int base,int role,
   if((yy%11)==0)
    hd_rect(p,x-half+7,yy,9,1,HD_STONE_LIT);
  }
- /* Sleeves wrap shoulders instead of emerging from an unattached ellipse. */
- hd_ellipse(p,x-26,y-26,12,18,HD_INK);
- hd_ellipse(p,x+26,y-26,12,18,HD_INK);
- hd_ellipse(p,x-26,y-27,10,16,jacket);
- hd_ellipse(p,x+26,y-27,10,16,jacket);
- hd_line(p,x-35,y-31,x-38,y-6,rim);
- hd_line(p,x+35,y-31,x+38,y-6,HD_STONE_LIT);
+ /* Ten stepped fabric segments follow actual shoulder -> elbow -> wrist
+    trajectories. Unlike two oval shoulder-pads, these have cuffs and
+    remain anchored to the torso at every frame. Chunked four-pixel
+    strips keep the handheld draw-call budget modest. */
+ for(int k=0;k<11;k++){
+  int yy=y-44+k*4;
+  int shift=k/2;
+  int wide=k<3?12+k*2:k<8?18:18-(k-8)*2;
+  int lc=x-24-shift,rc=x+24+shift;
+  if(emotion!=5){
+   hd_rect(p,lc-wide/2-1,yy,wide+2,4,HD_INK);
+   hd_rect(p,lc-wide/2,yy+1,wide,3,jacket);
+   hd_rect(p,lc-wide/2+1,yy+1,3,3,rim);
+  }
+  if(emotion!=7){
+   hd_rect(p,rc-wide/2-1,yy,wide+2,4,HD_INK);
+   hd_rect(p,rc-wide/2,yy+1,wide,3,jacket);
+   hd_rect(p,rc+wide/2-4,yy+1,3,3,rim);
+  }
+ }
+ if(emotion!=5){
+  hd_rect(p,x-36,y-4,15,3,HD_STONE_LIT);
+  hd_rect(p,x-35,y-1,11,6,HD_SKIN);
+  hd_rect(p,x-33,y,6,2,HD_SKIN_LIT);
+ }
+ if(emotion!=7){
+  hd_rect(p,x+22,y-4,15,3,HD_STONE_LIT);
+  hd_rect(p,x+24,y-1,11,6,HD_SKIN);
+  hd_rect(p,x+25,y,6,2,HD_SKIN_LIT);
+ }
  hd_rect(p,x-8,y-55,16,17,HD_SKIN);
  hd_rect(p,x-7,y-45,14,5,HD_SKIN_LIT);
  hd_line(p,x-21,y-41,x-4,y-20,HD_STONE_LIT);
@@ -216,6 +239,12 @@ void hd_actor_closeup(uint8_t *p,int x,int base,int role,
  hd_ellipse(p,x,y-69,23,27,HD_INK);
  hd_ellipse(p,x,y-69,20,25,HD_SKIN);
  hd_ellipse(p,x-6,y-73,11,17,HD_SKIN_LIT);
+ /* A slight jaw-plane shadow, lower-eyelid shape and cheek glint give
+    expressions depth without blowing out the native skin palette. */
+ hd_line(p,x-16,y-59,x-9,y-54,HD_BARK);
+ hd_line(p,x+10,y-54,x+16,y-60,HD_BARK);
+ hd_rect(p,x-16,y-66,4,2,HD_SKIN_LIT);
+ hd_rect(p,x+12,y-65,4,2,HD_SKIN_LIT);
  hd_rect(p,x-22,y-72,5,12,HD_SKIN);
  hd_rect(p,x+18,y-71,5,12,HD_SKIN);
  hd_rect(p,x-19,y-66,4,3,HD_RED_SHADE);

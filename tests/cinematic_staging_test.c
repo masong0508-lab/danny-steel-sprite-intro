@@ -148,6 +148,19 @@ int main(void){
   for(int xx=157;xx<199;xx++)
    if(color(xx,yy)==HD_GLASS)garment++;
  assert(garment>60u);
+ /* A connected sleeve reaches wrist level on BOTH sides. Old portrait
+    circles stopped at the shoulder and left the hands in midair. */
+ memset(&sample,0xA5,sizeof sample);
+ hd_rect(sample.pixels,0,0,HD_W,HD_H,HD_STONE_DARK);
+ hd_actor_closeup(sample.pixels,120,143,1,171u,0);
+ unsigned left_cuff=0,right_cuff=0;
+ for(int yy=138;yy<145;yy++){
+  for(int xx=80;xx<85;xx++)
+   if(color(xx,yy)==HD_RED)left_cuff++;
+  for(int xx=155;xx<162;xx++)
+   if(color(xx,yy)==HD_RED)right_cuff++;
+ }
+ assert(left_cuff>0u && right_cuff>0u);
  /* Every role's distinct portrait must stay bounded in the exact same
     guarded 240x160 buffer, with no new RAM backing. */
  uint32_t portraits[5];
