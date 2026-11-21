@@ -15,16 +15,15 @@
 #define HALF_TRANS 19
 #define TITLE_VOLUME 40
 enum { M_IDLE, M_TRANS };
-static u32 buffer[HD_BYTES/4] __attribute__((section(".ewram"), aligned(4)));
 static unsigned page,pending,clock_frames,scene_frame;
 static int state,level,sel,mode,prev_main,dir,transition,switched;
 static int was_a,was_b,was_l,was_r,erase_hold,menu_note,note_ticks,menu_launch;
 static void ink_page(unsigned pg){
- hd_menu_draw((uint8_t*)buffer,(unsigned)level,(unsigned)mode,(unsigned)sel,
+ hd_menu_draw((uint8_t*)hd_shared_frame,(unsigned)level,(unsigned)mode,(unsigned)sel,
               scene_frame,(unsigned)menu_note,(unsigned)erase_hold,
               (unsigned)play_slot_valid(0),(unsigned)play_slot_valid(1));
  volatile u32 *dest=(volatile u32*)(VRAM8+(pg?0xA000:0));
- for(unsigned i=0;i<HD_BYTES/4u;i++)dest[i]=buffer[i];
+ for(unsigned i=0;i<HD_BYTES/4u;i++)dest[i]=hd_shared_frame[i];
 }
 static void refresh(void){
  page^=1u;ink_page(page);pending=1u;
