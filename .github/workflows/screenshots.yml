@@ -11,6 +11,8 @@ on:
       - "src/hd_actor.c"
       - "src/hd_special.c"
       - "src/hd_ending.c"
+      - "src/hd_arena.c"
+      - "src/hd_arena_art.c"
   workflow_dispatch:
 
 permissions:
@@ -43,6 +45,7 @@ jobs:
             src/hd_canvas.c src/hd_menu.c src/hd_world.c src/hd_overlay.c \
             src/hd_perspective.c src/hd_studio.c src/hd_cinema.c \
             src/hd_actor.c src/hd_special.c src/hd_ending.c \
+            src/hd_arena.c src/hd_arena_art.c \
             tools/story_gallery.c -o /tmp/danny_story_gallery
           /tmp/danny_story_gallery docs/screenshots
           for f in docs/screenshots/*.ppm; do

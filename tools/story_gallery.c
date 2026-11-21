@@ -17,7 +17,9 @@ static void write_frame(const char *name,const Story *s,unsigned t){
  char filename[700];
  snprintf(filename,sizeof(filename),"%s/%s.ppm",outdir,name);
  memset(canvas,0,sizeof canvas);
- if(s->life_stage==STORY_LIFE_FINALE ||
+ if(s->battle){
+  hd_arena_draw(canvas,s,t);
+ }else if(s->life_stage==STORY_LIFE_FINALE ||
     (s->ended && (s->ending==STORY_END_GOOD ||
                   s->ending==STORY_END_NEUTRAL ||
                   s->ending==STORY_END_BAD))){
@@ -154,6 +156,24 @@ int main(int argc,char **argv){
  s.rescue_stage=STORY_RESCUE_AFTERSHOCK;
  s.finale_frame=1930u;
  write_frame("28_bad_saved_rescue_door",&s,1930);
+ /* All three rival identities, with a playable menu and a genuine
+    dodge beat. These captures derive from transient story battle state,
+    never from a separate concept-art mockup. */
+ s.battle=BATTLE_MENU;s.ended=0;s.dialogue=0;s.life_stage=STORY_LIFE_NONE;
+ s.cinema=CINE_NONE;s.activity=0;s.battle_focus=4;
+ s.cult_stage=0;s.cult_enemy=0;s.battle_choice=0;
+ s.battle_lane=1;s.battle_timer=0;s.battle_progress=0;
+ s.battle_parry=0;s.battle_guard=0;
+ write_frame("29_orchard_rat_menu",&s,194);
+ s.cult_enemy=1;s.battle_choice=1;
+ write_frame("30_orchard_badge_care",&s,227);
+ s.cult_enemy=2;s.battle=BATTLE_DODGE;
+ s.battle_lane=2;s.battle_timer=11;s.battle_progress=1;
+ write_frame("31_orchard_warden_dodge",&s,251);
+ s.cult_enemy=0;s.cult_stage=CULT_RESOLVED;s.battle_timer=8;
+ s.battle_lane=0;s.battle_focus=2;s.battle_parry=5;
+ write_frame("32_orchard_rebrand_parry",&s,291);
+ s.battle=0;
  puts("Actual Danny Steel story renderer gallery generated");
  return 0;
 }
