@@ -242,7 +242,9 @@ SCRIPT(d_art_last_locked,
 SCRIPT(d_neutral_start,
  {"DAY ONE", "Danny stays behind", "for an ordinary day."},
  {"DANNY", "I did enough to", "leave. Not all of it."},
- {"DANNY", "I'll keep painting", "while the buses run."});
+ {"DANNY", "I'll keep painting", "while the buses run."},
+ {"POCKET NOTEBOOK", "At familiar places", "A opens two choices."},
+ {"POCKET NOTEBOOK", "E energy  S spark", "B bond  W work."});
 SCRIPT(d_medical_notice,
  {"DAY TWO", "A clinic message", "arrived this morning."},
  {"DANNY", "The test results?", "I had forgotten."},
@@ -279,7 +281,9 @@ SCRIPT(d_good_end,
  {"GOOD END", "But the songs found", "somewhere to live."});
 SCRIPT(d_day_notes,
  {"POCKET NOTEBOOK", "The bus can wait.", "The roof cannot."},
- {"POCKET NOTEBOOK", "Read, walk, paint.", "The day continues."});
+ {"POCKET NOTEBOOK", "Read, walk, paint.", "The day continues."},
+ {"POCKET NOTEBOOK", "At familiar places", "A choose  B cancel."},
+ {"POCKET NOTEBOOK", "E energy  S spark", "B bond  W work."});
 SCRIPT(d_clinic_locked,
  {"CLINIC", "OPEN BY APPOINTMENT", "NEXT NOTICE PENDING."});
 SCRIPT(d_note_visit,
