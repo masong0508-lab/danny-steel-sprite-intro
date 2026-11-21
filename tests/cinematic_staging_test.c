@@ -75,19 +75,23 @@ int main(void){
  assert(letter_reaction!=film(&s,CINE_LETTER,174u,2u));
  uint32_t mara_close=film(&s,CINE_MARA,177u,3u);
  assert(mara_close!=film(&s,CINE_MARA,177u,2u));
- uint32_t bus_close=film(&s,CINE_BUS,195u,3u);
- assert(bus_close!=film(&s,CINE_BUS,195u,2u));
- uint32_t art_close=film(&s,CINE_ART,227u,3u);
+ uint32_t bus_close=film(&s,CINE_BUS,195u,2u);
+ assert(bus_close!=film(&s,CINE_BUS,195u,1u));
+ uint32_t art_close=film(&s,CINE_ART,227u,1u);
  uint8_t completed_paint[32];
  for(int x=160;x<192;x++)completed_paint[x-160]=
   (uint8_t)color(x,78);
- assert(art_close!=film(&s,CINE_ART,227u,2u));
+ assert(art_close!=film(&s,CINE_ART,227u,0u));
  /* The skyline painting must not vanish when the film cuts to the
     painter's reaction. The same brush marks persist in the same pixels. */
  for(int x=160;x<192;x++)
   assert(completed_paint[x-160]==color(x,78));
- uint32_t doctor_close=film(&s,CINE_LAST_CLINIC,195u,3u);
- assert(doctor_close!=film(&s,CINE_LAST_CLINIC,195u,2u));
+ uint32_t doctor_close=film(&s,CINE_LAST_CLINIC,195u,1u);
+ assert(doctor_close!=film(&s,CINE_LAST_CLINIC,195u,0u));
+ uint32_t patient_close=film(&s,CINE_LAST_CLINIC,215u,3u);
+ assert(patient_close!=film(&s,CINE_LAST_CLINIC,215u,0u));
+ uint32_t mara_clinic=film(&s,CINE_LAST_CLINIC,178u,2u);
+ assert(mara_clinic!=film(&s,CINE_LAST_CLINIC,178u,1u));
  /* Every role's distinct portrait must stay bounded in the exact same
     guarded 240x160 buffer, with no new RAM backing. */
  uint32_t portraits[5];

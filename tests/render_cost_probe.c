@@ -27,6 +27,10 @@ static void render(unsigned kind,Story *s,unsigned frame){
          hd_arena_draw(pixels,s,frame);break;
   case 7:s->cinema=CINE_OPEN;s->page=(uint8_t)(frame/60u%7u);
          hd_cinema_draw(pixels,s,frame);break;
+  case 8:s->cinema=CINE_MARA;s->page=3u;
+         hd_cinema_draw(pixels,s,180u+frame);break;
+  case 9:s->cinema=CINE_LAST_CLINIC;s->page=1u;
+         hd_cinema_draw(pixels,s,160u+frame);break;
   default:assert(0);
  }
 }
@@ -34,11 +38,11 @@ int main(void){
  static const char *const names[]={
   "overhead town","240-column 3D","Mara scene","rescue scene",
   "Studio notes","score-length ending","ROM illustrated arena",
-  "Potheads opening"
+  "Potheads opening","Mara close-up","Doctor close-up"
  };
  const unsigned frames=18u;
  studio_reset();
- for(unsigned scene=0;scene<8;scene++){
+ for(unsigned scene=0;scene<10;scene++){
   Story s;story_new(&s,0);
   s.x=12;s.y=13;s.facing=3;s.prev_x=s.x;s.prev_y=s.y;
   s.cinema=CINE_NONE;s.dialogue=0;s.activity=0;

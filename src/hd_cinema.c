@@ -680,7 +680,7 @@ static void rooftop(uint8_t *p,unsigned t,unsigned page){
  /* Advance to the same canvas edge before touching it. The brush
     extends from the raised hand and pigments appear only on contact. */
  int painter=ease(78,128,t,7,78);
- int reaction=page>=3u&&t>=192u;
+ int reaction=page>=1u&&t>=192u;
  if(reaction)hd_actor_closeup(p,106,143,1,t,5);
  else actor(p,painter,142,1,t,t<92u?2:3);
  if(t>=92u){
@@ -732,14 +732,23 @@ static void clinic(uint8_t *p,const Story *s,unsigned t,int last){
  int missing=(s->rescue_stage>=STORY_RESCUE_MISSING&&
               s->rescue_stage<=STORY_RESCUE_TRACE)||
               s->rescue_stage==STORY_RESCUE_LOST;
- actor(p,68,135,1,t,last?7:1);
- if(last&&!missing)actor(p,115,136,2,t,5);
- if(s->page>=3u&&t>=160u){
+ /* Shot/reverse-shot follows the person who is ACTUALLY speaking:
+    first visit: doctor / Danny / doctor.
+    last visit: doctor / Mara / Danny, but never invent a rescued Mara. */
+ int doctor_close=(s->page==1u || (!last&&s->page==3u))&&t>=120u;
+ int danny_close=(last?s->page==3u:s->page==2u)&&t>=150u;
+ int mara_close=last&&!missing&&s->page==2u&&t>=150u;
+ if(danny_close)hd_actor_closeup(p,78,145,1,t,last?5:7);
+ else actor(p,68,135,1,t,last?7:1);
+ if(last&&!missing){
+  if(mara_close)hd_actor_closeup(p,125,145,2,t,5);
+  else actor(p,115,136,2,t,5);
+ }
+ if(doctor_close){
   hd_actor_closeup(p,184,142,5,t,1);
  }else{
   actor(p,198,133,5,t,1);
-  /* In the wide shot the doctor touches the medical chart. A close-up
-     has no independent hovering limb at the old actor coordinate. */
+  /* In a wide shot, the doctor makes contact with the chart. */
   hd_line(p,181,106,157,102,HD_PLASTER_LIT);
   hd_ellipse(p,157,101,3,2,HD_SKIN);
  }
@@ -790,7 +799,7 @@ void hd_cinema_draw(uint8_t *p,const Story *s,unsigned t){
    int mara=ease(178,164,t,18,63);
    actor(p,danny,141,1,t,t<70?2:page>=1?5:1);
    int reaction=page>=3u&&t>=145u;
-   if(reaction)hd_actor_closeup(p,178,145,2,t,5);
+   if(reaction)hd_actor_closeup(p,178,145,2,t,page>=4u?1:5);
    else actor(p,mara,141,2,t,t<82?2:page>=2?3:1);
    /* Body gestures have real table targets instead of floating cups. */
    if(t>=86u&&page>=1u){
@@ -828,7 +837,7 @@ void hd_cinema_draw(uint8_t *p,const Story *s,unsigned t){
     hd_line(p,bx+68,113,bx+92,113,HD_LAMP);
    }
    int danny=ease(192,165,t,20,78);
-   if(page>=3u&&t>=170u)hd_actor_closeup(p,162,143,1,t,7);
+   if(page>=2u&&t>=170u)hd_actor_closeup(p,162,143,1,t,7);
    else actor(p,danny,142,1,t,t<100u?2:page>=2?7:0);
    break;
   }

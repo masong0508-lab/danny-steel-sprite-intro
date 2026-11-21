@@ -687,6 +687,30 @@ const StoryPage *story_pages(const Story *s, int *count) {
 }
 /* Each major interaction receives a world-grounded, animated shot sequence.
    The same script pages act as camera beats; no replay cutscene flags needed. */
+/* Deterministic edit points on selected authored conversations. These are
+   camera cues, not unskippable cutscene delays: B still dismisses, and
+   the VBlank clock never runs backwards. Longer live reads continue at
+   their naturally advanced frame without replaying a shot. */
+static uint16_t dialogue_shot_beat(unsigned script,unsigned page){
+ static const uint16_t opening[]={0u,36u,76u,132u,178u,218u,254u};
+ static const uint16_t letter[]={0u,55u,108u,160u};
+ static const uint16_t mara[]={0u,66u,108u,151u,190u};
+ static const uint16_t bus[]={0u,118u,183u};
+ static const uint16_t canvas[]={0u,198u};
+ static const uint16_t doctor[]={0u,124u,158u,200u};
+ const uint16_t *beats=0;unsigned length=0;
+ switch(script){
+  case D_OPEN:beats=opening;length=7u;break;
+  case D_LETTER:beats=letter;length=4u;break;
+  case D_MARA:beats=mara;length=5u;break;
+  case D_BUS_READY:beats=bus;length=3u;break;
+  case D_ART:beats=canvas;length=2u;break;
+  case D_DOCTOR_FIRST:case D_DOCTOR_LAST:
+   beats=doctor;length=4u;break;
+  default:break;
+ }
+ return beats&&page<length?beats[page]:0u;
+}
 static uint8_t cinematics_for_dialogue(uint8_t d){
     switch(d){
     case D_OPEN: case D_SHIFT_EARLY: case D_SHIFT_DONE:
@@ -1372,13 +1396,8 @@ void story_tick(Story *s, uint16_t keys) {
                    intended visible camera pose instead of skipping the
                    entire storefront reveal and dance. The scene clock
                    remains monotonic; B can still dismiss the dialogue. */
-                if(s->dialogue==D_OPEN){
-                    static const uint16_t shot[7]={
-                        0u,36u,76u,132u,178u,218u,254u
-                    };
-                    if(s->page<7u && s->cinema_frame<shot[s->page])
-                        s->cinema_frame=shot[s->page];
-                }
+                uint16_t beat=dialogue_shot_beat(s->dialogue,s->page);
+                if(s->cinema_frame<beat)s->cinema_frame=beat;
             }
             else {
                 int ready = s->dialogue == D_BUS_READY && (pressed & A);
