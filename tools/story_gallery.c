@@ -91,6 +91,12 @@ int main(int argc,char **argv){
  write_frame("35_quarter_bus_and_facades",&s,162);
  stand(&s,3,8,3);
  write_frame("36_quarter_riverside_residents",&s,177);
+ /* The revised street-work setting exists in the actual town camera.
+    Danny's held sign and reference-motion dance are deliberately deferred. */
+ stand(&s,20,11,1);
+ write_frame("37_potheads_storefront",&s,184);
+ stand(&s,10,7,0);
+ write_frame("38_civic_facades",&s,191);
  stand(&s,12,13,3);
  s.view=1;
  write_frame("07_gameplay_first_person",&s,90);
