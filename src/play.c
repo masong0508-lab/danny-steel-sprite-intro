@@ -21,6 +21,28 @@ static Story game;
 static u32 pixels[120*80/4] __attribute__((section(".ewram"), aligned(4)));
 static int shown_page, pending, pending_page, clock_ticks, save_cooldown;
 
+/* Shared musical language for Danny and BORE. The same cue is heard in the
+   associated 2D/3D location and during its corresponding cinematic. */
+static unsigned scene_music_cue(void){
+    if(game.ended && game.ending==STORY_END_GOOD)return MUSIC_CUE_LEGACY;
+    if(game.life_stage==STORY_LIFE_FINALE ||
+       (game.ended && game.ending==STORY_END_NEUTRAL) ||
+       game.cinema==CINE_FINALE)return MUSIC_CUE_ROOFTOP;
+    switch(game.cinema){
+    case CINE_GOOD:return MUSIC_CUE_LEGACY;
+    case CINE_NOTICE:case CINE_CLINIC:case CINE_FOLLOWUP:
+    case CINE_LAST_CLINIC:return MUSIC_CUE_CLINIC;
+    case CINE_BORE:case CINE_MUSIC:case CINE_STAY:
+    case CINE_BUS:return MUSIC_CUE_FARCE;
+    case CINE_SERVER:case CINE_WITNESS:case CINE_BACKUP:
+    case CINE_REBRAND:return MUSIC_CUE_ORCHARD;
+    default:break;
+    }
+    if(game.battle)return MUSIC_CUE_ORCHARD;
+    return MUSIC_CUE_STREETS;
+}
+
+
 static int read_slot(int slot,u8 *buf){
     if((unsigned)slot>1u)return 0;
     unsigned hash=0x6D;
@@ -95,6 +117,10 @@ void play_enter(int want_load,int slot){
         if(b[4]!=SAVE_VER)game.dirty=1;
     } else {story_new(&game,slot);write_save();}
     story_draw_init();
+    if(game.life_stage==STORY_LIFE_FINALE ||
+       (game.ended && game.ending>=STORY_END_GOOD && game.ending<=STORY_END_BAD))
+        music_begin_ending(game.ended?game.ending:STORY_END_NEUTRAL);
+    else music_set_cue(scene_music_cue());
     clock_ticks=0;shown_page=0;pending=0;pending_page=0;save_cooldown=0;
     REG_DISPCNT=0;REG_BLDCNT=0;REG_BLDY=0;
     for(int i=0;i<256;i++)PAL16[i]=i<32?story_palette[i]:0;
@@ -112,19 +138,22 @@ int play_update(void){
         pending=0;
     }
     story_tick(&game,(u16)(~REG_KEYINPUT&0x03FF));
-    if(game.quit){write_save();music_set_volume(40);return 1;}
+    if(game.quit){write_save();music_set_cue(MUSIC_CUE_TITLE);music_set_volume(40);return 1;}
+    if(game.life_stage==STORY_LIFE_FINALE ||
+       (game.ended && game.ending>=STORY_END_GOOD && game.ending<=STORY_END_BAD))
+        music_begin_ending(game.ended?game.ending:STORY_END_NEUTRAL);
+    else music_set_cue(scene_music_cue());
     /* Cinematic mix: music withdraws during difficult clinic scenes and
        gently fades during the final rooftop sequence. Eight-VBlank updates
        avoid additional per-frame PSG register work or audio allocations. */
     if((clock_ticks & 7)==0){
         int volume=65;
-        if(game.life_stage==STORY_LIFE_FINALE ||
-           (game.ended&&game.ending==STORY_END_NEUTRAL)){
-            int f=game.finale_frame;
-            volume=f<210?42:f<440?(440-f)*42/230:0;
-        } else if(game.cinema==CINE_CLINIC || game.cinema==CINE_LAST_CLINIC)
+        if(music_ending_phase()==1)volume=62; /* full HERE TODAY, no 7-sec fade */
+        else if(music_ending_phase()==2)volume=83; /* good-only coda */
+        else if(music_ending_phase()==3)volume=0;
+        else if(game.cinema==CINE_CLINIC || game.cinema==CINE_LAST_CLINIC)
             volume=28;
-        else if(game.cinema==CINE_GOOD)volume=83;
+        else if(game.cinema==CINE_GOOD)volume=78;
         music_set_volume(volume);
     }
     /* Periodic clock checkpoint: gameplay time survives resets and reloads. */

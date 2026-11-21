@@ -1,8 +1,16 @@
 #pragma once
-// Plays the song on the GBA's 4 built-in sound channels (2 pulse, 1 wave, 1 noise).
-// music_start(): restart from the 4-bar intro.  music_poll(): call as often as you can (>100x/second).
+#include "music_motifs.h"
+/* Original D-major title MIDI + BORE-aware GBA PSG soundtrack. */
 void music_init(void);
 void music_start(void);
 void music_stop(void);
 void music_poll(void);
-void music_set_volume(int pct);   // master PSG volume, 0..100 (hardware has 8 steps)
+void music_set_volume(int pct);
+void music_set_cue(unsigned cue);
+unsigned music_get_cue(void);
+
+/* Original 72.5-second HERE TODAY score, played one time through the ending.
+   Good ending adds a distinct BORE legacy coda; other endings end quietly.
+   Calls are idempotent so changing cutscene shots cannot restart the song. */
+void music_begin_ending(unsigned ending); /* 1 good, 2 neutral, 3 bad */
+unsigned music_ending_phase(void);       /* 0 no ending, 1 HERE TODAY, 2 good coda, 3 completed */

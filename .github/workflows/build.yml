@@ -35,6 +35,19 @@ jobs:
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/story_draw.c src/cinema.c tests/cinema_test.c -o /tmp/danny_cinema_test
           /tmp/danny_cinema_test
 
+      - name: Validate BORE-derived melodic motifs and note ranges
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/music_motifs.c tests/music_motifs_test.c -o /tmp/danny_motifs_test
+          /tmp/danny_motifs_test
+      - name: Check timer-based PSG music engine
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc -Itests/stubs -DHOST_MUSIC_TEST -include tests/stubs/gba.h src/music.c src/music_motifs.c tests/music_engine_test.c -o /tmp/danny_music_engine_test
+          /tmp/danny_music_engine_test
+      - name: Check full Here Today score in three endings and good coda
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc -Itests/stubs -DHOST_MUSIC_TEST -include tests/stubs/gba.h src/music.c src/music_motifs.c tests/music_ending_test.c -o /tmp/danny_music_ending_test
+          /tmp/danny_music_ending_test
+
   build:
     needs: host
     runs-on: ubuntu-latest
