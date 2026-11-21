@@ -25,17 +25,20 @@ static void render(unsigned kind,Story *s,unsigned frame){
          s->battle_lane=(uint8_t)(frame%3u);
          s->battle_timer=(uint8_t)(frame%60u);
          hd_arena_draw(pixels,s,frame);break;
+  case 7:s->cinema=CINE_OPEN;s->page=(uint8_t)(frame/60u%7u);
+         hd_cinema_draw(pixels,s,frame);break;
   default:assert(0);
  }
 }
 int main(void){
  static const char *const names[]={
   "overhead town","240-column 3D","Mara scene","rescue scene",
-  "Studio notes","score-length ending","ROM illustrated arena"
+  "Studio notes","score-length ending","ROM illustrated arena",
+  "Potheads opening"
  };
  const unsigned frames=18u;
  studio_reset();
- for(unsigned scene=0;scene<7;scene++){
+ for(unsigned scene=0;scene<8;scene++){
   Story s;story_new(&s,0);
   s.x=12;s.y=13;s.facing=3;s.prev_x=s.x;s.prev_y=s.y;
   s.cinema=CINE_NONE;s.dialogue=0;s.activity=0;
