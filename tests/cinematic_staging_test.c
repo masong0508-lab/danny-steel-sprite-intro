@@ -60,6 +60,7 @@ static void verify_reachable_editorial_cuts(void){
  static const uint16_t bus[]={0u,118u,183u};
  static const uint16_t art[]={0u,198u};
  static const uint16_t clinic[]={0u,124u,158u,200u};
+ static const uint16_t reunion[]={0u,100u,170u,250u};
  visit(&s,5,5,2);beats(&s,CINE_LETTER,letter,4u);
  s.flags=STORY_HOME|STORY_STAMP;
  visit(&s,8,12,3);beats(&s,CINE_MARA,mara,5u);
@@ -71,6 +72,10 @@ static void verify_reachable_editorial_cuts(void){
  visit(&s,16,6,3);beats(&s,CINE_CLINIC,clinic,4u);
  s.life_stage=STORY_LIFE_FINAL_CLINIC;
  visit(&s,16,6,3);beats(&s,CINE_LAST_CLINIC,clinic,4u);
+ /* Reunion is a live, reachable saved-state conversation: the final page
+    must show both people at the same point of contact. */
+ s.life_stage=STORY_LIFE_NONE;s.rescue_stage=STORY_RESCUE_SAVED;
+ visit(&s,7,3,3);beats(&s,CINE_RESCUE_SAVED,reunion,4u);
 }
 int main(void){
  verify_reachable_editorial_cuts();
