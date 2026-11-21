@@ -27,6 +27,13 @@ jobs:
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c src/hd_canvas.c src/hd_menu.c src/hd_world.c src/hd_overlay.c src/menu_ink.c tests/hd_graphics_test.c -o /tmp/danny_native_graphics_test
           /tmp/danny_native_graphics_test
+      - name: Validate native cartridge-backdrop combat, authentic attacks and portrait safety
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
+            src/story.c src/studio.c src/hd_canvas.c src/hd_actor.c \
+            src/hd_arena.c src/hd_arena_art.c tests/hd_arena_test.c \
+            -o /tmp/danny_native_arena
+          /tmp/danny_native_arena
       - name: Validate native perspective, six-tab studio, story scenes and pixel safety
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
@@ -55,8 +62,8 @@ jobs:
             src/story.c src/studio.c src/cinema.c src/hd_canvas.c \
             src/hd_world.c src/hd_perspective.c src/hd_studio.c \
             src/hd_cinema.c src/hd_actor.c src/hd_special.c \
-            src/hd_ending.c tests/render_cost_probe.c \
-            -o /tmp/danny_render_cost
+            src/hd_ending.c src/hd_arena.c src/hd_arena_art.c \
+            tests/render_cost_probe.c -o /tmp/danny_render_cost
           /tmp/danny_render_cost
       - name: Test story progression and map accessibility
         run: |
