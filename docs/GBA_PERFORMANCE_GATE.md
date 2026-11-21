@@ -54,8 +54,9 @@ detail for a fake performance claim.
   time for overhead, perspective, Mara scene, rescue scene, notes and
   endings. This is an *informational regression indicator on the CI
   runner*, **not** an ARM7TDMI hardware benchmark or measured FPS.
-- The devkitARM workflow reports `arm-none-eabi-size -A` linked
-  sections and binary bytes so subsequent UI work can be checked for
+- The devkitARM build emits a GNU linker `.map` file and CI reports
+  linked sections plus binary bytes, without requiring an unavailable
+  `arm-none-eabi-size` program. Future UI work can be checked for
   EWRAM/IWRAM growth.
 
 ## Explicit hold point
