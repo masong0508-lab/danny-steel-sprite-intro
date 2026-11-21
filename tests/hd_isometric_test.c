@@ -38,12 +38,22 @@ int main(void){
      but a solid roof/cobblestone/grass/canal center. */
   assert(guarded.pixel[70*HD_W+102]==HD_CHALK);
   assert(guarded.pixel[77*HD_W+118]!=HD_CHALK);
+  /* A fully visible diamond supplies an independent reference for all
+     clipped row-copy cases. Compare the entire local rectangle, including
+     untouched transparent corners, against that exact ROM art. */
+  uint8_t original[32u*16u];
+  for(int py=0;py<16;py++)for(int px=0;px<32;px++)
+   original[py*32+px]=guarded.pixel[(70+py)*HD_W+102+px];
   for(int x=-32;x<=240;x+=34)for(int y=-16;y<=160;y+=37){
-   clear();memset(guarded.pixel,HD_ROAD,HD_BYTES);
+   clear();memset(guarded.pixel,HD_CHALK,HD_BYTES);
    hd_iso_tile(guarded.pixel,x,y,id);
    for(unsigned k=0;k<64;k++)
     assert(guarded.pre[k]==0xA7&&guarded.post[k]==0xA7);
-   for(unsigned k=0;k<HD_BYTES;k++)assert(guarded.pixel[k]<64u);
+   for(int py=0;py<16;py++)for(int px=0;px<32;px++){
+    int xx=x+px,yy=y+py;
+    if((unsigned)xx<HD_W&&(unsigned)yy<HD_H)
+     assert(guarded.pixel[yy*HD_W+xx]==original[py*32+px]);
+   }
   }
  }
  for(unsigned i=0;i<14;i++)for(unsigned j=i+1;j<14;j++)
