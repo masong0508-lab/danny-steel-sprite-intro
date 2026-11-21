@@ -511,16 +511,28 @@ static void dialogue_card(uint8_t *p,const Story *s,const StoryPage *page,int co
     int accent=s->cinema==CINE_RESCUE_DOOR||s->cinema==CINE_BAD?16:
        s->cinema==CINE_MARA||s->cinema==CINE_RESCUE_SAVED?28:
        s->cinema==CINE_MUSIC?25:18;
-    panel(p,48,80);
-    box(p,1,49,2,30,accent);
-    box(p,4,57,112,1,accent);
-    text(p,7,51,page->speaker,accent,21);
-    for(int j=0;j<count&&j<5;j++)
-        box(p,97+j*4,52,3,3,j<=(int)s->page?accent:5);
-    text(p,7,60,page->line1,20,26);
-    text(p,7,68,page->line2,20,26);
-    box(p,108,73,10,6,3);
-    text(p,111,74,"A",20,1);
+    if(s->cinema!=CINE_NONE){
+        /* Cinematic subtitles live over SKY rather than hiding the
+           grounded handoff, brush, door, feet and shared stage. */
+        box(p,0,0,120,24,21);
+        box(p,0,0,3,24,accent);
+        box(p,3,23,117,1,accent);
+        text(p,7,2,page->speaker,accent,21);
+        for(int j=0;j<count&&j<5;j++)
+            box(p,97+j*4,3,3,3,j<=(int)s->page?accent:5);
+        text(p,7,9,page->line1,20,27);
+        text(p,7,16,page->line2,20,27);
+    }else{
+        panel(p,48,80);
+        box(p,1,49,2,30,accent);
+        box(p,4,57,112,1,accent);
+        text(p,7,51,page->speaker,accent,21);
+        for(int j=0;j<count&&j<5;j++)
+            box(p,97+j*4,52,3,3,j<=(int)s->page?accent:5);
+        text(p,7,60,page->line1,20,26);
+        text(p,7,68,page->line2,20,26);
+        text(p,110,74,"A",20,1);
+    }
 }
 static void ending_caption(uint8_t *p,unsigned ending,unsigned rescue,unsigned f){
  const char *a=0,*b=0;

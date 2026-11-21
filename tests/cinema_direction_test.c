@@ -60,6 +60,17 @@ int main(void){
   assert(out.pixels[y*120+x]==earlier[y*120+x]);
  /* The sky must continue animating, even after the character pose holds. */
  assert(difference(earlier,out.pixels,2,6,69,42)>10u);
+ /* The new subtitle strip does not conceal acting beneath the 24px sky. */
+ {Story scene;story_new(&scene,0);
+  scene.cinema=CINE_MARA;scene.cinema_frame=160;scene.page=0;
+  scene.bond=1;
+  draw_scene(CINE_MARA,160,0,0);
+  uint8_t reference[120*80];memcpy(reference,out.pixels,sizeof(reference));
+  memset(&out,0xF3,sizeof(out));
+  story_draw(&scene,160,out.pixels);verify();
+  for(int y=25;y<80;y++)for(int x=0;x<120;x++)
+   assert(out.pixels[y*120+x]==reference[y*120+x]);
+ }
  /* Explicit memory context: the two bad endings must not confuse Mara's fate. */
  assert(cinema_ending_scene(STORY_END_BAD,800,0)==CINE_MARA_EMPTY);
  assert(cinema_ending_scene(STORY_END_BAD,800,1)==CINE_MARA);

@@ -62,3 +62,14 @@ framebuffer guards, handoff scene choice, and persistent painted pixels.
 GitHub Actions builds the real GBA ROM after host tests. A passing host
 render does not establish real-console FPS, timing, or cinematic quality;
 hardware capture remains a separate verification task.
+
+
+## Subtitle staging
+
+Story cinematics now place their speaker and two lines in a **24-pixel
+upper strip**. The lower 55 pixels—the actors, reach gestures, paper,
+brush, cups, stage, safe-house door and feet—remain visible and are not
+covered by dialogue boxes. The original lower dialogue panel is still
+used outside cinematic scenes, preserving usability in the overhead and
+first-person exploration views. Host tests compare all pixels under the
+cinematic caption directly against the raw rendered scene.
