@@ -42,6 +42,15 @@ char story_tile(int x, int y) {
 }
 int story_goal(const Story *s, int *x, int *y, const char **label) {
     if (s->ended || s->life_stage==STORY_LIFE_FINALE) return 0;
+    if(s->rescue_stage==STORY_RESCUE_MISSING){
+        *x=6;*y=11;*label="WITNESS";return 1;
+    }
+    if(s->rescue_stage==STORY_RESCUE_WITNESS){
+        *x=21;*y=7;*label="TERMINAL";return 1;
+    }
+    if(s->rescue_stage==STORY_RESCUE_TRACE){
+        *x=7;*y=2;*label="SAVE MARA";return 1;
+    }
     /* A medical appointment takes priority; there is deliberately no timer
        forcing a final rooftop interaction after the last visit. */
     if (s->life_stage==STORY_LIFE_CLINIC ||
@@ -620,9 +629,10 @@ void story_resume(Story *s, int slot, int x, int y, int facing, int view, int fl
     s->flags = (uint8_t)(flags & STORY_FULL);
     s->ended = (uint8_t)(!!ended); s->ending = (uint8_t)(ending <= STORY_END_BAD ? ending : 0);
     s->dirty = 0;
-    if(s->ended && s->ending==STORY_END_GOOD){
+    if(s->ended && (s->ending==STORY_END_GOOD || s->ending==STORY_END_BAD)){
         /* Replay the cinematic in sync with the one-shot score after loading. */
-        s->finale_frame=0;s->dialogue=0;s->page=0;s->cinema=CINE_GOOD;
+        s->finale_frame=0;s->dialogue=0;s->page=0;
+        s->cinema=s->ending==STORY_END_BAD?CINE_BAD:CINE_GOOD;
     } else if(s->ended && s->ending==STORY_END_NEUTRAL){
         s->finale_frame=0;s->dialogue=0;s->page=0;s->cinema=CINE_FINALE;
         s->life_stage=STORY_LIFE_FINALE;
@@ -811,15 +821,65 @@ static void finish_moment(Story *s){
     }
     s->dirty=1;
 }
-static void interact(Story *s) {
-    const int dx[] = {1,0,-1,0}, dy[] = {0,1,0,-1};
-    char c = story_tile(s->x + dx[s->facing], s->y + dy[s->facing]);
-    if (c != 'L' && c != 'C' && c != 'F' && c != 'B' && c != 'P' && c != 'V' && c != 'Q' && c != 'S' && c != 'W' && c != 'H' && c != 'R' && c != 'M' && c != 'K') {
-        for (int d = 0; d < 4; ++d) {
-            char a = story_tile(s->x + dx[d], s->y + dy[d]);
-            if (a == 'L' || a == 'C' || a == 'F' || a == 'B' || a == 'P' || a == 'V' || a == 'Q' || a == 'S' || a == 'W' || a == 'H' || a == 'R' || a == 'M' || a == 'K') { c = a; break; }
+
+/* Only explicitly confirmed harmful actions earn checks.
+   No countdown, energy deficit or ordinary conversation can harm Mara. */
+int story_bad_count(const Story *s){
+    unsigned mask=s->bad_mask&15u,n=0;
+    for(int i=0;i<4;i++)n+=(mask>>i)&1u;
+    return (int)n;
+}
+static int actor_tile(char c){
+    return c=='L'||c=='C'||c=='F'||c=='B'||c=='P'||c=='V'||
+           c=='Q'||c=='S'||c=='W'||c=='H'||c=='R'||c=='M'||c=='K';
+}
+static char nearby_actor(const Story *s){
+    static const int dx[4]={1,0,-1,0},dy[4]={0,1,0,-1};
+    char c=story_tile(s->x+dx[s->facing],s->y+dy[s->facing]);
+    if(!actor_tile(c)){
+        for(int i=0;i<4;i++){
+            char a=story_tile(s->x+dx[i],s->y+dy[i]);
+            if(actor_tile(a)){c=a;break;}
         }
     }
+    return c;
+}
+static void begin_bad_film(Story *s){
+    s->ended=1;s->ending=STORY_END_BAD;s->life_stage=STORY_LIFE_NONE;
+    s->finale_frame=0;s->dialogue=0;s->page=0;
+    s->scene=STORY_SCENE_NONE;s->cinema=CINE_BAD;s->cinema_frame=0;
+    s->risk_menu=0;s->risk_choice=0;s->dirty=1;
+}
+static void commit_bad(Story *s,char target){
+    unsigned bit=target=='L'?STORY_BAD_LETTER:target=='C'?STORY_BAD_CLERK:
+                 target=='M'?STORY_BAD_MUSIC:STORY_BAD_SERVER;
+    if(s->bad_mask&bit)return; /* non-repeatable */
+    s->bad_mask|=(uint8_t)bit;s->dirty=1;
+    unsigned count=(unsigned)story_bad_count(s);
+    if(count==4u && s->rescue_stage>=STORY_RESCUE_MISSING){
+        s->rescue_stage=s->rescue_stage==STORY_RESCUE_SAVED?
+            STORY_RESCUE_AFTERSHOCK:STORY_RESCUE_LOST;
+        talk(s,s->rescue_stage==STORY_RESCUE_AFTERSHOCK?
+                D_RESCUE_AFTERSHOCK:D_RESCUE_LOST);
+    }else if(count==STORY_BAD_THRESHOLD &&
+             s->rescue_stage==STORY_RESCUE_NONE){
+        s->rescue_stage=STORY_RESCUE_MISSING;talk(s,D_MARA_MISSING);
+    }else talk(s,target=='L'?D_BAD_LETTER:target=='C'?D_BAD_CLERK:
+               target=='M'?D_BAD_MUSIC:D_BAD_SERVER);
+}
+static void resolve_risk(Story *s){
+    char target=(char)s->risk_menu;
+    unsigned selected=s->risk_choice;
+    s->risk_menu=0;s->risk_choice=0;s->cinema=CINE_NONE;
+    if(target=='H'){
+        if(s->rescue_stage!=STORY_RESCUE_TRACE)return;
+        s->rescue_stage=selected?STORY_RESCUE_LOST:STORY_RESCUE_SAVED;
+        s->dirty=1;
+        talk(s,selected?D_RESCUE_LOST:D_RESCUE_SAVED);
+    }else if(selected)commit_bad(s,target);
+}
+static void interact(Story *s) {
+    char c=nearby_actor(s);
     switch (c) {
     case 'L':
         if(can_make_memory(s) && !(s->daily_mask&STORY_DAY_LETTER))moment_menu(s,'L');
@@ -839,6 +899,10 @@ static void interact(Story *s) {
         }
         break;
     case 'F':
+        if(s->rescue_stage>=STORY_RESCUE_MISSING &&
+           s->rescue_stage<=STORY_RESCUE_TRACE){
+            talk(s,D_MARA_ABSENT);break;
+        }
         if (!(s->flags & STORY_STAMP)) talk(s, D_MARA_LOCKED);
         else {
             if(can_make_memory(s) && !(s->daily_mask&STORY_DAY_MARA))moment_menu(s,'F');
@@ -852,7 +916,14 @@ static void interact(Story *s) {
         }
         break;
     case 'B':
-        talk(s, ((s->flags & STORY_ALL) == STORY_ALL && !s->life_stage) ? D_BUS_READY : D_BUS_LOCKED);
+        if(s->rescue_stage>=STORY_RESCUE_MISSING &&
+           s->rescue_stage<=STORY_RESCUE_TRACE)talk(s,D_MARA_MISSING);
+        else if((s->flags&STORY_ALL)==STORY_ALL &&
+             (!s->life_stage ||
+              (s->rescue_stage==STORY_RESCUE_SAVED &&
+               s->life_stage<=STORY_LIFE_FOLLOWUP_WAIT)))
+             talk(s,D_BUS_READY);
+        else talk(s,D_BUS_LOCKED);
         break;
     case 'M':
         if(can_make_memory(s)){
@@ -898,16 +969,31 @@ static void interact(Story *s) {
     case 'V': cult_start(s, 1); break;
     case 'Q': cult_start(s, 2); break;
     case 'S':
+        if(s->rescue_stage==STORY_RESCUE_WITNESS){
+            s->rescue_stage=STORY_RESCUE_TRACE;s->dirty=1;
+            talk(s,D_RESCUE_TRACE);break;
+        }
         if (s->cult_stage == 0) { s->cult_stage = 1; talk(s, D_CULT_FIND); s->dirty = 1; }
         else if (s->cult_stage == 3) { s->cult_stage = CULT_RESOLVED; talk(s, D_CULT_BACKUP); s->dirty = 1; }
         else talk(s, s->cult_stage >= CULT_RESOLVED ? D_CULT_AFTER :
                   s->cult_stage == 1 ? D_CULT_LOGS : D_CULT_WAIT);
         break;
     case 'W':
+        if(s->rescue_stage==STORY_RESCUE_MISSING){
+            s->rescue_stage=STORY_RESCUE_WITNESS;s->dirty=1;
+            talk(s,D_RESCUE_WITNESS);break;
+        }
         if (s->cult_stage == 1) { s->cult_stage = 2; talk(s, D_CULT_WITNESS); s->dirty = 1; }
         else talk(s, s->cult_stage > 1 ? D_CULT_WITNESS_AFTER : D_CULT_NOT_YET);
         break;
     case 'H':
+        if(s->rescue_stage==STORY_RESCUE_TRACE){
+            s->risk_menu='H';s->risk_choice=0;
+            s->cinema=CINE_RESCUE_DOOR;s->cinema_frame=0;break;
+        }
+        if(s->rescue_stage==STORY_RESCUE_SAVED){
+            talk(s,D_RESCUE_SAVED);break;
+        }
         if (s->cult_stage == 2) { s->cult_stage = 3; talk(s, D_CULT_SAFETY); s->dirty = 1; }
         else talk(s, D_CULT_SAFE_AGAIN);
         break;
