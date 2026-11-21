@@ -205,7 +205,7 @@ static void empty_cafe(uint8_t *p,unsigned t){
  hd_rect(p,219,115,3,26,HD_BARK);
  hd_actor_stage(p,45,143,1,t,7);
 }
-static void rooftop(uint8_t *p,unsigned t,int paint,int mourning){
+static void rooftop(uint8_t *p,unsigned t,int paint,int ending_state){
  rainy_lane(p,t);
  hd_rect(p,0,101,240,59,HD_ROAD);
  hd_rect(p,0,99,240,4,HD_STONE_LIT);
@@ -240,12 +240,23 @@ static void rooftop(uint8_t *p,unsigned t,int paint,int mourning){
  hd_rect(p,209,140,18,6,HD_BARK);
  hd_rect(p,212,136,12,5,HD_BRICK_DARK);
  hd_rect(p,214,132,8,4,HD_GOLD);
- if(mourning) {
+ if(ending_state) {
   hd_rect(p,71,126,20,5,HD_INK);
   hd_rect(p,89,126,6,18,HD_INK);
-  if(t<360u)hd_actor_stage(p,48,144,1,t,7);
-  else if(t>520u)hd_actor_stage(p,52,146,2,t,7);
+  if(ending_state==1 && t<400u)
+   hd_actor_stage(p,48,144,1,t,t>310u?7:3);
+  else if(ending_state==3)
+   hd_actor_stage(p,52,146,2,t,t>3000u?0:7);
+  else if(ending_state==2)
+   hd_actor_stage(p,48,144,1,t,7);
   paper(p,106,138,14,9,t);
+  if(ending_state==2){
+   /* The unanswered phone stays with Danny. Never render Mara during
+      unresolved bad-ending shots. Her condition is not established. */
+   hd_rect(p,125,131,9,14,HD_INK);
+   hd_rect(p,127,134,5,9,HD_GLASS);
+   if((t/81u)&1u)hd_pixel(p,129,136,HD_LAMP);
+  }
  }else{
   hd_actor_stage(p,57,145,1,t,t<115u?3:0);
  }
@@ -303,11 +314,12 @@ int hd_special_cinema_draw(uint8_t *p,const Story *s,unsigned t){
   case CINE_RESCUE_DOOR:
   case CINE_RESCUE_SAVED:safehouse(p,t,s->cinema);break;
   case CINE_MARA_EMPTY:empty_cafe(p,t);break;
-  case CINE_FINALE:
-  case CINE_BAD:rooftop(p,t,1,1);break;
+  case CINE_FINALE:rooftop(p,t,1,s->page>=6u?3:1);break;
+  case CINE_BAD:rooftop(p,t,1,2);break;
   case CINE_DAY:rooftop(p,t,0,0);break;
   case CINE_GOOD:
    if(s->page>=6u&&s->page<=7u)concert(p,t);
+   else if(s->page==5u)rooftop(p,t,1,3);
    else if(s->page<=1u)rooftop(p,t,1,0);
    else good_record(p,t);
    break;
