@@ -52,6 +52,11 @@ int story_goal(const Story *s, int *x, int *y, const char **label) {
     if(s->rescue_stage==STORY_RESCUE_TRACE){
         *x=7;*y=2;*label="SAVE MARA";return 1;
     }
+    if(s->rescue_stage==STORY_RESCUE_LOST){
+        /* No rescue deadline remains, but the still-reachable cafe phone
+           is the explicit center of Danny's two-day hope subplot. */
+        *x=8;*y=11;*label="PHONE";return 1;
+    }
     /* A medical appointment takes priority; there is deliberately no timer
        forcing a final rooftop interaction after the last visit. */
     if (s->life_stage==STORY_LIFE_CLINIC ||

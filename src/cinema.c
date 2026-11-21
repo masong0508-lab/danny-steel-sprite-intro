@@ -602,6 +602,9 @@ static void cinema_draw_stage(uint8_t *p,unsigned scene,unsigned tick,
   break;
  case CINE_MARA_EMPTY:
    cafe(p,t);cafe_table(p,1);
+   /* Mara's unanswered phone rests beside her actual cafe cup. */
+   rect(p,66,55,4,4,3);rect(p,67,56,2,2,25);
+   if((t/150u)&1u)pixel(p,68,56,18);
    actor(p,travel(36,42,beat,20,58),72,1,t,beat<68?2:7);
    rect(p,81,62,13,2,14);rect(p,84,64,2,7,14);
    rect(p,91,64,2,7,14);

@@ -113,6 +113,13 @@ void play_enter(int want_load,int slot){
                 game.bad_mask=bad_mask;game.rescue_stage=rescue_stage;
             }
         }
+        if(game.rescue_stage==STORY_RESCUE_LOST){
+            /* LOST repurposes these already-persisted day bytes to count
+               the hopeful phone chapter. In particular day zero is valid. */
+            game.day_number=b[16]<=STORY_HOPE_END_DAY?b[16]:0u;
+            game.life_stage=STORY_LIFE_NONE;
+            game.scene=STORY_SCENE_NONE;
+        }
         if(game.finale_frame>STORY_GOOD_FINAL_FRAMES)game.finale_frame=0;
         if(game.life_stage==STORY_LIFE_FINALE ||
            (game.ended && (game.ending==STORY_END_GOOD ||
@@ -168,8 +175,10 @@ int play_update(void){
         music_set_volume(volume);
     }
     /* Periodic clock checkpoint: gameplay time survives resets and reloads. */
-    if(game.life_stage>=STORY_LIFE_WAIT && game.life_stage<=STORY_LIFE_LAST_WORK
-       && (clock_ticks%600)==599)game.dirty=1;
+    if(((game.life_stage>=STORY_LIFE_WAIT &&
+         game.life_stage<=STORY_LIFE_LAST_WORK) ||
+         game.rescue_stage==STORY_RESCUE_LOST) &&
+         (clock_ticks%600)==599)game.dirty=1;
     if(game.dirty&&++save_cooldown>=120){write_save();save_cooldown=0;}
     if((clock_ticks++&1)==0){
         /* Draw the hidden bitmap; the hardware page flips on the NEXT VBlank. */

@@ -556,9 +556,9 @@ static void ending_caption(uint8_t *p,unsigned ending,unsigned rescue,unsigned f
         else if(f<3670){a="DANNY LOST HIS WAY";b="BEFORE HIS LAST DAYS ENDED";}
         else{a="THE LAST DAYS OF DANNY STEEL";b="BAD END / MISUSED CHANCE";}
     }else{
-        if(f<780){a="ONE UNANSWERED CALL";b="AND A LIGHT LEFT ON";}
-        else if(f<1650){a="MARA DID NOT RETURN";b="NO ONE KNEW WHERE SHE WAS";}
-        else if(f<2490){a="THE DOOR STOOD CLOSED";b="THE STREET KEPT GOING";}
+        if(f<780){a="HE KEPT THE PHONE NEAR";b="SHE WAS SUPPOSED TO CALL";}
+        else if(f<1650){a="A DAY PASSED WITH NO WORD";b="STILL NO VERIFIED RECOVERY";}
+        else if(f<2490){a="THE DOOR STOOD CLOSED";b="HER FATE WAS UNKNOWN";}
         else if(f<3670){a="DANNY HAD NO ANSWERS";b="ONLY THE DAYS HE LOST";}
         else{a="THE LAST DAYS OF DANNY STEEL";b="BAD END / UNANSWERED";}
     }
@@ -628,7 +628,13 @@ void story_draw(const Story *s,int frame,uint8_t *p) {
     int ddx=gx-(int)s->x,ddy=gy-(int)s->y;
     const char *direction=ddx==0&&ddy==0?"HERE":
         abs_i(ddx)>abs_i(ddy)?(ddx>0?"E":"W"):(ddy>0?"S":"N");
-    if(s->life_stage && s->life_stage<STORY_LIFE_FINALE){
+    if(s->rescue_stage==STORY_RESCUE_LOST){
+        char number[]="DAY 0/2";
+        number[4]=(char)('0'+(s->day_number>2u?2u:s->day_number));
+        text(p,3,2,number,20,9);
+        box(p,47,3,36,2,3);
+        box(p,47,3,(int)s->day_frame*36/STORY_DAY_FRAMES,2,18);
+    } else if(s->life_stage && s->life_stage<STORY_LIFE_FINALE){
         char number[]={'D','A','Y',' ',(char)('0'+(s->day_number/10)%10),
                        (char)('0'+s->day_number%10),0};
         text(p,3,2,number,20,7);
@@ -679,6 +685,9 @@ void story_draw(const Story *s,int frame,uint8_t *p) {
         if(s->rescue_stage>=STORY_RESCUE_MISSING &&
            s->rescue_stage<=STORY_RESCUE_TRACE){
             text(p,3,74,"MARA MISSING   R CLUES",20,29);
+        }else if(s->rescue_stage==STORY_RESCUE_LOST){
+            text(p,3,74,s->day_number>=STORY_HOPE_REALIZE_DAY?
+                 "MARA NOT FOUND R NOTES":"MARA MAY CALL  R NOTES",20,29);
         }else if(s->rescue_stage==STORY_RESCUE_SAVED){
             char hint[]="MARA SAFE BAD 0/4 B RISK";
             hint[14]=(char)('0'+story_bad_count(s));
