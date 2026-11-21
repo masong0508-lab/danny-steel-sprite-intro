@@ -20,7 +20,6 @@
 static volatile u8 *const save_ram = (volatile u8 *)0x0E000000;
 const char story_sram_id[] __attribute__((used)) = "SRAM_V113";
 static Story game;
-static u32 pixels[HD_BYTES/4] __attribute__((section(".ewram"), aligned(4)));
 static int shown_page, pending, pending_page, clock_ticks, save_cooldown;
 
 /* Shared musical language for Danny and BORE. The same cue is heard in the
@@ -94,7 +93,7 @@ static void draw_hidden(int page){
         game.activity!=STORY_ACT_STUDIO &&
         !(game.paused && (game.choice & 0x80u));
     if(native_map){
-        hd_world_draw((u8*)pixels,&game,(unsigned)clock_ticks);
+        hd_world_draw((u8*)hd_shared_frame,&game,(unsigned)clock_ticks);
     }else{
         /* The legacy shots remain valid while menus/world art move to
            native pixels. In-place reverse expansion does not allocate a
@@ -104,16 +103,16 @@ static void draw_hidden(int page){
            game.life_stage!=STORY_LIFE_FINALE &&
            game.activity!=STORY_ACT_STUDIO)
             visual.dialogue=0;
-        story_draw(&visual,clock_ticks,(u8*)pixels);
-        hd_upscale_inplace((u8*)pixels);
+        story_draw(&visual,clock_ticks,(u8*)hd_shared_frame);
+        hd_upscale_inplace((u8*)hd_shared_frame);
     }
     if(!game.ended && !game.battle &&
        game.life_stage!=STORY_LIFE_FINALE &&
        game.activity!=STORY_ACT_STUDIO &&
        !(game.paused && (game.choice & 0x80u)))
-        hd_game_overlay((u8*)pixels,&game);
+        hd_game_overlay((u8*)hd_shared_frame,&game);
     volatile u32 *dest=(volatile u32*)(VRAM8+(page?0xA000:0));
-    for(unsigned i=0;i<HD_BYTES/4u;i++)dest[i]=pixels[i];
+    for(unsigned i=0;i<HD_BYTES/4u;i++)dest[i]=hd_shared_frame[i];
 }
 void play_enter(int want_load,int slot){
     u8 b[SAVE_LEN];
