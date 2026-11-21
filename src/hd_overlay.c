@@ -47,14 +47,26 @@ void hd_game_overlay(uint8_t *p,const Story *s){
   hd_text(p,23,98,s->risk_menu=='L'?"THE LETTER":s->risk_menu=='C'?
    "THE ARCHIVE":s->risk_menu=='M'?"THE MUSIC":s->risk_menu=='H'?
    "MARA AT THE DOOR":"THE TERMINAL",HD_PAPER,1,1);
-  hd_text(p,23,109,s->risk_choice?"THIS CAN CAUSE HARM":"YOU CAN WALK AWAY",HD_STONE_LIT,1,0);
-  selectable(p,23,121,91,"BACK",!s->risk_choice);
+  const char *risk_hint;
+  if(s->risk_menu=='H')risk_hint=s->risk_choice?
+       "LEAVE THE DOOR CLOSED":"TRY TO OPEN THE DOOR";
+  else if(s->rescue_stage==STORY_RESCUE_SAVED)risk_hint=
+       "A FOURTH CHECK CAN END THE STORY";
+  else if(s->rescue_stage>=STORY_RESCUE_MISSING &&
+          s->rescue_stage<=STORY_RESCUE_TRACE)risk_hint=
+       "ANOTHER CHECK CAN BLOCK RESCUE";
+  else if(story_bad_count(s)>=2)risk_hint=
+       "THE NEXT CHECK MAY ENDANGER MARA";
+  else risk_hint="YOUR CHOICES HAVE CONSEQUENCES";
+  hd_text(p,23,109,risk_hint,HD_STONE_LIT,1,0);
+  selectable(p,23,121,91,s->risk_menu=='H'?"OPEN":"BACK",!s->risk_choice);
   selectable(p,122,121,92,s->risk_menu=='H'?"LEAVE":"DO IT",s->risk_choice);
   hd_text(p,28,146,"LEFT/RIGHT CHOOSE    B CANCEL",HD_PAPER,1,0);
   return;
  }
  if(s->activity){
   const char *where="OLD QUARTER",*left="CONTINUE",*right="REST",*benefit="";
+  const char *effect="";
   switch(s->activity){
   case 'F':where="MARA / AFTERNOON";left="WALK";right="TALK";benefit="TIME TOGETHER";break;
   case 'L':where="LETTER / MEMORY";left="WRITE";right="KEEP";benefit="A MEMORY OF HOME";break;
@@ -65,9 +77,20 @@ void hd_game_overlay(uint8_t *p,const Story *s){
   case 'r':where="ROOFTOP / ART";left="LAYER";right="LIGHT";benefit="MAKE THE CITY YOURS";break;
   default:where="ROOFTOP / THE SKY";left="PAINT";right="REST";benefit="A QUIET AFTERNOON";break;
   }
-  framebox(p,12,75,216,81);
-  hd_text(p,22,85,where,HD_LAMP,1,1);
-  hd_text(p,22,99,benefit,HD_PAPER,1,0);
+  switch(s->activity){
+   case 'F':effect=s->activity_choice?"BOND +1  ENERGY +1":"BOND +2  ENERGY -1";break;
+   case 'L':effect=s->activity_choice?"SPARK +1 ENERGY +1":"SPARK +2 ENERGY -1";break;
+   case 'C':effect=s->activity_choice?"BOND +1 ENERGY +1":"SPARK +1 ENERGY -1";break;
+   case 'M':effect=s->activity_choice?"SPARK +1 ENERGY +1":"MUSIC STAGE +1";break;
+   case 'E':effect=s->activity_choice?"ADVANCED SIX-TAB STUDIO":"LISTEN TO THE MASTER";break;
+   case 'm':case 'r':effect=s->activity_choice?
+       "STAGE +1  ENERGY +1":"STAGE +1  MORE WORK";break;
+   default:effect=s->activity_choice?"ENERGY +2 SPARK +1":"PAINT STAGE +1";break;
+  }
+  framebox(p,12,72,216,84);
+  hd_text(p,22,79,where,HD_LAMP,1,1);
+  hd_text(p,22,91,benefit,HD_PAPER,1,0);
+  hd_text(p,22,103,effect,HD_STONE_LIT,1,0);
   selectable(p,22,115,92,left,!s->activity_choice);
   selectable(p,123,115,93,right,s->activity_choice);
   hd_text(p,25,145,"LEFT/RIGHT CHOOSE  A OK  B BACK",HD_STONE_LIT,1,0);
