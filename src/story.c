@@ -1,4 +1,5 @@
 #include "story.h"
+#include "story_checks.h"
 
 /* A quiet neighborhood, not a random maze. Every story anchor is reachable on foot. */
 static const char *const town[STORY_H] = {
@@ -1161,8 +1162,24 @@ void story_tick(Story *s, uint16_t keys) {
         }
         return;
     }
-    if (pressed & START) { s->paused ^= 1; return; }
-    if (s->paused) { if (pressed & B) s->quit = 1; return; }
+    if(pressed&START){
+        s->paused^=1u;
+        /* The journal is transient UI, never part of a bus decision. */
+        if(!s->paused)s->choice&=1u;
+        return;
+    }
+    if(s->paused){
+        if(pressed&R){
+            unsigned page=(s->choice&STORY_CHECK_PAGE_ACTIVE)?
+                (story_check_page(s)+1u)%STORY_CHECK_PAGE_COUNT:0u;
+            s->choice=(uint8_t)((s->choice&1u)|STORY_CHECK_PAGE_ACTIVE|
+                                (page<<1));
+        }else if(pressed&B){
+            if(s->choice&STORY_CHECK_PAGE_ACTIVE)s->choice&=1u;
+            else s->quit=1;
+        }
+        return;
+    }
     if (pressed & (L|SELECT)) { s->view ^= 1; s->dirty = 1; }
     if (pressed & R) {
         if(s->rescue_stage==STORY_RESCUE_MISSING){
