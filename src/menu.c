@@ -1,6 +1,7 @@
 #include "menu.h"
 #include "music.h"
 #include "intro.h"
+#include "play.h"
 #define MW 120
 #define MH 80
 #define REG_BG2PA R16(0x04000020)
@@ -35,6 +36,7 @@ enum { M_IDLE, M_SLIDE, M_TRANS };
 
 static u32 buf[MW * MH / 4] __attribute__((section(".ewram"), aligned(4)));   // decoded frame (EWRAM; falls back to normal RAM if no section)
 static int t, frame, page, was_b, was_a, was_l, was_r, acc;
+static int menu_launch, menu_feedback;
 static int st, level, sel, prev_main, mode;      // level 0 = NEW GAME/LOAD/ERASE, level 1 = SLOT 1/SLOT 2/BACK; mode = which main option opened the slots
 static int cx, slide_from, slide_t, lift;        // cursor centre x (px), slide state, slide "hop" height
 static int dir, tp, tsub, v, switched;           // transition: +1 forward / -1 back, frame, sub-step, vblank counter
@@ -91,6 +93,7 @@ void menu_enter(void) {
     for (int i = 0; i < ui_tile_words; i++) UI_VRAM[i] = ui_tiles[i];
     for (int e = 0; e < 128; e++) OAMW[e * 4] = 0x0200;             // drop the title's skyline sprites (intro_reload_title() restores them on exit)
     frame = 0; t = 0; page = 0; acc = 0; pend = 0; pend_pal = 0;
+    menu_launch = 0; menu_feedback = 0;
     was_a = was_b = was_l = was_r = 1;                              // keys held on entry must be released first
     st = M_IDLE; level = 0; sel = 0; prev_main = 0; mode = 0; cx = LX[0][0]; lift = 0;
     draw(menu_bands[0], 0);
@@ -100,7 +103,11 @@ void menu_enter(void) {
 
 static void start_trans(int d) { dir = d; st = M_TRANS; tp = 0; tsub = 0; v = 0; switched = 0; }
 static void go_sel(int n) { slide_from = cx; sel = n; slide_t = 0; st = M_SLIDE; }
-static void slot_chosen(int m, int slot) { (void)m; (void)slot; }    // PLACEHOLDER: m = 0 NEW GAME / 1 LOAD / 2 ERASE, slot = 0 or 1 -> start / load / erase here
+static void slot_chosen(int m, int slot) {
+    if (m == 2) { play_erase_slot(slot); menu_feedback = 45; }
+    else if (m == 1 && !play_slot_valid(slot)) { menu_feedback = 45; }
+    else menu_launch = (m == 0 ? 2 : 4) + slot;
+}
 
 int menu_update(void) {
     flip_pending();
@@ -151,5 +158,7 @@ int menu_update(void) {
         }
     }
     ui_draw(fade);
+    if (menu_feedback) { if (t & 4) OBJ_PAL[225] = RGB(31, 4, 4); --menu_feedback; }
+    if (menu_launch) { int r = menu_launch; menu_launch = 0; return r; }
     return 0;
 }

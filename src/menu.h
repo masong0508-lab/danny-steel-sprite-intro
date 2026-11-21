@@ -11,4 +11,4 @@ extern const int TRANS_FRAMES;
 extern const int ui_tile_words;                 // label + cursor sprite tiles (tools/make_menu_ui.py)
 extern const u32 ui_tiles[];
 void menu_enter(void);                        // call after the title's fade-out; fades the picture in and the music down to 40%
-int  menu_update(void);                       // call once per vblank; returns 1 when the player backs out (B) -> caller rebuilds the title
+int  menu_update(void);                       // 0 continue, 1 back to title, 2/3 new slot, 4/5 load slot

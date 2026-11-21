@@ -9,12 +9,13 @@
 #include "logo.h"
 #include "intro.h"
 #include "menu.h"
+#include "play.h"
 
 #define TITLE_ROW 1                       // map rows for the text layers
 #define PRESS_ROW 16
 
 enum { ST_FADE_IN, ST_RUN, ST_FADE_OUT };
-static int in_menu, state, state_t, frames, was_down, keep_music, white_in, city_t;   // keep_music: the intro already started the song
+static int in_menu, in_game, state, state_t, frames, was_down, keep_music, white_in, city_t;   // keep_music: the intro already started the song
 static u32 ph_x, ph_y;                    // scroll phases, 16.16 turns
 static s16 sin_lut[256];                  // Q12
 
@@ -106,8 +107,13 @@ int main(void) {
         if (REG_VCOUNT >= 160) {
             if (!in_vblank) {
                 in_vblank = 1;
-                if (in_menu) { if (menu_update()) { in_menu = 0; intro_reload_title(); title_setup(); } }   // B: back to the title
-                else frame_update();
+                if (in_menu) {
+                    int action = menu_update();
+                    if (action == 1) { in_menu = 0; intro_reload_title(); title_setup(); }
+                    else if (action >= 2) { in_menu = 0; in_game = 1; play_enter(action >= 4, (action - 2) & 1); }
+                } else if (in_game) {
+                    if (play_update()) { in_game = 0; in_menu = 1; menu_enter(); }
+                } else frame_update();
             }
         }
         else in_vblank = 0;
