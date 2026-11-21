@@ -79,11 +79,12 @@ static void building(uint8_t *p,int sx,int sy,int wx,int wy,
  unsigned h=27u+(unsigned)(((wx/3+wy/3)&1)*9);
  if(type=='A')h=36u;
  int front=exposed(wx,wy+1),side=exposed(wx+1,wy);
- unsigned variant=(n>>10)&7u;
- /* An actual Potheads storefront resides on the accessible edge of
-    the south-east block, not at a randomly moving map location. */
+ /* Neighboring wall units share an architectural style. Source
+    selection is per district, NOT independent random shop wallpaper. */
+ unsigned variant=(unsigned)(((wx/3)*5+(wy/3)*3)&7);
  int potheads=(wx==21&&wy==11);
  if(potheads)variant=7u;
+ else if(wx>=21&&wy>=10&&wy<=12)variant=4u;
  else if(type=='A')variant=6u;
  else if(wx>=10&&wx<=13&&wy>=3&&wy<=6)variant=3u;
  if(front)hd_facade_wall(p,sx,sy,(int)h,variant,0u);
