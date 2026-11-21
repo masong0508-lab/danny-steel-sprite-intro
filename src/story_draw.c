@@ -1,4 +1,5 @@
 #include "story_draw.h"
+#include "story_checks.h"
 
 #define RGB(r,g,b) ((r)|((g)<<5)|((b)<<10))
 const uint16_t story_palette[32] = {
@@ -377,6 +378,52 @@ static int memories_today(const Story *s){
 static void panel(uint8_t *p,int top,int bottom){
     box(p,0,top,120,bottom-top,21);box(p,0,top,120,1,22);
 }
+/* A genuine, accessible check-list for game consequences.
+   This is computed from live play state, not SRAM checksum markers.
+   Access: START (pause), R (open/next page), B (close), START (resume). */
+static void check_icon(uint8_t *p,int x,int y,int result,int harmful){
+    box(p,x,y,7,7,3);
+    box(p,x+1,y+1,5,5,result?(harmful?16:12):5);
+    if(!result){box(p,x+2,y+2,3,3,3);return;}
+    if(harmful){
+        put(p,x+2,y+2,20);put(p,x+4,y+4,20);
+        put(p,x+3,y+3,20);put(p,x+4,y+2,20);
+        put(p,x+2,y+4,20);
+    }else{
+        put(p,x+2,y+3,20);put(p,x+3,y+4,20);
+        put(p,x+4,y+3,20);put(p,x+5,y+2,20);
+    }
+}
+static void consequence_board(uint8_t *p,const Story *s){
+    unsigned page=story_check_page(s);
+    if(page>=STORY_CHECK_PAGE_COUNT)page=0;
+    unsigned total=story_check_count_page(s,page);
+    int risky=page==2u;
+    box(p,2,9,116,71,3);
+    box(p,4,11,112,67,21);
+    box(p,4,11,112,13,24);
+    text(p,8,13,page==0?"MAIN STORY":page==1?"LIFE AND LEGACY":
+                         "CHOICES AND RISKS",20,24);
+    char number[]="0/5";
+    number[0]=(char)('0'+total);
+    text(p,99,13,number,20,3);
+    text(p,8,20,page==0?"5 CORE MILESTONES":
+        page==1?"PEOPLE WORK AND CARE":"HARM IS NEVER AUTOMATIC",18,27);
+    box(p,8,25,103,2,3);
+    box(p,8,25,(int)total*103/5,2,risky?16:13);
+    for(unsigned i=0;i<STORY_CHECKS_PER_PAGE;i++){
+        unsigned id=page*STORY_CHECKS_PER_PAGE+i;
+        int y=29+(int)i*9;
+        int checked=(int)story_check_live(s,id);
+        box(p,7,y-1,106,9,(i&1u)?3:21);
+        check_icon(p,9,y,checked,risky&&i<4u);
+        text(p,21,y+1,story_check_name(id),
+             checked?(risky&&i<4u?18:20):10,23);
+    }
+    box(p,4,73,112,5,24);
+    text(p,6,73,"R NEXT  B BACK  START PLAY",20,27);
+}
+
 /* Short, staged caption beats; the audio remains the master timing.
    Unlike a blocking textbox these never wait for A during a 72-second cue. */
 /* One compact menu is reused for all five locations in either camera mode. */
@@ -552,7 +599,12 @@ void story_draw(const Story *s,int frame,uint8_t *p) {
             text(p,23,2,goal,20,12);text(p,75,2,direction,18,4);}
         else text(p,3,2,"DANNY / OLD QUARTER",20,29);
     }
-    for(int i=0;i<5;i++)box(p,90+i*6,2,4,4,(s->flags&(1<<i))?18:3);
+    for(int i=0;i<5;i++){
+        int x=90+i*6,done=!!(s->flags&(1<<i));
+        box(p,x,2,5,5,done?12:3);
+        if(done){put(p,x+1,4,20);put(p,x+2,5,20);put(p,x+3,3,20);}
+        else box(p,x+1,3,3,3,5);
+    }
     if(s->dialogue){
         int count; const StoryPage *pages=story_pages(s,&count);
         if(pages&&s->page<count){
@@ -572,9 +624,16 @@ void story_draw(const Story *s,int frame,uint8_t *p) {
         text(p,4,62,s->choice?"GO    > STAY":" > GO    STAY",18,28);
         text(p,4,72,"LEFT/RIGHT   A CHOOSE",20,29);
     } else if(s->paused){
-        panel(p,47,80);text(p,5,53,"PAUSED / OLD QUARTER",20,28);
-        text(p,5,63,"START RESUME",18,27);
-        text(p,5,72,"B SAVE AND MENU",20,27);
+        if(s->choice&STORY_CHECK_PAGE_ACTIVE){
+            consequence_board(p,s);
+        }else{
+            panel(p,38,80);
+            box(p,4,41,112,1,18);
+            text(p,6,44,"PAUSED / OLD QUARTER",20,27);
+            text(p,6,54,"R  LIFE CONSEQUENCES",18,27);
+            text(p,6,63,"START  RESUME GAME",20,27);
+            text(p,6,72,"B  SAVE AND MENU",20,27);
+        }
     } else {
         box(p,0,72,120,8,21);
         if(s->rescue_stage>=STORY_RESCUE_MISSING &&
@@ -584,6 +643,10 @@ void story_draw(const Story *s,int frame,uint8_t *p) {
             char hint[]="MARA SAFE BAD 0/4 B RISK";
             hint[14]=(char)('0'+story_bad_count(s));
             text(p,3,74,hint,20,29);
+        }else if(story_bad_count(s)>=2 && s->rescue_stage==STORY_RESCUE_NONE){
+            char hint[]="WARNING  BAD 0/4 START R";
+            hint[13]=(char)('0'+story_bad_count(s));
+            text(p,3,74,hint,18,28);
         }else if(s->life_stage==STORY_LIFE_WAIT ||
            s->life_stage==STORY_LIFE_FOLLOWUP_WAIT){
             char hint[]="0/5 E0 S0 B0 M0 A0 W00";
