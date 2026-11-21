@@ -1,5 +1,6 @@
 #include "story.h"
 #include "story_checks.h"
+#include "studio.h"
 
 /* A quiet neighborhood, not a random maze. Every story anchor is reachable on foot. */
 static const char *const town[STORY_H] = {
@@ -454,7 +455,9 @@ SCRIPT(d_project_song_3,
 SCRIPT(d_project_song_done,
  {"ARCHIVE TAPE", "MASTER COPY SAVED.", "THE LAST BORE REEL."},
  {"DANNY", "The quiet parts", "made it in too."},
- {"DANNY", "Let someone else", "hear the whole song."});
+ {"DANNY", "Let someone else", "hear the whole song."},
+ {"BORE ARCHIVE", "ADVANCED UNLOCKED.", "A AT THE MUSIC DESK."},
+ {"BORE ARCHIVE", "LISTEN IS EASY.", "EDIT WHEN YOU WANT."});
 SCRIPT(d_project_art_2,
  {"ROOFTOP", "Buildings rise over", "the painted horizon."},
  {"DANNY", "I know those", "windows by heart."});
@@ -744,6 +747,7 @@ static void talk(Story *s, uint8_t id) {
 }
 void story_new(Story *s, int slot) {
     *s = (Story){0};
+    studio_reset(); /* a new game starts with a clean optional tune */
     s->x = 12; s->y = 13; s->prev_x = s->x; s->prev_y = s->y;
     s->facing = 3; s->slot = (uint8_t)(slot & 1);
     s->day_number = 1;
@@ -909,6 +913,18 @@ static void step_project(Story *s,unsigned station,unsigned soft){
 }
 static void finish_moment(Story *s){
     unsigned station=s->activity,option=s->activity_choice;
+    if(station=='E'){
+        if(option){
+            s->activity=STORY_ACT_STUDIO;
+            s->activity_choice=0; /* transport stopped, no auto play */
+            s->studio_tab=STUDIO_SONG;s->studio_cursor=0;
+            s->cinema=CINE_MUSIC;s->cinema_frame=0;
+        }else{
+            s->activity=STORY_ACT_NONE;
+            talk(s,D_ACT_MUSIC_LISTEN);
+        }
+        return;
+    }
     if(station=='m'||station=='r'){
         s->activity=STORY_ACT_NONE;s->activity_choice=0;
         step_project(s,station,option);
@@ -1095,10 +1111,17 @@ static void interact(Story *s) {
         else talk(s,D_BUS_LOCKED);
         break;
     case 'M':
-        if(can_make_memory(s)){
+        if(s->rescue_stage>=STORY_RESCUE_MISSING &&
+           s->rescue_stage<=STORY_RESCUE_TRACE){
+            talk(s,D_MARA_MISSING); /* no cheerful studio work during rescue */
+        }else if(s->rescue_stage==STORY_RESCUE_LOST){
+            talk(s,s->day_number>=STORY_HOPE_REALIZE_DAY?
+                 D_HOPE_NOTE_LATE:D_HOPE_NOTE_WAIT);
+        }else if(s->song_steps>=STORY_PROJECT_DONE){
+            moment_menu(s,'E'); /* LISTEN or the unlocked full editor */
+        }else if(can_make_memory(s)){
             if(!(s->daily_mask&STORY_DAY_MUSIC))moment_menu(s,'M');
-            else if(s->song_steps<STORY_PROJECT_DONE)moment_menu(s,'m');
-            else talk(s,D_PROJECT_SONG_DONE);
+            else moment_menu(s,'m');
         }else if(!(s->flags & STORY_MUSIC)){
             s->flags |= STORY_MUSIC;s->dirty=1;talk(s,D_MUSIC);
         }else talk(s,s->work>=8?D_ACT_MUSIC_PROGRESS:D_MUSIC_AGAIN);
@@ -1226,7 +1249,8 @@ void story_tick(Story *s, uint16_t keys) {
     /* One step is exactly one VBlank, including dialogue. Pause freezes the
        clock. Day transitions never steal controls during a fight or textbox. */
     if (!s->ended && s->life_stage >= STORY_LIFE_WAIT &&
-        s->life_stage <= STORY_LIFE_LAST_WORK && !s->paused) {
+        s->life_stage <= STORY_LIFE_LAST_WORK && !s->paused &&
+        s->activity!=STORY_ACT_STUDIO) {
         if (++s->day_frame >= STORY_DAY_FRAMES) {
             s->day_frame=0;
             if (s->day_number<99) ++s->day_number;
@@ -1311,6 +1335,44 @@ void story_tick(Story *s, uint16_t keys) {
         if(pressed&(LEFT|RIGHT|UP|DOWN))s->risk_choice^=1u;
         if(pressed&B){s->risk_menu=0;s->risk_choice=0;s->cinema=CINE_NONE;}
         else if(pressed&A)resolve_risk(s);
+        return;
+    }
+    if(s->activity==STORY_ACT_STUDIO){
+        /* Easy enough to play entirely with the D-pad and face buttons.
+           L/R switch pages, D-pad edits the current setting, SELECT
+           previews the *actual* PSG notes, B exits without losing work. */
+        if(pressed&(B|START)){
+            s->activity=STORY_ACT_NONE;s->activity_choice=0;
+            s->cinema=CINE_NONE;
+            if(pressed&START)s->paused=1;
+            return;
+        }
+        if(pressed&(L|R)){
+            s->studio_tab=(uint8_t)((s->studio_tab+
+                ((pressed&L)?STUDIO_TAB_COUNT-1u:1u))%STUDIO_TAB_COUNT);
+            s->studio_cursor=0;
+        }
+        unsigned count=studio_cursor_count(s->studio_tab);
+        if(pressed&LEFT)
+            s->studio_cursor=(uint8_t)((s->studio_cursor+count-1u)%count);
+        if(pressed&RIGHT)
+            s->studio_cursor=(uint8_t)((s->studio_cursor+1u)%count);
+        if(pressed&UP){
+            studio_change(s->studio_tab,s->studio_cursor,1);
+            s->dirty=1;
+        }else if(pressed&DOWN){
+            studio_change(s->studio_tab,s->studio_cursor,-1);
+            s->dirty=1;
+        }
+        if(pressed&A){
+            if(s->studio_tab==STUDIO_PERFORM)
+                s->activity_choice^=1u;
+            else {
+                studio_toggle(s->studio_tab,s->studio_cursor);
+                s->dirty=1;
+            }
+        }
+        if(pressed&SELECT)s->activity_choice^=1u;
         return;
     }
     if(s->activity){

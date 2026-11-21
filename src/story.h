@@ -23,6 +23,9 @@
 #define STORY_DAY_RECAP 128u
 #define STORY_STAT_MAX 5u
 #define STORY_ACT_NONE 0u
+/* The new advanced editor uses the existing activity menu routing.
+   Its two tiny UI bytes remain transient; notes/order live in studio.c. */
+#define STORY_ACT_STUDIO 'Z'
 /* Four authored stages per creative project. No project gates an ending. */
 #define STORY_PROJECT_DONE 4u
 #define STORY_STYLE_SONG_SOFT 1u
@@ -83,6 +86,7 @@ typedef struct {
     uint8_t energy, spark, bond, work; /* saved resources */
     uint8_t song_steps, art_steps, project_style; /* SRAM v5; stages 0..4 */
     uint8_t activity, activity_choice; /* transient daily choice menu */
+    uint8_t studio_tab, studio_cursor; /* only valid in STUDIO mode */
     uint8_t bad_mask, rescue_stage; /* companion SRAM record */
     uint8_t risk_menu, risk_choice; /* confirmed ethical choices */
     uint16_t day_frame, finale_frame;
