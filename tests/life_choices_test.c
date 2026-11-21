@@ -68,7 +68,7 @@ int main(void){
  {int count=0;const StoryPage *pages=story_pages(&s,&count);
   assert(count>=2&&!strcmp(pages[0].line1,"You never have to"));}
  done(&s);
- s.work=9;stand(&s,19,8,3);press(&s,A);
+ s.work=9;s.daily_mask|=STORY_DAY_MUSIC;stand(&s,19,8,3);press(&s,A);
  {int count=0;const StoryPage *pages=story_pages(&s,&count);
   assert(count>=2&&!strcmp(pages[0].line1,"The new arrangement"));}
  done(&s);
