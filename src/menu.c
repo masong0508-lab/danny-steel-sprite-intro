@@ -1,5 +1,6 @@
 #include "menu.h"
 #include "hd_canvas.h"
+#include "story_draw.h"
 #include "menu_ink.h"
 #include "music.h"
 #include "play.h"
@@ -99,7 +100,7 @@ int menu_update(void){
   if(level==1&&mode==2&&sel<2){
    unsigned previous=(unsigned)erase_hold;
    erase_hold=(int)menu_erase_step(previous,ea,a&&play_slot_valid(sel));
-   if(erase_hold>=MENU_ERASE_HOLD){
+   if((unsigned)erase_hold>=MENU_ERASE_HOLD){
     play_erase_slot(sel);erase_hold=0;
     menu_note=MENU_NOTE_ERASED;note_ticks=100;redraw=1;
    }else if(erase_hold!= (int)previous || (previous && !erase_hold))redraw=1;
