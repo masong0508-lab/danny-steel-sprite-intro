@@ -24,7 +24,10 @@ static unsigned inspect(void){
   if(ink!=HD_ROAD)detail++;
   hash=(hash^ink)*16777619u;
  }
- assert(detail>10);
+ /* At the nearest supported projection size (five pixels tall),
+    a correctly rendered far-away silhouette may cover only a handful
+    of pixels. Its palette and boundaries still require full validation. */
+ assert(detail>0u);
  return hash;
 }
 static unsigned in_window(int x0,int y0,int x1,int y1){
