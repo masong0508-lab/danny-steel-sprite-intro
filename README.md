@@ -230,3 +230,14 @@ unlocks story reactions from the BORE clerk; the score reuses authored
 PSG music cues. This is a story-driven arranging minigame, **not** a
 free-form piano roll, live sampling DAW or user-composed audio export.
 Erasing an early demo does not erase a different completed master.
+
+### Unlockable BORE Advanced Studio — Bogotchi-style hierarchy
+After four normal recording sessions, the BORE desk offers **LISTEN**
+(the original simple mode) or **STUDIO**. The latter opens six readable
+SONG/NOTES/ORDER/LYRICS/CHOIR/PERFORM tabs. The 8-step note grid and
+four-phrase order control genuine PSG playback; tempo and digital
+harmony are editable, while lyrics are displayed **text cues**, not
+sampled vocals. L/R changes tabs, D-pad edits, A changes a value,
+SELECT previews, B exits. Every slot saves its own arrangement in
+a checksummed 24-byte extension without changing the main SRAM format.
+See docs/BORE_ADVANCED_STUDIO.md.
