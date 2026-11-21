@@ -11,12 +11,6 @@
    trading cartridge space for a predictable full-screen copy.
    EWRAM: ZERO new framebuffers, no heap, no decompression scratch. */
 
-static void frame(uint8_t *p,int x,int y,int w,int h,unsigned color){
- hd_rect(p,x,y,w,1,color);
- hd_rect(p,x,y+h-1,w,1,color);
- hd_rect(p,x,y,1,h,color);
- hd_rect(p,x+w-1,y,1,h,color);
-}
 static void enemy(uint8_t *p,unsigned rival,unsigned tick){
  const unsigned char *asset=hd_arena_enemies[rival%3u];
  /* Two-pixel coat motion, with grounded boot shadow inside the art.
