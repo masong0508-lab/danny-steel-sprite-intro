@@ -683,10 +683,14 @@ static void rooftop(uint8_t *p,unsigned t,unsigned page){
  int reaction=page>=3u&&t>=192u;
  if(reaction)hd_actor_closeup(p,106,143,1,t,5);
  else actor(p,painter,142,1,t,t<92u?2:3);
- if(!reaction&&t>=92u){
-  int hand=painter+23;
-  hd_line(p,hand,93,hand+8,87,HD_BARK);
-  hd_pixel(p,hand+8,87,HD_RED_SHADE);
+ if(t>=92u){
+  /* Foreground reaction shots do not ERASE the work that was painted
+     before the camera cut. Only the physically absent brush is hidden. */
+  if(!reaction){
+   int hand=painter+23;
+   hd_line(p,hand,93,hand+8,87,HD_BARK);
+   hd_pixel(p,hand+8,87,HD_RED_SHADE);
+  }
   int strokes=(int)((t-92u)/32u);
   if(strokes>6)strokes=6;
   for(int j=0;j<strokes;j++){
@@ -730,11 +734,15 @@ static void clinic(uint8_t *p,const Story *s,unsigned t,int last){
               s->rescue_stage==STORY_RESCUE_LOST;
  actor(p,68,135,1,t,last?7:1);
  if(last&&!missing)actor(p,115,136,2,t,5);
- if(s->page>=3u&&t>=160u)
+ if(s->page>=3u&&t>=160u){
   hd_actor_closeup(p,184,142,5,t,1);
- else actor(p,198,133,5,t,1);
- hd_line(p,181,106,157,102,HD_PLASTER_LIT);
- hd_ellipse(p,157,101,3,2,HD_SKIN);
+ }else{
+  actor(p,198,133,5,t,1);
+  /* In the wide shot the doctor touches the medical chart. A close-up
+     has no independent hovering limb at the old actor coordinate. */
+  hd_line(p,181,106,157,102,HD_PLASTER_LIT);
+  hd_ellipse(p,157,101,3,2,HD_SKIN);
+ }
 }
 void hd_cinema_draw(uint8_t *p,const Story *s,unsigned t){
  unsigned sc=s->cinema,page=s->page;
