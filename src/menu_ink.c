@@ -37,6 +37,11 @@ static void letter(uint8_t *p,int x,int y,char c,unsigned ink){
 static void lettering(uint8_t *p,int x,int y,const char *s,unsigned ink){
  for(int i=0;s[i]&&i<28;i++)letter(p,x+4*i,y,s[i],ink);
 }
+unsigned menu_erase_step(unsigned held,int new_press,int down){
+ if(!down)return 0u;
+ if(!held)return new_press?1u:0u;
+ return held<MENU_ERASE_HOLD?held+1u:MENU_ERASE_HOLD;
+}
 void menu_ink_draw(uint8_t *p,unsigned level,unsigned mode,
                    unsigned slot,unsigned valid,unsigned held,
                    unsigned feedback){
