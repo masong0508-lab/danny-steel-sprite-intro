@@ -564,3 +564,46 @@ void cinema_moment_detail(uint8_t *p,unsigned scene,unsigned work,unsigned bond)
         pixel(p,55,57,18);pixel(p,71,57,18);
     }
 }
+
+/* Physical project milestones, not a separate static "success" screen.
+   Scene interiors, characters and props remain continuous. */
+void cinema_project_detail(uint8_t *p,unsigned scene,unsigned music,
+                           unsigned art,unsigned style,unsigned tod){
+ if(scene==CINE_ART){
+    if(art>4u)art=4u;
+    for(unsigned i=0;i<art;i++){
+        int x=73+(int)i*6;
+        int y=28+(int)(i%2u)*3;
+        stroke(p,x,y,x+4,y+1,(style&2u)?18:20);
+        stroke(p,x,y+1,x+3,y+3,13);
+    }
+    if(art==4u){
+        rect(p,70,19,31,2,14);rect(p,72,42,27,3,14);
+        rect(p,81,43,9,2,20); /* brass title plate on canvas */
+        if(style&2u)disk(p,91,26,3,18);
+    }
+ }else if(scene==CINE_MUSIC){
+    if(music>4u)music=4u;
+    for(unsigned i=0;i<music;i++){
+        int x=80+(int)i*6;
+        rect(p,x,24+(int)(i%2u)*3,4,3,(style&1u)?26:20);
+        rect(p,x+2,30,3,2,18);
+    }
+    if(music==4u){
+        rect(p,81,39,25,5,14);
+        rect(p,84,41,20,1,20);
+        disk(p,46,49,8,(style&1u)?26:22); /* boxed master reel */
+        disk(p,46,49,2,20);
+    }
+ }else if(scene==CINE_MARA && tod==2u){
+    /* The cafe is still available after dark: lit shop windows and lamp. */
+    rect(p,8,29,20,15,18);
+    rect(p,9,30,18,13,23);
+    rect(p,17,30,2,13,14);
+    rect(p,8,37,20,1,14);
+ }else if(scene==CINE_BORE && tod==2u){
+    /* Shift-change desk lamp, without moving the one reachable clerk. */
+    disk(p,103,16,5,18);
+    rect(p,101,20,5,7,14);
+ }
+}

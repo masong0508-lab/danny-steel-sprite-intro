@@ -63,7 +63,13 @@ int story_goal(const Story *s, int *x, int *y, const char **label) {
         } else if (!(s->daily_mask&STORY_DAY_MUSIC)) {
             *x=19; *y=7; *label="MUSIC";
         } else {
-            *x=14; *y=6; *label="REST";
+            if(s->art_steps<STORY_PROJECT_DONE){
+                *x=14; *y=6; *label="ART WORK";
+            }else if(s->song_steps<STORY_PROJECT_DONE){
+                *x=19; *y=7; *label="MIX TAPE";
+            }else{
+                *x=14; *y=6; *label="REST";
+            }
         }
     } else if (!(s->flags&STORY_HOME)) {
         *x=5; *y=5; *label="LETTER";

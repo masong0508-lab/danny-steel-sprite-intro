@@ -387,10 +387,18 @@ static void activity_menu(uint8_t *p,const Story *s){
     case 'L':where="LETTER / WHAT NOW";left="WRITE";right="KEEP";break;
     case 'C':where="BORE / ANOTHER FORM";left="FILE";right="JOKE";break;
     case 'M':where="MUSIC / A NEW TAKE";left="RECORD";right="LISTEN";break;
+    case 'm':where="BORE TAPE / NEXT STEP";left="BUILD";right="SOFTEN";break;
+    case 'r':where="CANVAS / NEXT STEP";left="LAYER";right="LIGHT";break;
     default:where="ROOFTOP / THE SKY";left="PAINT";right="REST";break;
     }
     panel(p,45,80);
     text(p,4,48,where,18,26);
+    if(s->activity=='m' || s->activity=='r'){
+        char progress[]="STEP 0 / 4";
+        unsigned phase=s->activity=='m'?s->song_steps:s->art_steps;
+        progress[5]=(char)('0'+(phase>4u?4u:phase));
+        text(p,60,48,progress,20,12);
+    }
     text(p,13,58,left,s->activity_choice?22:20,10);
     text(p,69,58,right,s->activity_choice?20:22,10);
     text(p,s->activity_choice?61:4,58,">",18,1);
@@ -455,6 +463,8 @@ void story_draw(const Story *s,int frame,uint8_t *p) {
     } else if(s->cinema) {
         cinema_draw(p,s->cinema,s->cinema_frame,s->page,s->finale_frame);
         cinema_moment_detail(p,s->cinema,s->work,s->bond);
+        cinema_project_detail(p,s->cinema,s->song_steps,s->art_steps,
+                              s->project_style,s->day_frame/(STORY_DAY_FRAMES/3u));
     } else if(s->ended && s->ending==STORY_END_NEUTRAL) {
         scene_rooftop(s,frame,p);
     } else if(s->ended && s->ending==STORY_END_GOOD){
@@ -511,11 +521,13 @@ void story_draw(const Story *s,int frame,uint8_t *p) {
         box(p,0,72,120,8,21);
         if(s->life_stage==STORY_LIFE_WAIT ||
            s->life_stage==STORY_LIFE_FOLLOWUP_WAIT){
-            char hint[]="A ACT 0/5 E0 S0 B0 W00";
-            hint[6]=(char)('0'+memories_today(s));
-            hint[11]=(char)('0'+s->energy);
-            hint[14]=(char)('0'+s->spark);
-            hint[17]=(char)('0'+s->bond);
+            char hint[]="0/5 E0 S0 B0 M0 A0 W00";
+            hint[0]=(char)('0'+memories_today(s));
+            hint[5]=(char)('0'+s->energy);
+            hint[8]=(char)('0'+s->spark);
+            hint[11]=(char)('0'+s->bond);
+            hint[14]=(char)('0'+s->song_steps);
+            hint[17]=(char)('0'+s->art_steps);
             hint[20]=(char)('0'+s->work/10);
             hint[21]=(char)('0'+s->work%10);
             text(p,3,74,hint,20,29);

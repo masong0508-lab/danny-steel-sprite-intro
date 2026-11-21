@@ -18,3 +18,8 @@ void cinema_draw(uint8_t *pixels, unsigned scene, unsigned tick,
 
 /* Persisted creative work appears on the real rooftop/studio sets. */
 void cinema_moment_detail(uint8_t *pixels, unsigned scene, unsigned work, unsigned bond);
+
+/* One low-cost embellishment pass: completed creative projects and evening
+   shop lights. All drawing remains inside the original indexed buffer. */
+void cinema_project_detail(uint8_t *pixels, unsigned scene, unsigned song_steps,
+                           unsigned art_steps, unsigned style, unsigned time_of_day);
