@@ -129,7 +129,9 @@ enum { D_NONE, D_OPEN, D_LETTER, D_LETTER_AGAIN, D_CLERK_LOCKED, D_CLERK, D_CLER
        D_RESCUE_TRACE, D_RESCUE_SAVED, D_RESCUE_LOST,
        D_RESCUE_AFTERSHOCK, D_BAD_END, D_BAD_END_SAVED, D_RESCUE_NOTES_1,
        D_RESCUE_NOTES_2, D_RESCUE_NOTES_3, D_RESCUE_NOTES_SAVED,
-       D_BUS_RESCUE, D_BAD_WARNING_2, D_CLINIC_RESCUE };
+       D_BUS_RESCUE, D_BAD_WARNING_2, D_CLINIC_RESCUE,
+       D_RESCUE_WITNESS_TRUST, D_RESCUE_SAVED_TRUST,
+       D_RESCUE_SAVED_ART };
 #define SCRIPT(name, ...) static const StoryPage name[] = { __VA_ARGS__ }
 SCRIPT(d_open,
  {"DANNY", "The last bus leaves", "at sundown. Of course."},
@@ -519,6 +521,20 @@ SCRIPT(d_rescue_notes_saved,
 SCRIPT(d_bus_rescue,
  {"DRIVER", "Back for a ticket?", "There's still time."},
  {"DANNY", "Mara made it home.", "I can still choose."});
+/* Good marks alter the rescue itself: deeds change what NPCs know and say.
+   These are pure consequences of existing progress, never grind gates. */
+SCRIPT(d_rescue_witness_trust,
+ {"WITNESS", "You helped us with", "Mirror Orchard."},
+ {"WITNESS", "I trust you with", "Mara's trail now."},
+ {"WITNESS", "The terminal has", "the last known stop."});
+SCRIPT(d_rescue_saved_trust,
+ {"MARA", "I knew you would", "keep looking for me."},
+ {"DANNY", "You trusted me", "even after that."},
+ {"MARA", "Come on. Let's", "get back to the cafe."});
+SCRIPT(d_rescue_saved_art,
+ {"MARA", "You found me.", "We can go home."},
+ {"DANNY", "Your painting is", "waiting at the roof."},
+ {"MARA", "Show me that sky", "when we get back."});
 #undef SCRIPT
 #define SEQ(name) {name, (uint8_t)(sizeof(name) / sizeof((name)[0]))}
 static const struct { const StoryPage *pages; uint8_t count; } scripts[] = {
@@ -555,7 +571,9 @@ static const struct { const StoryPage *pages; uint8_t count; } scripts[] = {
   SEQ(d_rescue_aftershock), SEQ(d_bad_end), SEQ(d_bad_end_saved),
   SEQ(d_rescue_notes_1),
   SEQ(d_rescue_notes_2), SEQ(d_rescue_notes_3), SEQ(d_rescue_notes_saved),
-  SEQ(d_bus_rescue), SEQ(d_bad_warning_2), SEQ(d_clinic_rescue)
+  SEQ(d_bus_rescue), SEQ(d_bad_warning_2), SEQ(d_clinic_rescue),
+  SEQ(d_rescue_witness_trust), SEQ(d_rescue_saved_trust),
+  SEQ(d_rescue_saved_art)
 };
 const StoryPage *story_pages(const Story *s, int *count) {
     unsigned id = s->dialogue;
@@ -616,9 +634,10 @@ static uint8_t cinematics_for_dialogue(uint8_t d){
     case D_BAD_MUSIC: return CINE_MUSIC;
     case D_BAD_SERVER: case D_RESCUE_TRACE: case D_RESCUE_AFTERSHOCK: return CINE_SERVER;
     case D_MARA_MISSING: case D_MARA_ABSENT: return CINE_MARA_EMPTY;
-    case D_RESCUE_WITNESS: return CINE_WITNESS;
+    case D_RESCUE_WITNESS: case D_RESCUE_WITNESS_TRUST: return CINE_WITNESS;
     case D_RESCUE_LOST: return CINE_RESCUE_DOOR;
-    case D_RESCUE_SAVED: return CINE_RESCUE_SAVED;
+    case D_RESCUE_SAVED: case D_RESCUE_SAVED_TRUST:
+    case D_RESCUE_SAVED_ART: return CINE_RESCUE_SAVED;
     case D_BAD_END: case D_BAD_END_SAVED: return CINE_BAD;
     case D_BUS_RESCUE: return CINE_BUS;
     case D_BAD_WARNING_2: return CINE_NOTICE;
@@ -886,6 +905,13 @@ static void commit_bad(Story *s,char target){
     }else talk(s,target=='L'?D_BAD_LETTER:target=='C'?D_BAD_CLERK:
                target=='M'?D_BAD_MUSIC:D_BAD_SERVER);
 }
+static void rescue_reunion(Story *s){
+    if(story_check_live(s,STORY_CHECK_MARA_TRUST))
+        talk(s,D_RESCUE_SAVED_TRUST);
+    else if(story_check_live(s,STORY_CHECK_FRAMED_ART))
+        talk(s,D_RESCUE_SAVED_ART);
+    else talk(s,D_RESCUE_SAVED);
+}
 static void resolve_risk(Story *s){
     char target=(char)s->risk_menu;
     unsigned selected=s->risk_choice;
@@ -894,7 +920,8 @@ static void resolve_risk(Story *s){
         if(s->rescue_stage!=STORY_RESCUE_TRACE)return;
         s->rescue_stage=selected?STORY_RESCUE_LOST:STORY_RESCUE_SAVED;
         s->dirty=1;
-        talk(s,selected?D_RESCUE_LOST:D_RESCUE_SAVED);
+        if(selected)talk(s,D_RESCUE_LOST);
+        else rescue_reunion(s);
     }else if(selected)commit_bad(s,target);
 }
 static void interact(Story *s) {
@@ -1013,7 +1040,8 @@ static void interact(Story *s) {
     case 'W':
         if(s->rescue_stage==STORY_RESCUE_MISSING){
             s->rescue_stage=STORY_RESCUE_WITNESS;s->dirty=1;
-            talk(s,D_RESCUE_WITNESS);break;
+            talk(s,story_check_live(s,STORY_CHECK_ORCHARD)?
+                 D_RESCUE_WITNESS_TRUST:D_RESCUE_WITNESS);break;
         }
         if (s->cult_stage == 1) { s->cult_stage = 2; talk(s, D_CULT_WITNESS); s->dirty = 1; }
         else talk(s, s->cult_stage > 1 ? D_CULT_WITNESS_AFTER : D_CULT_NOT_YET);
@@ -1024,7 +1052,7 @@ static void interact(Story *s) {
             s->cinema=CINE_RESCUE_DOOR;s->cinema_frame=0;break;
         }
         if(s->rescue_stage==STORY_RESCUE_SAVED){
-            talk(s,D_RESCUE_SAVED);break;
+            rescue_reunion(s);break;
         }
         if (s->cult_stage == 2) { s->cult_stage = 3; talk(s, D_CULT_SAFETY); s->dirty = 1; }
         else talk(s, D_CULT_SAFE_AGAIN);
