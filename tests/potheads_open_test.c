@@ -46,6 +46,9 @@ static void finish_dialogue(Story *s){
 }
 static void verify_work_not_wishful_thinking(void){
  Story s;story_new(&s,0);
+ assert(s.x==20u&&s.y==11u&&s.facing==0u);
+ assert(!story_solid(s.x,s.y));
+ assert(story_tile(21,11)=='#');
  int count=0;
  const StoryPage *pages=story_pages(&s,&count);
  assert(count==7);
