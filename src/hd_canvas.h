@@ -30,6 +30,7 @@ void hd_menu_draw(uint8_t *p,unsigned page,unsigned mode,unsigned selection,
                   unsigned frame,unsigned feedback,unsigned erase_hold,
                   unsigned slot0_valid,unsigned slot1_valid);
 void hd_world_draw(uint8_t *p,const Story *s,unsigned frame);
+void hd_isometric_draw(uint8_t *p,const Story *s,unsigned frame);
 void hd_first_person_draw(uint8_t *p,const Story *s,unsigned frame);
 void hd_studio_draw(uint8_t *p,const Story *s,unsigned frame);
 int hd_cinema_supports(unsigned scene);
