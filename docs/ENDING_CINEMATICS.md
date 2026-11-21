@@ -131,3 +131,33 @@ arm differences in Mara's scene and final clinic, safe-house progression,
 the good-ending record groove at the 2,600-frame camera cut, bad-ending
 survival context and canaries around a 9,600-byte indexed framebuffer.
 These are visual regression checks, not emulator FPS measurements.
+
+## Emotional storyboard expansion: neutral and good endings
+
+The neutral route used to hold the same rooftop image for five consecutive
+late-song sections. It now tells a coherent visual aftermath: Mara enters
+from the left stairway, approaches the art supplies, finds Danny's folded
+letter, holds it against her chest, and looks over the finished painting.
+Each action has its own score-aligned shot, and the original painted
+canvas remains at exactly the same screen coordinates throughout. The
+corresponding ending captions now describe those specific moments.
+
+The good ending keeps the original record-shop architecture and spinning
+turntable but changes its film coverage across later sections: a discovered
+master record on a shelf, a growing rack of releases, Mara returning to
+listen, and a quiet final record-shop scene after the concert. The record
+sleeve in Mara's earlier shopping shot is now positioned precisely where
+her connected left-hand reaching gesture lands.
+
+The bad ending also differentiates non-dialogue scenes by outcome. An
+unanswered telephone and empty chair appear only when Mara's fate is
+unknown. If she was rescued, a returned note occupies that same physical
+spot instead, preserving her confirmed survival even when Danny later
+chooses another damaging act. There are no graphic depictions.
+
+All additions are short fixed-point/primitive drawing instructions on
+the original 120x80 indexed display. No additional framebuffer, heap
+allocation, large animation atlas or modified save format. Tests in
+`ending_storyboard_test.c` compare the raw film frames, verify physically
+unchanged canvas pixels, check the good ending's four distinct record
+shop beats, contrast bad-ending rescue contexts, and sample every ending.

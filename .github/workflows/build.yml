@@ -77,6 +77,10 @@ jobs:
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/cinema.c tests/cinema_temporal_test.c -o /tmp/danny_cinema_temporal_test
           /tmp/danny_cinema_temporal_test
+      - name: Check distinct musical storyboard beats across all three endings
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/cinema.c tests/ending_storyboard_test.c -o /tmp/danny_ending_storyboard_test
+          /tmp/danny_ending_storyboard_test
       - name: Verify emotional acting and uninterrupted world clock across cinematic cuts
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/cinema.c tests/cinema_acting_clock_test.c -o /tmp/danny_cinema_acting_clock_test

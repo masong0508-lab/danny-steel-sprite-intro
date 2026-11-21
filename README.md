@@ -202,3 +202,12 @@ bad ending. Cinematic shot beats now restart separately from the
 continuous world/record-player animation clock, eliminating abrupt
 background and vinyl resets during score-timed editing. Regression
 tests inspect the real indexed-frame pixels at a film cut.
+
+### Film storyboard expansion (neutral/good/bad)
+The neutral song's five returning rooftop sections now follow Mara
+through a continuous aftermath with the real finished painting and a
+folded letter. Good-ending record-shop visits now evolve through record
+discovery, releases, listeners and an intimate final coda. Bad-ending
+rooftop visuals distinguish an unanswered phone when Mara is missing
+from her confirmed survival after the rescue. See docs/ENDING_CINEMATICS.md
+and tests/ending_storyboard_test.c.
