@@ -23,6 +23,7 @@ void hd_ellipse(uint8_t *p,int cx,int cy,int rx,int ry,unsigned c);
 void hd_text(uint8_t *p,int x,int y,const char *s,unsigned ink,int scale,int track);
 int hd_text_width(const char *s,int scale,int track);
 void hd_copy_120_to_240(uint8_t *out,const uint8_t *in);
+void hd_upscale_inplace(uint8_t *pixels);
 void hd_menu_draw(uint8_t *p,unsigned page,unsigned mode,unsigned selection,
                   unsigned frame,unsigned feedback,unsigned erase_hold,
                   unsigned slot0_valid,unsigned slot1_valid);
