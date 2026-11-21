@@ -139,7 +139,9 @@ enum { D_NONE, D_OPEN, D_LETTER, D_LETTER_AGAIN, D_CLERK_LOCKED, D_CLERK, D_CLER
        D_RESCUE_SAVED_ART,
        D_HOPE_REALIZE, D_HOPE_PHONE_WAIT, D_HOPE_PHONE_LATE,
        D_HOPE_WITNESS, D_HOPE_TERMINAL, D_HOPE_DOOR,
-       D_HOPE_NOTE_WAIT, D_HOPE_NOTE_LATE };
+       D_HOPE_NOTE_WAIT, D_HOPE_NOTE_LATE,
+       D_MARA_CONCERN, D_MARA_WARNING, D_BAD_MUSIC_MASTER,
+       D_GOOD_END_SCARS };
 #define SCRIPT(name, ...) static const StoryPage name[] = { __VA_ARGS__ }
 SCRIPT(d_open,
  {"DANNY", "Last bus tonight.", "Doctor called again."},
@@ -174,7 +176,20 @@ SCRIPT(d_mara,
  {"DANNY", "I'll tell you first.", "You have my word."},
  {"MARA", "And keep the song.", "The silly one."});
 SCRIPT(d_mara_again,
- {"MARA", "Whatever happens,", "do not forget us."});
+ {"MARA", "Do you still have", "time for a walk?"},
+ {"DANNY", "I do now."});
+/* One or two deliberately harmful choices affect Mara's trust *before*
+   disappearance. Neither line presumes which site the player damaged. */
+SCRIPT(d_mara_concern,
+ {"MARA", "You've been talking", "around something."},
+ {"DANNY", "I hurt someone's", "trust. I know."},
+ {"MARA", "Tell me the truth.", "I can listen."},
+ {"DANNY", "I have to start", "by not hiding."});
+SCRIPT(d_mara_warning,
+ {"MARA", "People are getting", "hurt by these edits."},
+ {"DANNY", "I called them small", "until they weren't."},
+ {"MARA", "Stop making others", "pay for your fear."},
+ {"DANNY", "You're right.","No more shortcuts."});
 SCRIPT(d_bus_locked,
  {"DRIVER", "Last bus tonight.", "Seats still open."},
  {"DRIVER", "Your ticket is fine.", "Your goodbyes aren't."});
@@ -319,6 +334,15 @@ SCRIPT(d_good_end,
  {"RECORD STORE", "Mara released them", "after he was gone."},
  {"RECORD STORE", "The songs reached", "millions of people."},
  {"GOOD END", "He never heard", "their final chorus."});
+/* A positive artistic legacy cannot erase harms from optional bad checks.
+   The title of the ending remains unchanged; its moral context does not. */
+SCRIPT(d_good_end_scars,
+ {"YEARS LATER", "Danny lived beyond", "that last bus ride."},
+ {"MARA", "I kept the tapes.", "Not his excuses."},
+ {"BORE CLERK", "The archive kept", "the original copies."},
+ {"RECORD STORE", "After he was gone,", "the songs took off."},
+ {"MARA", "He made real music.", "He did harm too."},
+ {"GOOD END", "One did not erase", "the other."});
 SCRIPT(d_day_notes,
  {"POCKET NOTEBOOK", "The bus can wait.", "The roof cannot."},
  {"POCKET NOTEBOOK", "Read, walk, paint.", "The day continues."},
@@ -469,8 +493,13 @@ SCRIPT(d_bad_clerk,
  {"BORE CLERK", "That forged record", "has a real owner."},
  {"DANNY", "I thought it was", "only paperwork."});
 SCRIPT(d_bad_music,
- {"ARCHIVE TAPE", "THE DEMO WAS ERASED.", "NO BACKUP HERE."},
- {"DANNY", "I cannot laugh", "that one off."});
+ {"ARCHIVE TAPE", "EARLY DEMO ERASED.", "SESSION CREDITS LOST."},
+ {"DANNY", "Other people made", "that track with me."});
+/* Mastering the current recording does not retroactively recreate an
+   erased *early* demo; a master and lost session are distinct artifacts. */
+SCRIPT(d_bad_music_master,
+ {"ARCHIVE TAPE", "EARLY TAKE ERASED.", "MASTER STILL SAFE."},
+ {"DANNY", "A final mix can't", "replace that take."});
 SCRIPT(d_bad_server,
  {"TERMINAL", "PRIVATE NAME POSTED.", "RETRACTING IS HARD."},
  {"DANNY", "I just made life", "harder for someone."});
@@ -621,7 +650,9 @@ static const struct { const StoryPage *pages; uint8_t count; } scripts[] = {
   SEQ(d_rescue_saved_art),
   SEQ(d_hope_realize), SEQ(d_hope_phone_wait), SEQ(d_hope_phone_late),
   SEQ(d_hope_witness), SEQ(d_hope_terminal), SEQ(d_hope_door),
-  SEQ(d_hope_note_wait), SEQ(d_hope_note_late)
+  SEQ(d_hope_note_wait), SEQ(d_hope_note_late),
+  SEQ(d_mara_concern), SEQ(d_mara_warning), SEQ(d_bad_music_master),
+  SEQ(d_good_end_scars)
 };
 const StoryPage *story_pages(const Story *s, int *count) {
     unsigned id = s->dialogue;
@@ -636,7 +667,8 @@ static uint8_t cinematics_for_dialogue(uint8_t d){
     case D_OPEN: return CINE_OPEN;
     case D_LETTER: case D_LETTER_AGAIN: return CINE_LETTER;
     case D_CLERK_LOCKED: case D_CLERK: case D_CLERK_AGAIN: return CINE_BORE;
-    case D_MARA_LOCKED: case D_MARA: case D_MARA_AGAIN: return CINE_MARA;
+    case D_MARA_LOCKED: case D_MARA: case D_MARA_AGAIN:
+    case D_MARA_CONCERN: case D_MARA_WARNING: return CINE_MARA;
     case D_BUS_LOCKED: case D_BUS_READY: case D_END_GO: return CINE_BUS;
     case D_END_STAY: return CINE_STAY;
     case D_MUSIC: case D_MUSIC_AGAIN: return CINE_MUSIC;
@@ -654,7 +686,7 @@ static uint8_t cinematics_for_dialogue(uint8_t d){
     case D_DOCTOR_FIRST: return CINE_CLINIC;
     case D_DOCTOR_RETURN: return CINE_FOLLOWUP;
     case D_DOCTOR_LAST: return CINE_LAST_CLINIC;
-    case D_GOOD_END: return CINE_GOOD;
+    case D_GOOD_END: case D_GOOD_END_SCARS: return CINE_GOOD;
     case D_NEUTRAL_START: return CINE_DAY;
     case D_NEUTRAL_PAINT: case D_NEUTRAL_END: return CINE_FINALE;
     case D_DAY_MARA: case D_DAY_MARA_AFTER: return CINE_MARA;
@@ -679,7 +711,7 @@ static uint8_t cinematics_for_dialogue(uint8_t d){
     case D_CLERK_CLOSING: return CINE_BORE;
     case D_BAD_LETTER: return CINE_LETTER;
     case D_BAD_CLERK: return CINE_BORE;
-    case D_BAD_MUSIC: return CINE_MUSIC;
+    case D_BAD_MUSIC: case D_BAD_MUSIC_MASTER: return CINE_MUSIC;
     case D_BAD_SERVER: case D_RESCUE_TRACE: case D_RESCUE_AFTERSHOCK:
     case D_HOPE_TERMINAL: return CINE_SERVER;
     case D_MARA_MISSING: case D_MARA_ABSENT:
@@ -965,7 +997,8 @@ static void commit_bad(Story *s,char target){
     }else if(count==2u && s->rescue_stage==STORY_RESCUE_NONE){
         talk(s,D_BAD_WARNING_2);
     }else talk(s,target=='L'?D_BAD_LETTER:target=='C'?D_BAD_CLERK:
-               target=='M'?D_BAD_MUSIC:D_BAD_SERVER);
+               target=='M'?(s->song_steps>=STORY_PROJECT_DONE?
+                   D_BAD_MUSIC_MASTER:D_BAD_MUSIC):D_BAD_SERVER);
 }
 static void rescue_reunion(Story *s){
     if(story_check_live(s,STORY_CHECK_MARA_TRUST))
@@ -1019,14 +1052,20 @@ static void interact(Story *s) {
         }
         if (!(s->flags & STORY_STAMP)) talk(s, D_MARA_LOCKED);
         else {
-            if(can_make_memory(s) && !(s->daily_mask&STORY_DAY_MARA))moment_menu(s,'F');
+            /* The Promise checkmark is granted only after the actual
+               promise scene, never from small talk or a menu. */
+            if (!(s->flags & STORY_MARA)) {
+                talk(s,D_MARA);
+                s->flags |= STORY_MARA;s->dirty=1;
+            } else if(story_bad_count(s)>=2)talk(s,D_MARA_WARNING);
+            else if(story_bad_count(s)==1)talk(s,D_MARA_CONCERN);
+            else if(can_make_memory(s) && !(s->daily_mask&STORY_DAY_MARA))moment_menu(s,'F');
             else if(can_make_memory(s) && s->art_steps>=STORY_PROJECT_DONE)
                 talk(s,D_MARA_GALLERY);
             else if(can_make_memory(s) && s->bond>=4)talk(s,D_ACT_MARA_CLOSE);
             else if(can_make_memory(s) && day_period(s)==0u)talk(s,D_MARA_MORNING);
             else if(can_make_memory(s) && day_period(s)==2u)talk(s,D_MARA_CLOSING);
-            else talk(s,(s->flags & STORY_MARA) ? D_MARA_AGAIN : D_MARA);
-            if (!(s->flags & STORY_MARA)) { s->flags |= STORY_MARA; s->dirty = 1; }
+            else talk(s,D_MARA_AGAIN);
         }
         break;
     case 'B':
@@ -1218,7 +1257,8 @@ void story_tick(Story *s, uint16_t keys) {
             STORY_GOOD_FINAL_FRAMES:STORY_END_SCORE_FRAMES;
         if (s->finale_frame<limit) ++s->finale_frame;
         if (s->finale_frame>=limit) {
-            if (s->ending==STORY_END_GOOD)talk(s,D_GOOD_END);
+            if (s->ending==STORY_END_GOOD)
+                talk(s,story_bad_count(s)?D_GOOD_END_SCARS:D_GOOD_END);
             else if(s->ending==STORY_END_BAD)
                 talk(s,s->rescue_stage==STORY_RESCUE_AFTERSHOCK?
                      D_BAD_END_SAVED:D_BAD_END);
