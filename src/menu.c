@@ -2,6 +2,7 @@
 #include "music.h"
 #include "intro.h"
 #include "play.h"
+#include "menu_ink.h"
 #define MW 120
 #define MH 80
 #define REG_BG2PA R16(0x04000020)
@@ -27,20 +28,18 @@ static const s16 LX[2][3] = { {67, 134, 187}, {65, 124, 178} };   // label centr
 #define CURSOR_Y 79                             /* top of the 16x32 cursor sprite */
 
 // ---- option-select transition (reference video: labels fade as a dark rounded square dissolves in, zoom/rotate through it, dissolve into the next screen) ----
-#define SLIDE 18                                /* frames: cursor glides to the next label (eased) */
-#define T_STEP 2                                /* vblanks per transition frame (30 fps) */
-#define FO_V 12                                 /* vblanks: labels + cursor fade out (starts with the transition) */
-#define FI_V0 20                                /* vblank where the next screen's labels start to fade in (as the dissolve begins) */
-#define FI_V 8                                  /* vblanks: ... and how long that takes */
+#define SLIDE 14                                /* unhurried, frictionless cursor glide */
+#define TRANS_VBLANKS 42                        /* photographic dip, not a baked tech swipe */
+#define TRANS_MID (TRANS_VBLANKS / 2)
 enum { M_IDLE, M_SLIDE, M_TRANS };
 
 static u32 buf[MW * MH / 4] __attribute__((section(".ewram"), aligned(4)));   // decoded frame (EWRAM; falls back to normal RAM if no section)
 static int t, frame, page, was_b, was_a, was_l, was_r, acc;
-static int menu_launch, menu_feedback;
+static int menu_launch, menu_note, note_time, erase_hold;
 static int st, level, sel, prev_main, mode;      // level 0 = NEW GAME/LOAD/ERASE, level 1 = SLOT 1/SLOT 2/BACK; mode = which main option opened the slots
-static int cx, slide_from, slide_t, lift;        // cursor centre x (px), slide state, slide "hop" height
-static int dir, tp, tsub, v, switched;           // transition: +1 forward / -1 back, frame, sub-step, vblank counter
-static int pend; static const u16 *pend_pal;     // a decoded page waiting for the next vblank to be flipped in (together with its palette)
+static int cx, slide_from, slide_t, lift;        // cursor centre x, smooth glide
+static int dir, v, switched;                     // reversible photographic transition
+static int pend;                                // hidden page, flipped at next vblank
 
 static void lz77(const void *src, void *dst) {                     // BIOS LZ77UnCompWram (SWI 0x11)
     register const void *r0 __asm__("r0") = src; register void *r1 __asm__("r1") = dst;
@@ -48,17 +47,34 @@ static void lz77(const void *src, void *dst) {                     // BIOS LZ77U
 }
 static void draw(const u8 *stream, int pg) {                       // decode one stream, copy its 80 rows into page pg (mode-4 stride = 240)
     lz77(stream, buf);
+    menu_ink_draw((u8 *)buf,(unsigned)level,(unsigned)mode,(unsigned)sel,
+                  level && sel<2 ? (unsigned)play_slot_valid(sel) : 1u,
+                  (unsigned)erase_hold,(unsigned)menu_note);
     volatile u32 *vv = (volatile u32 *)(VRAM8 + (pg ? 0xA000 : 0));
     for (int y = 0; y < MH; y++) for (int x = 0; x < MW / 4; x++) vv[y * 60 + x] = buf[y * (MW / 4) + x];
 }
-static void queue(const u8 *stream, const u16 *pal) {              // draw into the hidden page; it is shown at the start of the NEXT vblank (no tearing, palette swaps in sync)
-    page ^= 1; draw(stream, page); pend = 1; pend_pal = pal;
+static void queue(const u8 *stream) {                             // decoded video plus captions into the hidden page
+    page ^= 1; draw(stream, page); pend = 1;
 }
-static void set_pal(const u16 *p) { for (int i = 0; i < 256; i++) PAL16[i] = p[i]; }
+static void set_pal(const u16 *p) {
+    for (int i = 0; i < 256; i++) PAL16[i] = p[i];
+    /* Two duplicate near-black video shades become ink and warm paper;
+       menu_ink_draw remaps their source pixels to neighbouring shade 253. */
+    PAL16[254] = RGB(3,4,5);
+    PAL16[255] = RGB(29,27,23);
+}
 static void flip_pending(void) {
     if (!pend) return;
-    if (pend_pal) set_pal(pend_pal);
-    REG_DISPCNT = 4 | DCNT_BG2 | OBJ_ON | (page ? 0x10 : 0); pend = 0; pend_pal = 0;
+    REG_DISPCNT = 4 | DCNT_BG2 | OBJ_ON | (page ? 0x10 : 0); pend = 0;
+}
+static void exposure(int amount) {
+    /* A minute, centred push toward the image as the exposure falls.
+       All coordinates stay inside the video, unlike rotated swipe assets. */
+    int scale = 128 - amount * 10 / 16;
+    REG_BG2PA = (u16)scale; REG_BG2PD = (u16)scale;
+    REG_BG2X = (u32)((60 << 8) - 120 * scale);
+    REG_BG2Y = (u32)((40 << 8) - 80 * scale);
+    REG_BLDY = (u16)(amount * 14 / 16);
 }
 
 // ---- sprites ----
@@ -68,18 +84,23 @@ static u16 mix(u16 a, u16 b, int f) {                              // a -> b, f 
     return RGB(r + (r2 - r) * f / 16, g + (g2 - g) * f / 16, bl + (b2 - bl) * f / 16);
 }
 static void ui_draw(int fade) {                                    // fade 0 = fully shown, 16 = gone
-    static const u8 TXT[4] = {31, 26, 22, 17};                     // white + 3 anti-alias steps (over BGGREY)
-    static const u8 BLUE_POS[4] = {1, 0, 1, 2};                    // which chevron is blue (sweeps down and back)
-    for (int i = 0; i < 4; i++) OBJ_PAL[240 + 1 + i] = mix(RGB(TXT[i], TXT[i], TXT[i]), BGGREY, fade);
-    int bp = BLUE_POS[(t / 12) & 3];
-    for (int j = 0; j < 3; j++) OBJ_PAL[224 + 1 + j] = mix(j == bp ? RGB(10, 24, 30) : RGB(31, 17, 2), BGGREY, fade);
-    OBJ_PAL[224 + 4] = mix(RGB(4, 4, 5), BGGREY, fade);
+    static const u8 TXT[4] = {31, 27, 23, 19};
+    /* Two type values: selected in worn ivory, the others in soot-gray.
+       This uses an otherwise-unused OBJ palette bank, not more graphics. */
+    for (int i = 0; i < 4; i++) {
+        OBJ_PAL[240 + 1 + i] = mix(RGB(TXT[i],TXT[i]-1,TXT[i]-3), BGGREY, fade);
+        OBJ_PAL[208 + 1 + i] = mix(RGB(17-i,17-i,17-i), BGGREY, fade);
+    }
+    for (int j = 0; j < 3; j++)
+        OBJ_PAL[224 + 1 + j] = mix(j == 1 ? RGB(25,20,13) : RGB(18,17,16), BGGREY, fade);
+    OBJ_PAL[224 + 4] = mix(RGB(4,4,5), BGGREY, fade);
     for (int e = 0; e < 7; e++) OAMW[e * 4] = 0x0200;              // hide ours, then place the visible ones
     if (fade >= 16) return;
     for (int k = 0; k < 3; k++) {
         int L = level * 3 + k, x = LX[level][k] - 32;
-        OAMW[k * 8 + 0] = LABEL_Y | 0x4000;  OAMW[k * 8 + 1] = (x & 511) | 0x8000;        OAMW[k * 8 + 2] = (UI_TILE + L * 16) | (15 << 12);      // 32x16, left half
-        OAMW[k * 8 + 4] = LABEL_Y | 0x4000;  OAMW[k * 8 + 5] = ((x + 32) & 511) | 0x8000;  OAMW[k * 8 + 6] = (UI_TILE + L * 16 + 8) | (15 << 12);  // right half
+        int bank = k==sel ? 15 : 13;
+        OAMW[k * 8 + 0] = LABEL_Y | 0x4000;  OAMW[k * 8 + 1] = (x & 511) | 0x8000;       OAMW[k * 8 + 2] = (UI_TILE + L * 16) | (bank << 12);
+        OAMW[k * 8 + 4] = LABEL_Y | 0x4000;  OAMW[k * 8 + 5] = ((x + 32) & 511) | 0x8000; OAMW[k * 8 + 6] = (UI_TILE + L * 16 + 8) | (bank << 12);
     }
     int y = CURSOR_Y - lift;
     OAMW[24] = (y & 255) | 0x8000; OAMW[25] = ((cx - 8) & 511) | 0x8000; OAMW[26] = (UI_TILE + 96) | (14 << 12);   // 16x32
@@ -92,8 +113,8 @@ void menu_enter(void) {
     REG_BGCNT(2) = 0;                                               // priority 0, nothing else needed in bitmap mode
     for (int i = 0; i < ui_tile_words; i++) UI_VRAM[i] = ui_tiles[i];
     for (int e = 0; e < 128; e++) OAMW[e * 4] = 0x0200;             // drop the title's skyline sprites (intro_reload_title() restores them on exit)
-    frame = 0; t = 0; page = 0; acc = 0; pend = 0; pend_pal = 0;
-    menu_launch = 0; menu_feedback = 0;
+    frame = 0; t = 0; page = 0; acc = 0; pend = 0;
+    menu_launch = 0; menu_note = MENU_NOTE_NONE; note_time = erase_hold = 0;
     was_a = was_b = was_l = was_r = 1;                              // keys held on entry must be released first
     st = M_IDLE; level = 0; sel = 0; prev_main = 0; mode = 0; cx = LX[0][0]; lift = 0;
     draw(menu_bands[0], 0);
@@ -101,64 +122,103 @@ void menu_enter(void) {
     REG_DISPCNT = 4 | DCNT_BG2 | OBJ_ON;                            // mode 4, BG2 + the label/cursor sprites, page 0 shown
 }
 
-static void start_trans(int d) { dir = d; st = M_TRANS; tp = 0; tsub = 0; v = 0; switched = 0; }
-static void go_sel(int n) { slide_from = cx; sel = n; slide_t = 0; st = M_SLIDE; }
+static void start_trans(int d) {
+    dir = d; st = M_TRANS; v = switched = erase_hold = 0;
+    menu_note = MENU_NOTE_NONE; note_time = 0;
+}
+static void go_sel(int n) {
+    slide_from = cx; sel = n; slide_t = 0; lift = 0; st = M_SLIDE;
+    erase_hold = 0; menu_note = MENU_NOTE_NONE; note_time = 0;
+}
 static void slot_chosen(int m, int slot) {
-    if (m == 2) { play_erase_slot(slot); menu_feedback = 45; }
-    else if (m == 1 && !play_slot_valid(slot)) { menu_feedback = 45; }
-    else menu_launch = (m == 0 ? 2 : 4) + slot;
+    if (m == 1 && !play_slot_valid(slot)) {
+        menu_note = MENU_NOTE_EMPTY; note_time = 80;
+    } else menu_launch = (m == 0 ? 2 : 4) + slot;
 }
 
 int menu_update(void) {
     flip_pending();
-    if (t < FADE_IN) REG_BLDY = 16 - t * 16 / FADE_IN; else REG_BLDY = 0;
-    if (t < VOL_FRAMES) music_set_volume(100 - (100 - MUSIC_PCT) * t / VOL_FRAMES); else music_set_volume(MUSIC_PCT);
+    if (t < FADE_IN) REG_BLDY = (u16)(16 - t * 16 / FADE_IN);
+    else if (st != M_TRANS) REG_BLDY = 0;
+    if (t < VOL_FRAMES) music_set_volume(100 - (100 - MUSIC_PCT) * t / VOL_FRAMES);
+    else music_set_volume(MUSIC_PCT);
     t++;
-    u16 k = ~REG_KEYINPUT;
+    u16 k = (u16)~REG_KEYINPUT;
     int a = k & KEY_A, b = k & KEY_B, l = k & KEY_LEFT, r = k & KEY_RIGHT;
     int ea = a && !was_a, eb = b && !was_b, el = l && !was_l, er = r && !was_r;
     was_a = a; was_b = b; was_l = l; was_r = r;
-    int fade = 0;
+    int fade = 0, redraw = 0;
 
+    /* Original inpainted zoom-square frames are gone. A subtle camera
+       push and an ink-black exposure dip convey a change of chapter,
+       without teleporting the player's eye to unrelated footage. */
     if (st == M_TRANS) {
-        if (tsub == 0) {                                            // a new transition frame every T_STEP vblanks
-            if (tp < TRANS_FRAMES) queue(trans_bands[dir > 0 ? tp : TRANS_FRAMES - 1 - tp], tp == 0 ? trans_pal : 0);
-            else queue(menu_bands[0], menu_pal);                    // last: the normal background again (palette swaps back in the same flip)
+        int phase = v <= TRANS_MID ? v : TRANS_VBLANKS - v;
+        if (phase < 0) phase = 0;
+        exposure(phase * 16 / TRANS_MID);
+        fade = phase * 16 / (TRANS_MID - 3);
+        if (fade > 16) fade = 16;
+        if (!switched && v >= TRANS_MID) {
+            switched = 1;
+            level ^= 1;
+            sel = dir > 0 ? 0 : prev_main;
+            cx = LX[level][sel]; lift = 0;
+            redraw = 1;
         }
-        if (v < FO_V) fade = v * 16 / FO_V;                         // labels + cursor fade out while the square dissolves in
-        else {
-            if (!switched) {                                        // invisible now: change screens
-                switched = 1; level ^= 1;
-                sel = dir > 0 ? 0 : prev_main; cx = LX[level][sel]; lift = 0;
-            }
-            fade = v < FI_V0 ? 16 : 16 - (v - FI_V0) * 16 / FI_V;
-            if (fade < 0) fade = 0;
+        if (++v > TRANS_VBLANKS) {
+            st = M_IDLE; frame = 0; acc = 0;
+            exposure(0);
+            fade = 0;
+            redraw = 1;
         }
-        v++;
-        if (++tsub >= T_STEP) { tsub = 0; if (++tp > TRANS_FRAMES) { st = M_IDLE; frame = 0; acc = 0; } }
     } else {
-        acc += VIDEO_FPS_X2;
-        if (acc >= 120) { acc -= 120; frame = (frame + 1) % MENU_FRAMES; queue(menu_bands[frame], 0); }   // loop: next video frame
-        if (st == M_SLIDE) {                                        // cursor glides (eased) and hops while it moves
-            int f = ++slide_t * 256 / SLIDE; if (f > 256) f = 256;
-            int to = LX[level][sel]; cx = slide_from + (((to - slide_from) * smooth(f)) >> 8);
-            lift = f * (256 - f) * 6 / 16384;
-            if (slide_t >= SLIDE) { st = M_IDLE; cx = to; lift = 0; }
+        if (st == M_SLIDE) {
+            int f = ++slide_t * 256 / SLIDE;
+            if (f > 256) f = 256;
+            int to = LX[level][sel];
+            cx = slide_from + (((to - slide_from) * smooth(f)) >> 8);
+            lift = 0; /* no mechanical bouncing arrow */
+            if (slide_t >= SLIDE) { st = M_IDLE; cx = to; }
         }
-        if (er && sel < 2) go_sel(sel + 1);
-        else if (el && sel > 0) go_sel(sel - 1);
+        if (er && sel < 2) { go_sel(sel + 1); redraw = 1; }
+        else if (el && sel > 0) { go_sel(sel - 1); redraw = 1; }
         else if (ea) {
             if (level == 0) { prev_main = mode = sel; start_trans(1); }
-            else if (sel == 2) start_trans(-1);                     // BACK
-            else slot_chosen(mode, sel);
-        }
-        else if (eb) {
+            else if (sel == 2) start_trans(-1);
+            else if (mode == 2) {
+                if (play_slot_valid(sel)) { erase_hold = 1; redraw = 1; }
+                else { menu_note = MENU_NOTE_EMPTY; note_time = 80; redraw = 1; }
+            } else { slot_chosen(mode, sel); redraw = 1; }
+        } else if (eb) {
             if (level == 1) start_trans(-1);
-            else { music_set_volume(100); return 1; }               // B on the main menu: back to the title
+            else { music_set_volume(100); return 1; }
+        }
+        /* Erasure only happens after an intentional, uninterrupted hold.
+           Entering ERASE with A already down never arms it. */
+        if (level == 1 && mode == 2 && sel < 2 && erase_hold) {
+            if (!a) { erase_hold = 0; redraw = 1; }
+            else if (++erase_hold >= (int)MENU_ERASE_HOLD) {
+                play_erase_slot(sel);
+                erase_hold = 0;
+                menu_note = MENU_NOTE_ERASED;
+                note_time = 100;
+                redraw = 1;
+            } else if ((t & 3) == 0) redraw = 1;
         }
     }
+    if (note_time && --note_time == 0) {
+        menu_note = MENU_NOTE_NONE; redraw = 1;
+    }
+    acc += VIDEO_FPS_X2;
+    if (acc >= 120) {
+        acc -= 120; frame = (frame + 1) % MENU_FRAMES;
+        redraw = 1;
+    }
+    if (redraw) queue(menu_bands[frame]);
     ui_draw(fade);
-    if (menu_feedback) { if (t & 4) OBJ_PAL[225] = RGB(31, 4, 4); --menu_feedback; }
-    if (menu_launch) { int r = menu_launch; menu_launch = 0; return r; }
+    if (menu_launch) {
+        int result = menu_launch; menu_launch = 0;
+        return result;
+    }
     return 0;
 }
