@@ -90,3 +90,20 @@ full devkitARM build must pass before merging.
 **Still outstanding:** instrumented mGBA or physical GBA worst-case
 frame-time profiling; no sustained FPS claim is made from a static image
 or x86 host timing. Other ports are not modified by this GBA patch.
+
+## Integrated release verification — November 21, 2026
+
+Native arena implementation was merged through
+[PR #8](https://github.com/masong0508-lab/danny-steel-sprite-intro/pull/8).
+The final branch source passed the complete host regression suite
+(including 94 combat pixel/palette/buffer and unmasked-head checks),
+devkitARM GBA compilation, linker-map RAM budgets, and real-renderer
+screenshot capture. The branch build generated a **741,604-byte ROM**
+before documentation-only follow-up edits; the published `main`
+ROM is rebuilt and versioned separately by the repository workflow.
+
+The x86 host render probe recorded approximately **0.017 ms**
+per native battle frame on that CI run. This is not an ARM7TDMI
+frame-time or physical-GBA FPS claim. The memory budgets remain
+38,400 bytes EWRAM canvas and 8,900 bytes of static IWRAM in the tested
+branch; the expanded artwork stays in cartridge ROM.
