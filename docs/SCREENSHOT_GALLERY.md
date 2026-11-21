@@ -9,10 +9,11 @@ executing it in headless mGBA, sending
 START/A inputs to navigate its opening title and new-game menus.
 They were upscaled with nearest-neighbour interpolation for legibility.
 
-**Gameplay/story engine frames:** the remaining twenty-four images are made by
+**Gameplay/story engine frames:** the remaining twenty-eight images are made by
 the exact production C rendering functions, including `hd_world_draw`, `hd_first_person_draw`, `hd_cinema_draw`,
 `hd_studio_draw`, `hd_special_cinema_draw` and `hd_ending_draw`,
-compiled for a desktop host with the identical game art and palettes. These frames were
+compiled for a desktop host with the identical game art, palettes and
+direct-from-cartridge battle illustrations. These frames were
 captured at carefully chosen story beats; they are *representative
 screenshots of the code*, not a claim that one uninterrupted live run
 reached every story milestone. The Advanced Studio frames use a completed-project state to demonstrate the
@@ -69,6 +70,27 @@ These keep the original conditional outcomes: the unresolved route
 does not show Mara safely returning, and the rescued route does not
 present her as missing. Captions are from the original timed script.
 
+## Mirror Orchard — cartridge-illustrated native battles
+
+These four scenes are rendered by the actual `hd_arena_draw` code at
+240×160, not pixel-doubled 120×80, and use original illustrations stored
+in cartridge ROM. They depict different existing story battle states:
+three rival identities plus the post-investigation parry. The character
+head, hat and costume ears stay visible beside the menu instructions;
+the FOCUS and BEAT readouts now identify their gameplay meaning.
+
+| Encounter | Actual frame |
+| --- | --- |
+| RATIO RAT, FACTS selected | ![Rainy street and rat rival](screenshots/29_orchard_rat_menu.png) |
+| BADGE LORD, CARE selected | ![Clerk room and badge rival](screenshots/30_orchard_badge_care.png) |
+| LORE WARDEN, dodge and moving paper warning | ![Vinyl archive dodge lane](screenshots/31_orchard_warden_dodge.png) |
+| REBRAND RAT, six-tick parry active | ![Rainy street parry animation](screenshots/32_orchard_rebrand_parry.png) |
+
+Combat remains a single playable, state-driven three-lane encounter; its
+actual collision timing, focus, parry cooldown, exit and side-story save
+effects are unchanged by the art pass. See [the native arena
+notes](NATIVE_MIRROR_ORCHARD.md).
+
 ## Unlockable Advanced Studio
 
 | Song controls | Note editor | Arrangement |
@@ -83,6 +105,7 @@ Capture source: `tools/story_gallery.c` and
 `.github/workflows/screenshots.yml`. The main menu, overhead view, first-person streets, twelve key cinematic
 sets and the six-tab Studio now render at native 240x160 GBA resolution.
 All 24 authored cinematic scene types and the three score-length ending
-montages now render at native 240x160. The separate Mirror Orchard
-combat arena still uses its original, tested 120x80 gameplay renderer. All final pictures are displayed at
+montages now render at native 240x160. The optional Mirror Orchard
+combat arena also uses native 240x160 ROM-backed environments and portraits
+while retaining the original game logic. All final pictures are displayed at
 2x their GBA size using nearest-neighbour scaling. No images are mockups.
