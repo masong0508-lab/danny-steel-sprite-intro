@@ -30,7 +30,50 @@ static unsigned color(int x,int y){
  assert(x>=0&&x<HD_W&&y>=0&&y<HD_H);
  return sample.pixels[y*HD_W+x];
 }
+/* These are genuine gameplay dialogue interactions, not hand-picked page
+   numbers injected into a gallery. Every planned close-up is reachable
+   when someone actually plays the chapter and presses A to continue. */
+static void button(Story *s,unsigned key){
+ story_tick(s,0u);story_tick(s,(uint16_t)key);story_tick(s,0u);
+}
+static void visit(Story *s,int x,int y,int facing){
+ assert(!story_solid(x,y));
+ s->x=(uint8_t)x;s->y=(uint8_t)y;s->facing=(uint8_t)facing;
+ s->prev_x=s->x;s->prev_y=s->y;s->cooldown=0;
+}
+static void beats(Story *s,unsigned cinema,
+                  const uint16_t *anchors,unsigned n){
+ button(s,1u);
+ assert(s->dialogue!=0u&&s->cinema==cinema);
+ for(unsigned i=1;i<n;i++){
+  button(s,1u);
+  assert(s->page==i && s->cinema_frame>=anchors[i]);
+ }
+ button(s,2u); /* early B skip is never gated by a camera cue */
+ assert(!s->dialogue && s->cinema==CINE_NONE);
+}
+static void verify_reachable_editorial_cuts(void){
+ Story s;story_new(&s,0);
+ button(&s,2u);assert(!s.dialogue);
+ static const uint16_t letter[]={0u,55u,108u,160u};
+ static const uint16_t mara[]={0u,66u,108u,151u,190u};
+ static const uint16_t bus[]={0u,118u,183u};
+ static const uint16_t art[]={0u,198u};
+ static const uint16_t clinic[]={0u,124u,158u,200u};
+ visit(&s,5,5,2);beats(&s,CINE_LETTER,letter,4u);
+ s.flags=STORY_HOME|STORY_STAMP;
+ visit(&s,8,12,3);beats(&s,CINE_MARA,mara,5u);
+ s.flags=STORY_ALL;
+ visit(&s,19,4,1);beats(&s,CINE_BUS,bus,3u);
+ s.flags=0;
+ visit(&s,14,7,3);beats(&s,CINE_ART,art,2u);
+ s.life_stage=STORY_LIFE_CLINIC;
+ visit(&s,16,6,3);beats(&s,CINE_CLINIC,clinic,4u);
+ s.life_stage=STORY_LIFE_FINAL_CLINIC;
+ visit(&s,16,6,3);beats(&s,CINE_LAST_CLINIC,clinic,4u);
+}
 int main(void){
+ verify_reachable_editorial_cuts();
  Story s;story_new(&s,0);s.dialogue=0;
  /* The envelope remains laid on the SAME counter; the hand enters
     the shot without replacing the whole asset or moving the letter. */
