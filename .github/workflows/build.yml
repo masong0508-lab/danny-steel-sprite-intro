@@ -41,11 +41,11 @@ jobs:
           /tmp/danny_motifs_test
       - name: Check timer-based PSG music engine
         run: |
-          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc -Itests/stubs -DHOST_MUSIC_TEST -include tests/stubs/gba.h src/music.c src/music_motifs.c tests/music_engine_test.c -o /tmp/danny_music_engine_test
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Itests/stubs -Isrc -DHOST_MUSIC_TEST -include tests/stubs/gba.h src/music.c src/music_motifs.c tests/music_engine_test.c -o /tmp/danny_music_engine_test
           /tmp/danny_music_engine_test
       - name: Check full Here Today score in three endings and good coda
         run: |
-          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc -Itests/stubs -DHOST_MUSIC_TEST -include tests/stubs/gba.h src/music.c src/music_motifs.c tests/music_ending_test.c -o /tmp/danny_music_ending_test
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Itests/stubs -Isrc -DHOST_MUSIC_TEST -include tests/stubs/gba.h src/music.c src/music_motifs.c tests/music_ending_test.c -o /tmp/danny_music_ending_test
           /tmp/danny_music_ending_test
 
       - name: Verify 72-second film, 16-second coda and frame bounds
