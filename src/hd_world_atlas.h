@@ -8,3 +8,7 @@ void hd_world_person_art(uint8_t *dst,int center_x,int foot_y,
                          unsigned role,unsigned facing,unsigned gait);
 void hd_world_tree_art(uint8_t *dst,int center_x,int foot_y,
                        unsigned kind,unsigned phase);
+/* Nearest-neighbor projected actor preserves the exact same hair,
+   silhouette and clothing in first-person. No heap or scaling buffer. */
+void hd_world_person_projected(uint8_t *dst,int center_x,int foot_y,int height,
+                               unsigned role,unsigned facing,unsigned gait);
