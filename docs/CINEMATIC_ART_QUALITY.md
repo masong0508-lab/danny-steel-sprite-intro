@@ -63,9 +63,11 @@ workflow. It is not a request to produce standalone concept art.
    and clothing connections as necessary.
 2. Review the expanded record-store finale and memorial concert at native
    1× and 4×. The record store has varied sleeves, a warm listening light,
-   and an anchored turntable; the concert now has a lit truss, real
-   instruments, speakers, and foreground patrons. Neither should imply
-   Danny is alive at his own posthumous legacy performance.
+   and an anchored turntable. Mara physically holds an album above
+   the platter, rather than a floating card stamped on the record.
+   The concert has a lit truss, instruments, speakers, foreground patrons,
+   and a microphone aligned with Mara's actual reaching hand. Neither
+   should imply Danny is alive at his posthumous legacy performance.
 3. Measured GBA emulator FPS / VRAM budget; scale back decorative
    loops if any cinematic scene exceeds the per-frame budget.
 4. Exact rotoscope of Danny's Potheads dance when the original reference

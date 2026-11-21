@@ -46,7 +46,11 @@ int main(void){
  s.cinema=CINE_GOOD;s.page=3;s.ended=0;
  clear();hd_cinema_draw(frame.pixels,&s,2910u);
  unsigned record_store=checksum(),warm_record=0;
- for(int y=20;y<99;y++)for(int x=133;x<231;x++){
+ /* At the actual held album sleeve the printed cover has a material
+    color, not the black turntable that occupied its old floating spot. */
+ assert(frame.pixels[86u*HD_W+69u]==HD_GLASS_LIT);
+ assert(frame.pixels[91u*HD_W+75u]==HD_GOLD);
+ for(int y=20;y<99;y++for(int x=133;x<231;x++){
   unsigned c=frame.pixels[y*HD_W+x];
   if(c==HD_GOLD||c==HD_COPPER||c==HD_PAPER)warm_record++;
  }
@@ -54,7 +58,9 @@ int main(void){
  s.page=6;
  clear();hd_cinema_draw(frame.pixels,&s,4760u);
  unsigned memorial_stage=checksum(),stage_light=0;
- for(int y=20;y<120;y++)for(int x=18;x<223;x++){
+ /* Mara's actual extended hand meets the fixed microphone at x140. */
+ assert(frame.pixels[86u*HD_W+140u]==HD_INK);
+ for(int y=20;y<120;y++for(int x=18;x<223;x++){
   unsigned c=frame.pixels[y*HD_W+x];
   if(c==HD_GOLD||c==HD_LAMP||c==HD_GLASS_LIT)stage_light++;
  }

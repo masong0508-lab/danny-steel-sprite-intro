@@ -353,13 +353,20 @@ static void good_record(uint8_t *p,unsigned t){
  hd_line(p,132,87,117,100,HD_COPPER);
  hd_rect(p,132,84,4,14,HD_COPPER);
  hd_rect(p,130,84,8,3,HD_GOLD);
- /* A copy of Danny's record in Mara's hand remains a physical prop,
-    not a floating speech icon or a rewritten ending. */
- hd_rect(p,60,94,16,22,HD_INK);
- hd_rect(p,62,95,12,18,HD_GLASS_LIT);
- hd_ellipse(p,68,104,5,5,HD_INK);
- hd_pixel(p,68,104,HD_GOLD);
+ /* The album is HELD by Mara at the end of her raised right arm.
+    Draw the arm first, then the sleeve and tiny supporting fingers:
+    no separate levitating record over the turntable platter. */
  hd_actor_stage(p,43,143,2,t,5);
+ int hand=104+(int)((t/38u)&1u);
+ hd_line(p,64,hand,68,102,HD_SKIN_LIT);
+ hd_rect(p,65,79,20,25,HD_INK);
+ hd_rect(p,67,81,16,21,HD_GLASS_LIT);
+ hd_rect(p,67,81,16,3,HD_COPPER);
+ hd_ellipse(p,75,91,6,6,HD_INK);
+ hd_ellipse(p,75,91,2,2,HD_GOLD);
+ hd_line(p,68,99,82,99,HD_PAPER);
+ hd_rect(p,67,101,4,3,HD_SKIN);
+ hd_pixel(p,68,102,HD_SKIN_LIT);
 }
 static void concert(uint8_t *p,unsigned t){
  rainy_lane(p,t);
@@ -414,10 +421,13 @@ static void concert(uint8_t *p,unsigned t){
     Danny inexplicably appear alive at his own posthumous tribute. */
  hd_actor_stage(p,75,119,3,t,0);
  hd_actor_stage(p,121,122,2,t,1);
- hd_line(p,130,93,130,117,HD_COPPER);
- hd_ellipse(p,130,92,3,3,HD_INK);
- hd_pixel(p,130,92,HD_PAPER);
- hd_line(p,130,118,125,122,HD_STONE);
+ /* Mara's animated speech hand is at x140/y85..87. A fixed floor
+    microphone at x130 previously floated ten pixels away from that
+    hand; key its head at the actual reach while the stand stays put. */
+ hd_line(p,140,89,140,117,HD_COPPER);
+ hd_ellipse(p,140,86,3,3,HD_INK);
+ hd_line(p,139,85,141,85,HD_PAPER);
+ hd_line(p,140,118,134,122,HD_STONE);
  hd_rect(p,86,116,21,5,HD_SHADOW);
  hd_line(p,89,116,103,116,HD_STONE_LIT);
  /* The near row of audience heads occupies the *foreground* rather
