@@ -881,8 +881,9 @@ static void moment_menu(Story *s,unsigned station){
     s->activity=(uint8_t)station;s->activity_choice=0;
     s->cinema=(uint8_t)(station=='F'?CINE_MARA:station=='L'?CINE_LETTER:
         station=='C'?CINE_BORE:
-        (station=='M'||station=='E')?CINE_MUSIC:CINE_ART);
-    s->cinema_frame=0;
+        (station=='M'||station=='E')?CINE_MUSIC:
+        station=='J'?CINE_OPEN:CINE_ART);
+    s->cinema_frame=station=='J'?136u:0u;
 }
 static void stat_gain(uint8_t *v,unsigned gain){
     unsigned sum=(unsigned)*v+gain;
@@ -933,6 +934,23 @@ static void step_project(Story *s,unsigned station,unsigned soft){
 }
 static void finish_moment(Story *s){
     unsigned station=s->activity,option=s->activity_choice;
+    if(station=='J'){
+        /* Opening the menu spends nothing. WORK must be explicitly confirmed. */
+        s->activity=STORY_ACT_NONE;s->activity_choice=0;
+        if(option){s->cinema=CINE_NONE;return;}
+        if(!can_make_memory(s))talk(s,D_SHIFT_EARLY);
+        else if(s->daily_mask&STORY_DAY_SHIFT)talk(s,D_SHIFT_REPEAT);
+        else if(!s->energy)talk(s,D_SHIFT_TIRED);
+        else {
+            --s->energy;
+            work_gain(s,2u);
+            s->daily_mask|=STORY_DAY_SHIFT;
+            s->dirty=1;
+            talk(s,D_SHIFT_DONE);
+        }
+        s->cinema_frame=136u; /* avoid replaying the full aerial intro */
+        return;
+    }
     if(station=='E'){
         if(option){
             s->activity=STORY_ACT_STUDIO;
@@ -1078,15 +1096,8 @@ static void interact(Story *s) {
         if(!can_make_memory(s))talk(s,D_SHIFT_EARLY);
         else if(s->daily_mask&STORY_DAY_SHIFT)talk(s,D_SHIFT_REPEAT);
         else if(!s->energy)talk(s,D_SHIFT_TIRED);
-        else{
-            --s->energy;
-            work_gain(s,2u);
-            s->daily_mask|=STORY_DAY_SHIFT;
-            s->dirty=1;
-            talk(s,D_SHIFT_DONE);
-        }
-        /* On a repeat visit there is no need to replay the entire
-           bird's-eye establishing camera. Resume on the steady dance. */
+        else moment_menu(s,'J'); /* WORK / LEAVE, no automatic cost */
+        /* Repeated visits never replay the whole aerial approach. */
         s->cinema_frame=136u;
         return;
     }

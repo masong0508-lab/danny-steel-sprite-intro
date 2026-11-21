@@ -20,8 +20,8 @@ story rather than turning the opening into a career tutorial.
 The camera now hands off directly to gameplay at the same shop: new games
 start on the adjacent walkable pavement at (20,11), facing east. Existing
 save positions are not moved. At Potheads, face the facade and press
-**A SHIFT**. During ordinary life-sim days you can do
-one optional shift for +2 work and -1 energy; it never gates the chapter
+**A SHIFT**. Choose **WORK** or **LEAVE** (B also cancels).
+Only confirmed WORK gives +2 work and costs 1 energy; it never gates the chapter
 or forces Danny to enjoy the job. The interaction is deliberately
 disabled during Mara's unresolved missing-person crisis. The shop,
 dialogue, shift cue, native animation tests and renderer-derived

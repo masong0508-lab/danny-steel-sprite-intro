@@ -70,6 +70,19 @@ static void verify_work_not_wishful_thinking(void){
  s.x=20;s.y=11;s.prev_x=s.x;s.prev_y=s.y;s.facing=0;
  s.life_stage=STORY_LIFE_WAIT;s.energy=3;
  tap(&s,1u);
+ assert(s.activity=='J'&&s.cinema==CINE_OPEN);
+ assert(s.work==0u&&s.energy==3u);
+ tap(&s,2u); /* B CANCEL */
+ assert(!s.activity&&s.work==0u&&s.energy==3u);
+ tap(&s,1u);
+ assert(s.activity=='J');
+ tap(&s,16u); /* RIGHT LEAVE */
+ assert(s.activity_choice==1u);
+ tap(&s,1u);
+ assert(!s.activity&&!s.dialogue&&s.work==0u&&s.energy==3u);
+ tap(&s,1u);
+ assert(s.activity=='J'&&s.activity_choice==0u);
+ tap(&s,1u); /* explicit WORK confirmation */
  assert(s.dialogue!=0u&&s.cinema==CINE_OPEN);
  assert(s.cinema_frame>=136u);
  assert(s.work==2u&&s.energy==2u);

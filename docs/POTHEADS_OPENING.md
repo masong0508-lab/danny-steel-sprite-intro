@@ -49,9 +49,10 @@ are resumed from their saved positions, not relocated by this change.
 
 The solid shop facade occupies world cell (21,11). From the walkable cell
 (20,11), face east and press **A SHIFT**. Before the life-sim day begins,
-this is an optional character line. In an ordinary life-sim day, a paid
-sign shift adds **2 work**, consumes **1 energy**, and is available only
-once per day. An exhausted Danny cannot work it. The existing daily_mask
+this is an optional character line. On a normal life-sim day, A opens
+a dedicated **WORK / LEAVE** menu; B cancels without a cost.
+Only confirming WORK adds **2 work** and consumes **1 energy**.
+A shift is available only once per day. An exhausted Danny cannot work it. The existing daily_mask
 byte uses unused bit 5; the five primary daily memories and endgame
 thresholds are unchanged. This is never a mandatory quest gate.
 
