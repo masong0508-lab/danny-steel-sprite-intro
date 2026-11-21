@@ -166,15 +166,46 @@ void hd_actor_closeup(uint8_t *p,int x,int base,int role,
  int breathe=(int)((frame/27u)&1u),y=base-breathe;
  /* Foreground torso runs behind the lower subtitle matte so every bust
     remains attached to the picture rather than floating above a panel. */
- hd_ellipse(p,x,y-17,32,31,HD_SHADOW);
- hd_ellipse(p,x,y-15,29,29,rim);
- hd_ellipse(p,x,y-15,26,27,jacket);
+ /* Replace the three concentric oval stickers with a tapered, full
+    shoulders-to-waist garment. Rows run behind the dialogue matte, giving
+    the actor a body with anatomical continuity rather than a floating ball. */
+ hd_ellipse(p,x,y+4,36,6,HD_SHADOW);
+ for(int yy=y-49;yy<y+37;yy++){
+  int d=yy-(y-49);
+  int half=d<14?18+d:d<45?32+(d-14)/8:35-(d-45)/4;
+  if(half<24)half=24;
+  hd_rect(p,x-half-1,yy,half*2+2,1,HD_INK);
+  hd_rect(p,x-half,yy,half*2,1,jacket);
+  hd_rect(p,x-half,yy,4,1,rim);
+  hd_rect(p,x+half-3,yy,3,1,rim);
+  if((yy%11)==0)
+   hd_rect(p,x-half+7,yy,9,1,HD_STONE_LIT);
+ }
+ /* Sleeves wrap shoulders instead of emerging from an unattached ellipse. */
+ hd_ellipse(p,x-26,y-26,12,18,HD_INK);
+ hd_ellipse(p,x+26,y-26,12,18,HD_INK);
+ hd_ellipse(p,x-26,y-27,10,16,jacket);
+ hd_ellipse(p,x+26,y-27,10,16,jacket);
+ hd_line(p,x-35,y-31,x-38,y-6,rim);
+ hd_line(p,x+35,y-31,x+38,y-6,HD_STONE_LIT);
  hd_rect(p,x-8,y-55,16,17,HD_SKIN);
- hd_rect(p,x-18,y-57,12,14,jacket);
- hd_rect(p,x+7,y-57,13,14,jacket);
- hd_line(p,x-18,y-29,x-5,y-13,HD_STONE_LIT);
- hd_line(p,x+19,y-30,x+6,y-14,rim);
- hd_rect(p,x-4,y-23,8,2,HD_GOLD);
+ hd_rect(p,x-7,y-45,14,5,HD_SKIN_LIT);
+ hd_line(p,x-21,y-41,x-4,y-20,HD_STONE_LIT);
+ hd_line(p,x-4,y-20,x-9,y+6,rim);
+ hd_line(p,x+21,y-42,x+4,y-20,rim);
+ hd_line(p,x+4,y-20,x+9,y+9,HD_STONE_LIT);
+ hd_rect(p,x-3,y-17,6,3,HD_GOLD);
+ if(role==1){
+  hd_line(p,x+25,y-43,x-10,y+18,HD_BARK);
+  hd_rect(p,x+13,y+7,15,12,HD_BARK);
+  hd_rect(p,x+14,y+8,13,2,HD_COPPER);
+ }else if(role==2){
+  hd_rect(p,x-14,y-39,28,4,HD_GLASS_LIT);
+  hd_rect(p,x+10,y-26,5,5,HD_GOLD);
+ }else if(role==3){
+  hd_rect(p,x-4,y-34,8,24,HD_PAPER);
+  hd_line(p,x,y-31,x-4,y-14,HD_COPPER);
+ }
  if(role==5){
   hd_rect(p,x-4,y-35,8,16,HD_PAPER);
   hd_rect(p,x-3,y-32,6,8,HD_GLASS_LIT);
@@ -214,12 +245,16 @@ void hd_actor_closeup(uint8_t *p,int x,int base,int role,
   hd_line(p,x-15,y-72,x-4,y-72,HD_BARK);
   hd_line(p,x+4,y-72,x+15,y-72,HD_BARK);
  }else{
-  hd_rect(p,x-15,y-74,11,3,HD_INK);
-  hd_rect(p,x+4,y-74,11,3,HD_INK);
-  hd_rect(p,x-12+gaze,y-73,3,4,HD_INK);
-  hd_rect(p,x+7+gaze,y-73,3,4,HD_INK);
+  hd_rect(p,x-15,y-75,11,7,HD_PAPER);
+  hd_rect(p,x+4,y-75,11,7,HD_PAPER);
+  hd_rect(p,x-12+gaze,y-74,5,6,HD_GLASS);
+  hd_rect(p,x+7+gaze,y-74,5,6,HD_GLASS);
+  hd_rect(p,x-11+gaze,y-73,3,5,HD_INK);
+  hd_rect(p,x+8+gaze,y-73,3,5,HD_INK);
   hd_pixel(p,x-11+gaze,y-73,HD_PAPER);
   hd_pixel(p,x+8+gaze,y-73,HD_PAPER);
+  hd_line(p,x-16,y-76,x-4,y-76,HD_INK);
+  hd_line(p,x+4,y-76,x+16,y-76,HD_INK);
  }
  hd_line(p,x-2,y-69,x-4,y-61,HD_SKIN_LIT);
  hd_line(p,x-4,y-60,x+1,y-59,HD_BARK);
@@ -235,6 +270,16 @@ void hd_actor_closeup(uint8_t *p,int x,int base,int role,
   hd_pixel(p,x+10,y-47,HD_SKIN_LIT);
  }else{
   hd_line(p,x-8,y-49,x+8,y-49,HD_BRICK_DARK);
+ }
+ /* Closeup gestures remain physically anchored to a shoulder. */
+ if(emotion==5){
+  hd_line(p,x-28,y-29,x-17,y-48,jacket);
+  hd_line(p,x-17,y-48,x-7,y-53,HD_SKIN);
+  hd_ellipse(p,x-7,y-53,5,4,HD_SKIN_LIT);
+ }else if(emotion==7){
+  hd_line(p,x+28,y-29,x+20,y-55,rim);
+  hd_line(p,x+20,y-55,x+14,y-61,HD_SKIN);
+  hd_ellipse(p,x+14,y-61,4,4,HD_SKIN_LIT);
  }
  if(role==5){ /* doctor's lapels and instrument remain recognizable */
   hd_line(p,x-19,y-39,x-4,y-20,HD_PAPER);

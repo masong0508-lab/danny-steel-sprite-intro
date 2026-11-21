@@ -130,6 +130,12 @@ int main(int argc,char **argv){
  write_frame("05u_clinic_mara_reaction",&s,178);
  s.page=3;
  write_frame("05v_clinic_danny_reaction",&s,215);
+ s.cinema=CINE_MARA;s.page=3;
+ write_frame("05w_vivid_mara_portrait",&s,177);
+ s.cinema=CINE_ART;s.page=1;
+ write_frame("05x_vivid_rooftop",&s,227);
+ s.cinema=CINE_CLINIC;s.page=2;
+ write_frame("05y_vivid_clinic",&s,178);
  s.cinema=CINE_NONE;s.scene=STORY_SCENE_NONE;s.view=0;
  /* The first controllable view is now the same storefront as the film. */
  stand(&s,20,11,0);

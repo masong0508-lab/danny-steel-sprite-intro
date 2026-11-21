@@ -8,6 +8,11 @@ static void framebox(uint8_t *p,int x,int y,int w,int h){
  hd_rect(p,x,y,w,1,HD_COPPER);
  hd_rect(p,x,y,2,h,HD_COPPER);
  hd_rect(p,x+4,y+h-2,w-8,1,HD_STONE_DARK);
+ hd_line(p,x+3,y+3,x+10,y+3,HD_GOLD);
+ hd_line(p,x+3,y+3,x+3,y+10,HD_GOLD);
+ hd_line(p,x+w-11,y+3,x+w-4,y+3,HD_GOLD);
+ hd_line(p,x+w-4,y+3,x+w-4,y+10,HD_GOLD);
+ hd_rect(p,x+5,y+4,w-10,1,HD_BRICK_DARK);
 }
 static void selectable(uint8_t *p,int x,int y,int w,const char *label,int selected){
  hd_rect(p,x,y,w,21,selected?HD_ROAD_COOL:HD_SHADOW);
@@ -22,7 +27,9 @@ void hd_game_overlay(uint8_t *p,const Story *s){
   if(pages && s->page<(unsigned)count){
    const StoryPage *d=&pages[s->page];
    framebox(p,8,103,224,54);
-   hd_text(p,18,111,d->speaker,s->cinema==CINE_MARA?HD_SKIN_LIT:HD_LAMP,1,1);
+   hd_rect(p,13,108,4,10,HD_GOLD);
+   hd_rect(p,19,106,91,13,HD_BRICK_DARK);
+   hd_text(p,23,110,d->speaker,s->cinema==CINE_MARA?HD_SKIN_LIT:HD_LAMP,1,0);
    hd_line(p,18,120,222,120,HD_STONE_DARK);
    hd_text(p,18,124,d->line1,HD_PAPER,1,1);
    hd_text(p,18,136,d->line2,HD_PAPER,1,1);

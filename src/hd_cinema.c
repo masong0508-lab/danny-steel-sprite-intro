@@ -31,6 +31,15 @@ static void dusk(uint8_t *p,unsigned frame,int night){
     y<117?HD_STONE_DARK:y<135?HD_ROAD_COOL:HD_ROAD;
   hd_rect(p,0,y,HD_W,1,c);
  }
+ /* Warm layered cloud banks turn the dead-flat night sky into a location.
+    Bands use the existing palette and drift only on coarse frame ticks. */
+ for(int i=0;i<5;i++){
+  int xx=8+i*53+(int)((frame/(i&1?109u:171u))%6u);
+  int yy=19+(i*11)%30;
+  hd_rect(p,xx-11,yy,34,4,HD_BRICK_LIT);
+  hd_rect(p,xx-4,yy-3,21,3,night?HD_RED_SHADE:HD_PAPER);
+  hd_rect(p,xx+3,yy-5,12,2,night?HD_COPPER:HD_LAMP);
+ }
  hd_ellipse(p,186,34,9,9,night?HD_COPPER:HD_LAMP);
  for(int i=0;i<18;i++){
   int x=i*20-12;
@@ -524,6 +533,24 @@ static void cafe(uint8_t *p,unsigned t){
   hd_rect(p,x+4,87,27,2,HD_COPPER);
  }
  hd_line(p,8,110,105,110,HD_PLASTER_LIT);
+ /* Warm shop windows are real little scenes: hanging bulbs, pastries,
+    flower pots and a lived-in counter, not empty colored rectangles. */
+ for(int i=0;i<2;i++){
+  int wx=18+i*42;
+  hd_rect(p,wx+2,90,26,2,HD_BARK);
+  hd_rect(p,wx+4,87,4,3,HD_GOLD);
+  hd_rect(p,wx+11,86,6,4,HD_BRICK_LIT);
+  hd_rect(p,wx+20,85,4,5,HD_GLASS);
+  hd_line(p,wx+13,72,wx+13,78,HD_COPPER);
+  hd_ellipse(p,wx+13,80,4,3,HD_LAMP);
+ }
+ for(int i=0;i<3;i++){
+  int px=9+i*38;
+  hd_rect(p,px,100,7,9,HD_BARK);
+  hd_ellipse(p,px+3,98,7,5,HD_LEAF);
+  hd_line(p,px+4,100,px+11,92,HD_LEAF_LIT);
+  hd_pixel(p,px+9,91,HD_RED_SHADE);
+ }
  /* Café shade, textured awning, lit service interior and rain reflections. */
  hd_rect(p,5,67,98,4,HD_BARK);
  for(int k=0;k<11;k++)
@@ -658,7 +685,21 @@ static void rooftop(uint8_t *p,unsigned t,unsigned page){
   hd_line(p,x,109,x+14,156,HD_ROAD_COOL);
   hd_rect(p,x,145,36,1,HD_ROAD_LIGHT);
  }
+ /* Lit parapet string and foreground rooftop greenery frame the artist. */
  hd_rect(p,0,75,HD_W,4,HD_COPPER);
+ for(int i=0;i<6;i++){
+  int bx=12+i*41;
+  hd_line(p,bx,73,bx+22,73,HD_STONE_DARK);
+  hd_rect(p,bx+4,74,3,3,(i&1)?HD_LAMP:HD_GOLD);
+ }
+ for(int i=0;i<3;i++){
+  int px=8+i*109;
+  hd_rect(p,px,121,17,14,HD_BRICK);
+  hd_rect(p,px+2,121,13,3,HD_BRICK_LIT);
+  hd_line(p,px+8,119,px+8,105,HD_LEAF_DARK);
+  hd_line(p,px+8,109,px+1,101,HD_LEAF);
+  hd_line(p,px+8,109,px+17,98,HD_LEAF_LIT);
+ }
  for(int x=12;x<240;x+=27)hd_rect(p,x,77,2,37,HD_COPPER);
  hd_line(p,0,105,239,105,HD_STONE_DARK);
  /* Painting depicts the same city rather than anonymous colored squares. */
@@ -711,6 +752,20 @@ static void clinic(uint8_t *p,const Story *s,unsigned t,int last){
  hd_rect(p,181,103,29,4,HD_BRICK_DARK);
  hd_rect(p,184,96,21,10,HD_PAPER);
  for(int i=0;i<4;i++)hd_line(p,185,98+i*2,202,98+i*2,HD_ROAD_COOL);
+ /* The clinic gains specific working equipment and a warmer lighting key. */
+ hd_rect(p,12,11,112,3,HD_STONE_LIT);
+ hd_rect(p,17,14,102,4,HD_PAPER);
+ hd_rect(p,17,18,102,2,HD_GOLD);
+ for(int j=0;j<4;j++){
+  int yy=35+j*13;
+  hd_rect(p,114,yy,26,3,HD_BARK);
+  hd_rect(p,117,yy-7,7,7,HD_GLASS);
+  hd_rect(p,128,yy-6,7,6,j&1?HD_COPPER:HD_LEAF);
+ }
+ hd_rect(p,21,93,13,14,HD_BARK);
+ hd_line(p,27,92,27,72,HD_LEAF_DARK);
+ hd_line(p,27,82,15,75,HD_LEAF_LIT);
+ hd_line(p,27,82,38,73,HD_LEAF);
  /* Consultation chart, desk and patient-clinician line of action. */
  hd_rect(p,83,107,123,5,HD_BARK);
  hd_rect(p,87,111,6,27,HD_BARK);

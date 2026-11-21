@@ -140,6 +140,14 @@ int main(void){
  assert(patient_close!=film(&s,CINE_LAST_CLINIC,215u,0u));
  uint32_t mara_clinic=film(&s,CINE_LAST_CLINIC,178u,2u);
  assert(mara_clinic!=film(&s,CINE_LAST_CLINIC,178u,1u));
+ /* A portrait body must remain connected all the way to the lower
+    matte. The former three-ellipse bust ended as a floating sticker. */
+ (void)film(&s,CINE_MARA,177u,3u);
+ unsigned garment=0;
+ for(int yy=115;yy<155;yy++)
+  for(int xx=157;xx<199;xx++)
+   if(color(xx,yy)==HD_GLASS)garment++;
+ assert(garment>60u);
  /* Every role's distinct portrait must stay bounded in the exact same
     guarded 240x160 buffer, with no new RAM backing. */
  uint32_t portraits[5];
