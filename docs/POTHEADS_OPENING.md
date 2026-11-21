@@ -41,6 +41,12 @@ recognizable physical context.
 
 ## Gameplay continuity
 
+A fresh game now starts at walkable tile (20,11), facing east toward
+Potheads (21,11). The moment the opening dialogue closes, the normal
+isometric camera picks up in front of the very same business. Old saves
+are resumed from their saved positions, not relocated by this change.
+
+
 The solid shop facade occupies world cell (21,11). From the walkable cell
 (20,11), face east and press **A SHIFT**. Before the life-sim day begins,
 this is an optional character line. In an ordinary life-sim day, a paid
