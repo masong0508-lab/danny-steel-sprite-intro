@@ -21,6 +21,15 @@ static void check(unsigned level,unsigned mode,unsigned slot,
  assert(frame.pixels[73*MENU_INK_W+4]<=255u);
 }
 int main(void){
+ /* The menu-enter A press must be released and re-pressed. */
+ assert(menu_erase_step(0,0,1)==0u);
+ assert(menu_erase_step(0,1,1)==1u);
+ unsigned held=1u;
+ for(unsigned i=1;i<MENU_ERASE_HOLD;i++)held=menu_erase_step(held,0,1);
+ assert(held==MENU_ERASE_HOLD);
+ assert(menu_erase_step(held,0,1)==MENU_ERASE_HOLD);
+ assert(menu_erase_step(held/2u,0,0)==0u);
+ assert(menu_erase_step(0,0,1)==0u);
  for(unsigned level=0;level<2;level++)
   for(unsigned mode=0;mode<3;mode++)
    for(unsigned slot=0;slot<3;slot++)
