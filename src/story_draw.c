@@ -397,8 +397,9 @@ static void check_icon(uint8_t *p,int x,int y,int result,int harmful){
 static void consequence_board(uint8_t *p,const Story *s){
     unsigned page=story_check_page(s);
     if(page>=STORY_CHECK_PAGE_COUNT)page=0;
-    unsigned total=story_check_count_page(s,page);
     int risky=page==2u;
+    unsigned total=risky?(unsigned)story_bad_count(s):
+                          story_check_count_page(s,page);
     box(p,2,9,116,71,3);
     box(p,4,11,112,67,21);
     box(p,4,11,112,13,24);
@@ -406,11 +407,12 @@ static void consequence_board(uint8_t *p,const Story *s){
                          "CHOICES AND RISKS",20,24);
     char number[]="0/5";
     number[0]=(char)('0'+total);
+    number[2]=risky?'4':'5';
     text(p,99,13,number,20,3);
     text(p,8,20,page==0?"5 CORE MILESTONES":
         page==1?"PEOPLE WORK AND CARE":"HARM IS NEVER AUTOMATIC",18,27);
     box(p,8,25,103,2,3);
-    box(p,8,25,(int)total*103/5,2,risky?16:13);
+    box(p,8,25,(int)total*103/(risky?4:5),2,risky?16:13);
     for(unsigned i=0;i<STORY_CHECKS_PER_PAGE;i++){
         unsigned id=page*STORY_CHECKS_PER_PAGE+i;
         int y=29+(int)i*9;
@@ -489,6 +491,23 @@ static void risk_menu(uint8_t *p,const Story *s){
         (s->risk_menu=='H'?" > OPEN    A CONFIRM":" > BACK    A CONFIRM"),20,28);
     text(p,94,74,"B EXIT",22,7);
 }
+/* Cinematic dialogue shares one clean speaker-first layout in every view,
+   including good/neutral/bad ending and rescue. No new image assets. */
+static void dialogue_card(uint8_t *p,const Story *s,const StoryPage *page,int count){
+    int accent=s->cinema==CINE_RESCUE_DOOR||s->cinema==CINE_BAD?16:
+       s->cinema==CINE_MARA||s->cinema==CINE_RESCUE_SAVED?28:
+       s->cinema==CINE_MUSIC?25:18;
+    panel(p,48,80);
+    box(p,1,49,2,30,accent);
+    box(p,4,57,112,1,accent);
+    text(p,7,51,page->speaker,accent,21);
+    for(int j=0;j<count&&j<5;j++)
+        box(p,97+j*4,52,3,3,j<=(int)s->page?accent:5);
+    text(p,7,60,page->line1,20,26);
+    text(p,7,68,page->line2,20,26);
+    box(p,108,73,10,6,3);
+    text(p,111,74,"A",20,1);
+}
 static void ending_caption(uint8_t *p,unsigned ending,unsigned rescue,unsigned f){
  const char *a=0,*b=0;
  if(ending==STORY_END_GOOD){
@@ -547,11 +566,7 @@ void story_draw(const Story *s,int frame,uint8_t *p) {
             int count;const StoryPage *pages=story_pages(s,&count);
             if(pages && s->page<count){
                 const StoryPage *d=&pages[s->page];
-                panel(p,49,80);
-                text(p,4,52,d->speaker,18,28);
-                text(p,4,60,d->line1,20,28);
-                text(p,4,68,d->line2,20,28);
-                text(p,91,74,"A NEXT",22,7);
+                dialogue_card(p,s,d,count);
             }
         }else if(s->finale_frame >= (ending==STORY_END_GOOD?
                 STORY_GOOD_FINAL_FRAMES:STORY_END_SCORE_FRAMES)){
@@ -608,12 +623,8 @@ void story_draw(const Story *s,int frame,uint8_t *p) {
     if(s->dialogue){
         int count; const StoryPage *pages=story_pages(s,&count);
         if(pages&&s->page<count){
-            panel(p,49,80);
             const StoryPage *d=&pages[s->page];
-            text(p,4,52,d->speaker,18,28);
-            text(p,4,60,d->line1,20,28);
-            text(p,4,68,d->line2,20,28);
-            text(p,91,74,"A NEXT",22,7);
+            dialogue_card(p,s,d,count);
         }
     } else if(s->risk_menu){
         risk_menu(p,s);
@@ -645,7 +656,7 @@ void story_draw(const Story *s,int frame,uint8_t *p) {
             text(p,3,74,hint,20,29);
         }else if(story_bad_count(s)>=2 && s->rescue_stage==STORY_RESCUE_NONE){
             char hint[]="WARNING  BAD 0/4 START R";
-            hint[13]=(char)('0'+story_bad_count(s));
+            hint[12]=(char)('0'+story_bad_count(s));
             text(p,3,74,hint,18,28);
         }else if(s->life_stage==STORY_LIFE_WAIT ||
            s->life_stage==STORY_LIFE_FOLLOWUP_WAIT){
