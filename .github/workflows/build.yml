@@ -21,47 +21,55 @@ jobs:
       - uses: actions/checkout@v4
       - name: Test story progression and map accessibility
         run: |
-          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c tests/story_test.c -o /tmp/danny_story_test
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c tests/story_test.c -o /tmp/danny_story_test
           /tmp/danny_story_test
       - name: Test both render modes
         run: |
-          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/story_draw.c src/cinema.c tests/render_test.c -o /tmp/danny_render_test
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c src/story_draw.c src/cinema.c tests/render_test.c -o /tmp/danny_render_test
           /tmp/danny_render_test
       - name: Verify objective guidance across both camera modes
         run: |
-          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/story_draw.c src/cinema.c tests/objective_test.c -o /tmp/danny_objective_test
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c src/story_draw.c src/cinema.c tests/objective_test.c -o /tmp/danny_objective_test
           /tmp/danny_objective_test
       - name: Test five optional day activities, changing scenes and clinic access
         run: |
-          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/story_draw.c src/cinema.c tests/daily_moments_test.c -o /tmp/danny_daily_moments_test
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c src/story_draw.c src/cinema.c tests/daily_moments_test.c -o /tmp/danny_daily_moments_test
           /tmp/danny_daily_moments_test
       - name: Test daily choices, resources, cancellation and accessible doctor visits
         run: |
-          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/story_draw.c src/cinema.c tests/life_choices_test.c -o /tmp/danny_life_choices_test
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c src/story_draw.c src/cinema.c tests/life_choices_test.c -o /tmp/danny_life_choices_test
           /tmp/danny_life_choices_test
       - name: Test two persistent creative projects and time-of-day dialogue
         run: |
-          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/story_draw.c src/cinema.c tests/projects_test.c -o /tmp/danny_projects_test
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c src/story_draw.c src/cinema.c tests/projects_test.c -o /tmp/danny_projects_test
           /tmp/danny_projects_test
+      - name: Test unlockable six-tab advanced editor, player intuition and per-slot studio save
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c src/story_draw.c src/cinema.c tests/studio_editor_test.c -o /tmp/danny_studio_editor_test
+          /tmp/danny_studio_editor_test
+      - name: Test actual GBA PSG playback of edited music without interrupting ending score
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Itests/stubs -Isrc -DHOST_MUSIC_TEST -include tests/stubs/gba.h src/music.c src/studio.c src/music_motifs.c tests/studio_audio_test.c -o /tmp/danny_studio_audio_test
+          /tmp/danny_studio_audio_test
       - name: Validate all SRAM v1-v5 migrations, checksum and slot bounds
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story_save.c tests/save_codec_test.c -o /tmp/danny_save_codec_test
           /tmp/danny_save_codec_test
       - name: Test live consequence checklist, accessible journal UI and reactive rescue scenes
         run: |
-          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/story_draw.c src/cinema.c tests/consequence_journal_test.c -o /tmp/danny_consequences_test
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c src/story_draw.c src/cinema.c tests/consequence_journal_test.c -o /tmp/danny_consequences_test
           /tmp/danny_consequences_test
       - name: Check Mara kidnapping, rescue, both bad-ending outcomes and restored good/neutral routes
         run: |
-          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/story_draw.c src/cinema.c tests/rescue_route_test.c -o /tmp/danny_rescue_route_test
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c src/story_draw.c src/cinema.c tests/rescue_route_test.c -o /tmp/danny_rescue_route_test
           /tmp/danny_rescue_route_test
       - name: Audit plot continuity, music master, honest promises and conditional endings
         run: |
-          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/story_draw.c src/cinema.c tests/story_continuity_test.c -o /tmp/danny_story_continuity_test
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c src/story_draw.c src/cinema.c tests/story_continuity_test.c -o /tmp/danny_story_continuity_test
           /tmp/danny_story_continuity_test
       - name: Test Mara's hopeful unanswered phone, delayed realization and two-day save continuity
         run: |
-          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/story_draw.c src/cinema.c src/story_save.c src/rescue_save.c tests/hope_phone_test.c -o /tmp/danny_hope_phone_test
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c src/story_draw.c src/cinema.c src/story_save.c src/rescue_save.c tests/hope_phone_test.c -o /tmp/danny_hope_phone_test
           /tmp/danny_hope_phone_test
       - name: Verify safe, checksummed per-slot Mara rescue persistence
         run: |
@@ -69,16 +77,16 @@ jobs:
           /tmp/danny_rescue_save_test
       - name: Test numbered-day neutral finale and the good epilogue
         run: |
-          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/story_draw.c src/cinema.c tests/ending_test.c -o /tmp/danny_ending_test
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c src/story_draw.c src/cinema.c tests/ending_test.c -o /tmp/danny_ending_test
           /tmp/danny_ending_test
       - name: Test before, during and after server encounters
         run: |
-          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/story_draw.c src/cinema.c tests/cult_test.c -o /tmp/danny_cult_test
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c src/story_draw.c src/cinema.c tests/cult_test.c -o /tmp/danny_cult_test
           /tmp/danny_cult_test
 
       - name: Verify cinematic shot coverage and animation safety
         run: |
-          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/story_draw.c src/cinema.c tests/cinema_test.c -o /tmp/danny_cinema_test
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c src/story_draw.c src/cinema.c tests/cinema_test.c -o /tmp/danny_cinema_test
           /tmp/danny_cinema_test
 
       - name: Check seamless cinematic parallax, tape motion and no-teleport bus arrival
@@ -95,7 +103,7 @@ jobs:
           /tmp/danny_cinema_acting_clock_test
       - name: Validate staged cutscene movement, spatial coherence and route-specific ending shots
         run: |
-          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/story_draw.c src/cinema.c tests/cinema_direction_test.c -o /tmp/danny_cinema_direction_test
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c src/story_draw.c src/cinema.c tests/cinema_direction_test.c -o /tmp/danny_cinema_direction_test
           /tmp/danny_cinema_direction_test
       - name: Validate BORE-derived melodic motifs and note ranges
         run: |
@@ -103,16 +111,16 @@ jobs:
           /tmp/danny_motifs_test
       - name: Check timer-based PSG music engine
         run: |
-          gcc -std=c11 -O2 -Wall -Wextra -Werror -Itests/stubs -Isrc -DHOST_MUSIC_TEST -include tests/stubs/gba.h src/music.c src/music_motifs.c tests/music_engine_test.c -o /tmp/danny_music_engine_test
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Itests/stubs -Isrc -DHOST_MUSIC_TEST -include tests/stubs/gba.h src/music.c src/studio.c src/music_motifs.c tests/music_engine_test.c -o /tmp/danny_music_engine_test
           /tmp/danny_music_engine_test
       - name: Check full Here Today score in three endings and good coda
         run: |
-          gcc -std=c11 -O2 -Wall -Wextra -Werror -Itests/stubs -Isrc -DHOST_MUSIC_TEST -include tests/stubs/gba.h src/music.c src/music_motifs.c tests/music_ending_test.c -o /tmp/danny_music_ending_test
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Itests/stubs -Isrc -DHOST_MUSIC_TEST -include tests/stubs/gba.h src/music.c src/studio.c src/music_motifs.c tests/music_ending_test.c -o /tmp/danny_music_ending_test
           /tmp/danny_music_ending_test
 
       - name: Verify 72-second film, 16-second coda and frame bounds
         run: |
-          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/story_draw.c src/cinema.c tests/ending_montage_test.c -o /tmp/danny_ending_montage_test
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c src/story_draw.c src/cinema.c tests/ending_montage_test.c -o /tmp/danny_ending_montage_test
           /tmp/danny_ending_montage_test
 
   build:
