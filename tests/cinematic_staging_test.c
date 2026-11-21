@@ -153,14 +153,40 @@ int main(void){
  memset(&sample,0xA5,sizeof sample);
  hd_rect(sample.pixels,0,0,HD_W,HD_H,HD_STONE_DARK);
  hd_actor_closeup(sample.pixels,120,143,1,171u,0);
- unsigned left_cuff=0,right_cuff=0;
- for(int yy=138;yy<145;yy++){
-  for(int xx=80;xx<85;xx++)
-   if(color(xx,yy)==HD_RED)left_cuff++;
-  for(int xx=155;xx<162;xx++)
-   if(color(xx,yy)==HD_RED)right_cuff++;
+ /* This is a jacket with contrast cuffs and visible hands, not a
+    monochrome sleeve. Check the two *actual* contact zones, rather than
+    expecting red pixels outside the cuff's drawn extent. */
+ unsigned left_cuff=0,right_cuff=0,left_hand=0,right_hand=0;
+ for(int yy=139;yy<=141;yy++){
+  for(int xx=84;xx<=98;xx++)
+   if(color(xx,yy)==HD_STONE_LIT)left_cuff++;
+  for(int xx=142;xx<=156;xx++)
+   if(color(xx,yy)==HD_STONE_LIT)right_cuff++;
  }
- assert(left_cuff>0u && right_cuff>0u);
+ for(int yy=142;yy<=147;yy++){
+  for(int xx=85;xx<=95;xx++)
+   if(color(xx,yy)==HD_SKIN||color(xx,yy)==HD_SKIN_LIT)
+    left_hand++;
+  for(int xx=144;xx<=154;xx++)
+   if(color(xx,yy)==HD_SKIN||color(xx,yy)==HD_SKIN_LIT)
+    right_hand++;
+ }
+ assert(left_cuff>20u && right_cuff>20u);
+ assert(left_hand>20u && right_hand>20u);
+ /* Actor breathing and reaction pose changes must remain real, while
+    always staying in the allocated 240x160 frame. */
+ uint32_t neutral=2166136261u;
+ for(unsigned k=0;k<HD_BYTES;k++)
+  neutral=(neutral^sample.pixels[k])*16777619u;
+ memset(&sample,0xA5,sizeof sample);
+ hd_rect(sample.pixels,0,0,HD_W,HD_H,HD_STONE_DARK);
+ hd_actor_closeup(sample.pixels,120,143,1,225u,5);
+ uint32_t reflective=2166136261u;
+ for(unsigned k=0;k<HD_BYTES;k++)
+  reflective=(reflective^sample.pixels[k])*16777619u;
+ assert(neutral!=reflective);
+ for(unsigned g=0;g<32u;g++)
+  assert(sample.before[g]==0xA5&&sample.after[g]==0xA5);
  /* Every role's distinct portrait must stay bounded in the exact same
     guarded 240x160 buffer, with no new RAM backing. */
  uint32_t portraits[5];

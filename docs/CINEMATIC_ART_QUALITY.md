@@ -40,6 +40,7 @@ workflow. It is not a request to produce standalone concept art.
 - New cinematic composition must not change save-state logic, story
   flags, dialogue timing or branching for Mara's rescue and endings.
 - The cinematic staging test checks guards, palette, portrait identities,
+  connected contrasting cuffs and hands, expression variance,
   story-dependent casting, prop continuity and reachable cut points.
   Screenshot capture inspects the *actual* rendered shots.
 - Keep the existing per-scene render-cost probe; host microseconds are

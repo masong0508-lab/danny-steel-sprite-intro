@@ -166,20 +166,22 @@ void hd_actor_closeup(uint8_t *p,int x,int base,int role,
  int breathe=(int)((frame/27u)&1u),y=base-breathe;
  /* Foreground torso runs behind the lower subtitle matte so every bust
     remains attached to the picture rather than floating above a panel. */
- /* Replace the three concentric oval stickers with a tapered, full
-    shoulders-to-waist garment. Rows run behind the dialogue matte, giving
-    the actor a body with anatomical continuity rather than a floating ball. */
+ /* A tapered shoulder-to-waist garment rather than three round blobs.
+    Draw two scanlines per band instead of issuing four draw calls per
+    *single* row; visual width quantization is at native pixel scale.
+    This halves torso-loop command count without any image buffer. */
  hd_ellipse(p,x,y+4,36,6,HD_SHADOW);
- for(int yy=y-49;yy<y+37;yy++){
-  int d=yy-(y-49);
-  int half=d<14?18+d:d<45?32+(d-14)/8:35-(d-45)/4;
+ for(int d=0;d<86;d+=2){
+  int yy=y-49+d;
+  int middle=d+1;
+  int half=middle<14?18+middle:
+           middle<45?32+(middle-14)/8:35-(middle-45)/4;
   if(half<24)half=24;
-  hd_rect(p,x-half-1,yy,half*2+2,1,HD_INK);
-  hd_rect(p,x-half,yy,half*2,1,jacket);
-  hd_rect(p,x-half,yy,4,1,rim);
-  hd_rect(p,x+half-3,yy,3,1,rim);
-  if((yy%11)==0)
-   hd_rect(p,x-half+7,yy,9,1,HD_STONE_LIT);
+  hd_rect(p,x-half-1,yy,half*2+2,2,HD_INK);
+  hd_rect(p,x-half,yy,half*2,2,jacket);
+  hd_rect(p,x-half,yy,4,2,rim);
+  hd_rect(p,x+half-3,yy,3,2,rim);
+  if(d%12==0)hd_rect(p,x-half+7,yy,9,1,HD_STONE_LIT);
  }
  /* Ten stepped fabric segments follow actual shoulder -> elbow -> wrist
     trajectories. Unlike two oval shoulder-pads, these have cuffs and
