@@ -171,7 +171,12 @@ jobs:
       - run: make
       - name: Report linked ROM, EWRAM/IWRAM/BSS size without speculative 30 FPS claims
         run: |
-          arm-none-eabi-size -A danny_steel_title.elf
+          # The devkitARM container ships the compiler/linker but not always
+          # arm-none-eabi-size. Use the linker map emitted by GNU ld itself.
+          test -s danny_steel_title.map
+          echo "Relevant linked sections (address and hexadecimal size):"
+          grep -E '^[[:space:]]*\.(text|rodata|data|bss|ewram|iwram|sbss)[[:space:]]+0x' danny_steel_title.map || true
+          echo "ROM bytes:"
           wc -c danny_steel_title.gba
       - name: Publish playable ROM to main (no artifact quota needed)
         run: |
