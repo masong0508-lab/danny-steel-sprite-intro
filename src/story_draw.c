@@ -350,7 +350,11 @@ static void panel(uint8_t *p,int top,int bottom){
 }
 void story_draw(const Story *s,int frame,uint8_t *p) {
     if(s->battle){cult_arena(s,frame,p);return;}
-    if(s->life_stage==STORY_LIFE_FINALE || (s->ended && s->ending==STORY_END_NEUTRAL)) {
+    if(s->life_stage==STORY_LIFE_FINALE) {
+        cinema_draw(p,CINE_FINALE,s->cinema_frame,s->page,s->finale_frame);
+    } else if(s->cinema) {
+        cinema_draw(p,s->cinema,s->cinema_frame,s->page,s->finale_frame);
+    } else if(s->ended && s->ending==STORY_END_NEUTRAL) {
         scene_rooftop(s,frame,p);
     } else if(s->ended && s->ending==STORY_END_GOOD){
         scene_record(p,frame);

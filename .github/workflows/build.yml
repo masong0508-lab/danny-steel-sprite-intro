@@ -19,16 +19,21 @@ jobs:
           /tmp/danny_story_test
       - name: Test both render modes
         run: |
-          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/story_draw.c tests/render_test.c -o /tmp/danny_render_test
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/story_draw.c src/cinema.c tests/render_test.c -o /tmp/danny_render_test
           /tmp/danny_render_test
       - name: Test numbered-day neutral finale and the good epilogue
         run: |
-          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/story_draw.c tests/ending_test.c -o /tmp/danny_ending_test
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/story_draw.c src/cinema.c tests/ending_test.c -o /tmp/danny_ending_test
           /tmp/danny_ending_test
       - name: Test before, during and after server encounters
         run: |
-          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/story_draw.c tests/cult_test.c -o /tmp/danny_cult_test
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/story_draw.c src/cinema.c tests/cult_test.c -o /tmp/danny_cult_test
           /tmp/danny_cult_test
+
+      - name: Verify cinematic shot coverage and animation safety
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/story_draw.c src/cinema.c tests/cinema_test.c -o /tmp/danny_cinema_test
+          /tmp/danny_cinema_test
 
   build:
     needs: host

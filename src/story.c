@@ -272,7 +272,41 @@ const StoryPage *story_pages(const Story *s, int *count) {
     *count = scripts[id].count;
     return scripts[id].pages;
 }
-static void talk(Story *s, uint8_t id) { s->dialogue = id; s->page = 0; }
+/* Each major interaction receives a world-grounded, animated shot sequence.
+   The same script pages act as camera beats; no replay cutscene flags needed. */
+static uint8_t cinematics_for_dialogue(uint8_t d){
+    switch(d){
+    case D_OPEN: return CINE_OPEN;
+    case D_LETTER: case D_LETTER_AGAIN: return CINE_LETTER;
+    case D_CLERK_LOCKED: case D_CLERK: case D_CLERK_AGAIN: return CINE_BORE;
+    case D_MARA_LOCKED: case D_MARA: case D_MARA_AGAIN: return CINE_MARA;
+    case D_BUS_LOCKED: case D_BUS_READY: case D_END_GO: return CINE_BUS;
+    case D_END_STAY: return CINE_STAY;
+    case D_MUSIC: case D_MUSIC_AGAIN: return CINE_MUSIC;
+    case D_ART: case D_ART_AGAIN: case D_ART_DAY: case D_ART_LAST_LOCKED:
+       return CINE_ART;
+    case D_CULT_FIND: case D_CULT_LOGS: case D_CULT_WAIT: return CINE_SERVER;
+    case D_CULT_WITNESS: case D_CULT_NOT_YET: case D_CULT_WITNESS_AFTER:
+       return CINE_WITNESS;
+    case D_CULT_SAFETY: case D_CULT_SAFE_AGAIN: return CINE_SAFE;
+    case D_CULT_BACKUP: return CINE_BACKUP;
+    case D_CULT_AFTER: case D_CULT_POST_WIN: return CINE_REBRAND;
+    case D_CULT_PRE_WIN: case D_CULT_DURING_WIN:
+    case D_CULT_RUN: case D_CULT_LOSE: return CINE_SERVER;
+    case D_MEDICAL_NOTICE: return CINE_NOTICE;
+    case D_DOCTOR_FIRST: return CINE_CLINIC;
+    case D_DOCTOR_RETURN: return CINE_FOLLOWUP;
+    case D_DOCTOR_LAST: return CINE_LAST_CLINIC;
+    case D_GOOD_END: return CINE_GOOD;
+    case D_NEUTRAL_START: return CINE_DAY;
+    case D_NEUTRAL_PAINT: case D_NEUTRAL_END: return CINE_FINALE;
+    default: return CINE_NONE;
+    }
+}
+static void talk(Story *s, uint8_t id) {
+    s->dialogue=id;s->page=0;
+    s->cinema=cinematics_for_dialogue(id);s->cinema_frame=0;
+}
 void story_new(Story *s, int slot) {
     *s = (Story){0};
     s->x = 12; s->y = 13; s->prev_x = s->x; s->prev_y = s->y;
@@ -445,6 +479,7 @@ void story_tick(Story *s, uint16_t keys) {
     uint16_t pressed = (uint16_t)(keys & ~s->old_keys);
     s->old_keys = keys;
     if (s->anim) --s->anim;
+    if (s->cinema && !s->paused && s->cinema_frame < 65530) ++s->cinema_frame;
     /* One step is exactly one VBlank, including dialogue. Pause freezes the
        clock. Day transitions never steal controls during a fight or textbox. */
     if (s->life_stage >= STORY_LIFE_WAIT && s->life_stage <= STORY_LIFE_LAST_WORK && !s->paused) {
@@ -480,6 +515,7 @@ void story_tick(Story *s, uint16_t keys) {
             else {
                 int ready = s->dialogue == D_BUS_READY && (pressed & A);
                 s->dialogue = 0; s->page = 0; s->scene=STORY_SCENE_NONE;
+                if(!ready && !s->ended && s->life_stage!=STORY_LIFE_FINALE)s->cinema=CINE_NONE;
                 if (ready) { s->choosing = 1; s->choice = 0; }
             }
         }
@@ -492,7 +528,7 @@ void story_tick(Story *s, uint16_t keys) {
     }
     if (s->choosing) {
         if (pressed & (LEFT|RIGHT|UP|DOWN)) s->choice ^= 1;
-        if (pressed & B) s->choosing = 0;
+        if (pressed & B) { s->choosing = 0; s->cinema = CINE_NONE; }
         if (pressed & A) {
             s->choosing=0;
             if (s->choice==0 && (s->flags & STORY_FULL)==STORY_FULL) {

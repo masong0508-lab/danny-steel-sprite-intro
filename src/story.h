@@ -1,5 +1,6 @@
 #pragma once
 #include <stdint.h>
+#include "cinema.h"
 #define STORY_W 24
 #define STORY_H 18
 #define STORY_HOME 1
@@ -42,6 +43,9 @@ typedef struct {
     /* Numbered-day life sim, doctor visits and the unskippable last painting. */
     uint8_t day_number, life_stage, scene;
     uint16_t day_frame, finale_frame;
+    /* Cinematic shots are transient; saves retain story flags, not camera frames. */
+    uint8_t cinema;
+    uint16_t cinema_frame;
     uint16_t old_keys;
 } Story;
 

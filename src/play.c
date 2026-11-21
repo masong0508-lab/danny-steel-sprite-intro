@@ -113,6 +113,20 @@ int play_update(void){
     }
     story_tick(&game,(u16)(~REG_KEYINPUT&0x03FF));
     if(game.quit){write_save();music_set_volume(40);return 1;}
+    /* Cinematic mix: music withdraws during difficult clinic scenes and
+       gently fades during the final rooftop sequence. Eight-VBlank updates
+       avoid additional per-frame PSG register work or audio allocations. */
+    if((clock_ticks & 7)==0){
+        int volume=65;
+        if(game.life_stage==STORY_LIFE_FINALE ||
+           (game.ended&&game.ending==STORY_END_NEUTRAL)){
+            int f=game.finale_frame;
+            volume=f<210?42:f<440?(440-f)*42/230:0;
+        } else if(game.cinema==CINE_CLINIC || game.cinema==CINE_LAST_CLINIC)
+            volume=28;
+        else if(game.cinema==CINE_GOOD)volume=83;
+        music_set_volume(volume);
+    }
     /* Periodic clock checkpoint: gameplay time survives resets and reloads. */
     if(game.life_stage>=STORY_LIFE_WAIT && game.life_stage<=STORY_LIFE_LAST_WORK
        && (clock_ticks%600)==599)game.dirty=1;
