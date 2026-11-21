@@ -97,6 +97,10 @@ int main(int argc,char **argv){
  write_frame("37_potheads_storefront",&s,184);
  stand(&s,10,7,0);
  write_frame("38_civic_facades",&s,191);
+ s.view=1;
+ stand(&s,20,11,0);
+ write_frame("39_potheads_first_person",&s,205);
+ s.view=0;
  stand(&s,12,13,3);
  s.view=1;
  write_frame("07_gameplay_first_person",&s,90);
