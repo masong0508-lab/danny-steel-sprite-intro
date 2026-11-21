@@ -28,8 +28,7 @@ static void title(uint8_t *p,unsigned tab,int playing){
  hd_rect(p,7,53,3,78,HD_COPPER);
  hd_rect(p,0,136,240,24,HD_SHADOW);
  hd_rect(p,0,136,240,1,HD_COPPER);
- hd_text(p,8,140,"L/R TABS       SELECT TO PREVIEW",HD_STONE_LIT,1,0);
- hd_text(p,8,150,"D-PAD EDIT     A SET    B LEAVE",HD_PAPER,1,0);
+ /* Footer text is rendered once, per tab, after the main composition. */
 }
 static void label(uint8_t *p,const char *name,const char *detail){
  hd_text(p,17,58,name,HD_PAPER,1,1);
@@ -58,7 +57,7 @@ static void record(uint8_t *p,int cx,int cy,int rx,int ry,unsigned t){
  hd_ellipse(p,cx,cy,2,2,HD_INK);
 }
 static void notes(uint8_t *p,const StudioPatch *a,unsigned cursor,int playing){
- label(p,"NOTES / MELODY","EIGHT STEPS / SEVEN PITCHES / REST");
+ label(p,"NOTES / MELODY","8 STEPS / 7 PITCHES / REST");
  const int left=23,top=83,stepw=24,rowh=5;
  for(int row=0;row<8;row++){
   int y=top+row*5;
@@ -87,8 +86,7 @@ static void notes(uint8_t *p,const StudioPatch *a,unsigned cursor,int playing){
  current[5]=(char)('1'+(cursor&7u));
  hd_text(p,165,59,current,HD_LAMP,1,0);
  hd_text(p,165,69,studio_note_label(a->notes[cursor&7u]),HD_PAPER,1,1);
- hd_text(p,18,140,"A REST/NOTE    UP/DOWN PITCH",HD_STONE_LIT,1,0);
- hd_text(p,18,150,"LEFT/RIGHT STEP     B LEAVE",HD_PAPER,1,0);
+ /* Contextual controls are printed in the common footer. */
 }
 static void order(uint8_t *p,const StudioPatch *a,unsigned cursor){
  static const char *const names[4]={"BASE","UP","LOW","FILL"};
@@ -151,8 +149,7 @@ static void perform(uint8_t *p,const StudioPatch *a,int playing){
   hd_text(p,x+22,90,num,highlighted?HD_PAPER:HD_STONE_LIT,1,0);
  }
  hd_text(p,17,125,studio_lyric(a->lyric),HD_STONE_LIT,1,0);
- hd_text(p,8,150,playing?"A STOP    SELECT PREVIEW    B LEAVE":
-                          "A PLAY    SELECT PREVIEW    B LEAVE",HD_PAPER,1,0);
+ /* Contextual controls are printed in the common footer. */
 }
 void hd_studio_draw(uint8_t *p,const Story *s,unsigned tick){
  const StudioPatch *a=studio_patch();
@@ -183,6 +180,14 @@ void hd_studio_draw(uint8_t *p,const Story *s,unsigned tick){
   hd_line(p,209,88,201,97,HD_COPPER);
   hd_text(p,18,127,"A CHANGE   UP/DOWN SELECT",HD_STONE_LIT,1,0);
  }
- if(tab!=STUDIO_NOTES && tab!=STUDIO_PERFORM)
-  hd_text(p,8,150,"A SET   LEFT/RIGHT EDIT   B LEAVE",HD_PAPER,1,0);
+ /* One instruction set per page; no compositing two incompatible bars. */
+ const char *row1=tab==STUDIO_NOTES?
+   "L/R TABS   LEFT/RIGHT STEP":tab==STUDIO_PERFORM?
+   "L/R TABS   SELECT PREVIEW":"L/R TABS   D-PAD SELECT";
+ const char *row2=tab==STUDIO_NOTES?
+   "UP/DOWN PITCH   A REST   B EXIT":tab==STUDIO_PERFORM?
+   (playing?"A STOP    B EXIT":"A PLAY    B EXIT"):
+   "A SET    SELECT PLAY    B EXIT";
+ hd_text(p,8,139,row1,HD_STONE_LIT,1,0);
+ hd_text(p,8,150,row2,HD_PAPER,1,0);
 }
