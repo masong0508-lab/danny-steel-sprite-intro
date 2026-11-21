@@ -131,7 +131,10 @@ enum { D_NONE, D_OPEN, D_LETTER, D_LETTER_AGAIN, D_CLERK_LOCKED, D_CLERK, D_CLER
        D_RESCUE_NOTES_2, D_RESCUE_NOTES_3, D_RESCUE_NOTES_SAVED,
        D_BUS_RESCUE, D_BAD_WARNING_2, D_CLINIC_RESCUE,
        D_RESCUE_WITNESS_TRUST, D_RESCUE_SAVED_TRUST,
-       D_RESCUE_SAVED_ART };
+       D_RESCUE_SAVED_ART,
+       D_HOPE_REALIZE, D_HOPE_PHONE_WAIT, D_HOPE_PHONE_LATE,
+       D_HOPE_WITNESS, D_HOPE_TERMINAL, D_HOPE_DOOR,
+       D_HOPE_NOTE_WAIT, D_HOPE_NOTE_LATE };
 #define SCRIPT(name, ...) static const StoryPage name[] = { __VA_ARGS__ }
 SCRIPT(d_open,
  {"DANNY", "The last bus leaves", "at sundown. Of course."},
@@ -492,9 +495,40 @@ SCRIPT(d_rescue_saved,
  {"MARA", "We still have", "a way home."},
  {"DANNY", "Let's go back.", "Together this time."});
 SCRIPT(d_rescue_lost,
- {"SAFE HOUSE", "The light went out.", "No one answered."},
- {"DANNY", "I went away.", "I cannot undo it."},
- {"PHONE", "Calls unanswered.", "No word of Mara."});
+ {"SAFE HOUSE", "The light went out.", "No answer came."},
+ {"UNKNOWN CALLER", "She will call you.", "Just give it a day."},
+ {"DANNY", "You said she would", "answer. All right."},
+ {"DANNY", "I'll keep my phone", "near. She'll call."});
+/* The unverified caller sounds reassuring, but the game does not portray
+   an unreturned call as evidence of death or confirmed harm. */
+SCRIPT(d_hope_realize,
+ {"PHONE", "A day has passed.", "No return call."},
+ {"UNKNOWN CALLER", "That last message", "was not verified."},
+ {"WITNESS", "Mara still has not", "been recovered."},
+ {"DANNY", "I was told she'd", "answer me by now."},
+ {"DANNY", "I don't know where", "she is. Not yet."},
+ {"DANNY", "I'll keep the line", "open. Just in case."});
+SCRIPT(d_hope_phone_wait,
+ {"PHONE", "CALL STILL PENDING.", "No reply yet."},
+ {"DANNY", "They said she'd", "answer. I believe it."});
+SCRIPT(d_hope_phone_late,
+ {"PHONE", "NO VERIFIED UPDATE.", "Calls unanswered."},
+ {"DANNY", "She hasn't been", "found. I still hope."});
+SCRIPT(d_hope_witness,
+ {"WITNESS", "They promised news.", "I can't confirm it."},
+ {"WITNESS", "No recovery report", "has come through."});
+SCRIPT(d_hope_terminal,
+ {"TERMINAL", "LOCATION UNKNOWN.", "NO VERIFIED TRACE."},
+ {"DANNY", "I can't turn hope", "into a location."});
+SCRIPT(d_hope_door,
+ {"SAFE HOUSE", "The door is shut.", "The light is off."},
+ {"DANNY", "I still have no", "answer. Not yet."});
+SCRIPT(d_hope_note_wait,
+ {"POCKET NOTEBOOK", "AWAIT MARA'S CALL.", "PROMISE UNVERIFIED."},
+ {"DANNY", "Keep the phone on.", "She could still call."});
+SCRIPT(d_hope_note_late,
+ {"POCKET NOTEBOOK", "MARA NOT RECOVERED.", "NO VERIFIED UPDATE."},
+ {"DANNY", "I know what I", "don't know. I hope."});
 SCRIPT(d_rescue_aftershock,
  {"TERMINAL", "FOURTH BAD CHECK.", "THE DAMAGE SPREADS."},
  {"MARA", "I'm safe now.", "But not all is well."},
@@ -573,7 +607,10 @@ static const struct { const StoryPage *pages; uint8_t count; } scripts[] = {
   SEQ(d_rescue_notes_2), SEQ(d_rescue_notes_3), SEQ(d_rescue_notes_saved),
   SEQ(d_bus_rescue), SEQ(d_bad_warning_2), SEQ(d_clinic_rescue),
   SEQ(d_rescue_witness_trust), SEQ(d_rescue_saved_trust),
-  SEQ(d_rescue_saved_art)
+  SEQ(d_rescue_saved_art),
+  SEQ(d_hope_realize), SEQ(d_hope_phone_wait), SEQ(d_hope_phone_late),
+  SEQ(d_hope_witness), SEQ(d_hope_terminal), SEQ(d_hope_door),
+  SEQ(d_hope_note_wait), SEQ(d_hope_note_late)
 };
 const StoryPage *story_pages(const Story *s, int *count) {
     unsigned id = s->dialogue;
@@ -632,15 +669,19 @@ static uint8_t cinematics_for_dialogue(uint8_t d){
     case D_BAD_LETTER: return CINE_LETTER;
     case D_BAD_CLERK: return CINE_BORE;
     case D_BAD_MUSIC: return CINE_MUSIC;
-    case D_BAD_SERVER: case D_RESCUE_TRACE: case D_RESCUE_AFTERSHOCK: return CINE_SERVER;
-    case D_MARA_MISSING: case D_MARA_ABSENT: return CINE_MARA_EMPTY;
-    case D_RESCUE_WITNESS: case D_RESCUE_WITNESS_TRUST: return CINE_WITNESS;
-    case D_RESCUE_LOST: return CINE_RESCUE_DOOR;
+    case D_BAD_SERVER: case D_RESCUE_TRACE: case D_RESCUE_AFTERSHOCK:
+    case D_HOPE_TERMINAL: return CINE_SERVER;
+    case D_MARA_MISSING: case D_MARA_ABSENT:
+    case D_HOPE_PHONE_WAIT: case D_HOPE_PHONE_LATE:
+        return CINE_MARA_EMPTY;
+    case D_RESCUE_WITNESS: case D_RESCUE_WITNESS_TRUST:
+    case D_HOPE_WITNESS: return CINE_WITNESS;
+    case D_RESCUE_LOST: case D_HOPE_DOOR: return CINE_RESCUE_DOOR;
     case D_RESCUE_SAVED: case D_RESCUE_SAVED_TRUST:
     case D_RESCUE_SAVED_ART: return CINE_RESCUE_SAVED;
     case D_BAD_END: case D_BAD_END_SAVED: return CINE_BAD;
     case D_BUS_RESCUE: return CINE_BUS;
-    case D_BAD_WARNING_2: return CINE_NOTICE;
+    case D_BAD_WARNING_2: case D_HOPE_REALIZE: return CINE_NOTICE;
     case D_CLINIC_RESCUE: return CINE_CLINIC;
     default: return CINE_NONE;
     }
@@ -886,6 +927,16 @@ static void begin_bad_film(Story *s){
     s->scene=STORY_SCENE_NONE;s->cinema=CINE_BAD;s->cinema_frame=0;
     s->risk_menu=0;s->risk_choice=0;s->dirty=1;
 }
+/* The failed rescue does NOT instantly decide Mara's fate. Reuse the
+   already-persisted day clock for this chapter; no new SRAM flags required.
+   These days are independent of the clinic's original numbered days. */
+static void begin_wait_for_call(Story *s){
+    s->rescue_stage=STORY_RESCUE_LOST;
+    s->life_stage=STORY_LIFE_NONE;
+    s->day_number=0;s->day_frame=0;
+    s->daily_mask=0;s->scene=STORY_SCENE_NONE;s->dirty=1;
+    talk(s,D_RESCUE_LOST);
+}
 static void commit_bad(Story *s,char target){
     unsigned bit=target=='L'?STORY_BAD_LETTER:target=='C'?STORY_BAD_CLERK:
                  target=='M'?STORY_BAD_MUSIC:STORY_BAD_SERVER;
@@ -893,10 +944,10 @@ static void commit_bad(Story *s,char target){
     s->bad_mask|=(uint8_t)bit;s->dirty=1;
     unsigned count=(unsigned)story_bad_count(s);
     if(count==4u && s->rescue_stage>=STORY_RESCUE_MISSING){
-        s->rescue_stage=s->rescue_stage==STORY_RESCUE_SAVED?
-            STORY_RESCUE_AFTERSHOCK:STORY_RESCUE_LOST;
-        talk(s,s->rescue_stage==STORY_RESCUE_AFTERSHOCK?
-                D_RESCUE_AFTERSHOCK:D_RESCUE_LOST);
+        if(s->rescue_stage==STORY_RESCUE_SAVED){
+            s->rescue_stage=STORY_RESCUE_AFTERSHOCK;
+            talk(s,D_RESCUE_AFTERSHOCK);
+        }else begin_wait_for_call(s);
     }else if(count==STORY_BAD_THRESHOLD &&
              s->rescue_stage==STORY_RESCUE_NONE){
         s->rescue_stage=STORY_RESCUE_MISSING;talk(s,D_MARA_MISSING);
@@ -918,10 +969,11 @@ static void resolve_risk(Story *s){
     s->risk_menu=0;s->risk_choice=0;s->cinema=CINE_NONE;
     if(target=='H'){
         if(s->rescue_stage!=STORY_RESCUE_TRACE)return;
-        s->rescue_stage=selected?STORY_RESCUE_LOST:STORY_RESCUE_SAVED;
-        s->dirty=1;
-        if(selected)talk(s,D_RESCUE_LOST);
-        else rescue_reunion(s);
+        if(selected)begin_wait_for_call(s);
+        else{
+            s->rescue_stage=STORY_RESCUE_SAVED;s->dirty=1;
+            rescue_reunion(s);
+        }
     }else if(selected)commit_bad(s,target);
 }
 static void interact(Story *s) {
@@ -945,6 +997,11 @@ static void interact(Story *s) {
         }
         break;
     case 'F':
+        if(s->rescue_stage==STORY_RESCUE_LOST){
+            talk(s,s->day_number>=STORY_HOPE_REALIZE_DAY?
+                 D_HOPE_PHONE_LATE:D_HOPE_PHONE_WAIT);
+            break;
+        }
         if(s->rescue_stage>=STORY_RESCUE_MISSING &&
            s->rescue_stage<=STORY_RESCUE_TRACE){
             talk(s,D_MARA_ABSENT);break;
@@ -962,6 +1019,11 @@ static void interact(Story *s) {
         }
         break;
     case 'B':
+        if(s->rescue_stage==STORY_RESCUE_LOST){
+            talk(s,s->day_number>=STORY_HOPE_REALIZE_DAY?
+                 D_HOPE_NOTE_LATE:D_HOPE_NOTE_WAIT);
+            break;
+        }
         if(s->rescue_stage>=STORY_RESCUE_MISSING &&
            s->rescue_stage<=STORY_RESCUE_TRACE)talk(s,D_MARA_MISSING);
         else if((s->flags&STORY_ALL)==STORY_ALL &&
@@ -981,6 +1043,11 @@ static void interact(Story *s) {
         }else talk(s,s->work>=8?D_ACT_MUSIC_PROGRESS:D_MUSIC_AGAIN);
         break;
     case 'R':
+        if(s->rescue_stage==STORY_RESCUE_LOST){
+            talk(s,s->day_number>=STORY_HOPE_REALIZE_DAY?
+                 D_HOPE_NOTE_LATE:D_HOPE_NOTE_WAIT);
+            break;
+        }
         /* The missing-person rescue takes priority even after the last
            clinic visit; the player cannot accidentally bypass the crisis. */
         if(s->rescue_stage>=STORY_RESCUE_MISSING &&
@@ -1028,6 +1095,9 @@ static void interact(Story *s) {
     case 'V': cult_start(s, 1); break;
     case 'Q': cult_start(s, 2); break;
     case 'S':
+        if(s->rescue_stage==STORY_RESCUE_LOST){
+            talk(s,D_HOPE_TERMINAL);break;
+        }
         if(s->rescue_stage==STORY_RESCUE_WITNESS){
             s->rescue_stage=STORY_RESCUE_TRACE;s->dirty=1;
             talk(s,D_RESCUE_TRACE);break;
@@ -1038,6 +1108,9 @@ static void interact(Story *s) {
                   s->cult_stage == 1 ? D_CULT_LOGS : D_CULT_WAIT);
         break;
     case 'W':
+        if(s->rescue_stage==STORY_RESCUE_LOST){
+            talk(s,D_HOPE_WITNESS);break;
+        }
         if(s->rescue_stage==STORY_RESCUE_MISSING){
             s->rescue_stage=STORY_RESCUE_WITNESS;s->dirty=1;
             talk(s,story_check_live(s,STORY_CHECK_ORCHARD)?
@@ -1047,6 +1120,9 @@ static void interact(Story *s) {
         else talk(s, s->cult_stage > 1 ? D_CULT_WITNESS_AFTER : D_CULT_NOT_YET);
         break;
     case 'H':
+        if(s->rescue_stage==STORY_RESCUE_LOST){
+            talk(s,D_HOPE_DOOR);break;
+        }
         if(s->rescue_stage==STORY_RESCUE_TRACE){
             s->risk_menu='H';s->risk_choice=0;
             s->cinema=CINE_RESCUE_DOOR;s->cinema_frame=0;break;
@@ -1066,10 +1142,25 @@ void story_tick(Story *s, uint16_t keys) {
     uint16_t pressed = (uint16_t)(keys & ~s->old_keys);
     s->old_keys = keys;
     if (s->anim) --s->anim;
+    /* The fourth violation after a SUCCESSFUL rescue retains its original
+       immediate-bad-ending consequence. A failed rescue now has a playable,
+       two-day unanswered-phone epilogue with no assumed death. */
     if(!s->dialogue&&!s->ended&&
-       (s->rescue_stage==STORY_RESCUE_LOST||
-        s->rescue_stage==STORY_RESCUE_AFTERSHOCK))
+       s->rescue_stage==STORY_RESCUE_AFTERSHOCK)
         begin_bad_film(s);
+    if(s->rescue_stage==STORY_RESCUE_LOST && !s->ended &&
+       !s->paused && !s->dialogue && !s->battle &&
+       !s->choosing && !s->risk_menu && !s->activity){
+        if(++s->day_frame>=STORY_DAY_FRAMES){
+            s->day_frame=0;
+            if(s->day_number<STORY_HOPE_END_DAY)++s->day_number;
+            s->dirty=1;
+            if(s->day_number==STORY_HOPE_REALIZE_DAY)
+                talk(s,D_HOPE_REALIZE);
+            else if(s->day_number>=STORY_HOPE_END_DAY)
+                begin_bad_film(s);
+        }
+    }
     if (s->cinema && !s->paused && s->cinema_frame < 65530) ++s->cinema_frame;
     /* One step is exactly one VBlank, including dialogue. Pause freezes the
        clock. Day transitions never steal controls during a fight or textbox. */
@@ -1210,6 +1301,10 @@ void story_tick(Story *s, uint16_t keys) {
     }
     if (pressed & (L|SELECT)) { s->view ^= 1; s->dirty = 1; }
     if (pressed & R) {
+        if(s->rescue_stage==STORY_RESCUE_LOST){
+            talk(s,s->day_number>=STORY_HOPE_REALIZE_DAY?
+                 D_HOPE_NOTE_LATE:D_HOPE_NOTE_WAIT);return;
+        }
         if(s->rescue_stage==STORY_RESCUE_MISSING){
             talk(s,D_RESCUE_NOTES_1);return;
         }

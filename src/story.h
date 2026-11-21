@@ -46,6 +46,12 @@
 #define STORY_RESCUE_SAVED 4u
 #define STORY_RESCUE_LOST 5u
 #define STORY_RESCUE_AFTERSHOCK 6u
+/* After a failed rescue, an unverified promise is followed by one full
+   numbered day of hope, an acknowledgement of no recovery, and one more
+   full day before the pre-existing bad-ending film. The old day_number and
+   day_frame save bytes are reused ONLY while STORY_RESCUE_LOST. */
+#define STORY_HOPE_REALIZE_DAY 1u
+#define STORY_HOPE_END_DAY 2u
 #define STORY_LIFE_NONE 0
 #define STORY_LIFE_WAIT 1
 #define STORY_LIFE_CLINIC 2
