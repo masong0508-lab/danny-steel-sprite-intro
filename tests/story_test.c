@@ -40,7 +40,10 @@ int main(void) {
     walk_to(&s,19,4); press(&s,A); assert(s.flags==0);close_dialogue(&s);
     walk_to(&s,5,5); press(&s,A); assert(s.flags==STORY_HOME);close_dialogue(&s);
     walk_to(&s,11,8); press(&s,A); assert((s.flags&STORY_STAMP));close_dialogue(&s);
-    walk_to(&s,8,12); press(&s,A); assert((s.flags&STORY_MARA));close_dialogue(&s);
+    walk_to(&s,8,12); press(&s,A);
+    /* Promise check only after Danny actually speaks and confirms it. */
+    assert(!(s.flags&STORY_MARA));close_dialogue(&s);
+    assert((s.flags&STORY_MARA));
     walk_to(&s,19,4); press(&s,A);close_dialogue(&s);assert(s.choosing);
     /* STAY keeps gameplay running; the old instant ending is gone. */
     press(&s,RIGHT);press(&s,A); assert(!s.ended&&!s.life_stage);close_dialogue(&s);
