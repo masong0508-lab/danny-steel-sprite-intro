@@ -100,7 +100,10 @@ static void draw_hidden(int page){
            native pixels. In-place reverse expansion does not allocate a
            second framebuffer, nor does it overwrite unread source rows. */
         Story visual=game;
-        if(visual.dialogue)visual.dialogue=0;
+        if(visual.dialogue && !game.ended && !game.battle &&
+           game.life_stage!=STORY_LIFE_FINALE &&
+           game.activity!=STORY_ACT_STUDIO)
+            visual.dialogue=0;
         story_draw(&visual,clock_ticks,(u8*)pixels);
         hd_upscale_inplace((u8*)pixels);
     }
