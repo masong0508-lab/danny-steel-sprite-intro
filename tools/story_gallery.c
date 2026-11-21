@@ -75,8 +75,16 @@ int main(int argc,char **argv){
  story_new(&s,0);
  /* Beginning of the real title-to-story transition. */
  assert(s.cinema==CINE_OPEN);
- s.cinema_frame=80;
- write_frame("05_story_arrival",&s,80);
+ s.cinema_frame=0;
+ write_frame("05a_potheads_aerial",&s,0);
+ s.cinema_frame=60;
+ write_frame("05b_potheads_descent",&s,60);
+ s.cinema_frame=132;
+ write_frame("05c_potheads_closeup",&s,132);
+ s.cinema_frame=180;
+ write_frame("05_story_arrival",&s,180);
+ s.cinema_frame=216;
+ write_frame("05d_potheads_dance",&s,216);
  done(&s);
  s.cinema=CINE_NONE;s.scene=STORY_SCENE_NONE;s.view=0;
  stand(&s,12,13,3);
@@ -91,8 +99,7 @@ int main(int argc,char **argv){
  write_frame("35_quarter_bus_and_facades",&s,162);
  stand(&s,3,8,3);
  write_frame("36_quarter_riverside_residents",&s,177);
- /* The revised street-work setting exists in the actual town camera.
-    Danny's held sign and reference-motion dance are deliberately deferred. */
+ /* The storefront is also a real walkable town facade, not just opening art. */
  stand(&s,20,11,1);
  write_frame("37_potheads_storefront",&s,184);
  stand(&s,10,7,0);
