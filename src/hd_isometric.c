@@ -1,6 +1,7 @@
 #include "hd_canvas.h"
 #include "hd_isometric_atlas.h"
 #include "hd_world_atlas.h"
+#include "hd_facade_art.h"
 
 /* A real isometric projection of the ACTUAL 24x18 walkable town:
    x grows southeast and y southwest, so D-pad logic stays cardinal
@@ -48,77 +49,58 @@ static void night(uint8_t *p){
    hd_rect(p,x+w,32-h+5,2,3,HD_GLASS);
  }
 }
-static void diamond_wall(uint8_t *p,int sx,int sy,int h,int wx,int wy,
-                         unsigned base,unsigned bright,int front,int side){
- /* Each isometric side has a ground edge slanted 8 pixels over 16
-    columns and an exactly vertical height. No float or texture scaling. */
- if(front)for(int i=0;i<16;i++){
-  int x=sx+i,top=sy+8+i/2-h;
-  unsigned color=base;
-  if(((wy*7+wx*3+i)&7)==0)color=bright;
-  hd_rect(p,x,top,1,h,color);
-  if((i&7)==0){
-   for(int step=6;step<h-2;step+=9)
-    hd_pixel(p,x,top+step,HD_BRICK_DARK);
-  }
- }
- if(side)for(int i=0;i<16;i++){
-  int x=sx+16+i,top=sy+16-i/2-h;
-  unsigned color=HD_STONE_DARK;
-  if(((wy*11+wx*3+i)&15)==0)color=HD_STONE;
-  hd_rect(p,x,top,1,h,color);
-  if((i&7)==0){
-   for(int step=6;step<h-2;step+=9)
-    hd_pixel(p,x,top+step,HD_STONE_DARK);
-  }
- }
- /* Lit facade windows use facing-specific offsets so they follow the
-    walls instead of floating as HUD icons over the streets. */
- if(front && h>=23){
-  int ey=sy+6-h/2;
-  hd_rect(p,sx+4,ey,7,7,HD_INK);
-  hd_rect(p,sx+5,ey+1,5,5,HD_GLASS_LIT);
-  hd_rect(p,sx+5,ey+4,5,1,HD_COPPER);
-  hd_rect(p,sx+7,ey+1,1,5,HD_BRICK_DARK);
-  if(h>=32){
-   hd_rect(p,sx+12,ey-12,3,5,HD_PLASTER_LIT);
-   hd_pixel(p,sx+13,ey-10,HD_LAMP);
-  }
- }
- if(side && h>=23){
-  int ey=sy+4-h/2;
-  hd_rect(p,sx+22,ey,7,8,HD_INK);
-  hd_rect(p,sx+23,ey+1,5,6,HD_GLASS);
-  hd_rect(p,sx+23,ey+1,5,2,HD_GLASS_LIT);
-  hd_rect(p,sx+25,ey+1,1,6,HD_BRICK_DARK);
- }
+/* Potheads is a regular business with a dependable employee, not a
+   quest trap. The banner is attached to the shop's side facade rather
+   than drawn as a floating HUD caption over the pavement. */
+static void potheads_fascia(uint8_t *p,int sx,int sy,int h){
+ int y=sy-h+22;
+ hd_rect(p,sx+19,y,52,15,HD_SHADOW);
+ hd_rect(p,sx+18,y-1,54,13,HD_LEAF_DARK);
+ hd_rect(p,sx+20,y+1,50,9,HD_BRICK_DARK);
+ hd_rect(p,sx+20,y+1,50,2,HD_LEAF);
+ hd_text(p,sx+23,y+4,"POTHEADS",HD_PAPER,1,0);
+ hd_rect(p,sx+22,y+12,45,2,HD_GOLD);
+ /* A restrained botanical emblem, styled like the reference shop's
+    green insignia but rendered in physical world coordinates. */
+ hd_line(p,sx+19,y-5,sx+18,y,HD_LEAF);
+ hd_line(p,sx+19,y-4,sx+16,y-6,HD_LEAF_LIT);
+ hd_line(p,sx+19,y-4,sx+23,y-7,HD_LEAF_LIT);
+ hd_line(p,sx+19,y-3,sx+15,y-3,HD_LEAF);
+ hd_line(p,sx+19,y-3,sx+23,y-3,HD_LEAF);
 }
 static void building(uint8_t *p,int sx,int sy,int wx,int wy,
                      unsigned tick,char type){
  unsigned n=grain(wx,wy);
- /* Group adjacent building tiles into the same roofline, rather than
-    giving every pavement cell a separate chess-piece cube. */
+ /* Shared roof heights are deliberately keyed to 3x3 districts;
+    visually contiguous blocks never extrude like shuffled cubes. */
  unsigned h=27u+(unsigned)(((wx/3+wy/3)&1)*9);
  if(type=='A')h=36u;
  int front=exposed(wx,wy+1),side=exposed(wx+1,wy);
- /* Interior roof cells keep the SAME shared roofline: wall faces are
-    omitted where a neighboring building occludes them. */
- /* Raised foundation, two differently lit facades, roof diamond,
-    ridge/coping and real world-coordinate window treatment. */
- diamond_wall(p,sx,sy,(int)h,wx,wy,HD_BRICK_DARK,
-              HD_COPPER,front,side);
+ unsigned variant=(n>>10)&7u;
+ /* An actual Potheads storefront resides on the accessible edge of
+    the south-east block, not at a randomly moving map location. */
+ int potheads=(wx==21&&wy==11);
+ if(potheads)variant=7u;
+ else if(type=='A')variant=6u;
+ else if(wx>=10&&wx<=13&&wy>=3&&wy<=6)variant=3u;
+ if(front)hd_facade_wall(p,sx,sy,(int)h,variant,0u);
+ if(side)hd_facade_wall(p,sx+16,sy,(int)h,variant,1u);
  hd_iso_tile(p,sx,sy-(int)h,10u+(n&1u));
+ /* Roof edges, gutters and shadowed coping belong to the building
+    footprint; do not paint an unrelated rectangle over the street. */
  hd_line(p,sx+1,sy+8-(int)h,sx+16,sy+15-(int)h,HD_COPPER);
  hd_line(p,sx+17,sy+15-(int)h,sx+31,sy+8-(int)h,HD_STONE_LIT);
  if(front){
-  hd_rect(p,sx+7,sy+12-(int)h/3,6,7,HD_INK);
-  hd_rect(p,sx+8,sy+13-(int)h/3,4,5,HD_BARK);
-  hd_pixel(p,sx+11,sy+16-(int)h/3,HD_LAMP);
+  hd_line(p,sx+1,sy+8,sx+15,sy+15,HD_STONE_DARK);
+  hd_rect(p,sx+11,sy+11-(int)h/3,3,5,HD_GLASS);
+  hd_pixel(p,sx+12,sy+14-(int)h/3,HD_LAMP);
  }
+ if(side)hd_line(p,sx+17,sy+15,sx+31,sy+8,HD_STONE_DARK);
  if((n&3u)==0u){
   hd_rect(p,sx+16,sy-3-(int)h,3,5,HD_STONE_DARK);
   hd_rect(p,sx+16,sy-4-(int)h,5,1,HD_PLASTER);
  }
+ if(potheads&&side)potheads_fascia(p,sx,sy,(int)h);
  (void)tick;
 }
 static void lamp(uint8_t *p,int sx,int sy,unsigned tick){
