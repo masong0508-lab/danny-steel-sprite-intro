@@ -1,0 +1,56 @@
+name: Capture real Danny Steel screenshots
+
+on:
+  push:
+    paths:
+      - ".github/workflows/screenshots.yml"
+      - "tools/story_gallery.c"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  capture:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install screenshot tools and mGBA core
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libmgba-dev libpng-dev imagemagick
+      - name: Build mGBA headless picture capture
+        run: |
+          git clone --depth 1 https://github.com/JohnnySun/gba-rom-debugger.git /tmp/gba-rom-debugger
+          make -C /tmp/gba-rom-debugger bin/gba-walk MGBA_PREFIX=/usr LIBPNG_PREFIX=/usr
+      - name: Render gameplay and authored story scenes using game code
+        run: |
+          mkdir -p docs/screenshots
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc             src/story.c src/studio.c src/story_draw.c src/cinema.c             tools/story_gallery.c -o /tmp/danny_story_gallery
+          /tmp/danny_story_gallery docs/screenshots
+          for f in docs/screenshots/*.ppm; do
+            convert "$f" -filter point -resize 400% "${f%.ppm}.png"
+            rm "$f"
+          done
+      - name: Run the current playable ROM in headless mGBA
+        run: |
+          /tmp/gba-rom-debugger/bin/gba-walk dist/danny_steel_title.gba docs/screenshots             run:1650 snap:01_title             press:START:2 run:95 snap:02_main_menu             press:A:2 run:95 snap:03_save_slots             press:A:2 run:120 snap:04_story_in_emulator
+          for f in docs/screenshots/0[1-4]_*.png; do
+            convert "$f" -filter point -resize 200% "$f"
+          done
+      - name: Verify dimensions and save contact sheet
+        run: |
+          identify -format '%f %wx%h\n' docs/screenshots/*.png
+          montage docs/screenshots/*.png -tile 3x -geometry 480x320+6+6             -background '#171919' docs/screenshots/contact_sheet.png
+      # The repository stores the images directly; Actions artifact upload is
+      # intentionally omitted because this account has reached its quota.
+      - name: Publish screenshots into this branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/screenshots
+          if ! git diff --cached --quiet; then
+            git commit -m "docs: capture actual mGBA and game-renderer screenshots [skip ci]"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
