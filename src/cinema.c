@@ -45,6 +45,14 @@ static void city(uint8_t *p,unsigned t,int dusk){
    if(wy<51&&((i+j+(int)(t/80))&3)!=0)pixel(p,x+3,wy,dusk?18:7);
   }
  }
+ /* Rooftop water towers, antenna and cabling; static at a given camera angle. */
+ for(int i=0;i<3;i++){
+  int cx=18+i*45;
+  stroke(p,cx,25,cx,45,3);stroke(p,cx-4,27,cx,25,14);
+  stroke(p,cx,25,cx+5,28,14);
+  rect(p,cx-5,43,10,6,14);rect(p,cx-4,42,8,1,22);
+  pixel(p,cx,24,((t/37+i)&1)?18:7);
+ }
  for(int i=0;i<7;i++){
   int x=i*23-12-((int)(t/110)%8),ht=13+((i*7)%16);
   rect(p,x,57-ht,22,ht,3);
@@ -85,36 +93,104 @@ static void furniture(uint8_t *p,int x,int y,int w,int c){
 }
 /* Full, expressive 2D silhouettes with hair, coat, eyes, blink and grounded
    feet/shadows; no abstract flying heads or randomly teleporting props. */
+/* Six distinct character silhouettes with coordinated body parts.
+   Roles 1 Danny / 2 Mara / 3 BORE clerk / 4 witness / 5 heckler / 6 doctor.
+   Gesture 0 breathe / 1 talk / 2 walk / 3 reach. */
 static void actor(uint8_t *p,int x,int foot,int role,unsigned t,int gesture){
- int walk=(gesture==2)?((int)(t/5)&1):0;
- int bob=(gesture==2)?((int)(t/5)&1):((int)(t/22)&1);
- int coat=role==1?16:role==2?25:role==3?17:role==4?12:role==5?23:28;
+ int moving=(gesture==2);
+ int gait=moving?((int)(t/7)&1):0;
+ int bob=moving?gait:((int)(t/31)&1);
+ int coat=role==1?16:role==2?25:role==3?17:role==4?12:role==5?23:20;
+ int trim=role==1?18:role==2?28:role==3?20:role==4?11:role==5?16:26;
+ int hair=role==2?24:role==3?29:role==4?14:role==5?23:3;
  int skin=role==4?22:31;
- /* Shadow, shoes, trouser split and collar. */
- rect(p,x-9,foot,19,2,3);
- rect(p,x-6,foot-6+walk,5,7,3);rect(p,x+2,foot-6-walk,5,7,3);
- rect(p,x-8,foot-24+bob,17,18,coat);
- rect(p,x-7,foot-24+bob,15,2,role==3?20:18);
- rect(p,x-8,foot-24+bob,2,15,23);rect(p,x+7,foot-24+bob,2,15,23);
- /* Head, ear, distinct hairstyles and expressions. */
- disk(p,x,foot-32+bob,8,skin);
- rect(p,x-8,foot-40+bob,16,5,role==2?24:role==3?29:role==4?14:3);
- if(role==2){rect(p,x-9,foot-37+bob,3,14,24);}
- if(role==3){rect(p,x+6,foot-35+bob,4,12,29);}
- if((t%90)<86){pixel(p,x-3,foot-33+bob,3);pixel(p,x+3,foot-33+bob,3);}
- else{rect(p,x-4,foot-33+bob,3,1,3);rect(p,x+2,foot-33+bob,3,1,3);}
- pixel(p,x,foot-29+bob,23);
- if(role==2)rect(p,x-3,foot-27+bob,7,1,23);
- /* Gestures: speaking, handing over, painting, or idle weight shifts. */
- if(gesture==1){
-  stroke(p,x+7,foot-20+bob,x+15,foot-29+((int)(t/14)&1),coat);
-  disk(p,x+15,foot-29+((int)(t/14)&1),2,skin);
- } else if(gesture==3){
-  stroke(p,x+7,foot-22+bob,x+20,foot-27+bob,coat);
-  disk(p,x+20,foot-27+bob,2,skin);
- } else {
-  stroke(p,x-7,foot-21+bob,x-11,foot-12+bob,coat);
-  stroke(p,x+8,foot-21+bob,x+11,foot-12+bob,coat);
+ int shoulder=foot-27+bob;
+ int brow=foot-39+bob;
+ /* Grounded shadow, stride and separate boots. */
+ rect(p,x-9,foot,18,1,3);
+ if(moving){
+  stroke(p,x-4,foot-12,x-6+gait*3,foot-2,4);
+  stroke(p,x+4,foot-12,x+6-gait*3,foot-2,4);
+  rect(p,x-9+gait*3,foot-2,7,2,3);
+  rect(p,x+2-gait*3,foot-2,7,2,3);
+ }else{
+  rect(p,x-6,foot-13,5,11,4);rect(p,x+2,foot-13,5,11,4);
+  rect(p,x-7,foot-2,7,2,3);rect(p,x+2,foot-2,7,2,3);
+ }
+ /* Tapered garment, cuffs and contrasting lapels. */
+ rect(p,x-8,shoulder+2,16,12,coat);
+ rect(p,x-7,shoulder+13,14,5,coat);
+ rect(p,x-6,shoulder+18,12,2,trim);
+ rect(p,x-10,shoulder+4,3,10,coat);
+ rect(p,x+7,shoulder+4,3,10,coat);
+ pixel(p,x-7,shoulder+4,trim);pixel(p,x+7,shoulder+4,trim);
+ stroke(p,x-4,shoulder+2,x,shoulder+7,trim);
+ stroke(p,x+4,shoulder+2,x,shoulder+7,trim);
+ stroke(p,x,shoulder+7,x,shoulder+17,role==3?20:23);
+ if(role==1){
+  /* Danny's diagonal satchel and red jacket. */
+  stroke(p,x-6,shoulder+4,x+4,shoulder+16,18);
+  rect(p,x+4,shoulder+14,4,3,14);
+  rect(p,x-4,shoulder+16,2,1,7);
+ }else if(role==2){
+  /* Mara's magenta neckline and hair framing. */
+  rect(p,x-6,shoulder+12,12,2,28);
+  pixel(p,x-3,shoulder+9,20);pixel(p,x+3,shoulder+9,20);
+ }else if(role==3){
+  /* Archive clerk ID badge and tie. */
+  rect(p,x-5,shoulder+6,3,2,20);rect(p,x+3,shoulder+6,3,2,20);
+  stroke(p,x,shoulder+6,x+1,shoulder+14,16);
+ }else if(role==4){
+  /* Witness' hood and zipper, no identifying details. */
+  stroke(p,x-4,shoulder+2,x-4,shoulder+17,11);
+  rect(p,x+3,shoulder+13,3,2,14);
+ }else if(role==5)rect(p,x-5,shoulder+7,11,2,16);
+ /* Shaded jaw and hair, ears, blinking eyes, spoken expression. */
+ disk(p,x,foot-34+bob,8,3);
+ disk(p,x,foot-35+bob,7,skin);
+ rect(p,x-6,foot-32+bob,13,2,skin);
+ pixel(p,x+7,foot-34+bob,22);
+ rect(p,x-6,brow,12,4,hair);
+ rect(p,x-7,brow+2,3,5,hair);
+ if(role==2){
+  rect(p,x-8,brow+3,3,12,24);rect(p,x+6,brow+3,3,13,24);
+  pixel(p,x+1,brow-1,28);
+ }else if(role==3){
+  rect(p,x+4,brow+3,4,5,29);rect(p,x-5,brow,5,1,7);
+ }else if(role==4){
+  rect(p,x-8,brow+1,3,12,14);rect(p,x+6,brow+2,3,11,14);
+  rect(p,x-6,brow-2,13,2,11);
+ }else if(role==1){
+  rect(p,x-7,brow+1,7,2,3);pixel(p,x+4,brow-1,14);
+ }else rect(p,x+4,brow+3,4,6,hair);
+ if((t%97)<92){
+  rect(p,x-4,foot-35+bob,2,1,3);
+  rect(p,x+3,foot-35+bob,2,1,3);
+ }else{
+  rect(p,x-4,foot-34+bob,2,1,3);
+  rect(p,x+3,foot-34+bob,2,1,3);
+ }
+ pixel(p,x+1,foot-32+bob,22);
+ if(gesture==1 && ((t/9)&1))rect(p,x-2,foot-29+bob,4,2,23);
+ else rect(p,x-2,foot-29+bob,4,1,role==2?16:23);
+ /* Arms are attached to shoulders; hand never floats at head level. */
+ if(gesture==3){
+  stroke(p,x+8,shoulder+4,x+17,shoulder-2+((int)(t/13)&1),coat);
+  stroke(p,x+17,shoulder-2,x+20,shoulder-4,skin);
+  disk(p,x+20,shoulder-4,2,skin);
+  stroke(p,x-8,shoulder+4,x-11,shoulder+15,coat);
+  disk(p,x-11,shoulder+15,2,skin);
+ }else if(gesture==1){
+  stroke(p,x+8,shoulder+4,x+13,shoulder-2+((int)(t/12)&3),coat);
+  disk(p,x+13,shoulder-2+((int)(t/12)&3),2,skin);
+  stroke(p,x-8,shoulder+4,x-10,shoulder+14,coat);
+  disk(p,x-10,shoulder+14,2,skin);
+ }else{
+  int sway=moving?(gait?2:-2):(int)((t/20)&1u);
+  stroke(p,x-8,shoulder+4,x-10+sway,shoulder+14,coat);
+  stroke(p,x+8,shoulder+4,x+10-sway,shoulder+14,coat);
+  disk(p,x-10+sway,shoulder+14,2,skin);
+  disk(p,x+10-sway,shoulder+14,2,skin);
  }
 }
 static void bus(uint8_t *p,int x,int y,unsigned t){
@@ -130,6 +206,12 @@ static void roof(uint8_t *p,unsigned t,int dusk){
  rect(p,0,56,W,24,9);rect(p,0,54,W,3,14);
  for(int x=0;x<120;x+=22){rect(p,x,58,1,9,10);rect(p,x+11,68,1,8,10);}
  stroke(p,0,67,119,67,10);
+ /* Tar seams, masonry, and an anchored rooftop drainpipe. */
+ for(int i=0;i<8;i++){
+  int rx=(i*27+9)%120;
+  stroke(p,rx,66+(i&1)*3,rx+8,66+(i&1)*3,10);
+ }
+ rect(p,109,53,3,20,14);rect(p,107,70,8,2,3);
  /* Rail across the back, never in front of the canvas. */
  rect(p,0,42,120,2,14);for(int x=5;x<120;x+=23)rect(p,x,42,2,15,14);
 }
@@ -143,10 +225,15 @@ static void canvas(uint8_t *p,int x,int y,unsigned t,int painted){
  }
  rect(p,x+1,y+17,28,5,11);
  if(painted){
-  int q=(int)(t/17)%6;
-  stroke(p,x+5+q,y+6,x+15+q/2,y+11,18);
-  pixel(p,x+11+q,y+8,7);
+  /* Paint accumulates on the actual canvas rather than randomly changing. */
+  int strokes=(int)(t/55);if(strokes>7)strokes=7;
+  for(int i=0;i<strokes;i++){
+   int px=x+5+i*3,py=y+7+(i%3)*2;
+   stroke(p,px,py,px+5,py+2,i&1?18:13);
+  }
+  pixel(p,x+17,y+9,7);
  }
+ /* Wooden stretcher, struts, fasteners and cast shadow. */
  rect(p,x+13,y+27,3,21,14);rect(p,x+1,y+42,31,2,14);
  stroke(p,x+14,y+30,x+2,y+50,14);stroke(p,x+15,y+30,x+28,y+50,14);
 }
@@ -355,9 +442,11 @@ void cinema_draw(uint8_t *p,unsigned scene,unsigned tick,unsigned page,unsigned 
   canvas(p,69,18,final,f>=20&&f<295);
   /* Exterior paint supplies, stationary in every shot. */
   rect(p,13,69,10,5,14);rect(p,15,66,6,3,18);
+  pixel(p,15,67,26);pixel(p,18,67,16);pixel(p,20,67,13);
+  stroke(p,18,68,25,62,14);
   rect(p,97,69,15,3,3);rect(p,101,67,9,2,7);
   if(f<310){
-   int x=43+(f>200?(f-200)/30:0);
+   int x=43+(f>200?(f-200)/50:0);
    actor(p,x,76,1,final,f<230?3:0);
    if(f<235){
     /* Brush connects the hand to the canvas; last colored stroke appears. */
