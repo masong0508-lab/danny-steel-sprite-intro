@@ -186,8 +186,9 @@ int menu_update(void) {
             if (level == 0) { prev_main = mode = sel; start_trans(1); }
             else if (sel == 2) start_trans(-1);
             else if (mode == 2) {
-                if (play_slot_valid(sel)) { erase_hold = 1; redraw = 1; }
-                else { menu_note = MENU_NOTE_EMPTY; note_time = 80; redraw = 1; }
+                if (!play_slot_valid(sel)) {
+                    menu_note = MENU_NOTE_EMPTY; note_time = 80; redraw = 1;
+                }
             } else { slot_chosen(mode, sel); redraw = 1; }
         } else if (eb) {
             if (level == 1) start_trans(-1);
@@ -195,15 +196,18 @@ int menu_update(void) {
         }
         /* Erasure only happens after an intentional, uninterrupted hold.
            Entering ERASE with A already down never arms it. */
-        if (level == 1 && mode == 2 && sel < 2 && erase_hold) {
-            if (!a) { erase_hold = 0; redraw = 1; }
-            else if (++erase_hold >= (int)MENU_ERASE_HOLD) {
+        if (level == 1 && mode == 2 && sel < 2) {
+            unsigned previous=(unsigned)erase_hold;
+            erase_hold=(int)menu_erase_step(previous,ea,a && play_slot_valid(sel));
+            if (erase_hold >= (int)MENU_ERASE_HOLD) {
                 play_erase_slot(sel);
                 erase_hold = 0;
                 menu_note = MENU_NOTE_ERASED;
                 note_time = 100;
                 redraw = 1;
-            } else if ((t & 3) == 0) redraw = 1;
+            } else if ((previous && !erase_hold) || (erase_hold && ((t & 3)==0))) {
+                redraw = 1;
+            }
         }
     }
     if (note_time && --note_time == 0) {
