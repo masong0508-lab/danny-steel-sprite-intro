@@ -1354,7 +1354,21 @@ void story_tick(Story *s, uint16_t keys) {
     if (s->dialogue) {
         if (pressed & (A|B)) {
             int count; story_pages(s, &count);
-            if ((pressed & A) && s->page + 1 < count) ++s->page;
+            if ((pressed & A) && s->page + 1 < count) {
+                ++s->page;
+                /* The opening is editorially cut to seven spoken beats.
+                   Fast readers may advance, but each line then gets its
+                   intended visible camera pose instead of skipping the
+                   entire storefront reveal and dance. The scene clock
+                   remains monotonic; B can still dismiss the dialogue. */
+                if(s->dialogue==D_OPEN){
+                    static const uint16_t shot[7]={
+                        0u,36u,76u,132u,178u,218u,254u
+                    };
+                    if(s->page<7u && s->cinema_frame<shot[s->page])
+                        s->cinema_frame=shot[s->page];
+                }
+            }
             else {
                 int ready = s->dialogue == D_BUS_READY && (pressed & A);
                 /* B skips an unfinished conversation; no promise check.
