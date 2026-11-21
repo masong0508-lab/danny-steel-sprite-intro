@@ -19,6 +19,9 @@
 #define STORY_DAY_CLERK 4u
 #define STORY_DAY_ART 8u
 #define STORY_DAY_MUSIC 16u
+/* Independent optional Potheads shift: bit 5 was unused in the persisted
+   daily_mask byte. It never changes the five existing memory requirements. */
+#define STORY_DAY_SHIFT 32u
 #define STORY_DAY_ALL 31u
 #define STORY_DAY_RECAP 128u
 #define STORY_STAT_MAX 5u
