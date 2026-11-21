@@ -74,7 +74,7 @@ void studio_motif_step(unsigned step,MotifBeat *out){
  unsigned index=step&7u;
  unsigned mode=patch.order[section];
  int note=patch.notes[index];
- int n=note?((int)pitch[n]+transpose[mode]):0;
+ int n=note?((int)pitch[note]+transpose[mode]):0;
  if(n>96)n=96;
  if(n<36&&n>0)n=36;
  out->lead=n?(int8_t)n:-1;
