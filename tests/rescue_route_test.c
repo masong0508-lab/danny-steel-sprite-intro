@@ -126,6 +126,20 @@ int main(void){
  press(&lost,RIGHT);assert(lost.risk_choice==1u);
  press(&lost,A);assert(lost.rescue_stage==STORY_RESCUE_LOST);
  close_pages(&lost);story_tick(&lost,0);
+ assert(!lost.ended&&lost.rescue_stage==STORY_RESCUE_LOST);
+ assert(lost.day_number==0u&&lost.life_stage==STORY_LIFE_NONE);
+ goal(&lost,8,11,"PHONE");
+ /* The hopeful phone epilogue must run one full day before the
+    unverified promise is confronted; then one more day before BAD END. */
+ lost.day_frame=STORY_DAY_FRAMES-1u;
+ story_tick(&lost,0);assert(!lost.ended&&lost.day_number==1u);
+ assert(lost.dialogue);
+ {int count=0;const StoryPage *p=story_pages(&lost,&count);
+  assert(count==6&&!strcmp(p[2].line1,"Mara still has not"));}
+ close_pages(&lost);
+ assert(!lost.ended&&lost.rescue_stage==STORY_RESCUE_LOST);
+ lost.day_frame=STORY_DAY_FRAMES-1u;
+ story_tick(&lost,0);
  assert(lost.ended&&lost.ending==STORY_END_BAD);
  for(unsigned n=0;n<STORY_END_SCORE_FRAMES;n+=311)render(&lost,n);
  lost.finale_frame=STORY_END_SCORE_FRAMES-1;
@@ -167,6 +181,6 @@ int main(void){
  assert(appointment.life_stage==STORY_LIFE_LAST_WORK);
  close_pages(&appointment);
  assert(sizeof(Story)<64);
- puts("Mara: 4 intentional checks, cancel, 3-step rescue, optional fail, saved second chances, 2 bad endings and guarded film OK");
+ puts("Mara: 4 confirmed checks, guided rescue, 2-day hopeful phone epilogue, verified survival, distinct bad endings and guarded film OK");
  return 0;
 }
