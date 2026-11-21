@@ -51,7 +51,20 @@ int story_goal(const Story *s, int *x, int *y, const char **label) {
         *x=14; *y=6; *label="CANVAS";
     } else if (s->life_stage==STORY_LIFE_WAIT ||
                s->life_stage==STORY_LIFE_FOLLOWUP_WAIT) {
-        *x=14; *y=6; *label="LIVE";
+        /* Suggestions, not mandatory objectives; days continue regardless. */
+        if (!(s->daily_mask&STORY_DAY_MARA)) {
+            *x=8; *y=11; *label="MARA";
+        } else if (!(s->daily_mask&STORY_DAY_LETTER)) {
+            *x=5; *y=5; *label="LETTER";
+        } else if (!(s->daily_mask&STORY_DAY_CLERK)) {
+            *x=11; *y=7; *label="BORE";
+        } else if (!(s->daily_mask&STORY_DAY_ART)) {
+            *x=14; *y=6; *label="PAINT";
+        } else if (!(s->daily_mask&STORY_DAY_MUSIC)) {
+            *x=19; *y=7; *label="MUSIC";
+        } else {
+            *x=14; *y=6; *label="REST";
+        }
     } else if (!(s->flags&STORY_HOME)) {
         *x=5; *y=5; *label="LETTER";
     } else if (!(s->flags&STORY_STAMP)) {
@@ -84,7 +97,10 @@ enum { D_NONE, D_OPEN, D_LETTER, D_LETTER_AGAIN, D_CLERK_LOCKED, D_CLERK, D_CLER
        D_NEUTRAL_START, D_MEDICAL_NOTICE, D_DOCTOR_FIRST,
        D_DOCTOR_RETURN, D_DOCTOR_LAST, D_NEUTRAL_PAINT, D_NEUTRAL_END,
        D_GOOD_END, D_DAY_NOTES, D_CLINIC_LOCKED,
-       D_NOTE_VISIT, D_NOTE_FOLLOWUP, D_NOTE_CANVAS };
+       D_NOTE_VISIT, D_NOTE_FOLLOWUP, D_NOTE_CANVAS,
+       D_DAY_MARA, D_DAY_MARA_AFTER, D_DAY_LETTER, D_DAY_LETTER_AFTER,
+       D_DAY_CLERK, D_DAY_CLERK_AFTER, D_DAY_MUSIC, D_DAY_MUSIC_AFTER,
+       D_DAY_PAINT, D_DAY_PAINT_AFTER, D_DAY_RECAP, D_DAY_RECAP_AFTER };
 #define SCRIPT(name, ...) static const StoryPage name[] = { __VA_ARGS__ }
 SCRIPT(d_open,
  {"DANNY", "The last bus leaves", "at sundown. Of course."},
@@ -272,6 +288,56 @@ SCRIPT(d_note_followup,
 SCRIPT(d_note_canvas,
  {"POCKET NOTEBOOK", "LAST ROOFTOP CANVAS", "NORTH PLAZA STAIRS."},
  {"DANNY", "The last detail is", "a corner of sky."});
+
+/* Small, world-grounded scenes, staged in the existing cinematic sets. */
+SCRIPT(d_day_mara,
+ {"MARA", "Want the long way", "past the old shops?"},
+ {"DANNY", "My legs complain.", "My mouth says yes."},
+ {"MARA", "Then we can walk", "as slowly as we like."});
+SCRIPT(d_day_mara_after,
+ {"MARA", "I can walk with", "you for a while."},
+ {"DANNY", "Let's pass the shop", "with the bad sign."},
+ {"MARA", "Still spelled wrong.", "Some things endure."});
+SCRIPT(d_day_letter,
+ {"DANNY", "The letter smells", "of old cupboards."},
+ {"DANNY", "I owe a reply.", "Ink should be enough."},
+ {"OLD LETTER", "A small note placed", "behind the frame."});
+SCRIPT(d_day_letter_after,
+ {"DANNY", "There was a lamp", "in that old house."},
+ {"DANNY", "Maybe my painting", "can hold its light."},
+ {"OLD LETTER", "He folded the page", "and kept it near."});
+SCRIPT(d_day_clerk,
+ {"BORE CLERK", "Form W: proof of", "an ordinary weekday."},
+ {"DANNY", "I had breakfast.", "Does that count?"},
+ {"BORE CLERK", "Only if you kept", "the receipt."});
+SCRIPT(d_day_clerk_after,
+ {"BORE CLERK", "Today's stamp is", "not a deadline."},
+ {"DANNY", "That's the nicest", "thing you've said."},
+ {"BORE CLERK", "Please don't file", "a compliment."});
+SCRIPT(d_day_music,
+ {"ARCHIVE TAPE", "A melody from", "the old BORE games."},
+ {"DANNY", "This chord should", "be one step lower."},
+ {"DANNY", "There. Now it's", "awkward on purpose."});
+SCRIPT(d_day_music_after,
+ {"ARCHIVE TAPE", "A second take.", "The reel turns."},
+ {"DANNY", "Leave the quiet", "part of the song."},
+ {"DANNY", "A pause can say", "a whole lot."});
+SCRIPT(d_day_paint,
+ {"ROOFTOP", "The paint catches", "the afternoon sun."},
+ {"DANNY", "Another thin line", "behind the skyline."},
+ {"DANNY", "It's coming along.", "So am I, maybe."});
+SCRIPT(d_day_paint_after,
+ {"ROOFTOP", "The city changes", "while he paints."},
+ {"DANNY", "Leave some space", "for tomorrow's sky."},
+ {"DANNY", "No need to fill", "every corner yet."});
+SCRIPT(d_day_recap,
+ {"AN ORDINARY DAY", "A walk, a letter", "and a crooked tune."},
+ {"DANNY", "I didn't solve", "the whole world."},
+ {"DANNY", "I did live in", "a little of it."});
+SCRIPT(d_day_recap_after,
+ {"ANOTHER DAY", "The music played.", "The sky moved on."},
+ {"MARA", "Tomorrow isn't", "a receipt to keep."},
+ {"DANNY", "No. Just another", "morning, if it comes."});
 #undef SCRIPT
 #define SEQ(name) {name, (uint8_t)(sizeof(name) / sizeof((name)[0]))}
 static const struct { const StoryPage *pages; uint8_t count; } scripts[] = {
@@ -291,7 +357,10 @@ static const struct { const StoryPage *pages; uint8_t count; } scripts[] = {
  SEQ(d_medical_notice), SEQ(d_doctor_first), SEQ(d_doctor_return),
  SEQ(d_doctor_last), SEQ(d_neutral_paint), SEQ(d_neutral_end),
  SEQ(d_good_end), SEQ(d_day_notes), SEQ(d_clinic_locked),
- SEQ(d_note_visit), SEQ(d_note_followup), SEQ(d_note_canvas)
+ SEQ(d_note_visit), SEQ(d_note_followup), SEQ(d_note_canvas),
+ SEQ(d_day_mara), SEQ(d_day_mara_after), SEQ(d_day_letter), SEQ(d_day_letter_after),
+ SEQ(d_day_clerk), SEQ(d_day_clerk_after), SEQ(d_day_music), SEQ(d_day_music_after),
+ SEQ(d_day_paint), SEQ(d_day_paint_after), SEQ(d_day_recap), SEQ(d_day_recap_after)
 };
 const StoryPage *story_pages(const Story *s, int *count) {
     unsigned id = s->dialogue;
@@ -327,6 +396,12 @@ static uint8_t cinematics_for_dialogue(uint8_t d){
     case D_GOOD_END: return CINE_GOOD;
     case D_NEUTRAL_START: return CINE_DAY;
     case D_NEUTRAL_PAINT: case D_NEUTRAL_END: return CINE_FINALE;
+    case D_DAY_MARA: case D_DAY_MARA_AFTER: return CINE_MARA;
+    case D_DAY_LETTER: case D_DAY_LETTER_AFTER: return CINE_LETTER;
+    case D_DAY_CLERK: case D_DAY_CLERK_AFTER: return CINE_BORE;
+    case D_DAY_MUSIC: case D_DAY_MUSIC_AFTER: return CINE_MUSIC;
+    case D_DAY_PAINT: case D_DAY_PAINT_AFTER: return CINE_ART;
+    case D_DAY_RECAP: case D_DAY_RECAP_AFTER: return CINE_DAY;
     default: return CINE_NONE;
     }
 }
@@ -426,6 +501,18 @@ static void cult_tick(Story *s, uint16_t pressed) {
         s->battle_choice = 0;
     }
 }
+/* Optional memories are not quest gates, scores, health, or deadlines. */
+static int can_make_memory(const Story *s){
+    return s->life_stage==STORY_LIFE_WAIT ||
+           s->life_stage==STORY_LIFE_FOLLOWUP_WAIT;
+}
+static int remember(Story *s,unsigned bit){
+    if(!can_make_memory(s) || (s->daily_mask&bit))return 0;
+    s->daily_mask=(uint8_t)(s->daily_mask|bit);
+    if(s->daily_memories<99)++s->daily_memories;
+    s->dirty=1;
+    return 1;
+}
 static void interact(Story *s) {
     const int dx[] = {1,0,-1,0}, dy[] = {0,1,0,-1};
     char c = story_tile(s->x + dx[s->facing], s->y + dy[s->facing]);
@@ -437,20 +524,29 @@ static void interact(Story *s) {
     }
     switch (c) {
     case 'L':
-        talk(s, (s->flags & STORY_HOME) ? D_LETTER_AGAIN : D_LETTER);
+        if(remember(s,STORY_DAY_LETTER))
+            talk(s,s->life_stage==STORY_LIFE_FOLLOWUP_WAIT?
+                D_DAY_LETTER_AFTER:D_DAY_LETTER);
+        else talk(s,(s->flags & STORY_HOME) ? D_LETTER_AGAIN : D_LETTER);
         if (!(s->flags & STORY_HOME)) { s->flags |= STORY_HOME; s->dirty = 1; }
         break;
     case 'C':
         if (!(s->flags & STORY_HOME)) talk(s, D_CLERK_LOCKED);
         else {
-            talk(s, (s->flags & STORY_STAMP) ? D_CLERK_AGAIN : D_CLERK);
+            if(remember(s,STORY_DAY_CLERK))
+                talk(s,s->life_stage==STORY_LIFE_FOLLOWUP_WAIT?
+                    D_DAY_CLERK_AFTER:D_DAY_CLERK);
+            else talk(s,(s->flags & STORY_STAMP) ? D_CLERK_AGAIN : D_CLERK);
             if (!(s->flags & STORY_STAMP)) { s->flags |= STORY_STAMP; s->dirty = 1; }
         }
         break;
     case 'F':
         if (!(s->flags & STORY_STAMP)) talk(s, D_MARA_LOCKED);
         else {
-            talk(s, (s->flags & STORY_MARA) ? D_MARA_AGAIN : D_MARA);
+            if(remember(s,STORY_DAY_MARA))
+                talk(s,s->life_stage==STORY_LIFE_FOLLOWUP_WAIT?
+                    D_DAY_MARA_AFTER:D_DAY_MARA);
+            else talk(s,(s->flags & STORY_MARA) ? D_MARA_AGAIN : D_MARA);
             if (!(s->flags & STORY_MARA)) { s->flags |= STORY_MARA; s->dirty = 1; }
         }
         break;
@@ -458,7 +554,13 @@ static void interact(Story *s) {
         talk(s, ((s->flags & STORY_ALL) == STORY_ALL && !s->life_stage) ? D_BUS_READY : D_BUS_LOCKED);
         break;
     case 'M':
-        if (!(s->flags & STORY_MUSIC)) { s->flags |= STORY_MUSIC; s->dirty=1; talk(s,D_MUSIC); }
+        if (!(s->flags & STORY_MUSIC)) {
+            s->flags |= STORY_MUSIC; s->dirty=1;
+            (void)remember(s,STORY_DAY_MUSIC);
+            talk(s,D_MUSIC);
+        } else if(remember(s,STORY_DAY_MUSIC))
+            talk(s,s->life_stage==STORY_LIFE_FOLLOWUP_WAIT?
+                D_DAY_MUSIC_AFTER:D_DAY_MUSIC);
         else talk(s,D_MUSIC_AGAIN);
         break;
     case 'R':
@@ -471,10 +573,15 @@ static void interact(Story *s) {
             s->dialogue=0;s->page=0;s->cinema=CINE_FINALE;s->cinema_frame=0;
         } else if (s->life_stage == STORY_LIFE_FINALE) {
             /* The final cutscene is already playing: no restarting it. */
-        } else if (s->life_stage >= STORY_LIFE_CLINIC) {
+        } else if (s->life_stage == STORY_LIFE_CLINIC ||
+                   s->life_stage == STORY_LIFE_FINAL_CLINIC) {
             talk(s,D_ART_LAST_LOCKED);
-        } else if (s->life_stage == STORY_LIFE_WAIT) {
-            talk(s,D_ART_DAY);
+        } else if (s->life_stage == STORY_LIFE_WAIT ||
+                   s->life_stage == STORY_LIFE_FOLLOWUP_WAIT) {
+            if(remember(s,STORY_DAY_ART))
+                talk(s,s->life_stage==STORY_LIFE_FOLLOWUP_WAIT?
+                    D_DAY_PAINT_AFTER:D_DAY_PAINT);
+            else talk(s,D_ART_DAY);
         } else if (!(s->flags & STORY_ART)) {
             s->flags |= STORY_ART;s->dirty=1;talk(s,D_ART);
         } else talk(s,D_ART_AGAIN);
@@ -521,6 +628,7 @@ void story_tick(Story *s, uint16_t keys) {
         if (++s->day_frame >= STORY_DAY_FRAMES) {
             s->day_frame=0;
             if (s->day_number<99) ++s->day_number;
+            s->daily_mask=0; /* optional moments reset every morning */
             s->dirty=1;
         }
         if (!s->dialogue && !s->battle && !s->choosing) {
@@ -530,6 +638,12 @@ void story_tick(Story *s, uint16_t keys) {
             } else if (s->life_stage==STORY_LIFE_FOLLOWUP_WAIT && s->day_number>=3) {
                 s->life_stage=STORY_LIFE_FINAL_CLINIC;
                 s->scene=STORY_SCENE_NOTICE;s->dirty=1;talk(s,D_DOCTOR_RETURN);
+            } else if(can_make_memory(s) &&
+                      (s->daily_mask&STORY_DAY_ALL)==STORY_DAY_ALL &&
+                      !(s->daily_mask&STORY_DAY_RECAP)) {
+                s->daily_mask|=STORY_DAY_RECAP;s->dirty=1;
+                talk(s,s->life_stage==STORY_LIFE_FOLLOWUP_WAIT?
+                    D_DAY_RECAP_AFTER:D_DAY_RECAP);
             }
         }
     }

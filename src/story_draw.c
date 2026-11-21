@@ -367,6 +367,13 @@ static void scene_record(uint8_t *p,int frame){
     box(p,58,41,5,5,26);
     text(p,14,68,"SONGS OUTLIVE THE DAY",20,28);
 }
+/* Five daily moments are optional. The tally is shared by both views. */
+static int memories_today(const Story *s){
+    unsigned bits=s->daily_mask&STORY_DAY_ALL;
+    int count=0;
+    for(int i=0;i<5;i++)count+=(bits>>i)&1u;
+    return count;
+}
 static void panel(uint8_t *p,int top,int bottom){
     box(p,0,top,120,bottom-top,21);box(p,0,top,120,1,22);
 }
@@ -482,7 +489,12 @@ void story_draw(const Story *s,int frame,uint8_t *p) {
         text(p,5,72,"B SAVE AND MENU",20,27);
     } else {
         box(p,0,72,120,8,21);
-        text(p,3,74,s->ended?"START / RETURN TO MENU":
+        if(s->life_stage==STORY_LIFE_WAIT ||
+           s->life_stage==STORY_LIFE_FOLLOWUP_WAIT){
+            char hint[]="A TALK  MOMENTS 0/5";
+            hint[16]=(char)('0'+memories_today(s));
+            text(p,3,74,hint,20,29);
+        } else text(p,3,74,s->ended?"START / RETURN TO MENU":
              s->life_stage==STORY_LIFE_FINALE?"THE LAST PAINTING":
              s->view?"L MAP   A TALK   R NOTES":"L 3D   A TALK   R NOTES",20,29);
     }

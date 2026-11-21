@@ -82,7 +82,8 @@ static void write_save(void){
     u8 b[SAVE_LEN]={'D','S','T','2',SAVE_VER,game.x,game.y,game.facing,game.view,game.flags,
         game.ended,game.ending,game.cult_stage,game.cult_pre_wins,game.cult_post_wins,
         game.life_stage,game.day_number,(u8)game.day_frame,(u8)(game.day_frame>>8),
-        (u8)game.finale_frame,(u8)(game.finale_frame>>8),0,0,0};
+        (u8)game.finale_frame,(u8)(game.finale_frame>>8),
+        game.daily_mask,game.daily_memories,0};
     unsigned hash=0x6D;
     for(int i=0;i<SAVE_LEN-1;i++)hash^=b[i];
     b[SAVE_LEN-1]=(u8)hash;
@@ -108,6 +109,8 @@ void play_enter(int want_load,int slot){
         game.day_frame=(u16)(b[17]|((unsigned)b[18]<<8));
         if(game.day_frame>=STORY_DAY_FRAMES)game.day_frame=0;
         game.finale_frame=(u16)(b[19]|((unsigned)b[20]<<8));
+        game.daily_mask=b[21]&(STORY_DAY_ALL|STORY_DAY_RECAP);
+        game.daily_memories=b[22]>99?99:b[22];
         if(game.finale_frame>STORY_GOOD_FINAL_FRAMES)game.finale_frame=0;
         if(game.life_stage==STORY_LIFE_FINALE ||
            (game.ended && game.ending==STORY_END_GOOD)) {

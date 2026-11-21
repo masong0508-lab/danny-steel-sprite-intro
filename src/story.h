@@ -12,6 +12,15 @@
 #define STORY_FULL (STORY_ALL | STORY_MUSIC | STORY_ART)
 /* Each numbered day lasts four minutes at the GBA's 60Hz VBlank rate. */
 #define STORY_DAY_FRAMES 14400
+/* Five optional daily memories. The high bit marks the closing vignette;
+   these fit the existing reserved SRAM bytes without changing slot size. */
+#define STORY_DAY_MARA 1u
+#define STORY_DAY_LETTER 2u
+#define STORY_DAY_CLERK 4u
+#define STORY_DAY_ART 8u
+#define STORY_DAY_MUSIC 16u
+#define STORY_DAY_ALL 31u
+#define STORY_DAY_RECAP 128u
 /* 72.5-second source song, then the good-only 16-second reprise. */
 #define STORY_END_SCORE_FRAMES 4350u
 #define STORY_END_CODA_FRAMES 960u
@@ -46,6 +55,7 @@ typedef struct {
     uint8_t battle_progress, battle_timer, battle_parry, battle_parry_cd, battle_guard;
     /* Numbered-day life sim, doctor visits and the unskippable last painting. */
     uint8_t day_number, life_stage, scene;
+    uint8_t daily_mask, daily_memories; /* optional, persisted; never gates an ending */
     uint16_t day_frame, finale_frame;
     /* Cinematic shots are transient; saves retain story flags, not camera frames. */
     uint8_t cinema;
