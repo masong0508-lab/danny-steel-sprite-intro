@@ -63,6 +63,30 @@ int main(void){
  done(&s);stand(&s,8,12,3);choose(&s,'F',0);
  assert(s.bond==4&&s.energy==3);
  done(&s);
+ /* Bond and real work trigger new reactive, non-gating dialogue. */
+ stand(&s,8,12,3);press(&s,A);
+ {int count=0;const StoryPage *pages=story_pages(&s,&count);
+  assert(count>=2&&!strcmp(pages[0].line1,"You never have to"));}
+ done(&s);
+ s.work=9;stand(&s,19,8,3);press(&s,A);
+ {int count=0;const StoryPage *pages=story_pages(&s,&count);
+  assert(count>=2&&!strcmp(pages[0].line1,"The new arrangement"));}
+ done(&s);
+ /* The measured canvas and music sets change as work is completed. */
+ {uint8_t before[120*80],after[120*80];
+  cinema_draw(before,CINE_ART,250,0,0);
+  cinema_draw(after,CINE_ART,250,0,0);
+  cinema_moment_detail(after,CINE_ART,12,0);
+  int diff=0;for(int y=27;y<38;y++)for(int x=74;x<99;x++)
+   diff+=before[y*120+x]!=after[y*120+x];
+  assert(diff>=8);
+  cinema_draw(before,CINE_MUSIC,250,0,0);
+  cinema_draw(after,CINE_MUSIC,250,0,0);
+  cinema_moment_detail(after,CINE_MUSIC,12,0);
+  diff=0;for(int y=26;y<40;y++)for(int x=76;x<107;x++)
+   diff+=before[y*120+x]!=after[y*120+x];
+  assert(diff>=2);
+ }
  guards(&s);
  assert(sizeof(Story)<64);
  puts("life choices: cancel, five two-option decisions, bounded stats, low-energy safety, 2D/3D, appointments OK");

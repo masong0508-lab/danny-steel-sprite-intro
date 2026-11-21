@@ -15,3 +15,6 @@ void cinema_ending_draw(uint8_t *pixels, unsigned ending, unsigned frame);
 unsigned cinema_ending_shot(unsigned ending, unsigned frame);
 void cinema_draw(uint8_t *pixels, unsigned scene, unsigned tick,
                  unsigned page, unsigned finale_frame);
+
+/* Persisted creative work appears on the real rooftop/studio sets. */
+void cinema_moment_detail(uint8_t *pixels, unsigned scene, unsigned work, unsigned bond);

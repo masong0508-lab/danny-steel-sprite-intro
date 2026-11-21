@@ -540,3 +540,27 @@ void cinema_ending_draw(uint8_t *p,unsigned ending,unsigned frame){
    rect(p,0,80-bar,120,bar,3);
  }
 }
+
+/* Tiny world-space accents, only during ordinary life-sim scenes.
+   Work affects an actual painting and tape monitor, not just the HUD. */
+void cinema_moment_detail(uint8_t *p,unsigned scene,unsigned work,unsigned bond){
+    if(scene==CINE_ART){
+        unsigned strokes=(work+1u)/2u;
+        if(strokes>9u)strokes=9u;
+        for(unsigned i=0;i<strokes;i++){
+            int x=75+(int)i*2,y=29+(int)(i%3u)*2;
+            stroke(p,x,y,x+3,y+1,(i&1u)?18:13);
+        }
+    }else if(scene==CINE_MUSIC){
+        unsigned bars=(work+1u)/3u;
+        if(bars>6u)bars=6u;
+        for(unsigned i=0;i<bars;i++){
+            int x=79+(int)i*4;
+            rect(p,x,35-(int)(i%3u)*2,3,2,20);
+        }
+    }else if(scene==CINE_MARA && bond>=4u){
+        /* Two small cups between the friends on a familiar street bench. */
+        rect(p,56,56,4,3,20);rect(p,67,56,4,3,20);
+        pixel(p,55,57,18);pixel(p,71,57,18);
+    }
+}

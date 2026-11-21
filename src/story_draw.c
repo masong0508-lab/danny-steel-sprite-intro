@@ -454,6 +454,7 @@ void story_draw(const Story *s,int frame,uint8_t *p) {
         cinema_draw(p,CINE_FINALE,s->cinema_frame,s->page,s->finale_frame);
     } else if(s->cinema) {
         cinema_draw(p,s->cinema,s->cinema_frame,s->page,s->finale_frame);
+        cinema_moment_detail(p,s->cinema,s->work,s->bond);
     } else if(s->ended && s->ending==STORY_END_NEUTRAL) {
         scene_rooftop(s,frame,p);
     } else if(s->ended && s->ending==STORY_END_GOOD){

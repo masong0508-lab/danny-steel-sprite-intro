@@ -102,7 +102,8 @@ enum { D_NONE, D_OPEN, D_LETTER, D_LETTER_AGAIN, D_CLERK_LOCKED, D_CLERK, D_CLER
        D_DAY_CLERK, D_DAY_CLERK_AFTER, D_DAY_MUSIC, D_DAY_MUSIC_AFTER,
        D_DAY_PAINT, D_DAY_PAINT_AFTER, D_DAY_RECAP, D_DAY_RECAP_AFTER,
        D_ACT_MARA_TALK, D_ACT_LETTER_KEEP, D_ACT_CLERK_JOKE,
-       D_ACT_MUSIC_LISTEN, D_ACT_ART_REST };
+       D_ACT_MUSIC_LISTEN, D_ACT_ART_REST,
+       D_ACT_MARA_CLOSE, D_ACT_MUSIC_PROGRESS, D_ACT_ART_PROGRESS };
 #define SCRIPT(name, ...) static const StoryPage name[] = { __VA_ARGS__ }
 SCRIPT(d_open,
  {"DANNY", "The last bus leaves", "at sundown. Of course."},
@@ -361,6 +362,17 @@ SCRIPT(d_act_art_rest,
  {"ROOFTOP", "Danny sets the", "brush beside him."},
  {"DANNY", "I could paint all", "the hours away."},
  {"DANNY", "Or watch the sky", "paint itself awhile."});
+SCRIPT(d_act_mara_close,
+ {"MARA", "You never have to", "perform for me."},
+ {"DANNY", "Then let's watch", "the shops close."},
+ {"MARA", "We can take our", "time getting home."});
+SCRIPT(d_act_music_progress,
+ {"ARCHIVE TAPE", "The new arrangement", "has taken shape."},
+ {"DANNY", "That off-beat line", "is finally mine."},
+ {"DANNY", "Keep a copy in", "the BORE archive."});
+SCRIPT(d_act_art_progress,
+ {"ROOFTOP", "The old skyline", "has more color now."},
+ {"DANNY", "It's not perfect.", "It feels like mine."});
 #undef SCRIPT
 #define SEQ(name) {name, (uint8_t)(sizeof(name) / sizeof((name)[0]))}
 static const struct { const StoryPage *pages; uint8_t count; } scripts[] = {
@@ -385,7 +397,8 @@ static const struct { const StoryPage *pages; uint8_t count; } scripts[] = {
  SEQ(d_day_clerk), SEQ(d_day_clerk_after), SEQ(d_day_music), SEQ(d_day_music_after),
  SEQ(d_day_paint), SEQ(d_day_paint_after), SEQ(d_day_recap), SEQ(d_day_recap_after),
   SEQ(d_act_mara_talk), SEQ(d_act_letter_keep), SEQ(d_act_clerk_joke),
-  SEQ(d_act_music_listen), SEQ(d_act_art_rest)
+  SEQ(d_act_music_listen), SEQ(d_act_art_rest),
+  SEQ(d_act_mara_close), SEQ(d_act_music_progress), SEQ(d_act_art_progress)
 };
 const StoryPage *story_pages(const Story *s, int *count) {
     unsigned id = s->dialogue;
@@ -431,7 +444,9 @@ static uint8_t cinematics_for_dialogue(uint8_t d){
     case D_ACT_LETTER_KEEP: return CINE_LETTER;
     case D_ACT_CLERK_JOKE: return CINE_BORE;
     case D_ACT_MUSIC_LISTEN: return CINE_MUSIC;
-    case D_ACT_ART_REST: return CINE_ART;
+    case D_ACT_ART_REST: case D_ACT_ART_PROGRESS: return CINE_ART;
+    case D_ACT_MARA_CLOSE: return CINE_MARA;
+    case D_ACT_MUSIC_PROGRESS: return CINE_MUSIC;
     default: return CINE_NONE;
     }
 }
@@ -636,7 +651,8 @@ static void interact(Story *s) {
         if (!(s->flags & STORY_STAMP)) talk(s, D_MARA_LOCKED);
         else {
             if(can_make_memory(s) && !(s->daily_mask&STORY_DAY_MARA))moment_menu(s,'F');
-            else talk(s,(s->flags & STORY_MARA) ? D_MARA_AGAIN : D_MARA);
+            else talk(s,s->bond>=4?D_ACT_MARA_CLOSE:
+                (s->flags & STORY_MARA) ? D_MARA_AGAIN : D_MARA);
             if (!(s->flags & STORY_MARA)) { s->flags |= STORY_MARA; s->dirty = 1; }
         }
         break;
@@ -647,7 +663,7 @@ static void interact(Story *s) {
         if(can_make_memory(s) && !(s->daily_mask&STORY_DAY_MUSIC))moment_menu(s,'M');
         else if (!(s->flags & STORY_MUSIC)) {
             s->flags |= STORY_MUSIC; s->dirty=1; talk(s,D_MUSIC);
-        } else talk(s,D_MUSIC_AGAIN);
+        } else talk(s,s->work>=8?D_ACT_MUSIC_PROGRESS:D_MUSIC_AGAIN);
         break;
     case 'R':
         if (s->life_stage == STORY_LIFE_LAST_WORK) {
@@ -665,7 +681,7 @@ static void interact(Story *s) {
         } else if (s->life_stage == STORY_LIFE_WAIT ||
                    s->life_stage == STORY_LIFE_FOLLOWUP_WAIT) {
             if(!(s->daily_mask&STORY_DAY_ART))moment_menu(s,'R');
-            else talk(s,D_ART_DAY);
+            else talk(s,s->work>=8?D_ACT_ART_PROGRESS:D_ART_DAY);
         } else if (!(s->flags & STORY_ART)) {
             s->flags |= STORY_ART;s->dirty=1;talk(s,D_ART);
         } else talk(s,D_ART_AGAIN);
