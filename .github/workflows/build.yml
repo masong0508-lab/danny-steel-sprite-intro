@@ -19,6 +19,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Validate cinematic menu overlays and guarded erase progress
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/menu_ink.c tests/menu_ink_test.c -o /tmp/danny_menu_ink_test
+          /tmp/danny_menu_ink_test
       - name: Test story progression and map accessibility
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c tests/story_test.c -o /tmp/danny_story_test

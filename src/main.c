@@ -30,6 +30,28 @@ static int sin12(u32 ph) {
     return a + (((b - a) * f) >> 8);
 }
 static int clampi(int v, int lo, int hi) { return v < lo ? lo : v > hi ? hi : v; }
+/* Filmic exposure curves avoid abrupt 0.4-second linear brightness ramps. */
+static int exposure_ease(int elapsed, int length) {
+    int f = clampi(elapsed * 256 / length,0,256);
+    int smooth = ((f * f >> 8) * (768 - 2 * f)) >> 8;
+    return smooth * 16 >> 8;
+}
+static u16 warm_mix(u16 light,u16 shadow,int amount) {
+    int r=(light&31),g=(light>>5)&31,b=(light>>10)&31;
+    return (u16)((r+(((shadow&31)-r)*amount)/16) |
+          ((g+((((shadow>>5)&31)-g)*amount)/16)<<5) |
+          ((b+((((shadow>>10)&31)-b)*amount)/16)<<10));
+}
+static void title_prompt_breathe(int tick) {
+    /* Only BG1's bank 15 is modulated; the distressed title in bank 14
+       remains steady. Slower, always-readable breathing replaces blinking. */
+    int phase=tick%144;
+    if(phase>72)phase=144-phase;
+    int dark=7-phase*6/72;
+    PAL16[241]=text_pal[1];
+    PAL16[242]=warm_mix(text_pal[2],0x294a,dark);
+    PAL16[243]=warm_mix(text_pal[3],0x294a,dark/2);
+}
 static void scroll_pos(int *sx, int *sy) {
     *sx = clampi(BGS_MAX_X / 2 + ((BGS_MAX_X / 2 * sin12(ph_x)) >> 12), 0, BGS_MAX_X);
     *sy = clampi(BGS_MAX_Y / 2 + ((BGS_MAX_Y / 2 * sin12(ph_y)) >> 12), 0, BGS_MAX_Y);
@@ -40,14 +62,20 @@ static void title_setup(void) {
     REG_BLDCNT = keep_music ? 0x00BF : 0x00FF; REG_BLDY = 16; REG_DISPCNT = 0;   // no forced blank (it shows white): white after the eyes' flash, black otherwise
     if (!keep_music) music_stop();
     for (int i = 0; i < 224; i++) PAL16[i] = bg_pal[i];
-    for (int i = 0; i < 16; i++) PAL16[224 + i] = text_pal[i];            // palette bank 14 = text
+    for (int i = 0; i < 16; i++) {
+        PAL16[224 + i] = text_pal[i];      // bank 14: steady hand-distressed title
+        PAL16[240 + i] = text_pal[i];      // bank 15: slowly breathing invitation
+    }
     volatile u32 *tt = (volatile u32 *)(VRAM8 + 3 * 0x4000);              // charblock 3 = text tiles
     for (int i = 0; i < text_tile_count * 8; i++) tt[i] = text_tiles[i];
     volatile u16 *m0 = (volatile u16 *)(VRAM8 + 30 * 0x800), *m1 = (volatile u16 *)(VRAM8 + 31 * 0x800);
     for (int i = 0; i < 1024; i++) { m0[i] = 0; m1[i] = 0; }
     for (int r = 0; r < TITLE_TH; r++) for (int c = 0; c < TITLE_TW; c++) m0[(TITLE_ROW + r) * 32 + c] = title_map[r * TITLE_TW + c];
-    for (int r = 0; r < PRESS_TH; r++) for (int c = 0; c < PRESS_TW; c++) m1[(PRESS_ROW + r) * 32 + c] = press_map[r * PRESS_TW + c];
-    ph_x = ph_y = 0; frames = 0;
+    for (int r = 0; r < PRESS_TH; r++) for (int c = 0; c < PRESS_TW; c++) {
+        u16 tile=press_map[r * PRESS_TW + c];
+        m1[(PRESS_ROW + r) * 32 + c]= tile ? (u16)((tile & 0x0FFF) | (15 << 12)) : 0;
+    }
+    ph_x = ph_y = 0; frames = 0; was_down = 1;
     int sx, sy; scroll_pos(&sx, &sy);
     bgs_init(sx, sy);
     REG_BGCNT(0) = BGCNT(0, 3, 30);                                       // title text
@@ -63,9 +91,8 @@ static void title_setup(void) {
     state = ST_FADE_IN; state_t = 0;
 }
 
-// PLACEHOLDER game logic: for now START simply sends us back to the title screen.
-// Later: start the game / show a menu here instead.
-static void title_finished(void) { in_menu = 1; menu_enter(); }   // START -> main menu (video loop, music down to 40%)
+/* The title belongs to the chapter's physical painting, not a debug splash. */
+static void title_finished(void) { in_menu = 1; menu_enter(); }
 
 static void frame_update(void) {
     frames++; intro_title_tick(city_t++);                                 // skyline keeps turning under the title
@@ -76,22 +103,22 @@ static void frame_update(void) {
 
     int down = !(REG_KEYINPUT & KEY_START);
     int pressed = down && !was_down; was_down = down;
-    int blink_on;
+    title_prompt_breathe(frames);
     switch (state) {
     case ST_FADE_IN:
         { int hold = white_in ? 4 : 0, len = white_in ? 22 : 24;            // reference: ~4 frames of pure white, then a ~0.37 s fade down to the title
-            REG_BLDY = clampi(16 - (state_t - hold) * 16 / len, 0, 16); blink_on = 1;
+            REG_BLDY = (u16)(16 - exposure_ease(state_t-hold,len));
             if (++state_t >= hold + len) { state = ST_RUN; state_t = 0; REG_BLDCNT = 0x00FF; } }
         break;
     case ST_RUN:
-        REG_BLDY = 0; blink_on = ((frames / 30) & 1) == 0;
+        REG_BLDY = 0;
         if (pressed) { state = ST_FADE_OUT; state_t = 0; }
         break;
     default:                                                              // ST_FADE_OUT
-        REG_BLDY = clampi(state_t * 16 / 24, 0, 16); blink_on = (state_t >> 2) & 1;   // fast blink
-        if (++state_t >= 24) { title_finished(); return; }
+        REG_BLDY = (u16)exposure_ease(state_t,27);
+        if (++state_t >= 27) { title_finished(); return; }
     }
-    REG_DISPCNT = DCNT_BG0 | DCNT_BG2 | OBJ_ON | (blink_on ? DCNT_BG1 : 0);
+    REG_DISPCNT = DCNT_BG0 | DCNT_BG1 | DCNT_BG2 | OBJ_ON;
 }
 
 int main(void) {
