@@ -298,7 +298,7 @@ static void concert(uint8_t *p,unsigned t){
  hd_rect(p,18,119,202,10,HD_BRICK_DARK);
  for(int i=0;i<19;i++){
   int x=i*14-6;
-  int y=141+(int)((unsigned)(i*7)+t/23u&3u);
+  int y=141+(int)(((unsigned)(i*7)+t/23u)&3u);
   hd_ellipse(p,x,y,7,7,i%3u?HD_STONE_DARK:HD_HAIR);
   hd_rect(p,x-6,y+4,13,19,i%4u?HD_GLASS:HD_BRICK);
  }
