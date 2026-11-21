@@ -737,38 +737,94 @@ void hd_cinema_draw(uint8_t *p,const Story *s,unsigned t){
   case CINE_OPEN:
    potheads_open(p,t);
    break;
-  case CINE_LETTER:
+  case CINE_LETTER:{
    street(p,t,1);
-   hd_rect(p,10,69,85,46,HD_BARK);
-   hd_rect(p,12,72,80,41,HD_BRICK);
-   hd_rect(p,21,78,40,34,HD_INK);
-   hd_rect(p,24,81,34,29,HD_GLASS_LIT);
-   hd_rect(p,72,81,14,24,HD_PAPER);
-   hd_rect(p,74,83,10,2,HD_COPPER);
-   actor(p,ease(162,142,t,10,55),145,1,t,page>=1?3:2);
+   hd_rect(p,9,56,91,59,HD_BARK);
+   hd_rect(p,12,59,85,53,HD_BRICK);
+   for(int i=0;i<5;i++)
+    hd_line(p,14,67+i*9,96,67+i*9,HD_BRICK_DARK);
+   hd_rect(p,18,75,43,37,HD_INK);
+   hd_rect(p,21,78,37,31,HD_GLASS_LIT);
+   hd_line(p,38,78,38,109,HD_BARK);
+   hd_rect(p,65,75,23,36,HD_STONE_DARK);
+   hd_rect(p,67,76,20,4,HD_COPPER);
+   hd_rect(p,69,81,16,16,HD_SHADOW);
+   int dx=ease(174,141,t,10,70);
+   /* Same counter and letter for all dialogue pages. */
+   hd_rect(p,153,111,70,7,HD_BARK);
+   hd_rect(p,155,117,5,29,HD_BARK);
+   hd_rect(p,217,117,5,29,HD_BARK);
+   hd_rect(p,165,91,24,17,HD_PAPER);
+   hd_rect(p,166,92,22,2,HD_STONE_LIT);
+   hd_line(p,166,94,177,103,HD_COPPER);
+   hd_line(p,188,94,177,103,HD_COPPER);
+   hd_rect(p,176,97,3,2,HD_RED_SHADE);
+   actor(p,dx,145,1,t,t<85u?2:page==0?1:3);
+   if(t>=85u&&page>=1u){
+    hd_line(p,dx+23,96,166,97,HD_SKIN);
+    hd_pixel(p,166,97,HD_SKIN_LIT);
+   }
    break;
+  }
   case CINE_BORE:archive(p,t,page);break;
   case CINE_MARA:
-  case CINE_STAY:
+  case CINE_STAY:{
    cafe(p,t);
    table(p,121,110,t);
-   actor(p,ease(78,91,t,11,60),141,1,t,t<70?2:page>=1?5:1);
-   actor(p,ease(178,164,t,18,63),141,2,t,t<82?2:page>=2?3:1);
+   int danny=ease(78,91,t,11,60);
+   int mara=ease(178,164,t,18,63);
+   actor(p,danny,141,1,t,t<70?2:page>=1?5:1);
+   actor(p,mara,141,2,t,t<82?2:page>=2?3:1);
+   /* Body gestures have real table targets instead of floating cups. */
+   if(t>=86u&&page>=1u){
+    hd_line(p,danny+18,108,114,99,HD_SKIN);
+    hd_pixel(p,114,99,HD_SKIN_LIT);
+   }
+   if(t>=104u&&page>=2u){
+    hd_line(p,mara-18,108,141,99,HD_SKIN);
+    hd_pixel(p,141,99,HD_SKIN_LIT);
+   }
+   /* Noninteractive pedestrians keep the cafe block lived-in. */
+   int passer=235-(int)((t/5u)%80u);
+   hd_ellipse(p,passer,113,7,2,HD_SHADOW);
+   hd_rect(p,passer-3,93,7,15,HD_STONE_DARK);
+   hd_rect(p,passer-2,89,5,6,HD_SKIN);
    break;
-  case CINE_BUS:
+  }
+  case CINE_BUS:{
    street(p,t,1);
-   bus(p,ease(260,74,t,0,116),67,t);
-   actor(p,ease(192,165,t,20,78),142,1,t,t<100?2:page>=2?7:0);
+   /* Arrival, settle and opening door are sequential physical events. */
+   int bx=ease(260,74,t,0,116);
+   bus(p,bx,67,t);
+   hd_rect(p,201,68,30,19,HD_INK); /* bus route timetable */
+   hd_rect(p,203,70,26,14,HD_PAPER);
+   hd_line(p,207,74,224,74,HD_STONE);
+   hd_line(p,207,78,220,78,HD_STONE);
+   hd_rect(p,200,88,3,25,HD_BARK);
+   if(t>=116u){
+    int gap=ease(0,12,t,116,36);
+    hd_rect(p,bx+66,92,20,12,HD_INK);
+    hd_rect(p,bx+68,94,16,9,HD_STONE_DARK);
+    hd_rect(p,bx+68,94,8-gap/3,9,HD_RED);
+    hd_rect(p,bx+84-gap/3,94,2,9,HD_COPPER);
+    hd_rect(p,bx+85,103,4,9,HD_STONE_LIT);
+    hd_line(p,bx+68,113,bx+92,113,HD_LAMP);
+   }
+   int danny=ease(192,165,t,20,78);
+   actor(p,danny,142,1,t,t<100u?2:page>=2?7:0);
    break;
+  }
   case CINE_MUSIC:record_room(p,t);break;
   case CINE_ART:rooftop(p,t);break;
   case CINE_NOTICE:{
    street(p,t,1);
    int x=ease(68,91,t,13,71);
    actor(p,x,142,1,t,t<80?2:7);
-   hd_rect(p,x+21,96,11,19,HD_INK);
-   hd_rect(p,x+23,98,7,15,HD_GLASS_LIT);
-   hd_pixel(p,x+26,101,HD_LAMP);
+   /* Phone aligns with Danny's raised hand at (x+19,85). */
+   hd_rect(p,x+18,75,11,20,HD_INK);
+   hd_rect(p,x+20,77,7,16,HD_GLASS_LIT);
+   hd_pixel(p,x+23,80,HD_LAMP);
+   hd_line(p,x+19,85,x+20,87,HD_SKIN);
    break;
   }
   case CINE_CLINIC:clinic(p,s,t,0);break;
