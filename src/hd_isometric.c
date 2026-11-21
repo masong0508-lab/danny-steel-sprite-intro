@@ -65,7 +65,7 @@ static void diamond_wall(uint8_t *p,int sx,int sy,int h,int wx,int wy,
  }
  for(int i=0;i<16;i++){
   int x=sx+16+i,top=sy+16-i/2-h;
-  unsigned color=side;
+  unsigned color=HD_BRICK_DARK;
   if(((wy*11+wx*3+i)&7)==0)color=base;
   hd_rect(p,x,top,1,h,color);
   if((i&7)==0){
@@ -227,7 +227,7 @@ void hd_isometric_draw(uint8_t *p,const Story *s,unsigned tick){
     object(p,sx,sy,c,tick,wx,wy);
    if(wx==17&&wy==13)lamp(p,sx,sy,tick);
   }
-  if(!drew_player&&(unsigned)depth>=player_depth){
+  if(!drew_player&&depth>=(int)player_depth){
    int ox=0,oy=0;
    if(s->anim){
     ox=((int)s->prev_x-(int)s->x -
