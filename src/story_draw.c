@@ -14,11 +14,17 @@ const uint16_t story_palette[32] = {
 #undef RGB
 
 static int16_t sin_q12[256];
+static uint16_t floor_depth[80];
 void story_draw_init(void) {
     for (int i=0;i<256;i++) {
         int h=i&127,p=h*(128-h);
         int v=65536*p/(81920-4*p);
         sin_q12[i]=(int16_t)(i>=128?-v:v);
+    }
+    /* Division belongs in setup, not in the 4,800 floor pixels per frame. */
+    for (int y=40;y<80;y++) {
+        int d=4400/(y-39);
+        floor_depth[y]=(uint16_t)(d>2300?2300:d);
     }
 }
 static void put(uint8_t *p,int x,int y,int c) {
@@ -146,7 +152,7 @@ static void first_person(const Story *s,int tick,uint8_t *p) {
         int vx=sin_q12[(ang+64)&255],vy=sin_q12[ang];
         /* Perspective floor projection: near details move with Danny, not with the camera backdrop. */
         for(int y=40;y<80;y++){
-            int dist=4400/(y-39);if(dist>2300)dist=2300;
+            int dist=floor_depth[y];
             int tx=(camx+vx*dist/4096)>>8,ty=(camy+vy*dist/4096)>>8;
             char c=story_tile(tx,ty);
             int color=c=='~'?25:c==','||c=='='?10:c=='g'||c=='T'?11:c=='#'?4:8;
