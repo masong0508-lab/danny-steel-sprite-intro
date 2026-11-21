@@ -185,3 +185,12 @@ and an evolving skyline that never erases the final painting. The bad-ending
 montage now selects different *visual* shots depending on whether Mara survived.
 No extra framebuffer/large assets were introduced. See
 docs/ENDING_CINEMATICS.md and tests/cinema_direction_test.c.
+
+### Temporal cutscene continuity pass
+Clouds and skyline now scroll in seamless repeating layers, indoor
+window geometry stays physically anchored, buses arrive and remain
+parked, and music/legacy scenes use rotating tape and vinyl plus
+live concert choreography. The good-ending rooftop canvas is visibly
+finished; the bad-ending unanswered phone no longer flashes the
+whole screen. Regression tests check actual frame pixels across wrap
+boundaries. See docs/ENDING_CINEMATICS.md.

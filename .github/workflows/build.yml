@@ -73,6 +73,10 @@ jobs:
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/story_draw.c src/cinema.c tests/cinema_test.c -o /tmp/danny_cinema_test
           /tmp/danny_cinema_test
 
+      - name: Check seamless cinematic parallax, tape motion and no-teleport bus arrival
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/cinema.c tests/cinema_temporal_test.c -o /tmp/danny_cinema_temporal_test
+          /tmp/danny_cinema_temporal_test
       - name: Validate staged cutscene movement, spatial coherence and route-specific ending shots
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/story_draw.c src/cinema.c tests/cinema_direction_test.c -o /tmp/danny_cinema_direction_test

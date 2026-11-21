@@ -73,3 +73,36 @@ covered by dialogue boxes. The original lower dialogue panel is still
 used outside cinematic scenes, preserving usability in the overhead and
 first-person exploration views. Host tests compare all pixels under the
 cinematic caption directly against the raw rendered scene.
+
+## Long-shot temporal continuity — next animation pass
+
+The city background has a 160-pixel repeating far skyline, a 184-pixel
+nearer neighborhood and a 160-pixel cloud cycle. These are *periodic
+drawings*: when the counters wrap, the same skyline is already one
+pixel outside/behind the viewport, rather than abruptly changing a
+building's height or moving a cloud dozens of pixels. Interior window
+geometry is fixed to the physical building while its distant apartment
+lights still change over time.
+
+The initial bus now arrives and parks at one curb. Danny walks into
+his waiting position, then stops; there is no modulo-based loop returning
+the bus to the horizon. The afternoon bus and clinic follow-up reuse
+grounded walk-ins.
+
+In the studio, the BORE reel has a rotating 8-pose spindle and four
+smooth envelope-based level bars. The vinyl in the good-ending record
+shop rotates as well. A woman physically approaches a record sleeve,
+and the good-ending concert now includes fixed-truss moving beams, an
+onstage performer and a gently moving crowd. The completed rooftop
+painting is actually finished in Mara's later good-ending rooftop shot.
+
+The failing bad-ending route uses a quiet unanswered phone instead of
+a flashing full-width bar. The character acting remains non-graphic.
+
+Temporal assertions in `tests/cinema_temporal_test.c` compare actual
+framebuffer pixels immediately before/after animation wrap boundaries,
+validate a stationary archive window, sample moving reel and vinyl
+highlights, ensure the bus remains parked once arrived, and check
+deterministic rendering. This supplements the full cutscene, ending and
+rescue tests. No PCM, new framebuffer, extra sprite images or heap was
+added. Absolute GBA FPS still requires hardware/emulator profiling.
