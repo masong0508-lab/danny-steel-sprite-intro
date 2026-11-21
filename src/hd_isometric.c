@@ -52,7 +52,7 @@ static void diamond_wall(uint8_t *p,int sx,int sy,int h,int wx,int wy,
                          unsigned base,unsigned bright,int front,int side){
  /* Each isometric side has a ground edge slanted 8 pixels over 16
     columns and an exactly vertical height. No float or texture scaling. */
- for(int i=0;i<16;i++){
+ if(front)for(int i=0;i<16;i++){
   int x=sx+i,top=sy+8+i/2-h;
   unsigned color=base;
   if(((wy*7+wx*3+i)&7)==0)color=bright;
@@ -62,10 +62,10 @@ static void diamond_wall(uint8_t *p,int sx,int sy,int h,int wx,int wy,
     hd_pixel(p,x,top+step,HD_BRICK_DARK);
   }
  }
- for(int i=0;i<16;i++){
+ if(side)for(int i=0;i<16;i++){
   int x=sx+16+i,top=sy+16-i/2-h;
-  unsigned color=HD_BRICK_DARK;
-  if(((wy*11+wx*3+i)&7)==0)color=base;
+  unsigned color=HD_STONE_DARK;
+  if(((wy*11+wx*3+i)&15)==0)color=HD_STONE;
   hd_rect(p,x,top,1,h,color);
   if((i&7)==0){
    for(int step=6;step<h-2;step+=9)
@@ -95,14 +95,18 @@ static void diamond_wall(uint8_t *p,int sx,int sy,int h,int wx,int wy,
 }
 static void building(uint8_t *p,int sx,int sy,int wx,int wy,
                      unsigned tick,char type){
- unsigned n=grain(wx,wy),h=27u+((n>>5)&3u)*5u;
- if(type=='A')h=33u;
+ unsigned n=grain(wx,wy);
+ /* Group adjacent building tiles into the same roofline, rather than
+    giving every pavement cell a separate chess-piece cube. */
+ unsigned h=27u+(unsigned)(((wx/3+wy/3)&1)*9);
+ if(type=='A')h=36u;
  int front=exposed(wx,wy+1),side=exposed(wx+1,wy);
- if(!front&&!side)h=24u;
+ /* Interior roof cells keep the SAME shared roofline: wall faces are
+    omitted where a neighboring building occludes them. */
  /* Raised foundation, two differently lit facades, roof diamond,
     ridge/coping and real world-coordinate window treatment. */
- diamond_wall(p,sx,sy,(int)h,wx,wy,HD_BRICK,
-              HD_BRICK_LIT,front,HD_BRICK_DARK);
+ diamond_wall(p,sx,sy,(int)h,wx,wy,HD_BRICK_DARK,
+              HD_COPPER,front,side);
  hd_iso_tile(p,sx,sy-(int)h,10u+(n&1u));
  hd_line(p,sx+1,sy+8-(int)h,sx+16,sy+15-(int)h,HD_COPPER);
  hd_line(p,sx+17,sy+15-(int)h,sx+31,sy+8-(int)h,HD_STONE_LIT);
