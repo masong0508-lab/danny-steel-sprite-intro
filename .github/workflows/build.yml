@@ -55,6 +55,10 @@ jobs:
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/story_draw.c src/cinema.c tests/rescue_route_test.c -o /tmp/danny_rescue_route_test
           /tmp/danny_rescue_route_test
+      - name: Audit plot continuity, music master, honest promises and conditional endings
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/story_draw.c src/cinema.c tests/story_continuity_test.c -o /tmp/danny_story_continuity_test
+          /tmp/danny_story_continuity_test
       - name: Test Mara's hopeful unanswered phone, delayed realization and two-day save continuity
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/story_draw.c src/cinema.c src/story_save.c src/rescue_save.c tests/hope_phone_test.c -o /tmp/danny_hope_phone_test
