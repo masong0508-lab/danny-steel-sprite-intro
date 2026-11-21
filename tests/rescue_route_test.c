@@ -152,6 +152,19 @@ int main(void){
  assert(final_day.rescue_stage==STORY_RESCUE_MISSING);
  assert(final_day.life_stage==STORY_LIFE_LAST_WORK&&!final_day.ended);
  close_pages(&final_day);
+ /* Pending doctor appointments never show Mara as present during rescue.
+    The same appointment becomes reachable when she is safely home. */
+ Story appointment;setup_three(&appointment);
+ appointment.life_stage=STORY_LIFE_FINAL_CLINIC;
+ at(&appointment,'K'); /* clinic is directly east of the plaza */
+ press(&appointment,A);
+ {int n=0;const StoryPage *p=story_pages(&appointment,&n);
+  assert(n==3&&!strcmp(p[0].line1,"Your appointment"));}
+ assert(appointment.life_stage==STORY_LIFE_FINAL_CLINIC);
+ close_pages(&appointment);rescue(&appointment);
+ at(&appointment,'K');press(&appointment,A);
+ assert(appointment.life_stage==STORY_LIFE_LAST_WORK);
+ close_pages(&appointment);
  assert(sizeof(Story)<64);
  puts("Mara: 4 intentional checks, cancel, 3-step rescue, optional fail, saved second chances, 2 bad endings and guarded film OK");
  return 0;

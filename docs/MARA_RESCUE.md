@@ -44,3 +44,12 @@ Tests: `tests/rescue_route_test.c` for both rescue outcomes, guide goals,
 cancel semantics, re-opened ending routes, full score, guarded renders;
 `tests/rescue_save_test.c` for extension checksum/slot independence; all
 existing regression tests remain in GitHub Actions.
+
+## Timeline continuity
+
+If the rescue happens during the numbered-day chapter, pending clinic visits
+are temporarily rescheduled rather than staging Mara as present while she is
+missing. The appointment, day progress, and eventual neutral ending become
+available again immediately after rescue. The last rooftop painting likewise
+cannot bypass the rescue. Ordinary world time may pass during the search,
+but time by itself never fails the mission.

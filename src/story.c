@@ -128,7 +128,7 @@ enum { D_NONE, D_OPEN, D_LETTER, D_LETTER_AGAIN, D_CLERK_LOCKED, D_CLERK, D_CLER
        D_RESCUE_TRACE, D_RESCUE_SAVED, D_RESCUE_LOST,
        D_RESCUE_AFTERSHOCK, D_BAD_END, D_BAD_END_SAVED, D_RESCUE_NOTES_1,
        D_RESCUE_NOTES_2, D_RESCUE_NOTES_3, D_RESCUE_NOTES_SAVED,
-       D_BUS_RESCUE, D_BAD_WARNING_2 };
+       D_BUS_RESCUE, D_BAD_WARNING_2, D_CLINIC_RESCUE };
 #define SCRIPT(name, ...) static const StoryPage name[] = { __VA_ARGS__ }
 SCRIPT(d_open,
  {"DANNY", "The last bus leaves", "at sundown. Of course."},
@@ -459,6 +459,10 @@ SCRIPT(d_bad_music,
 SCRIPT(d_bad_server,
  {"TERMINAL", "PRIVATE NAME POSTED.", "RETRACTING IS HARD."},
  {"DANNY", "I just made life", "harder for someone."});
+SCRIPT(d_clinic_rescue,
+ {"RECEPTION", "Your appointment", "can be rescheduled."},
+ {"DANNY", "Mara is missing.", "I have to find her."},
+ {"RECEPTION", "We'll keep your", "place for you."});
 SCRIPT(d_bad_warning_2,
  {"DANNY", "Another wrong choice", "made a real mess."},
  {"UNKNOWN TEXT", "MARA IS NOT", "OUT OF REACH."},
@@ -550,7 +554,7 @@ static const struct { const StoryPage *pages; uint8_t count; } scripts[] = {
   SEQ(d_rescue_aftershock), SEQ(d_bad_end), SEQ(d_bad_end_saved),
   SEQ(d_rescue_notes_1),
   SEQ(d_rescue_notes_2), SEQ(d_rescue_notes_3), SEQ(d_rescue_notes_saved),
-  SEQ(d_bus_rescue), SEQ(d_bad_warning_2)
+  SEQ(d_bus_rescue), SEQ(d_bad_warning_2), SEQ(d_clinic_rescue)
 };
 const StoryPage *story_pages(const Story *s, int *count) {
     unsigned id = s->dialogue;
@@ -617,6 +621,7 @@ static uint8_t cinematics_for_dialogue(uint8_t d){
     case D_BAD_END: case D_BAD_END_SAVED: return CINE_BAD;
     case D_BUS_RESCUE: return CINE_BUS;
     case D_BAD_WARNING_2: return CINE_NOTICE;
+    case D_CLINIC_RESCUE: return CINE_CLINIC;
     default: return CINE_NONE;
     }
 }
@@ -979,6 +984,10 @@ static void interact(Story *s) {
         } else talk(s,D_ART_AGAIN);
         break;
     case 'K':
+        if(s->rescue_stage>=STORY_RESCUE_MISSING &&
+           s->rescue_stage<=STORY_RESCUE_TRACE){
+            talk(s,D_CLINIC_RESCUE);break;
+        }
         if (s->life_stage == STORY_LIFE_CLINIC) {
             s->life_stage=STORY_LIFE_FOLLOWUP_WAIT;
             s->scene=STORY_SCENE_CLINIC;s->dirty=1;talk(s,D_DOCTOR_FIRST);
@@ -1045,7 +1054,11 @@ void story_tick(Story *s, uint16_t keys) {
             s->dirty=1;
         }
         if (!s->dialogue && !s->battle && !s->choosing && !s->activity && !s->risk_menu) {
-            if (s->life_stage==STORY_LIFE_WAIT && s->day_number>=2) {
+            if(s->rescue_stage>=STORY_RESCUE_MISSING &&
+               s->rescue_stage<=STORY_RESCUE_TRACE){
+                /* Appointments stay on the calendar, without scenes that
+                   incorrectly show Mara while she is missing. */
+            }else if (s->life_stage==STORY_LIFE_WAIT && s->day_number>=2) {
                 s->life_stage=STORY_LIFE_CLINIC;
                 s->scene=STORY_SCENE_NOTICE;s->dirty=1;talk(s,D_MEDICAL_NOTICE);
             } else if (s->life_stage==STORY_LIFE_FOLLOWUP_WAIT && s->day_number>=3) {
