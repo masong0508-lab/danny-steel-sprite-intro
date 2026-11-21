@@ -141,7 +141,7 @@ enum { D_NONE, D_OPEN, D_LETTER, D_LETTER_AGAIN, D_CLERK_LOCKED, D_CLERK, D_CLER
        D_HOPE_WITNESS, D_HOPE_TERMINAL, D_HOPE_DOOR,
        D_HOPE_NOTE_WAIT, D_HOPE_NOTE_LATE,
        D_MARA_CONCERN, D_MARA_WARNING, D_BAD_MUSIC_MASTER,
-       D_GOOD_END_SCARS };
+       D_GOOD_END_SCARS, D_RESCUE_LOST_REMOTE };
 #define SCRIPT(name, ...) static const StoryPage name[] = { __VA_ARGS__ }
 SCRIPT(d_open,
  {"DANNY", "Last bus tonight.", "Doctor called again."},
@@ -537,6 +537,13 @@ SCRIPT(d_rescue_lost,
  {"UNKNOWN CALLER", "She will call you.", "Just give it a day."},
  {"DANNY", "You sound so sure.", "I need you right."},
  {"DANNY", "I'll keep the phone", "on. She can call."});
+/* Fourth harm can occur from any desk, before Danny ever reaches the
+   house. It must NOT teleport him to a safe-house failure scene. */
+SCRIPT(d_rescue_lost_remote,
+ {"PHONE", "A lead went quiet.", "Mara is still gone."},
+ {"UNKNOWN CALLER", "She will call you.", "Just give it a day."},
+ {"DANNY", "You sound so sure.", "I need you right."},
+ {"DANNY", "I'll keep the phone", "on. She can call."});
 /* The unverified caller sounds reassuring, but the game does not portray
    an unreturned call as evidence of death or confirmed harm. */
 SCRIPT(d_hope_realize,
@@ -652,7 +659,7 @@ static const struct { const StoryPage *pages; uint8_t count; } scripts[] = {
   SEQ(d_hope_witness), SEQ(d_hope_terminal), SEQ(d_hope_door),
   SEQ(d_hope_note_wait), SEQ(d_hope_note_late),
   SEQ(d_mara_concern), SEQ(d_mara_warning), SEQ(d_bad_music_master),
-  SEQ(d_good_end_scars)
+  SEQ(d_good_end_scars), SEQ(d_rescue_lost_remote)
 };
 const StoryPage *story_pages(const Story *s, int *count) {
     unsigned id = s->dialogue;
@@ -724,7 +731,8 @@ static uint8_t cinematics_for_dialogue(uint8_t d){
     case D_RESCUE_SAVED_ART: return CINE_RESCUE_SAVED;
     case D_BAD_END: case D_BAD_END_SAVED: return CINE_BAD;
     case D_BUS_RESCUE: return CINE_BUS;
-    case D_BAD_WARNING_2: case D_HOPE_REALIZE: return CINE_NOTICE;
+    case D_BAD_WARNING_2: case D_HOPE_REALIZE:
+    case D_RESCUE_LOST_REMOTE: return CINE_NOTICE;
     case D_CLINIC_RESCUE: return CINE_CLINIC;
     default: return CINE_NONE;
     }
@@ -973,12 +981,12 @@ static void begin_bad_film(Story *s){
 /* The failed rescue does NOT instantly decide Mara's fate. Reuse the
    already-persisted day clock for this chapter; no new SRAM flags required.
    These days are independent of the clinic's original numbered days. */
-static void begin_wait_for_call(Story *s){
+static void begin_wait_for_call(Story *s,unsigned away_from_house){
     s->rescue_stage=STORY_RESCUE_LOST;
     s->life_stage=STORY_LIFE_NONE;
     s->day_number=0;s->day_frame=0;
     s->daily_mask=0;s->scene=STORY_SCENE_NONE;s->dirty=1;
-    talk(s,D_RESCUE_LOST);
+    talk(s,away_from_house?D_RESCUE_LOST_REMOTE:D_RESCUE_LOST);
 }
 static void commit_bad(Story *s,char target){
     unsigned bit=target=='L'?STORY_BAD_LETTER:target=='C'?STORY_BAD_CLERK:
@@ -990,7 +998,7 @@ static void commit_bad(Story *s,char target){
         if(s->rescue_stage==STORY_RESCUE_SAVED){
             s->rescue_stage=STORY_RESCUE_AFTERSHOCK;
             talk(s,D_RESCUE_AFTERSHOCK);
-        }else begin_wait_for_call(s);
+        }else begin_wait_for_call(s,1u);
     }else if(count==STORY_BAD_THRESHOLD &&
              s->rescue_stage==STORY_RESCUE_NONE){
         s->rescue_stage=STORY_RESCUE_MISSING;talk(s,D_MARA_MISSING);
@@ -1013,7 +1021,7 @@ static void resolve_risk(Story *s){
     s->risk_menu=0;s->risk_choice=0;s->cinema=CINE_NONE;
     if(target=='H'){
         if(s->rescue_stage!=STORY_RESCUE_TRACE)return;
-        if(selected)begin_wait_for_call(s);
+        if(selected)begin_wait_for_call(s,0u);
         else{
             s->rescue_stage=STORY_RESCUE_SAVED;s->dirty=1;
             rescue_reunion(s);
