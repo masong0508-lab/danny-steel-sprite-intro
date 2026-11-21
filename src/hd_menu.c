@@ -93,12 +93,13 @@ static void sky(uint8_t *p,unsigned t){
  }
 }
 static void paper_panel(uint8_t *p){
- hd_rect(p,10,42,140,100,HD_SHADOW);
- hd_rect(p,12,44,136,96,HD_ROAD);
- hd_rect(p,14,46,132,92,HD_INK);
- hd_rect(p,15,47,130,90,HD_SHADOW);
- hd_rect(p,20,49,126,1,HD_COPPER);
- hd_line(p,20,133,145,133,HD_STONE_DARK);
+ /* A quiet, slightly offset sleeve of dark paper, not a framed GUI. */
+ hd_rect(p,10,42,140,101,HD_SHADOW);
+ hd_rect(p,13,44,133,96,HD_BRICK_DARK);
+ hd_rect(p,14,45,131,93,HD_INK);
+ hd_rect(p,16,47,126,89,HD_SHADOW);
+ hd_line(p,20,49,139,49,HD_COPPER);
+ hd_line(p,20,133,139,133,HD_STONE_DARK);
 }
 void hd_menu_draw(uint8_t *p,unsigned page,unsigned mode,unsigned selection,
                   unsigned frame,unsigned feedback,unsigned held,
@@ -109,7 +110,7 @@ void hd_menu_draw(uint8_t *p,unsigned page,unsigned mode,unsigned selection,
  hd_text(p,15,19,"DANNY STEEL",HD_PAPER,2,1);
  hd_line(p,15,38,230,38,HD_COPPER);
  hd_text(p,159,9,"OLD QUARTER",HD_LAMP,1,1);
- hd_text(p,190,26,"CHAPTER 01",HD_STONE_LIT,1,1);
+ hd_text(p,179,26,"SIDE A / 01",HD_STONE_LIT,1,0);
  paper_panel(p);
  const char *const top[3]={"NEW GAME","CONTINUE","ERASE SAVE"};
  const char *const sub[3]={"A FRESH BEGINNING","PICK UP THE STORY","CLEAR A RECORD"};
@@ -118,8 +119,8 @@ void hd_menu_draw(uint8_t *p,unsigned page,unsigned mode,unsigned selection,
  for(unsigned i=0;i<3;i++){
   int y=54+(int)i*25,active=i==selection;
   if(active){
-   hd_rect(p,20,y-3,121,23,HD_ROAD_COOL);
-   hd_rect(p,20,y-3,2,23,HD_LAMP);
+   hd_rect(p,20,y-3,121,22,HD_BRICK_DARK);
+   hd_rect(p,20,y-3,2,22,HD_LAMP);
    hd_line(p,27,y+17,138,y+17,HD_COPPER);
   }else hd_line(p,26,y+19,136,y+19,HD_STONE_DARK);
   hd_text(p,27,y, page?slots[i]:top[i],active?HD_PAPER:HD_STONE_LIT,1,1);
@@ -128,7 +129,7 @@ void hd_menu_draw(uint8_t *p,unsigned page,unsigned mode,unsigned selection,
    caption=i==0?(valid0?"SAVED STORY":"EMPTY RECORD"):
                  (valid1?"SAVED STORY":"EMPTY RECORD");
   }
-  hd_text(p,27,y+10,caption,active?HD_LAMP:HD_STONE,1,0);
+  hd_text(p,27,y+10,caption,active?HD_STONE_LIT:HD_STONE,1,0);
  }
  if(page && mode==2 && selection<2){
   hd_rect(p,23,132,116,2,HD_STONE_DARK);
