@@ -79,3 +79,26 @@ Before authorizing further features or more detailed animation:
    the worst scene first; do not add effects while that remains true.
 
 **No real-device FPS data is available from these CI workflows yet.**
+
+## Verified optimization acceptance — 2026-11-21
+
+[PR #7](https://github.com/masong0508-lab/danny-steel-sprite-intro/pull/7)
+was merged after the entire host regression suite and devkitARM ROM build
+passed on the feature branch
+([workflow 44936047192](https://github.com/masong0508-lab/danny-steel-sprite-intro/actions/runs/44936047192)).
+The new CI budget gate itself passed with measured linked static sections:
+
+- **EWRAM:** 38,400 bytes, against a 196,608-byte enforced limit.
+- **IWRAM:** 8,880 bytes BSS + 20 bytes data, against a 24,576-byte
+  enforced static limit; the physical IWRAM total is 32,768 bytes.
+- **ROM:** 604,548 bytes in the tested devkitARM branch build.
+- **Exact operation checks:** wall texture quotient divisions fall from
+  11,325 to 300 for the 150 tested heights, monotonic ellipse
+  radius comparisons from 128,960 to 25,700, and 363 line-raster
+  cases remain pixel-identical. Town-grid equality passed at 775
+  checked coordinates including out-of-bounds handling.
+
+These metrics are **not** a claim of sustained 30 FPS. The 30 Hz render
+schedule is only a target until a timed emulator/physical GBA benchmark
+establishes worst-case frame completion. No new visual effects or
+animation should be added before that check.
