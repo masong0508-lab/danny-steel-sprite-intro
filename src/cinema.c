@@ -760,7 +760,7 @@ void cinema_ending_draw_context(uint8_t *p,unsigned ending,unsigned frame,
    cinema_draw_stage(p,scene,frame,frame,0,frame<420u?frame:420u);
  }else{
    /* Crucially, do not restart the whole city and record spindle each cut. */
-   cinema_draw_stage(p,scene,100u+frame,100u+local,shots[shot].page,0);
+   cinema_draw_stage(p,scene,100u+frame,local,shots[shot].page,0);
  }
  /* Film-gate cut at score section boundaries: no fake pixel zoom or extra
     framebuffer. The same authored world location persists inside each shot. */
