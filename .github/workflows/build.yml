@@ -43,6 +43,21 @@ jobs:
             src/hd_ending.c tests/hd_story_expansion_test.c \
             -o /tmp/danny_hd_story_expansion
           /tmp/danny_hd_story_expansion
+      - name: Prove pixel-identical geometry, town coordinates and exact wall-projection rounding
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
+            src/story.c src/studio.c src/hd_canvas.c \
+            tests/native_perf_equivalence_test.c -o /tmp/danny_perf_equivalence
+          /tmp/danny_perf_equivalence
+      - name: Profile per-scene host render costs without confusing them with GBA FPS
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
+            src/story.c src/studio.c src/cinema.c src/hd_canvas.c \
+            src/hd_world.c src/hd_perspective.c src/hd_studio.c \
+            src/hd_cinema.c src/hd_actor.c src/hd_special.c \
+            src/hd_ending.c tests/render_cost_probe.c \
+            -o /tmp/danny_render_cost
+          /tmp/danny_render_cost
       - name: Test story progression and map accessibility
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c tests/story_test.c -o /tmp/danny_story_test
@@ -154,6 +169,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: make
+      - name: Report linked ROM, EWRAM/IWRAM/BSS size without speculative 30 FPS claims
+        run: |
+          arm-none-eabi-size -A danny_steel_title.elf
+          wc -c danny_steel_title.gba
       - name: Publish playable ROM to main (no artifact quota needed)
         run: |
           cd "$GITHUB_WORKSPACE"
