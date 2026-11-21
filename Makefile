@@ -17,7 +17,7 @@ CC      := arm-none-eabi-gcc
 OBJCOPY := arm-none-eabi-objcopy
 ARCH    := -mthumb -mthumb-interwork -mcpu=arm7tdmi
 CFLAGS  := $(ARCH) -O2 -Wall -std=gnu11 -fomit-frame-pointer -Isrc
-LDFLAGS := $(ARCH) -specs=gba.specs
+LDFLAGS := $(ARCH) -specs=gba.specs -Wl,-Map=$(TARGET).map
 SRC     := $(wildcard src/*.c)
 HDR     := $(wildcard src/*.h)
 
@@ -32,6 +32,6 @@ $(TARGET).gba: $(TARGET).elf
 	else echo "warning: gbafix not found; ROM header not fixed"; fi
 
 clean:
-	rm -f $(TARGET).elf $(TARGET).gba
+	rm -f $(TARGET).elf $(TARGET).gba $(TARGET).map
 
 .PHONY: all clean
