@@ -387,8 +387,8 @@ static void activity_menu(uint8_t *p,const Story *s){
     case 'L':where="LETTER / WHAT NOW";left="WRITE";right="KEEP";break;
     case 'C':where="BORE / ANOTHER FORM";left="FILE";right="JOKE";break;
     case 'M':where="MUSIC / A NEW TAKE";left="RECORD";right="LISTEN";break;
-    case 'm':where="BORE TAPE / NEXT STEP";left="BUILD";right="SOFTEN";break;
-    case 'r':where="CANVAS / NEXT STEP";left="LAYER";right="LIGHT";break;
+    case 'm':where="BORE TAPE";left="BUILD";right="SOFTEN";break;
+    case 'r':where="ROOFTOP ART";left="LAYER";right="LIGHT";break;
     default:where="ROOFTOP / THE SKY";left="PAINT";right="REST";break;
     }
     panel(p,45,80);

@@ -56,7 +56,7 @@ int main(void){
  stand(&s,14,7);press(&s,A);assert(s.activity=='R');press(&s,A);
  assert(s.daily_mask==STORY_DAY_ART&&s.cinema==CINE_ART);
  int n;const StoryPage *pages=story_pages(&s,&n);
- assert(n==3&&!strcmp(pages[1].line1,"Leave some space"));
+ assert(n==2&&!strcmp(pages[0].line1,"Buildings rise over"));
  render(&s);done(&s);assert(s.daily_memories==6);
  s.day_frame=STORY_DAY_FRAMES-1;story_tick(&s,0);
  assert(s.day_number==3&&s.life_stage==STORY_LIFE_FINAL_CLINIC);
