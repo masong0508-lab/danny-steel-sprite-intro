@@ -405,7 +405,11 @@ static void recordshop(uint8_t *p,unsigned t){
 }
 /* Camera framing: wide -> two-shot -> actor reaction -> detail. The world and
    object positions remain coherent: panning is limited to a few pixels. */
-void cinema_draw(uint8_t *p,unsigned scene,unsigned tick,unsigned page,unsigned final){
+/* World clock continues across every cut. The local blocking beat resets
+   only for performers entering a new shot; it never restarts clouds, vinyl,
+   studio meters or the city clock. The public API uses a shared clock. */
+static void cinema_draw_stage(uint8_t *p,unsigned scene,unsigned tick,
+                              unsigned beat,unsigned page,unsigned final){
  if(scene>=CINE_COUNT)scene=CINE_NONE;
  unsigned t=tick;
  int focus=(int)(page&3u);
@@ -415,9 +419,9 @@ void cinema_draw(uint8_t *p,unsigned scene,unsigned tick,unsigned page,unsigned 
   street(p,t,0);
   /* The last bus ARRIVES and idles at the same kerb, rather than
      teleporting back to the entrance on a modulo counter. */
-  int busx=travel(134,17,t,0,126);
+  int busx=travel(134,17,beat,0,126);
   bus(p,busx,26,t);
-  actor(p,travel(39,45,t,8,62),74,1,t,t<70?2:0);
+  actor(p,travel(39,45,beat,8,62),74,1,t,beat<70?2:0);
   /* Permanently anchored sign and stop post. */
   rect(p,104,39,2,28,14);
   rect(p,99,37,12,8,14);rect(p,101,39,8,4,18);
@@ -431,8 +435,8 @@ void cinema_draw(uint8_t *p,unsigned scene,unsigned tick,unsigned page,unsigned 
    rect(p,36,51,34,3,14);rect(p,39,54,3,13,14);
    rect(p,60,54,3,13,14);
    paper(p,46,50,13,7,focus);
-   int x=travel(81,76,t,8,38);
-   actor(p,x,72,1,t,focus>=1?4:t<48?2:0);
+   int x=travel(81,76,beat,8,38);
+   actor(p,x,72,1,t,focus>=1?4:beat<48?2:0);
    if(focus>=1){stroke(p,x-20,56,57,53,31);rect(p,49,51,7,1,18);}
    break;
   }
@@ -443,37 +447,37 @@ void cinema_draw(uint8_t *p,unsigned scene,unsigned tick,unsigned page,unsigned 
    paper(p,58,49,18,7,focus);
    rect(p,78,49,6,5,14);rect(p,79,47,4,3,18);
    if(focus>=2){rect(p,64,50,9,4,16);rect(p,66,51,5,2,20);}
-   actor(p,travel(28,33,t,10,36),68,1,t,focus&1?1:0);
+   actor(p,travel(28,33,beat,10,36),68,1,t,focus&1?1:0);
    actor(p,96,66,3,t,focus>=1?4:0);
    break;
  case CINE_MARA: {
    cafe(p,t);cafe_table(p,2);
-   int dx=travel(34,43,t,12,55),mx=travel(95,83,t,18,57);
-   actor(p,dx,72,1,t,t<65?2:focus==1?5:focus>=2?3:1);
-   actor(p,mx,72,2,t,t<70?2:focus==0?1:focus>=2?4:5);
+   int dx=travel(34,43,beat,12,55),mx=travel(95,83,beat,18,57);
+   actor(p,dx,72,1,t,beat<65?2:focus==1?5:focus>=2?3:1);
+   actor(p,mx,72,2,t,beat<70?2:focus==0?1:focus>=2?4:5);
    if(focus>=2){rect(p,62,57,5,3,20);rect(p,63,58,3,1,18);}
    break;
   }
  case CINE_BUS: {
   street(p,t,1);
-  bus(p,travel(136,16,t,0,100),25,t);
+  bus(p,travel(136,16,beat,0,100),25,t);
   /* Danny approaches the parked bus and pauses before deciding. */
-  int x=travel(108,92,t,32,85);
-  actor(p,x,74,1,t,t<119?2:focus==2?0:1);
+  int x=travel(108,92,beat,32,85);
+  actor(p,x,74,1,t,beat<119?2:focus==2?0:1);
   break;
  }
   case CINE_STAY: {
   cafe(p,t);cafe_table(p,1);
-  actor(p,travel(37,45,t,10,45),72,1,t,t<56?2:1);
-  actor(p,travel(95,87,t,25,61),72,2,t,t<87?2:0);
+  actor(p,travel(37,45,beat,10,45),72,1,t,beat<56?2:1);
+  actor(p,travel(95,87,beat,25,61),72,2,t,beat<87?2:0);
   break;
  }
   case CINE_MUSIC: {
   studio(p,t);
   /* The engineer moves from the tape reel to the mixing desk, leaving
      the physical reel and controls fixed inside the same room. */
-  int x=travel(17,30,t,12,54);
-  actor(p,x,73,1,t,t<68?2:focus>=2?3:1);
+  int x=travel(17,30,beat,12,54);
+  actor(p,x,73,1,t,beat<68?2:focus>=2?3:1);
   for(int i=0;i<5;i++){
    unsigned pulse=(t/8u+(unsigned)i*4u)%16u;
    int level=(int)(pulse>8u?16u-pulse:pulse);
@@ -483,9 +487,9 @@ void cinema_draw(uint8_t *p,unsigned scene,unsigned tick,unsigned page,unsigned 
  }
   case CINE_ART: {
     roof(p,t,0);canvas(p,70,20,t,1);
-    int x=travel(37,46,t,7,45);
-    actor(p,x,76,1,t,t<53?2:3);
-    if(t>=53){stroke(p,x+20,60,76,35,14);pixel(p,76,35+(int)((t/13)&1),18);}
+    int x=travel(37,46,beat,7,45);
+    actor(p,x,76,1,t,beat<53?2:3);
+    if(beat>=53){stroke(p,x+20,60,76,35,14);pixel(p,76,35+(int)((t/13)&1),18);}
     break;
    }
  case CINE_SERVER:
@@ -495,7 +499,7 @@ void cinema_draw(uint8_t *p,unsigned scene,unsigned tick,unsigned page,unsigned 
     street(p,t,1);
     rect(p,52,54,61,3,14);rect(p,58,57,4,9,14);
     rect(p,103,57,4,9,14);
-    actor(p,travel(28,39,t,12,51),72,1,t,t<63?2:focus&1?1:0);
+    actor(p,travel(28,39,beat,12,51),72,1,t,beat<63?2:focus&1?1:0);
     actor(p,78,72,4,t,focus>=1?4:1);
     /* The witness's physical written clue is handed to Danny. */
     rect(p,58,58,7,4,20);
@@ -511,8 +515,8 @@ void cinema_draw(uint8_t *p,unsigned scene,unsigned tick,unsigned page,unsigned 
   break;
  case CINE_NOTICE: {
     street(p,t,0);
-    int x=travel(32,43,t,9,65);
-    actor(p,x,72,1,t,t<70?2:3);
+    int x=travel(32,43,beat,9,65);
+    actor(p,x,72,1,t,beat<70?2:3);
     /* Held phone follows his hand, not a floating large overlay. */
     int px=x+21,py=52;
     rect(p,px,py,9,14,3);rect(p,px+2,py+2,5,10,25);
@@ -522,7 +526,7 @@ void cinema_draw(uint8_t *p,unsigned scene,unsigned tick,unsigned page,unsigned 
    }
  case CINE_CLINIC:
     clinic(p,t,0);
-    actor(p,travel(35,43,t,8,59),72,1,t,t<65?2:focus==2?7:5);
+    actor(p,travel(35,43,beat,8,59),72,1,t,beat<65?2:focus==2?7:5);
     actor(p,86,72,6,t,focus>=1?4:1);
     rect(p,81,53,17,2,20);
     if(focus>=1)stroke(p,87,52,89,48,31);
@@ -534,10 +538,10 @@ void cinema_draw(uint8_t *p,unsigned scene,unsigned tick,unsigned page,unsigned 
   rect(p,25,24,38,4,17);rect(p,34,32,20,15,25);
   rect(p,16,17,56,2,14);rect(p,40,50,19,2,14);
   rect(p,46,52,28,3,14);
-  int dx=travel(63,80,t,7,75);
-  int mx=travel(91,104,t,24,78);
-  actor(p,dx,74,1,t,t<82?2:focus&1?1:0);
-  actor(p,mx,74,2,t,t<102?2:focus&1?0:1);
+  int dx=travel(63,80,beat,7,75);
+  int mx=travel(91,104,beat,24,78);
+  actor(p,dx,74,1,t,beat<82?2:focus&1?1:0);
+  actor(p,mx,74,2,t,beat<102?2:focus&1?0:1);
   break;
  }
   case CINE_LAST_CLINIC:
@@ -551,8 +555,8 @@ void cinema_draw(uint8_t *p,unsigned scene,unsigned tick,unsigned page,unsigned 
   else if(page<5){
      recordshop(p,t);
      if(page==4){
-       int x=travel(110,96,t,10,85);
-       actor(p,x,73,2,t,t<96?2:3);
+       int x=travel(110,96,beat,10,85);
+       actor(p,x,73,2,t,beat<96?2:3);
        rect(p,87,46,9,9,14);rect(p,89,48,5,5,20);
        disk(p,91,50,2,22);
      }
@@ -560,7 +564,7 @@ void cinema_draw(uint8_t *p,unsigned scene,unsigned tick,unsigned page,unsigned 
   else if(page==5){
     /* Someone stays with Danny's artwork after he is gone. */
     roof(p,t,1);canvas(p,67,19,t>=400u?400u:t,1);
-     actor(p,travel(41,50,t,14,79),73,2,t,t<94?2:0);
+     actor(p,travel(41,50,beat,14,79),73,2,t,beat<94?2:0);
   }else if(page==6){
      /* Moving lights remain anchored to a visible concert truss. */
      city(p,t,1);rect(p,0,35,120,45,3);
@@ -596,7 +600,7 @@ void cinema_draw(uint8_t *p,unsigned scene,unsigned tick,unsigned page,unsigned 
   break;
  case CINE_MARA_EMPTY:
    cafe(p,t);cafe_table(p,1);
-   actor(p,travel(36,42,t,20,58),72,1,t,t<68?2:7);
+   actor(p,travel(36,42,beat,20,58),72,1,t,beat<68?2:7);
    rect(p,81,62,13,2,14);rect(p,84,64,2,7,14);
    rect(p,91,64,2,7,14);
    break;
@@ -604,26 +608,26 @@ void cinema_draw(uint8_t *p,unsigned scene,unsigned tick,unsigned page,unsigned 
     safehouse(p,t);
     rect(p,76,22,29,35,3);rect(p,78,24,25,31,14);
     rect(p,80,25,21,28,22);pixel(p,97,43,18);
-    int x=travel(38,59,t,6,70);
-    actor(p,x,72,1,t,t<76?2:focus>=2?7:3);
-    if(t>84 && ((t/24)&1))pixel(p,97,43,7);
+    int x=travel(38,59,beat,6,70);
+    actor(p,x,72,1,t,beat<76?2:focus>=2?7:3);
+    if(beat>84 && ((t/24)&1))pixel(p,97,43,7);
     break;
    }
  case CINE_RESCUE_SAVED: {
     safehouse(p,t);
     rect(p,76,22,29,35,3);
-    int open=travel(0,16,t,15,47);
+    int open=travel(0,16,beat,15,47);
     rect(p,78,24,25,31,20);
     rect(p,78+open,24,25-open,31,14);
     rect(p,79+open,25,20-open,29,22);
     /* They approach from separated, grounded positions: only once the door
        has opened does Mara enter the shot. Hands meet without crossing. */
-    int dx=travel(30,50,t,12,79);
-    int mx=travel(93,89,t,50,72);
-    actor(p,dx,72,1,t,t<92?2:t>=124?6:focus>=1?3:5);
-    if(t>=45u)
-        actor(p,mx,72,2,t,t<118?2:t>=124?6:focus>=1?4:5);
-    if(t>=123u)stroke(p,dx+19,57,mx-20,57,31);
+    int dx=travel(30,50,beat,12,79);
+    int mx=travel(93,89,beat,50,72);
+    actor(p,dx,72,1,t,beat<92?2:beat>=124?6:focus>=1?3:5);
+    if(beat>=45u)
+        actor(p,mx,72,2,t,beat<118?2:beat>=124?6:focus>=1?4:5);
+    if(beat>=123u)stroke(p,dx+19,57,mx-20,57,31);
     break;
    }
  case CINE_BAD:
@@ -684,6 +688,11 @@ void cinema_draw(uint8_t *p,unsigned scene,unsigned tick,unsigned page,unsigned 
  }
 }
 
+
+void cinema_draw(uint8_t *p,unsigned scene,unsigned tick,
+                 unsigned page,unsigned final){
+ cinema_draw_stage(p,scene,tick,tick,page,final);
+}
 
 /* Long-form ending storyboard. Each shot holds an identifiable location and
    slowly moves within it. Scene changes follow sections of the 20-phrase
@@ -748,9 +757,10 @@ void cinema_ending_draw_context(uint8_t *p,unsigned ending,unsigned frame,
  unsigned scene=cinema_ending_scene(ending,frame,mara_safe);
  if(!good && scene==CINE_FINALE){
    /* Sky and city continue moving; Danny stays in the last pose reached. */
-   cinema_draw(p,scene,frame,0,frame<420u?frame:420u);
+   cinema_draw_stage(p,scene,frame,frame,0,frame<420u?frame:420u);
  }else{
-   cinema_draw(p,scene,100u+local,shots[shot].page,0);
+   /* Crucially, do not restart the whole city and record spindle each cut. */
+   cinema_draw_stage(p,scene,100u+frame,100u+local,shots[shot].page,0);
  }
  /* Film-gate cut at score section boundaries: no fake pixel zoom or extra
     framebuffer. The same authored world location persists inside each shot. */
