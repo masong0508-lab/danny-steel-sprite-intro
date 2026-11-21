@@ -404,7 +404,34 @@ static void activity_menu(uint8_t *p,const Story *s){
     text(p,s->activity_choice?61:4,58,">",18,1);
     text(p,4,69,"LEFT/RIGHT A DO B BACK",20,28);
 }
-static void ending_caption(uint8_t *p,unsigned ending,unsigned f){
+
+/* Explicit on-screen alternatives: harm requires B near a location,
+   RIGHT to select the bad action, then A to confirm. */
+static void risk_menu(uint8_t *p,const Story *s){
+    const char *name="",*act="";
+    if(s->risk_menu=='H'){
+        name="MARA / AT THE DOOR";act="OPEN / LEAVE";
+    }else{
+        name=s->risk_menu=='L'?"LETTER / A CHOICE":
+             s->risk_menu=='C'?"BORE / A CHOICE":
+             s->risk_menu=='M'?"MUSIC / A CHOICE":"TERMINAL / A CHOICE";
+        act=s->risk_menu=='L'?"HIDE REPLY":s->risk_menu=='C'?
+            "FORGE RECORD":s->risk_menu=='M'?"ERASE DEMO":"LEAK PRIVATE NAME";
+    }
+    panel(p,40,80);
+    text(p,4,43,name,20,26);
+    if(s->risk_menu=='H'){
+        text(p,4,53,"LEFT OPEN / RIGHT LEAVE",20,28);
+    }else{
+        text(p,4,52,act,20,18);
+        text(p,4,60,"RIGHT = BAD CHECK +1",18,28);
+    }
+    text(p,4,69,s->risk_choice?
+        (s->risk_menu=='H'?" > LEAVE   A CONFIRM":" > DO IT   A CONFIRM"):
+        (s->risk_menu=='H'?" > OPEN    A CONFIRM":" > BACK    A CONFIRM"),20,28);
+    text(p,94,74,"B EXIT",22,7);
+}
+static void ending_caption(uint8_t *p,unsigned ending,unsigned rescue,unsigned f){
  const char *a=0,*b=0;
  if(ending==STORY_END_GOOD){
    if(f<530){a="DANNY MADE ONE LAST PROMISE";b="TO FINISH WHAT HE BEGAN";}
@@ -418,6 +445,20 @@ static void ending_caption(uint8_t *p,unsigned ending,unsigned f){
    else if(f<4890){a="ONE MORE SONG FOR DANNY";b="CLOSER TO THE END";}
    else if(f<5140){a="THE CITY KEPT PLAYING";b="THE MUSIC KEPT TRAVELING";}
    else{a="THE LAST DAYS OF DANNY STEEL";b="GOOD END / A LEGACY";}
+ }else if(ending==STORY_END_BAD){
+    if(rescue==STORY_RESCUE_AFTERSHOCK){
+        if(f<780){a="MARA GOT HOME SAFELY";b="THE SECOND CHANCE WAS REAL";}
+        else if(f<1650){a="ONE MORE BAD CHOICE";b="AND TRUST FELL APART";}
+        else if(f<2490){a="THE CITY REMEMBERED";b="THE PROMISES HE BROKE";}
+        else if(f<3670){a="DANNY LOST HIS WAY";b="BEFORE HIS LAST DAYS ENDED";}
+        else{a="THE LAST DAYS OF DANNY STEEL";b="BAD END / MISUSED CHANCE";}
+    }else{
+        if(f<780){a="ONE UNANSWERED CALL";b="AND A LIGHT LEFT ON";}
+        else if(f<1650){a="MARA DID NOT RETURN";b="NO ONE KNEW WHERE SHE WAS";}
+        else if(f<2490){a="THE DOOR STOOD CLOSED";b="THE STREET KEPT GOING";}
+        else if(f<3670){a="DANNY HAD NO ANSWERS";b="ONLY THE DAYS HE LOST";}
+        else{a="THE LAST DAYS OF DANNY STEEL";b="BAD END / UNANSWERED";}
+    }
  }else{
    if(f<370){a="ONE LAST LINE OF PAINT";b="HIS HAND REACHED THE CANVAS";}
    else if(f<810){a="HIS LAST WORK WAS QUIET";b="THE BRUSH STAYED THERE";}
@@ -438,8 +479,11 @@ static void ending_caption(uint8_t *p,unsigned ending,unsigned f){
 void story_draw(const Story *s,int frame,uint8_t *p) {
     if(s->battle){cult_arena(s,frame,p);return;}
     if(s->life_stage==STORY_LIFE_FINALE ||
-       (s->ended && (s->ending==STORY_END_GOOD || s->ending==STORY_END_NEUTRAL))){
-        unsigned ending=s->ending==STORY_END_GOOD?STORY_END_GOOD:STORY_END_NEUTRAL;
+       (s->ended && (s->ending==STORY_END_GOOD ||
+                      s->ending==STORY_END_NEUTRAL ||
+                      s->ending==STORY_END_BAD))){
+        unsigned ending=s->ending==STORY_END_GOOD?STORY_END_GOOD:
+                         s->ending==STORY_END_BAD?STORY_END_BAD:STORY_END_NEUTRAL;
         cinema_ending_draw(p,ending,s->finale_frame);
         if(s->dialogue){
             int count;const StoryPage *pages=story_pages(s,&count);
@@ -455,7 +499,7 @@ void story_draw(const Story *s,int frame,uint8_t *p) {
                 STORY_GOOD_FINAL_FRAMES:STORY_END_SCORE_FRAMES)){
             box(p,0,72,120,8,21);
             text(p,3,74,"START / RETURN TO MENU",20,29);
-        }else ending_caption(p,ending,s->finale_frame);
+        }else ending_caption(p,ending,s->rescue_stage,s->finale_frame);
         return;
     }
     if(s->life_stage==STORY_LIFE_FINALE) {
@@ -490,7 +534,8 @@ void story_draw(const Story *s,int frame,uint8_t *p) {
         box(p,30,3,20,2,3);box(p,30,3,progress*20/48,2,18);
         if(has_goal){text(p,54,2,goal,20,7);text(p,84,2,direction,18,1);}
     } else if(s->ended) {
-        text(p,3,2,s->ending==STORY_END_GOOD?"GOOD END":"NEUTRAL END",20,20);
+        text(p,3,2,s->ending==STORY_END_GOOD?"GOOD END":
+            s->ending==STORY_END_BAD?"BAD END":"NEUTRAL END",20,20);
     } else {
         if(has_goal){text(p,3,2,"NEXT",18,4);
             text(p,23,2,goal,20,12);text(p,75,2,direction,18,4);}
@@ -507,6 +552,8 @@ void story_draw(const Story *s,int frame,uint8_t *p) {
             text(p,4,68,d->line2,20,28);
             text(p,91,74,"A NEXT",22,7);
         }
+    } else if(s->risk_menu){
+        risk_menu(p,s);
     } else if(s->activity){
         activity_menu(p,s);
     } else if(s->choosing){
@@ -519,7 +566,14 @@ void story_draw(const Story *s,int frame,uint8_t *p) {
         text(p,5,72,"B SAVE AND MENU",20,27);
     } else {
         box(p,0,72,120,8,21);
-        if(s->life_stage==STORY_LIFE_WAIT ||
+        if(s->rescue_stage>=STORY_RESCUE_MISSING &&
+           s->rescue_stage<=STORY_RESCUE_TRACE){
+            text(p,3,74,"MARA MISSING   R CLUES",20,29);
+        }else if(s->rescue_stage==STORY_RESCUE_SAVED){
+            char hint[]="MARA SAFE BAD 0/4 B RISK";
+            hint[14]=(char)('0'+story_bad_count(s));
+            text(p,3,74,hint,20,29);
+        }else if(s->life_stage==STORY_LIFE_WAIT ||
            s->life_stage==STORY_LIFE_FOLLOWUP_WAIT){
             char hint[]="0/5 E0 S0 B0 M0 A0 W00";
             hint[0]=(char)('0'+memories_today(s));
@@ -533,6 +587,7 @@ void story_draw(const Story *s,int frame,uint8_t *p) {
             text(p,3,74,hint,20,29);
         } else text(p,3,74,s->ended?"START / RETURN TO MENU":
              s->life_stage==STORY_LIFE_FINALE?"THE LAST PAINTING":
-             s->view?"L MAP   A TALK   R NOTES":"L 3D   A TALK   R NOTES",20,29);
+             s->view?"L MAP  A TALK  B RISK  R NOTE":
+                      "L 3D  A TALK  B RISK  R NOTE",20,29);
     }
 }
