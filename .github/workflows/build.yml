@@ -81,6 +81,14 @@ jobs:
             src/hd_ending.c tests/hd_story_expansion_test.c \
             -o /tmp/danny_hd_story_expansion
           /tmp/danny_hd_story_expansion
+      - name: Audit cutscene props, blocking, clinic casting and rescue continuity
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
+            src/story.c src/studio.c src/cinema.c src/hd_canvas.c \
+            src/hd_cinema.c src/hd_actor.c src/hd_special.c \
+            src/hd_ending.c tests/cinematic_staging_test.c \
+            -o /tmp/danny_cinematic_staging
+          /tmp/danny_cinematic_staging
       - name: Prove pixel-identical geometry, town coordinates and exact wall-projection rounding
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
