@@ -36,18 +36,15 @@ jobs:
       - name: Run the current playable ROM in headless mGBA
         run: |
           /tmp/gba-rom-debugger/bin/gba-walk dist/danny_steel_title.gba docs/screenshots             run:1650 snap:01_title             press:START:2 run:95 snap:02_main_menu             press:A:2 run:95 snap:03_save_slots             press:A:2 run:120 snap:04_story_in_emulator
-          for f in docs/screenshots/0*.png; do
+          for f in docs/screenshots/0[1-4]_*.png; do
             convert "$f" -filter point -resize 200% "$f"
           done
       - name: Verify dimensions and save contact sheet
         run: |
           identify -format '%f %wx%h\n' docs/screenshots/*.png
           montage docs/screenshots/*.png -tile 3x -geometry 480x320+6+6             -background '#171919' docs/screenshots/contact_sheet.png
-      - uses: actions/upload-artifact@v4
-        with:
-          name: danny-steel-actual-screenshots
-          path: docs/screenshots/*.png
-          if-no-files-found: error
+      # The repository stores the images directly; Actions artifact upload is
+      # intentionally omitted because this account has reached its quota.
       - name: Publish screenshots into this branch
         run: |
           git config user.name "github-actions[bot]"
