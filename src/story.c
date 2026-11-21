@@ -40,6 +40,33 @@ char story_tile(int x, int y) {
     if (x == 16 && y == 5) return 'K';
     return town[y][x];
 }
+int story_goal(const Story *s, int *x, int *y, const char **label) {
+    if (s->ended || s->life_stage==STORY_LIFE_FINALE) return 0;
+    /* A medical appointment takes priority; there is deliberately no timer
+       forcing a final rooftop interaction after the last visit. */
+    if (s->life_stage==STORY_LIFE_CLINIC ||
+        s->life_stage==STORY_LIFE_FINAL_CLINIC) {
+        *x=16; *y=5; *label="CLINIC";
+    } else if (s->life_stage==STORY_LIFE_LAST_WORK) {
+        *x=14; *y=6; *label="CANVAS";
+    } else if (s->life_stage==STORY_LIFE_WAIT ||
+               s->life_stage==STORY_LIFE_FOLLOWUP_WAIT) {
+        *x=14; *y=6; *label="LIVE";
+    } else if (!(s->flags&STORY_HOME)) {
+        *x=5; *y=5; *label="LETTER";
+    } else if (!(s->flags&STORY_STAMP)) {
+        *x=11; *y=7; *label="STAMP";
+    } else if (!(s->flags&STORY_MARA)) {
+        *x=8; *y=11; *label="MARA";
+    } else if (!(s->flags&STORY_MUSIC)) {
+        *x=19; *y=7; *label="MUSIC";
+    } else if (!(s->flags&STORY_ART)) {
+        *x=14; *y=6; *label="CANVAS";
+    } else {
+        *x=19; *y=5; *label="LAST BUS";
+    }
+    return 1;
+}
 int story_solid(int x, int y) {
     const char c = story_tile(x, y);
     return c == '#' || c == 'A' || c == 'T' || c == '~' || c == 'L' || c == 'C' || c == 'F' || c == 'B' || c == 'P' || c == 'V' || c == 'Q' || c == 'S' || c == 'W' || c == 'H' || c == 'R' || c == 'M' || c == 'K';

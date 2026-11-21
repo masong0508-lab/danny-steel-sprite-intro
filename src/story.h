@@ -59,6 +59,9 @@ void story_resume(Story *s, int slot, int x, int y, int facing, int view, int fl
 void story_tick(Story *s, uint16_t keys);
 char story_tile(int x, int y);
 int story_solid(int x, int y);
+/* World-space primary story objective. Returns zero only after an ending.
+   Pure query: does not change the optional Mirror Orchard progression. */
+int story_goal(const Story *s, int *x, int *y, const char **label);
 const StoryPage *story_pages(const Story *s, int *count);
 
 /* Deterministic enemy tells and waves: shared by logic, renderer and host tests. */

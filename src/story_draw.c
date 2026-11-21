@@ -127,6 +127,14 @@ static void marker(uint8_t *p,int x,int y,int type,int size,int tick) {
         box(p,x-size/3,y-size+1,size*2/3,1,15);
     } else person(p,x,y,type,size,tick);
 }
+/* A grounded, pulsing waypoint in the shared world coordinate system.
+   Small enough not to obscure a whole 8x8 map tile. */
+static void map_waypoint(uint8_t *p,int sx,int sy,int frame){
+    int c=((frame/15)&1)?20:18;
+    put(p,sx,sy-4,c);put(p,sx-1,sy-3,c);put(p,sx+1,sy-3,c);
+    put(p,sx-2,sy-2,3);put(p,sx+2,sy-2,3);
+    put(p,sx,sy-2,20);put(p,sx,sy-1,18);
+}
 static void overhead(const Story *s,int tick,uint8_t *p) {
     int cx=s->x-7, cy=s->y-4;
     for(int ty=0;ty<11;ty++)for(int tx=0;tx<16;tx++){
@@ -140,6 +148,13 @@ static void overhead(const Story *s,int tick,uint8_t *p) {
             else marker(p,px+4,py+7,c,7,tick);
         }
     }
+    int gx,gy;const char *label;
+    if(story_goal(s,&gx,&gy,&label)){
+        int wx=gx-cx,wy=gy-cy;
+        (void)label;
+        if(wx>=0&&wx<16&&wy>=0&&wy<11)
+            map_waypoint(p,wx*8+3,wy*8+3,tick);
+    }
     int dx=0,dy=0;
     if(s->anim){dx=(s->prev_x-(int)s->x)*s->anim*2;dy=(s->prev_y-(int)s->y)*s->anim*2;}
     int px=60+dx,py=36+dy;
@@ -147,6 +162,11 @@ static void overhead(const Story *s,int tick,uint8_t *p) {
     box(p,px-3,py,7,4,16);box(p,px-2,py+4,2,3,3);box(p,px+1,py+4,2,3,3);
     put(p,px+(s->facing==0?2:s->facing==2?-2:0),py-2,19);
 }
+/* Perspective floor distances are entirely fixed for 120x80 mode.
+   Storing forty 16-bit constants in ROM avoids 4,800 divides per frame. */
+static const uint16_t floor_row_dist[40] = {
+    2300,2200,1466,1100,880,733,628,550,488,440,400,366,338,314,293,275,258,244,231,220,209,200,191,183,176,169,162,157,151,146,141,137,133,129,125,122,118,115,112,110
+};
 static void first_person(const Story *s,int tick,uint8_t *p) {
     static int depth[120];
     int facing=(s->facing*64)&255;
@@ -161,13 +181,15 @@ static void first_person(const Story *s,int tick,uint8_t *p) {
         if(x%11==3)for(int y=skyline+3;y<37;y+=5)put(p,x,y,7);
         int off=(x-60)*38/60, ang=(facing+off+256)&255;
         int vx=sin_q12[(ang+64)&255],vy=sin_q12[ang];
+        int projection_cos=sin_q12[(off+64+256)&255];
         /* Perspective floor projection: near details move with Danny, not with the camera backdrop. */
         for(int y=40;y<80;y++){
-            int dist=4400/(y-39);if(dist>2300)dist=2300;
-            int tx=(camx+vx*dist/4096)>>8,ty=(camy+vy*dist/4096)>>8;
+            int dist=floor_row_dist[y-40];
+            int wx=camx+vx*dist/4096,wy=camy+vy*dist/4096;
+            int tx=wx>>8,ty=wy>>8;
             char c=story_tile(tx,ty);
             int color=c=='~'?25:c==','||c=='='?10:c=='g'||c=='T'?11:c=='#'?4:8;
-            int fx=(camx+vx*dist/4096)&255, fy=(camy+vy*dist/4096)&255;
+            int fx=wx&255,fy=wy&255;
             if((c==','||c=='.')&&(fx<5||fy<5))color=9;
             if(c=='~'&&((fx+fy+tick*2)&127)<7)color=26;
             put(p,x,y,color);
@@ -180,7 +202,7 @@ static void first_person(const Story *s,int tick,uint8_t *p) {
             int dist=step*32,tx=rayx>>8,ty=rayy>>8;
             char t=story_tile(tx,ty);
             if(t=='#'||t=='A'||t=='T'){
-                int correct=(dist*sin_q12[(off+64+256)&255])/4096;
+                int correct=(dist*projection_cos)/4096;
                 int height=8500/(correct+48);if(height>80)height=80;
                 if(height<2)height=2;
                 int top=39-height/2,bottom=39+height/2;
@@ -418,16 +440,26 @@ void story_draw(const Story *s,int frame,uint8_t *p) {
         scene_notice(p,frame);
     } else if(s->view)first_person(s,frame,p); else overhead(s,frame,p);
     box(p,0,0,120,8,21);
+    /* Both camera modes use the identical next-location query. Keep
+       the objective visible even when its actor is behind a wall. */
+    int gx=s->x,gy=s->y; const char *goal="";
+    int has_goal=story_goal(s,&gx,&gy,&goal);
+    int ddx=gx-(int)s->x,ddy=gy-(int)s->y;
+    const char *direction=ddx==0&&ddy==0?"HERE":
+        abs_i(ddx)>abs_i(ddy)?(ddx>0?"E":"W"):(ddy>0?"S":"N");
     if(s->life_stage && s->life_stage<STORY_LIFE_FINALE){
         char number[]={'D','A','Y',' ',(char)('0'+(s->day_number/10)%10),
                        (char)('0'+s->day_number%10),0};
         text(p,3,2,number,20,7);
         int progress=s->day_frame*48/STORY_DAY_FRAMES;
-        box(p,40,3,48,2,3);box(p,40,3,progress,2,18);
+        box(p,30,3,20,2,3);box(p,30,3,progress*20/48,2,18);
+        if(has_goal){text(p,54,2,goal,20,7);text(p,84,2,direction,18,1);}
     } else if(s->ended) {
         text(p,3,2,s->ending==STORY_END_GOOD?"GOOD END":"NEUTRAL END",20,20);
     } else {
-        text(p,3,2,"DANNY / OLD QUARTER",20,29);
+        if(has_goal){text(p,3,2,"NEXT",18,4);
+            text(p,23,2,goal,20,12);text(p,75,2,direction,18,4);}
+        else text(p,3,2,"DANNY / OLD QUARTER",20,29);
     }
     for(int i=0;i<5;i++)box(p,90+i*6,2,4,4,(s->flags&(1<<i))?18:3);
     if(s->dialogue){
