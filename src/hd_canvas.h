@@ -16,6 +16,8 @@ enum {
  HD_SKIN_LIT,HD_HAIR,HD_GOLD
 };
 extern const uint16_t hd_extra_palette[32];
+/* Mutually exclusive title/menu and gameplay share this one EWRAM page. */
+extern uint32_t hd_shared_frame[HD_BYTES/4];
 void hd_rect(uint8_t *p,int x,int y,int w,int h,unsigned c);
 void hd_pixel(uint8_t *p,int x,int y,unsigned c);
 void hd_line(uint8_t *p,int x,int y,int xx,int yy,unsigned c);
