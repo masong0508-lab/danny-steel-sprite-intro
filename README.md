@@ -194,3 +194,11 @@ live concert choreography. The good-ending rooftop canvas is visibly
 finished; the bad-ending unanswered phone no longer flashes the
 whole screen. Regression tests check actual frame pixels across wrap
 boundaries. See docs/ENDING_CINEMATICS.md.
+
+### Expressive character and movie-editor follow-up
+The native GBA cutscene renderer gives characters distinct listening,
+relieved and worried faces/gestures during the café, clinic, rescue and
+bad ending. Cinematic shot beats now restart separately from the
+continuous world/record-player animation clock, eliminating abrupt
+background and vinyl resets during score-timed editing. Regression
+tests inspect the real indexed-frame pixels at a film cut.

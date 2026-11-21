@@ -106,3 +106,28 @@ highlights, ensure the bus remains parked once arrived, and check
 deterministic rendering. This supplements the full cutscene, ending and
 rescue tests. No PCM, new framebuffer, extra sprite images or heap was
 added. Absolute GBA FPS still requires hardware/emulator profiling.
+
+## Expressive acting and continuous editing (current pass)
+
+The six existing character silhouettes now support three additional
+purposeful gestures in addition to walking, speaking and reaching:
+**listening** (quiet hands and held eye-line), **relief** (smile with hand
+to chest), and **concern** (brows and connected hand to forehead).
+Mara's café, the empty café, the safe-house rescue, both clinic scenes,
+and the bad-ending rooftop select these reactions based on context.
+Expressions change the *character* rather than swapping a background.
+
+The ending director now keeps two different inexpensive integer clocks.
+The **world clock** never resets when a music cue introduces a different
+shot: cloud motion, apartment lights, meters and record rotation retain
+their continuity. The **shot clock** restarts on a new shot and controls
+walk-ins, door opening, handoffs and reaction beats. This means the
+recording-shop cut into Mara's entrance does not cause the record's
+glint to jump backward. Ordinary dialogue scenes still use a single
+clock and have no gameplay or save format changes.
+
+The new `tests/cinema_acting_clock_test.c` directly samples facial and
+arm differences in Mara's scene and final clinic, safe-house progression,
+the good-ending record groove at the 2,600-frame camera cut, bad-ending
+survival context and canaries around a 9,600-byte indexed framebuffer.
+These are visual regression checks, not emulator FPS measurements.
