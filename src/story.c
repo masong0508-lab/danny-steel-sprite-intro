@@ -103,7 +103,11 @@ enum { D_NONE, D_OPEN, D_LETTER, D_LETTER_AGAIN, D_CLERK_LOCKED, D_CLERK, D_CLER
        D_DAY_PAINT, D_DAY_PAINT_AFTER, D_DAY_RECAP, D_DAY_RECAP_AFTER,
        D_ACT_MARA_TALK, D_ACT_LETTER_KEEP, D_ACT_CLERK_JOKE,
        D_ACT_MUSIC_LISTEN, D_ACT_ART_REST,
-       D_ACT_MARA_CLOSE, D_ACT_MUSIC_PROGRESS, D_ACT_ART_PROGRESS };
+       D_ACT_MARA_CLOSE, D_ACT_MUSIC_PROGRESS, D_ACT_ART_PROGRESS,
+       D_PROJECT_SONG_2, D_PROJECT_SONG_3, D_PROJECT_SONG_DONE,
+       D_PROJECT_ART_2, D_PROJECT_ART_3, D_PROJECT_ART_DONE,
+       D_MARA_MORNING, D_MARA_CLOSING, D_CLERK_CLOSING,
+       D_MARA_GALLERY, D_CLERK_SONG };
 #define SCRIPT(name, ...) static const StoryPage name[] = { __VA_ARGS__ }
 SCRIPT(d_open,
  {"DANNY", "The last bus leaves", "at sundown. Of course."},
@@ -377,6 +381,48 @@ SCRIPT(d_act_music_progress,
 SCRIPT(d_act_art_progress,
  {"ROOFTOP", "The old skyline", "has more color now."},
  {"DANNY", "It's not perfect.", "It feels like mine."});
+
+/* Projects continue between numbered-day interactions. Every milestone is
+   a playable scene tied to the same physical workplace and BORE music. */
+SCRIPT(d_project_song_2,
+ {"ARCHIVE TAPE", "The bass finds the", "old crooked melody."},
+ {"DANNY", "Whistler Man comes", "back in the gaps."});
+SCRIPT(d_project_song_3,
+ {"DANNY", "The rhythm is", "finally breathing."},
+ {"ARCHIVE TAPE", "One final mix.", "Then it is ready."});
+SCRIPT(d_project_song_done,
+ {"ARCHIVE TAPE", "MASTER COPY SAVED.", "THE LAST BORE REEL."},
+ {"DANNY", "The quiet parts", "made it in too."},
+ {"DANNY", "Let someone else", "hear the whole song."});
+SCRIPT(d_project_art_2,
+ {"ROOFTOP", "Buildings rise over", "the painted horizon."},
+ {"DANNY", "I know those", "windows by heart."});
+SCRIPT(d_project_art_3,
+ {"ROOFTOP", "A thin brush adds", "the street lights."},
+ {"DANNY", "Almost the same", "as the view outside."});
+SCRIPT(d_project_art_done,
+ {"ROOFTOP", "THE OLD QUARTER", "FINISHED ON CANVAS."},
+ {"DANNY", "I left one corner", "for the real sky."},
+ {"DANNY", "That feels about", "right for a painting."});
+/* Shops follow morning / evening rhythms while remaining reachable:
+   schedules never hide story NPCs or disable their interactions. */
+SCRIPT(d_mara_morning,
+ {"MARA", "The cafe's opening.", "The kettle is loud."},
+ {"DANNY", "So am I before", "coffee, allegedly."});
+SCRIPT(d_mara_closing,
+ {"MARA", "Evening's here.", "We can take a walk."},
+ {"DANNY", "The city lights", "look less tired."});
+SCRIPT(d_clerk_closing,
+ {"BORE CLERK", "Five minutes until", "the stamps go home."},
+ {"DANNY", "Does your stamp", "get paid overtime?"});
+SCRIPT(d_mara_gallery,
+ {"MARA", "You finished the", "rooftop picture!"},
+ {"DANNY", "Just in time for", "the light to change."},
+ {"MARA", "Let me see it", "without the frame."});
+SCRIPT(d_clerk_song,
+ {"BORE CLERK", "This recording", "is officially BORE."},
+ {"DANNY", "I finally made", "a usable master."},
+ {"BORE CLERK", "Filed under", "SONGS WORTH KEEPING."});
 #undef SCRIPT
 #define SEQ(name) {name, (uint8_t)(sizeof(name) / sizeof((name)[0]))}
 static const struct { const StoryPage *pages; uint8_t count; } scripts[] = {
@@ -402,7 +448,11 @@ static const struct { const StoryPage *pages; uint8_t count; } scripts[] = {
  SEQ(d_day_paint), SEQ(d_day_paint_after), SEQ(d_day_recap), SEQ(d_day_recap_after),
   SEQ(d_act_mara_talk), SEQ(d_act_letter_keep), SEQ(d_act_clerk_joke),
   SEQ(d_act_music_listen), SEQ(d_act_art_rest),
-  SEQ(d_act_mara_close), SEQ(d_act_music_progress), SEQ(d_act_art_progress)
+  SEQ(d_act_mara_close), SEQ(d_act_music_progress), SEQ(d_act_art_progress),
+  SEQ(d_project_song_2), SEQ(d_project_song_3), SEQ(d_project_song_done),
+  SEQ(d_project_art_2), SEQ(d_project_art_3), SEQ(d_project_art_done),
+  SEQ(d_mara_morning), SEQ(d_mara_closing), SEQ(d_clerk_closing),
+  SEQ(d_mara_gallery), SEQ(d_clerk_song)
 };
 const StoryPage *story_pages(const Story *s, int *count) {
     unsigned id = s->dialogue;
@@ -451,6 +501,13 @@ static uint8_t cinematics_for_dialogue(uint8_t d){
     case D_ACT_ART_REST: case D_ACT_ART_PROGRESS: return CINE_ART;
     case D_ACT_MARA_CLOSE: return CINE_MARA;
     case D_ACT_MUSIC_PROGRESS: return CINE_MUSIC;
+    case D_PROJECT_SONG_2: case D_PROJECT_SONG_3:
+    case D_PROJECT_SONG_DONE: case D_CLERK_SONG: return CINE_MUSIC;
+    case D_PROJECT_ART_2: case D_PROJECT_ART_3:
+    case D_PROJECT_ART_DONE: return CINE_ART;
+    case D_MARA_MORNING: case D_MARA_CLOSING:
+    case D_MARA_GALLERY: return CINE_MARA;
+    case D_CLERK_CLOSING: return CINE_BORE;
     default: return CINE_NONE;
     }
 }
@@ -564,6 +621,11 @@ static int remember(Story *s,unsigned bit){
     return 1;
 }
 /* Choices carry small, visible benefits, never failure or ending gates. */
+static unsigned day_period(const Story *s){
+    if(s->day_frame<STORY_DAY_FRAMES/3u)return 0u; /* morning */
+    if(s->day_frame<STORY_DAY_FRAMES*2u/3u)return 1u; /* afternoon */
+    return 2u; /* evening */
+}
 static void moment_menu(Story *s,unsigned station){
     s->activity=(uint8_t)station;s->activity_choice=0;
     s->cinema=(uint8_t)(station=='F'?CINE_MARA:station=='L'?CINE_LETTER:
@@ -582,8 +644,48 @@ static int exert(Story *s){
     if(!s->energy)return 0;
     --s->energy;return 1;
 }
+
+/* A completed project is a small tangible creation, not a new gate.
+   The second choice produces a gentler warm/soft alternative arrangement. */
+static void step_project(Story *s,unsigned station,unsigned soft){
+    uint8_t *phase=station=='m'?&s->song_steps:&s->art_steps;
+    if(*phase>=STORY_PROJECT_DONE){
+        talk(s,station=='m'?D_PROJECT_SONG_DONE:D_PROJECT_ART_DONE);
+        return;
+    }
+    if(soft){
+        stat_gain(&s->spark,1);
+        stat_gain(&s->energy,1);
+        s->project_style|=(uint8_t)(station=='m'?
+            STORY_STYLE_SONG_SOFT:STORY_STYLE_ART_WARM);
+        work_gain(s,1u);
+    }else{
+        int enough=exert(s);
+        work_gain(s,1u+(unsigned)enough+(s->spark>=4u));
+        stat_gain(&s->spark,1);
+    }
+    ++*phase;
+    s->dirty=1;
+    if(station=='m'){
+        talk(s,*phase>=4u?D_PROJECT_SONG_DONE:
+            *phase==3u?D_PROJECT_SONG_3:
+            *phase==2u?D_PROJECT_SONG_2:
+            s->life_stage==STORY_LIFE_FOLLOWUP_WAIT?D_DAY_MUSIC_AFTER:D_DAY_MUSIC);
+        if(!(s->flags&STORY_MUSIC)){s->flags|=STORY_MUSIC;s->dirty=1;}
+    }else{
+        talk(s,*phase>=4u?D_PROJECT_ART_DONE:
+            *phase==3u?D_PROJECT_ART_3:
+            *phase==2u?D_PROJECT_ART_2:
+            s->life_stage==STORY_LIFE_FOLLOWUP_WAIT?D_DAY_PAINT_AFTER:D_DAY_PAINT);
+    }
+}
 static void finish_moment(Story *s){
     unsigned station=s->activity,option=s->activity_choice;
+    if(station=='m'||station=='r'){
+        s->activity=STORY_ACT_NONE;s->activity_choice=0;
+        step_project(s,station,option);
+        return;
+    }
     unsigned bit=station=='F'?STORY_DAY_MARA:station=='L'?STORY_DAY_LETTER:
         station=='C'?STORY_DAY_CLERK:station=='M'?STORY_DAY_MUSIC:STORY_DAY_ART;
     s->activity=STORY_ACT_NONE;s->activity_choice=0;
@@ -605,25 +707,17 @@ static void finish_moment(Story *s){
               D_DAY_CLERK_AFTER:D_DAY_CLERK);}
         break;
     case 'M':
-        if(option){stat_gain(&s->energy,1);stat_gain(&s->spark,1);talk(s,D_ACT_MUSIC_LISTEN);}
-        else {
-            int enough=exert(s);
-            work_gain(s,1u+(unsigned)enough+(s->spark>=4u));
-            stat_gain(&s->spark,1);
-            talk(s,s->life_stage==STORY_LIFE_FOLLOWUP_WAIT?
-                 D_DAY_MUSIC_AFTER:D_DAY_MUSIC);
-        }
+        if(option){
+            stat_gain(&s->energy,1);stat_gain(&s->spark,1);
+            talk(s,D_ACT_MUSIC_LISTEN);
+        }else step_project(s,'m',0u);
         if(!(s->flags&STORY_MUSIC)){s->flags|=STORY_MUSIC;s->dirty=1;}
         break;
     default:
-        if(option){stat_gain(&s->energy,2);stat_gain(&s->spark,1);talk(s,D_ACT_ART_REST);}
-        else {
-            int enough=exert(s);
-            work_gain(s,1u+(unsigned)enough+(s->spark>=4u));
-            stat_gain(&s->spark,1);
-            talk(s,s->life_stage==STORY_LIFE_FOLLOWUP_WAIT?
-                 D_DAY_PAINT_AFTER:D_DAY_PAINT);
-        }
+        if(option){
+            stat_gain(&s->energy,2);stat_gain(&s->spark,1);
+            talk(s,D_ACT_ART_REST);
+        }else step_project(s,'r',0u);
         break;
     }
     s->dirty=1;
@@ -647,6 +741,10 @@ static void interact(Story *s) {
         if (!(s->flags & STORY_HOME)) talk(s, D_CLERK_LOCKED);
         else {
             if(can_make_memory(s) && !(s->daily_mask&STORY_DAY_CLERK))moment_menu(s,'C');
+            else if(can_make_memory(s) && s->song_steps>=STORY_PROJECT_DONE)
+                talk(s,D_CLERK_SONG);
+            else if(can_make_memory(s) && day_period(s)==2u)
+                talk(s,D_CLERK_CLOSING);
             else talk(s,(s->flags & STORY_STAMP) ? D_CLERK_AGAIN : D_CLERK);
             if (!(s->flags & STORY_STAMP)) { s->flags |= STORY_STAMP; s->dirty = 1; }
         }
@@ -655,8 +753,12 @@ static void interact(Story *s) {
         if (!(s->flags & STORY_STAMP)) talk(s, D_MARA_LOCKED);
         else {
             if(can_make_memory(s) && !(s->daily_mask&STORY_DAY_MARA))moment_menu(s,'F');
-            else talk(s,s->bond>=4?D_ACT_MARA_CLOSE:
-                (s->flags & STORY_MARA) ? D_MARA_AGAIN : D_MARA);
+            else if(can_make_memory(s) && s->art_steps>=STORY_PROJECT_DONE)
+                talk(s,D_MARA_GALLERY);
+            else if(can_make_memory(s) && s->bond>=4)talk(s,D_ACT_MARA_CLOSE);
+            else if(can_make_memory(s) && day_period(s)==0u)talk(s,D_MARA_MORNING);
+            else if(can_make_memory(s) && day_period(s)==2u)talk(s,D_MARA_CLOSING);
+            else talk(s,(s->flags & STORY_MARA) ? D_MARA_AGAIN : D_MARA);
             if (!(s->flags & STORY_MARA)) { s->flags |= STORY_MARA; s->dirty = 1; }
         }
         break;
@@ -664,10 +766,13 @@ static void interact(Story *s) {
         talk(s, ((s->flags & STORY_ALL) == STORY_ALL && !s->life_stage) ? D_BUS_READY : D_BUS_LOCKED);
         break;
     case 'M':
-        if(can_make_memory(s) && !(s->daily_mask&STORY_DAY_MUSIC))moment_menu(s,'M');
-        else if (!(s->flags & STORY_MUSIC)) {
-            s->flags |= STORY_MUSIC; s->dirty=1; talk(s,D_MUSIC);
-        } else talk(s,s->work>=8?D_ACT_MUSIC_PROGRESS:D_MUSIC_AGAIN);
+        if(can_make_memory(s)){
+            if(!(s->daily_mask&STORY_DAY_MUSIC))moment_menu(s,'M');
+            else if(s->song_steps<STORY_PROJECT_DONE)moment_menu(s,'m');
+            else talk(s,D_PROJECT_SONG_DONE);
+        }else if(!(s->flags & STORY_MUSIC)){
+            s->flags |= STORY_MUSIC;s->dirty=1;talk(s,D_MUSIC);
+        }else talk(s,s->work>=8?D_ACT_MUSIC_PROGRESS:D_MUSIC_AGAIN);
         break;
     case 'R':
         if (s->life_stage == STORY_LIFE_LAST_WORK) {
@@ -685,7 +790,8 @@ static void interact(Story *s) {
         } else if (s->life_stage == STORY_LIFE_WAIT ||
                    s->life_stage == STORY_LIFE_FOLLOWUP_WAIT) {
             if(!(s->daily_mask&STORY_DAY_ART))moment_menu(s,'R');
-            else talk(s,s->work>=8?D_ACT_ART_PROGRESS:D_ART_DAY);
+            else if(s->art_steps<STORY_PROJECT_DONE)moment_menu(s,'r');
+            else talk(s,D_PROJECT_ART_DONE);
         } else if (!(s->flags & STORY_ART)) {
             s->flags |= STORY_ART;s->dirty=1;talk(s,D_ART);
         } else talk(s,D_ART_AGAIN);

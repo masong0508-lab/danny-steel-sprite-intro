@@ -23,6 +23,10 @@
 #define STORY_DAY_RECAP 128u
 #define STORY_STAT_MAX 5u
 #define STORY_ACT_NONE 0u
+/* Four authored stages per creative project. No project gates an ending. */
+#define STORY_PROJECT_DONE 4u
+#define STORY_STYLE_SONG_SOFT 1u
+#define STORY_STYLE_ART_WARM 2u
 /* 72.5-second source song, then the good-only 16-second reprise. */
 #define STORY_END_SCORE_FRAMES 4350u
 #define STORY_END_CODA_FRAMES 960u
@@ -58,7 +62,8 @@ typedef struct {
     /* Numbered-day life sim, doctor visits and the unskippable last painting. */
     uint8_t day_number, life_stage, scene;
     uint8_t daily_mask, daily_memories; /* optional, persisted; never gates an ending */
-    uint8_t energy, spark, bond, work; /* save v4, gentle resources */
+    uint8_t energy, spark, bond, work; /* saved resources */
+    uint8_t song_steps, art_steps, project_style; /* SRAM v5; stages 0..4 */
     uint8_t activity, activity_choice; /* transient daily choice menu */
     uint16_t day_frame, finale_frame;
     /* Cinematic shots are transient; saves retain story flags, not camera frames. */
