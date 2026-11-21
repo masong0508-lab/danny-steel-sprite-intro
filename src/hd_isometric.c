@@ -8,7 +8,6 @@
    One shared 240x160 mode-4 buffer; no heap, second frame or Z buffer.
    ROM prepaints the textured ground diamonds; only vertical architecture,
    people, lights and restrained rain are composed at runtime. */
-static int absolute(int x){return x<0?-x:x;}
 static unsigned grain(int x,int y){
  uint32_t n=(uint32_t)(x+101)*374761393u+
             (uint32_t)(y+131)*668265263u;
