@@ -159,6 +159,14 @@ static void pot_city(uint8_t *p,unsigned t,int z,int cx,int cy){
  /* Pavement perspective: diagonals converge on Danny, never on the HUD. */
  pot_rect(p,cx,cy,z,-25,100,293,65,HD_ROAD_COOL);
  pot_rect(p,cx,cy,z,-25,98,293,3,HD_COPPER);
+ /* The canopy casts an actual contact shadow across a lit sidewalk.
+    A restrained, repeated wet-stone reflection ties storefront and ground. */
+ pot_rect(p,cx,cy,z,43,101,170,4,HD_SHADOW);
+ for(int i=0;i<8;i++){
+  int x=47+i*22;
+  pot_rect(p,cx,cy,z,x,108+(i&1)*3,12,1,HD_REFLECT);
+  pot_rect(p,cx,cy,z,x+3,112+(i&1)*3,5,1,HD_STONE_LIT);
+ }
  for(int i=0;i<11;i++){
   int x=-34+i*31;
   pot_line(p,cx,cy,z,x,101,x-19,161,HD_ROAD);
@@ -175,8 +183,15 @@ static void pot_city(uint8_t *p,unsigned t,int z,int cx,int cy){
  pot_rect(p,cx,cy,z,34,15,185,10,HD_STONE_DARK);
  pot_line(p,cx,cy,z,34,15,120,-2,HD_STONE_LIT);
  pot_line(p,cx,cy,z,120,-2,219,15,HD_STONE_LIT);
- for(int i=0;i<8;i++)
-  pot_line(p,cx,cy,z,39+i*23,15,68+i*16,3,HD_COPPER);
+ for(int i=0;i<8;i++){
+  int roofx=39+i*23;
+  pot_line(p,cx,cy,z,roofx,15,68+i*16,3,HD_COPPER);
+  pot_rect(p,cx,cy,z,roofx+3,12,13,1,HD_ROAD_LIGHT);
+ }
+ /* A single coherent masonry ledge, awning brackets and drainage. */
+ pot_rect(p,cx,cy,z,42,27,167,2,HD_BRICK_LIT);
+ pot_line(p,cx,cy,z,42,28,42,97,HD_STONE_DARK);
+ pot_line(p,cx,cy,z,207,28,207,97,HD_SHADOW);
  /* Forest-green shop fascia is built INTO the brickwork. */
  pot_rect(p,cx,cy,z,72,30,116,25,HD_INK);
  pot_rect(p,cx,cy,z,75,32,110,21,HD_LEAF_DARK);
@@ -204,8 +219,19 @@ static void pot_city(uint8_t *p,unsigned t,int z,int cx,int cy){
  pot_line(p,cx,cy,z,127,70,127,99,HD_COPPER);
  pot_rect(p,cx,cy,z,131,84,2,2,HD_GOLD);
  pot_rect(p,cx,cy,z,52,57,153,7,HD_LEAF_DARK);
- for(int x=55;x<200;x+=18)
+ for(int x=55;x<200;x+=18){
   pot_rect(p,cx,cy,z,x,59,10,4,HD_LEAF_LIT);
+  pot_line(p,cx,cy,z,x+10,60,x+15,62,HD_LEAF_DARK);
+ }
+ pot_rect(p,cx,cy,z,51,65,154,2,HD_COPPER);
+ pot_line(p,cx,cy,z,54,65,47,101,HD_STONE);
+ pot_line(p,cx,cy,z,202,65,209,101,HD_STONE);
+ /* A window-local OPEN light, rather than floating interface lettering. */
+ if(z>=218){
+  hd_rect(p,pot_pt(cx,156-120,z),pot_pt(cy,77-80,z),27,11,HD_LEAF_DARK);
+  hd_text(p,pot_pt(cx,159-120,z),pot_pt(cy,79-80,z),
+          "OPEN",HD_LAMP,1,0);
+ }
  pot_line(p,cx,cy,z,45,101,211,101,HD_PLASTER_LIT);
  pot_line(p,cx,cy,z,43,103,214,103,HD_SHADOW);
  /* Two tiny street details make the sign job feel inhabited, not staged. */
@@ -213,6 +239,17 @@ static void pot_city(uint8_t *p,unsigned t,int z,int cx,int cy){
  pot_rect(p,cx,cy,z,198,78,11,5,HD_GOLD);
  pot_rect(p,cx,cy,z,35,90,10,10,HD_BARK);
  pot_rect(p,cx,cy,z,37,87,6,4,HD_LEAF);
+ /* The job is somebody's ordinary afternoon: the shop is lit, the
+    sidewalk is used, and nothing is magically suspended in space. */
+ for(int i=0;i<2;i++){
+  int bx=17+i*216+((int)((t/8u)%41u))*(i?-1:1);
+  int yy=94+i*2;
+  pot_rect(p,cx,cy,z,bx-7,yy+3,15,2,HD_SHADOW);
+  pot_rect(p,cx,cy,z,bx-4,yy-15,9,15,i?HD_GLASS:HD_BRICK);
+  pot_rect(p,cx,cy,z,bx-3,yy-20,7,6,HD_SKIN);
+  pot_line(p,cx,cy,z,bx-2,yy,bx-5+((t/12u)&1u)*3,yy+3,HD_INK);
+  pot_line(p,cx,cy,z,bx+2,yy,bx+5-((t/12u)&1u)*3,yy+3,HD_INK);
+ }
 }
 typedef struct {
  signed char lean,bob,lx,ly,rx,ry,lf,lh,rf,rh;
@@ -230,7 +267,12 @@ static const PotPose pot_dance[8]={
  {-2,-1,-18,-32,26,-44,-11,-4, 13, 0}
 };
 static int pot_lerp(int a,int b,unsigned m){
- return a+((b-a)*(int)m)/12;
+ /* Hermite ease: the sampled pose lands without a one-frame snap.
+    Fixed-point integer arithmetic keeps the exact same joint geometry on
+    host and GBA and does not evaluate floating point on every frame. */
+ unsigned f=m*256u/12u;
+ unsigned smooth=(f*f*(768u-2u*f))>>16;
+ return a+((b-a)*(int)smooth)/256;
 }
 static PotPose pot_motion(unsigned t){
  if(t<76u)return pot_dance[0];
@@ -281,6 +323,15 @@ static void pot_banana(uint8_t *p,int cx,int cy,int z,unsigned t){
  pot_bellipse(p,x,foot,sc,a.lean/2,-34+a.bob,15,20,HD_INK);
  pot_bellipse(p,x,foot,sc,a.lean/2,-34+a.bob,12,18,HD_GOLD);
  pot_bellipse(p,x,foot,sc,a.lean/2-6,-34+a.bob,3,14,HD_LAMP);
+ /* Seamed, asymmetrical banana silhouette. The dark seam tracks the
+    connected torso, rather than wobbling independently of the skeleton. */
+ pot_bline(p,x,foot,sc,a.lean/2+8,-50+a.bob,
+           a.lean/2+12,-27+a.bob,HD_BARK);
+ pot_bline(p,x,foot,sc,a.lean/2+12,-27+a.bob,
+           a.lean/2+5,-17+a.bob,HD_GOLD);
+ pot_bline(p,x,foot,sc,a.lean/2-11,-31+a.bob,
+           a.lean/2-8,-19+a.bob,HD_LAMP);
+ pot_brect(p,x,foot,sc,a.lean/2-2,-23+a.bob,4,2,HD_COPPER);
  pot_bline(p,x,foot,sc,-8+a.lean/2,-49+a.bob,
            -18+a.lean/2,-41+a.bob,HD_PAPER);
  pot_bline(p,x,foot,sc, 8+a.lean/2,-48+a.bob,
@@ -290,9 +341,16 @@ static void pot_banana(uint8_t *p,int cx,int cy,int z,unsigned t){
  pot_bellipse(p,x,foot,sc,a.lean,-54+a.bob,6,7,HD_SKIN_LIT);
  pot_bline(p,x,foot,sc,a.lean-2,-67+a.bob,a.lean-5,-72+a.bob,HD_PAPER);
  pot_bline(p,x,foot,sc,a.lean-1,-68+a.bob,a.lean+4,-73+a.bob,HD_GOLD);
+ /* A little sweat and a neutral, weathered expression: he's working,
+    not delighted with the suit. The face remains recognizable in profile. */
+ pot_bline(p,x,foot,sc,a.lean-5,-60+a.bob,
+           a.lean-2,-59+a.bob,HD_BARK);
+ pot_bline(p,x,foot,sc,a.lean+2,-59+a.bob,
+           a.lean+5,-60+a.bob,HD_BARK);
  pot_brect(p,x,foot,sc,a.lean-4,-57+a.bob,2,2,HD_INK);
  pot_brect(p,x,foot,sc,a.lean+3,-57+a.bob,2,2,HD_INK);
- pot_bline(p,x,foot,sc,a.lean-2,-51+a.bob,a.lean+3,-50+a.bob,HD_BRICK_DARK);
+ pot_bline(p,x,foot,sc,a.lean-2,-50+a.bob,a.lean+3,-51+a.bob,HD_BRICK_DARK);
+ pot_brect(p,x,foot,sc,a.lean+8,-59+a.bob,1,3,HD_SKIN);
  /* The sign arm is visibly connected: the paper overlay never floats. */
  pot_bline(p,x,foot,sc,-9,-44+a.bob,a.lx,a.ly,HD_INK);
  pot_bline(p,x,foot,sc,-8,-43+a.bob,a.lx,a.ly,HD_GOLD);
@@ -307,7 +365,14 @@ static void pot_banana(uint8_t *p,int cx,int cy,int z,unsigned t){
  hd_rect(p,bx-1,by-1,bw+2,bh+2,HD_INK);
  hd_rect(p,bx,by,bw,bh,HD_PAPER);
  hd_rect(p,bx+1,by+1,bw-2,pot_size(3,sc),HD_GOLD);
+ /* Scuffed corrugation, inked corners and a subtle paper-cut edge make
+    the sign clearly superimposed without losing its physical grip. */
+ for(int i=1;i<4;i++)
+  hd_line(p,bx+2,by+bh-2-i*3,bx+4,by+bh-3-i*3,HD_STONE_LIT);
  hd_line(p,bx,by+bh-1,bx+bw-1,by+bh-2,HD_BARK);
+ hd_line(p,bx+bw-2,by+3,bx+bw-2,by+bh-4,HD_COPPER);
+ hd_pixel(p,bx+2,by+bh-3,HD_RED_SHADE);
+ hd_pixel(p,bx+bw-4,by+3,HD_RED_SHADE);
  hd_line(p,bx+1,by+1,bx+1,by+bh-2,HD_COPPER);
  if(z>=215){
   hd_rect(p,bx+5,by+5,bw-10,8,HD_LAMP);
@@ -330,8 +395,8 @@ static void pot_banana(uint8_t *p,int cx,int cy,int z,unsigned t){
 static void potheads_open(uint8_t *p,unsigned t){
  /* 0-132: a continuous bird's-eye descent; then an unbroken dance.
     Page advance never resets the camera or sign's position. */
- int z=ease(96,256,t,0,132);
- int cx=ease(101,120,t,0,132),cy=ease(100,80,t,0,132);
+ int z=ease(86,256,t,0,132);
+ int cx=ease(97,120,t,0,132),cy=ease(106,80,t,0,132);
  pot_city(p,t,z,cx,cy);
  pot_banana(p,cx,cy,z,t);
 }
