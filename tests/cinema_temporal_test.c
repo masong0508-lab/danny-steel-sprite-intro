@@ -51,7 +51,9 @@ int main(void){
  /* Neither parked bus may continue moving or return to its entrance. */
  frame(CINE_OPEN,220,0,&a);
  frame(CINE_OPEN,400,0,&b);
- assert(changed(28,30,60,39)==0u);
+ /* Compare the parked bus's second windshield, not Danny's blinking
+    face in front of the first window. */
+ assert(changed(60,31,74,39)==0u);
  frame(CINE_BUS,220,0,&a);
  frame(CINE_BUS,400,0,&b);
  assert(changed(27,30,55,40)==0u);
