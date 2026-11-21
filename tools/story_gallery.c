@@ -84,7 +84,14 @@ int main(int argc,char **argv){
  s.cinema_frame=180;
  write_frame("05_story_arrival",&s,180);
  s.cinema_frame=216;
+ s.page=1;
  write_frame("05d_potheads_dance",&s,216);
+ s.cinema_frame=264;
+ s.page=2;
+ write_frame("05e_potheads_gratitude",&s,264);
+ s.cinema_frame=300;
+ s.page=3;
+ write_frame("05f_potheads_after_hours",&s,300);
  done(&s);
  s.cinema=CINE_NONE;s.scene=STORY_SCENE_NONE;s.view=0;
  stand(&s,12,13,3);
