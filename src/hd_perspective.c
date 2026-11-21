@@ -1,5 +1,6 @@
 #include "hd_canvas.h"
 #include "hd_world_atlas.h"
+#include "hd_facade_art.h"
 
 /* A full 240-column perspective renderer for the actual same 24x18
    collision map. All steps and ray offsets are fixed-point, cardinal facing
@@ -150,6 +151,12 @@ static void wall_column(uint8_t *p,int x,int top,int bottom,char type,
     c=HD_BRICK_LIT;
   }
   if(v>225&&(u&15)==1)c=HD_STONE;
+  /* Same Potheads shop, same town coordinate in both cameras. This is
+     environmental branding, not the future handheld/dancing sign. */
+  if(!tree && tx==21 && ty==11){
+   int signage=hd_potheads_wall_ink(u,v);
+   if(signage>=0)c=(unsigned)signage;
+  }
   p[y*HD_W+x]=(uint8_t)c;
   v+=major;
   error+=minor;
