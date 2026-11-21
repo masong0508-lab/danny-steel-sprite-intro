@@ -86,8 +86,10 @@ void music_set_cue(unsigned cue){
         return;
     }
     if(cue==active_cue){pending_cue=cue;return;}
-    if(active_cue==MUSIC_CUE_TITLE || cue==MUSIC_CUE_TITLE){
-        /* Enter and leave the title/menu cleanly; replays the original theme. */
+    if(active_cue==MUSIC_CUE_TITLE || cue==MUSIC_CUE_TITLE ||
+       active_cue==MUSIC_CUE_STUDIO || cue==MUSIC_CUE_STUDIO){
+        /* Title transitions and the player's studio transport are immediate.
+         * Scene-to-scene music still respects the short phrase boundary. */
         music_stop();time_update();
         active_cue=pending_cue=cue;
         cue_step=0;cue_next=total;
@@ -138,15 +140,17 @@ static void play_motif(unsigned cue,unsigned step){
     if(n.comp){
         REG_SND2CNT=(5<<12)|(3<<8)|(0<<6);
         REG_SND2FREQ=0x8000|sq_rate(n.comp);
-    }
+    }else if(cue==MUSIC_CUE_STUDIO)REG_SND2CNT=0;
     if(n.bass){
         REG_SND3CNT=0x4000;
         REG_SND3FREQ=0x8000|wav_rate(n.bass);
-    }
+    }else if(cue==MUSIC_CUE_STUDIO)REG_SND3CNT=0;
     if(n.noise){
         REG_SND4CNT=(n.noise==1?0x5700:0x8300);
         REG_SND4FREQ=0x8000|(n.noise==1?0x21:0x5B);
-    }
+    }else if(cue==MUSIC_CUE_STUDIO)REG_SND4CNT=0;
+    /* A rest in Danny's editor really silences the corresponding channel.
+       Other authored motifs retain their existing sustain behavior. */
 }
 static void play_here_today(void){
     u32 elapsed=total-ending_start;

@@ -20,6 +20,10 @@ static const char *const lines[4]={
 void studio_reset(void){patch=initial;playhead=0;}
 const StudioPatch *studio_patch(void){return &patch;}
 const char *studio_lyric(unsigned idx){return lines[idx&3u];}
+const char *studio_note_label(unsigned pitch){
+ static const char *const labels[8]={"REST","C4","D4","E4","F4","G4","A4","B4"};
+ return pitch<8u?labels[pitch]:"?";
+}
 unsigned studio_cursor_count(unsigned tab){
  return tab==STUDIO_NOTES?8u:tab==STUDIO_ORDER?4u:
         tab==STUDIO_SONG?2u:1u;
@@ -66,7 +70,8 @@ uint32_t studio_ticks(void){
  static const uint32_t beat[4]={88000u,65536u,56000u,48000u};
  return beat[patch.tempo];
 }
-unsigned studio_playhead(void){return playhead;}
+unsigned studio_playhead(void){return playhead&7u;}
+unsigned studio_playpart(void){return (playhead>>3)&3u;}
 void studio_motif_step(unsigned step,MotifBeat *out){
  static const uint8_t pitch[8]={0u,60u,62u,64u,65u,67u,69u,71u};
  static const int8_t transpose[4]={0,2,-2,5};
@@ -90,7 +95,7 @@ void studio_motif_step(unsigned step,MotifBeat *out){
                      root+(patch.choir==1u?19u:
                            patch.choir==2u?24u:31u):0u);
  out->noise=(uint8_t)(patch.mood==2u && (index&1u)?1u:0u);
- playhead=index;
+ playhead=step&31u; /* retain both step and phrase for the live display */
 }
 void studio_save_encode(unsigned slot,uint8_t out[STUDIO_EXT_LEN]){
  out[0]='B';out[1]='S';out[2]=1u;out[3]=(uint8_t)slot;

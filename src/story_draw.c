@@ -630,6 +630,11 @@ static void studio_editor(uint8_t *p,const Story *s,int frame){
    text(p,11,61,"UP/DOWN CHANGE",18,25);
  }else if(tab==STUDIO_NOTES){
    text(p,8,27,"NOTES / MELODY",20,25);
+   /* Always identify the selected note and step, even when it is a rest. */
+   unsigned selected=cursor<STUDIO_STEPS?cursor:0u;
+   char step[]="1/8";step[0]=(char)('1'+selected);
+   text(p,73,27,step,18,3);
+   text(p,92,27,studio_note_label(a->notes[selected]),20,5);
    for(int n=0;n<7;n++)
      box(p,8,34+n*4,104,1,n==3?18:5);
    for(unsigned i=0;i<STUDIO_STEPS;i++){
@@ -650,7 +655,8 @@ static void studio_editor(uint8_t *p,const Story *s,int frame){
      int x=6+(int)i*28;
      box(p,x,38,26,19,i==cursor?25:5);
      box(p,x+1,39,24,17,3);
-     text(p,x+8,40,i==cursor?"*":" ",18,1);
+     char number[]="1";number[0]=(char)('1'+i);
+     text(p,x+11,40,number,i==cursor?20:18,1);
      text(p,x+3,47,names[a->order[i]],20,5);
    }
    text(p,7,60,"A CYCLE  PART SELECT",18,28);
@@ -671,6 +677,8 @@ static void studio_editor(uint8_t *p,const Story *s,int frame){
          i==1 && a->choir==0u?5:i==3&&a->mood!=2u?5:18);
  }else{
    text(p,8,28,"PERFORM / LIVE PREVIEW",20,27);
+   char part[]="1/4";part[0]=(char)('1'+studio_playpart());
+   text(p,103,28,part,18,3);
    unsigned playing=s->activity_choice;
    unsigned playhead=studio_playhead()&7u;
    for(unsigned i=0;i<STUDIO_STEPS;i++){
@@ -683,8 +691,13 @@ static void studio_editor(uint8_t *p,const Story *s,int frame){
    (void)frame;
  }
  box(p,0,68,120,12,3);
- text(p,3,69,"L/R TABS  DPAD EDIT",18,29);
- text(p,3,75,"A SET  B EXIT  SEL PLAY",20,29);
+ if(tab==STUDIO_PERFORM){
+  text(p,3,69,"L/R TABS  SEL PREVIEW",18,29);
+  text(p,3,75,"A PLAY/STOP  B EXIT",20,29);
+ }else{
+  text(p,3,69,"L/R TABS  DPAD EDIT",18,29);
+  text(p,3,75,"A SET  B EXIT  SEL PLAY",20,29);
+ }
 }
 void story_draw(const Story *s,int frame,uint8_t *p) {
     if(s->activity==STORY_ACT_STUDIO){

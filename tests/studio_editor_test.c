@@ -61,7 +61,9 @@ int main(void){
  press(&s,R);assert(s.studio_tab==STUDIO_NOTES&&s.view==view);
  press(&s,RIGHT);assert(s.studio_cursor==1u);
  assert(studio_patch()->notes[1]==0u);
+ assert(!strcmp(studio_note_label(studio_patch()->notes[1]),"REST"));
  press(&s,UP);assert(studio_patch()->notes[1]==4u);
+ assert(!strcmp(studio_note_label(studio_patch()->notes[1]),"F4"));
  press(&s,A);assert(studio_patch()->notes[1]==0u);
  press(&s,A);assert(studio_patch()->notes[1]==4u);guard(&s);
  /* Ordered sections alter the real melody, not only a drawn block. */
@@ -73,6 +75,8 @@ int main(void){
  press(&s,UP);studio_motif_step(8u,&after);
  assert(studio_patch()->order[1]!=order_before);
  assert(before.lead!=after.lead);
+ studio_motif_step(23u,&after);
+ assert(studio_playpart()==2u && studio_playhead()==7u);
  guard(&s);
  press(&s,R);assert(s.studio_tab==STUDIO_LYRICS);
  const char *line=studio_lyric(studio_patch()->lyric);
