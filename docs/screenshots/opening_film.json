@@ -1,11 +1,11 @@
 {
-  "source_commit": "0ce824831e327da638fc2a19ad263ab5c9b50ecc",
+  "source_commit": "00fc2b1296ff2b591771e4ee39aa15ec39cb84df",
   "source_rom_sha256": "5179c81d3e7bbb951d5a33571757b9be186ded54117b46ec3958264f48423159",
   "source_elf_sha256": "fce0fc5a73f9db82b8a40bd7e64c1460e1a38992e1701fb54152bdeb2a07e8c9",
   "arm_build_toolchain": {
     "file": "arm_build_toolchain.txt",
-    "sha256": "c33e409dd546449d34d7c53eea35941ff367b35c50ac89d7d8ad9a2b1c4aac31",
-    "record": "Source commit: 0ce824831e327da638fc2a19ad263ab5c9b50ecc\nDocker image reference: devkitpro/devkitarm\nImage ID: sha256:5850ea3193e95244827a1e38cf464a0e730d1b9cc7c276888ceed984cbe38912\nRepoDigests: [\"devkitpro/devkitarm@sha256:116afba8df8453961de2936ffab20dd441edf4d682856c1ec8b0e53d7ed0bbf5\"]\n\nARM compiler: /opt/devkitpro/devkitARM/bin/arm-none-eabi-gcc\narm-none-eabi-gcc (devkitARM) 16.1.0\nCopyright (C) 2026 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n"
+    "sha256": "5b424886a883faf816f8396901313a7d4818986bef8dd18168d6a70d0a83a2a5",
+    "record": "Source commit: 00fc2b1296ff2b591771e4ee39aa15ec39cb84df\nDocker image reference: devkitpro/devkitarm\nImage ID: sha256:5850ea3193e95244827a1e38cf464a0e730d1b9cc7c276888ceed984cbe38912\nRepoDigests: [\"devkitpro/devkitarm@sha256:116afba8df8453961de2936ffab20dd441edf4d682856c1ec8b0e53d7ed0bbf5\"]\n\nARM compiler: /opt/devkitpro/devkitARM/bin/arm-none-eabi-gcc\narm-none-eabi-gcc (devkitARM) 16.1.0\nCopyright (C) 2026 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n"
   },
   "capture": {
     "source": "mGBA completed GBA video scanout",
