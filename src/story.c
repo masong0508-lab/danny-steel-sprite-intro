@@ -1222,7 +1222,7 @@ const char *story_action_hint(const Story *s){
     default:return "A LOOK";
     }
 }
-int story_risk_available(int story_risk_available(const Story *s){
+int story_risk_available(const Story *s){
     char target=nearby_actor(s);
     unsigned bit=target=='L'?STORY_BAD_LETTER:
                  target=='C'?STORY_BAD_CLERK:
@@ -1478,7 +1478,6 @@ static void interact(Story *s) {
         else talk(s, D_CULT_SAFE_AGAIN);
         break;
     default:
-        /* Standing still    default:
         /* Standing still is an invitation to notice the neighborhood,
            not a dead control. Geography decides the short observation. */
         if(s->x>=17u && s->y>=9u && s->y<=13u)
