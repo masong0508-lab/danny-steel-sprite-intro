@@ -264,6 +264,36 @@ static void object(uint8_t *p,int sx,int sy,char kind,unsigned tick,int wx,int w
   hd_rect(p,cx-3,foot-7,6,5,HD_GLASS);
  }
 }
+/* Tiny grounded material accents; the same coordinates remain under every
+   camera pan. Draw these BEFORE architecture so rain never covers faces. */
+static void ground_detail(uint8_t *p,int sx,int sy,int wx,int wy,
+                          char tile,unsigned tick){
+ unsigned n=grain(wx,wy);
+ if(tile=='~'){
+  int cx=sx+16,cy=sy+8;
+  int span=3+(int)((tick/18u+n)%6u);
+  hd_line(p,cx-span,cy-1,cx+span,cy-1,HD_GLASS_LIT);
+  if((n&3u)==0u)
+   hd_line(p,cx-5,cy+2,cx+3,cy+2,HD_REFLECT);
+ }else if((tile==','||tile=='=') && (n&15u)==0u){
+  hd_line(p,sx+10,sy+9,sx+16,sy+9,HD_REFLECT);
+  hd_pixel(p,sx+19,sy+10,HD_STONE_LIT);
+ }else if(tile=='.' && (n&31u)==0u){
+  hd_line(p,sx+12,sy+8,sx+17,sy+8,HD_STONE_DARK);
+  hd_pixel(p,sx+13,sy+9,HD_MORTAR);
+  hd_pixel(p,sx+16,sy+9,HD_MORTAR);
+ }
+}
+/* Unlike a top-layer sparkle, this route cue cannot glow through roofs:
+   the objective's pavement is decorated at its natural depth. */
+static void ground_goal(uint8_t *p,int sx,int sy,unsigned tick){
+ unsigned ink=((tick/24u)&1u)?HD_COPPER:HD_GOLD;
+ hd_line(p,sx+5,sy+10,sx+11,sy+13,ink);
+ hd_line(p,sx+11,sy+13,sx+16,sy+11,ink);
+ hd_line(p,sx+27,sy+10,sx+21,sy+13,ink);
+ hd_line(p,sx+21,sy+13,sx+16,sy+11,ink);
+ hd_pixel(p,sx+16,sy+8,HD_LAMP);
+}
 static void rain(uint8_t *p,unsigned tick){
  /* Fourteen subdued strokes behind the depth-sorted architecture and
     people: rain cannot scribble across Danny's face or a shop sign. */
@@ -285,8 +315,13 @@ void hd_isometric_draw(uint8_t *p,const Story *s,unsigned tick){
    if(sx<=-32||sx>=240||sy<=-18||sy>=154)continue;
    char c=story_tile(wx,wy);
    hd_iso_tile(p,sx,sy,material(c,wx,wy));
+   ground_detail(p,sx,sy,wx,wy,c,tick);
   }
  rain(p,tick);
+ int gx=0,gy=0;
+ const char *goal=0;
+ int has_goal=story_goal(s,&gx,&gy,&goal);
+ (void)goal;
  int ox=0,oy=0;
  if(s->anim){
   ox=((int)s->prev_x-(int)s->x -
@@ -311,6 +346,8 @@ void hd_isometric_draw(uint8_t *p,const Story *s,unsigned tick){
    int sx,sy;projection(s,wx,wy,&sx,&sy);
    if(sx<=-48||sx>=256||sy<=-55||sy>=166)continue;
    char c=story_tile(wx,wy);
+   if(has_goal&&wx==gx&&wy==gy)
+    ground_goal(p,sx,sy,tick);
    if(c=='#'||c=='A')building(p,sx,sy,wx,wy,tick,c,
                             actor_x,actor_foot,player_depth);
    else if(c=='T'||c=='F'||c=='C'||c=='P'||c=='V'||
@@ -322,18 +359,7 @@ void hd_isometric_draw(uint8_t *p,const Story *s,unsigned tick){
  }
  if(!drew_player)
   hd_world_person_art(p,actor_x,actor_foot,0u,s->facing,0u);
- /* The original story_goal is a logical coordinate, not a new quest.
-    Render a restrained in-world cue only if the target is visible. */
- int gx,gy;
- const char *title;
- if(story_goal(s,&gx,&gy,&title)){
-  int sx,sy;projection(s,gx,gy,&sx,&sy);
-  if(sx>4&&sx<208&&sy>45&&sy<123){
-   int cx=sx+16,top=sy-9-(int)((tick/24u)&1u);
-   hd_pixel(p,cx,top,HD_GOLD);
-   hd_line(p,cx-4,top+3,cx,top+6,HD_LAMP);
-   hd_line(p,cx+4,top+3,cx,top+6,HD_LAMP);
-  }
- }
+ /* World-space goal cues are already depth sorted. The compass provides
+    a reliable fallback when the target is behind buildings. */
 }
 
