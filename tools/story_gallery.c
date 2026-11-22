@@ -77,21 +77,38 @@ int main(int argc,char **argv){
  assert(s.cinema==CINE_OPEN);
  s.cinema_frame=0;
  write_frame("05a_potheads_aerial",&s,0);
- s.cinema_frame=60;
- write_frame("05b_potheads_descent",&s,60);
- s.cinema_frame=132;
- write_frame("05c_potheads_closeup",&s,132);
+ s.cinema_frame=90;
+ write_frame("05b_potheads_descent",&s,90);
+ s.cinema_frame=180;
+ write_frame("05c_potheads_closeup",&s,180);
  s.cinema_frame=180;
  write_frame("05_story_arrival",&s,180);
- s.cinema_frame=216;
+ s.cinema_frame=420;
  s.page=1;
- write_frame("05d_potheads_dance",&s,216);
- s.cinema_frame=264;
+ write_frame("05d_potheads_dance",&s,420);
+ s.cinema_frame=600;
  s.page=2;
- write_frame("05e_potheads_gratitude",&s,264);
- s.cinema_frame=300;
+ write_frame("05e_potheads_gratitude",&s,600);
+ s.cinema_frame=720;
  s.page=3;
- write_frame("05f_potheads_after_hours",&s,300);
+ write_frame("05f_potheads_after_hours",&s,720);
+ /* Native renderer frames cover the entire authored floor routine and exit.
+    The companion opening.mp4 is captured separately from the running ROM. */
+ s.cinema_frame=780;
+ write_frame("05fa_potheads_inverted",&s,780);
+ s.cinema_frame=860;
+ s.page=4;
+ write_frame("05fb_potheads_bridge",&s,860);
+ s.cinema_frame=990;
+ write_frame("05fc_potheads_support_change",&s,990);
+ s.cinema_frame=1110;
+ s.page=5;
+ write_frame("05fd_potheads_leg_sweep",&s,1110);
+ s.cinema_frame=1230;
+ s.page=6;
+ write_frame("05fe_potheads_right_exit",&s,1230);
+ s.cinema_frame=1273;
+ write_frame("05ff_potheads_final",&s,1273);
  done(&s);
  /* Engine-produced performance frames; these are not Photoshop mockups.
     Additional story scenes share camera rigs and all their world props. */

@@ -72,7 +72,19 @@ jobs:
             src/hd_facade_art.c src/hd_perspective.c \
             tests/hd_perspective_equivalence_test.c -o /tmp/danny_perspective_equivalence
           /tmp/danny_perspective_equivalence
-      - name: Validate reference-ready Potheads opening, sign and all dance beats
+      - name: Verify full-source motion provenance, crop safety and reproducible ROM data
+        run: |
+          python3 tests/potheads_trace_pack_test.py
+          python3 tools/build_potheads_trace.py tools/references/potheads_trace.json /tmp/potheads_motion.h
+          cmp src/potheads_motion.h /tmp/potheads_motion.h
+      - name: Verify immutable storefront stream against the live projected camera
+        run: |
+          python3 tools/build_potheads_set.py /tmp/hd_potheads_fixed.h
+          cmp src/hd_potheads_fixed.h /tmp/hd_potheads_fixed.h
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
+            src/hd_canvas.c tests/potheads_set_test.c -o /tmp/danny_potheads_set
+          /tmp/danny_potheads_set
+      - name: Validate full Potheads dance, floor contacts, source crop and captions
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
             src/story.c src/studio.c src/cinema.c src/hd_canvas.c \
@@ -241,7 +253,11 @@ jobs:
     container: devkitpro/devkitarm
     steps:
       - uses: actions/checkout@v4
-      - run: make
+      - name: Build cartridge and record the exact ARM compiler
+        run: |
+          "${DEVKITARM:-/opt/devkitpro/devkitARM}/bin/arm-none-eabi-gcc" --version
+          make
+          sha256sum danny_steel_title.gba
       - name: Enforce static RAM headroom and report real linked memory use
         run: |
           # GNU ld provides the exact section sizes. The devkitARM container

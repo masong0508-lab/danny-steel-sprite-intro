@@ -1,5 +1,60 @@
 # Danny Steel — runtime, rendering and release validation
 
+## Full-reference opening: local verification
+
+The opening now covers all 548 source frames with 110 measured key poses,
+including inversion, changing palm support, repeated floor rotations and the
+partial right-edge exit. This pass also preserves the exact first-person
+occlusion optimization and corrects hand-held paper/record-player staging.
+
+The final local ARM build uses GCC 14.2.1 (`15:14.2.rel1-1`, 20241119) and mGBA
+0.10.5. Its ROM is 903,228 bytes with SHA256
+`ac7c726fa4640608e4166a0175144d6f05c04261c3b202305f302d9b77949378`.
+The production devkitARM binary is built and measured separately by CI; the
+film manifest records that exact compiler/container and binary identity.
+Do not substitute local compiler measurements for production evidence.
+
+The normal-input local 24.009-second film retains 1,434 video scanouts, advances
+all seven captions using six A taps, and reports zero lost input samples,
+emulator errors or cinematic/runtime clock discrepancy. The 600-video-frame
+route probe measured 19.710 opening page changes/s, 14.932 town and 9.955 first
+person. The opening route includes a partial transition at its window edge;
+its complete standing intervals are three video frames each.
+
+A separate breakdown of the full capture keeps the held final image out of the
+motion rate:
+
+| Observed cinema-clock window | Video samples | Page changes | Changes/s |
+|---|---:|---:|---:|
+| Aerial descent, <180 | 181 | 30 | 9.900 |
+| Standing/sign work, 180–749 | 568 | 189 | 19.874 |
+| Floor work, 750–1273 | 524 | 188 | 21.429 |
+| Final hold, 1274+ | 161 | 81 | 30.049 |
+
+These are finite-window page-transition counts; partial boundary intervals
+can shift the rates slightly. They include repeated completed pages, not just
+changed image content. The aerial descent remains the slowest phase, with a
+maximum observed seven-video-frame gap (117.199 ms). This is not a claim of
+30 FPS throughout the game or the opening.
+
+Static memory is 20,272 bytes IWRAM (11,224 code + 9,024 BSS + 24 data) and
+38,400 bytes EWRAM. The immutable settled-storefront stream costs 22,476 ROM
+bytes and adds no framebuffer or runtime cache. It is generated from the same
+projected architecture and tested against every pixel at four alignments.
+The measured motion itself occupies 7,480 ROM bytes.
+
+All 45 host workflow gates passed locally. The full-duration opening also
+passed ASan/UBSan; the actual ARM runtime probe reported zero failures, lost
+inputs or emulator errors. Eleven real ARM drawing samples were compared with
+the portable painter across aerial, standing and floor phases. CI reruns the
+complete source checks, RAM gates, runtime route, presentation measurements
+and full film before publication.
+
+Current production evidence lives in `docs/screenshots/opening_film.json`,
+`arm_build_toolchain.txt`, `opening_capture.txt`, `emulator_cadence.txt` and
+`runtime_verification.txt`. The reports below preserve prior-release baselines.
+
+
 This gate records what the GBA build actually does and which evidence is
 required before publishing it. The current continuation fixes missed input
 and lost elapsed time during slow rendering, accelerates existing painters,

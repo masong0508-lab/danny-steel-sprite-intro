@@ -11,6 +11,12 @@
 static uint16_t wall_depth[HD_W];
 /* Sparse native-column depth/texture cache, not another framebuffer. */
 static uint8_t wall_type[HD_W],wall_u[HD_W],wall_tx[HD_W],wall_ty[HD_W];
+/* Ends of the exact original ((x-120)*3)/16 ray-direction runs. */
+static const uint8_t ray_end[45]={
+ 3,9,14,19,25,30,35,41,46,51,57,62,67,73,78,83,89,94,99,105,110,115,
+ 126,131,136,142,147,152,158,163,168,174,179,184,190,195,200,206,211,216,
+ 222,227,232,238,240
+};
 static int abs_i(int a){return a<0?-a:a;}
 static HD_CANVAS_CODE inline unsigned texel(unsigned x,unsigned y){
  uint32_t v=(x+31u)*1664525u+(y+79u)*1013904223u;
@@ -101,21 +107,27 @@ static HD_CANVAS_CODE __attribute__((noinline)) void floor_render(uint8_t *p,con
   int wall_limit=10400/(y-78)-60;
   int last_tx=-99,last_ty=-99;
   char tile='.';
-  for(int x=0;x<240;x+=step){
-   /* Far samples paint pairs. If only one member is exposed, retain
-      the original sample x and write just that visible member. */
-   int paint0=!wall_type[x]||wall_depth[x]>wall_limit;
-   int paint1=step==2&&(!wall_type[x+1]||wall_depth[x+1]>wall_limit);
-   if(!paint0&&!paint1)continue;
-   int side=((x-120)*side_unit)>>8;
-   int wx=cx+fx*dist+rx*side,wy=cy+fy*dist+ry*side;
-   int tx=wx>>8,ty=wy>>8;
-   if(tx!=last_tx||ty!=last_ty){
-    last_tx=tx;last_ty=ty;tile=story_tile(tx,ty);
+  int begin=0;
+  for(unsigned ray=0;ray<sizeof ray_end;ray++){
+   int end=ray_end[ray];
+   /* cast_walls gives every column in this original direction run
+      the same hit and depth. Test coverage once, not per hidden pixel. */
+   if(!wall_type[begin]||wall_depth[begin]>wall_limit){
+    for(int x=begin&~(step-1);x<end;x+=step){
+     int side=((x-120)*side_unit)>>8;
+     int wx=cx+fx*dist+rx*side,wy=cy+fy*dist+ry*side;
+     int tx=wx>>8,ty=wy>>8;
+     if(tx!=last_tx||ty!=last_ty){
+      last_tx=tx;last_ty=ty;tile=story_tile(tx,ty);
+     }
+     unsigned ink=floor_ink(tile,wx,wy,x,y,tick);
+     /* An odd run edge may split a far sample. Keep its original
+        even sample x, then paint only this run's visible member(s). */
+     if(x>=begin)p[y*HD_W+x]=(uint8_t)ink;
+     if(step==2&&x+1<end)p[y*HD_W+x+1]=(uint8_t)ink;
+    }
    }
-   unsigned ink=floor_ink(tile,wx,wy,x,y,tick);
-   if(paint0)p[y*HD_W+x]=(uint8_t)ink;
-   if(paint1)p[y*HD_W+x+1]=(uint8_t)ink;
+   begin=end;
   }
  }
 }

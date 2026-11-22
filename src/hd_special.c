@@ -225,10 +225,16 @@ static void paper(uint8_t *p,int x,int y,int w,int h,unsigned t){
  hd_rect(p,x+2,y+2,w,h,HD_SHADOW);
  hd_rect(p,x,y,w,h,HD_PAPER);
  hd_rect(p,x+1,y+1,w-2,2,HD_STONE_LIT);
- for(int i=0;i<4;i++)
-  hd_line(p,x+4,y+7+i*5,x+w-5-(i&1)*7,y+7+i*5,HD_STONE);
- hd_rect(p,x+6,y+5,9,1,HD_RED_SHADE);
- if((t/120u)&1u)hd_rect(p,x+w-10,y+h-8,5,4,HD_COPPER);
+ /* A folded note is shorter than a full sheet. Ink belongs inside the
+    paper, including the small rooftop note; four fixed lines used to
+    spill through the counter and onto the floor. */
+ for(int row=0,yy=6;yy<h-2;row++,yy+=4){
+  int end=x+w-4-((row&1)?w/5:0);
+  hd_line(p,x+3,y+yy,end,y+yy,HD_STONE);
+ }
+ hd_rect(p,x+3,y+4,w>16?9:w-6,1,HD_RED_SHADE);
+ if(w>=20&&h>=14&&((t/120u)&1u))
+  hd_rect(p,x+w-8,y+h-6,4,3,HD_COPPER);
 }
 static void archive_room(uint8_t *p,unsigned t,int backed,int rebrand){
  inside(p,t,0);
@@ -272,12 +278,26 @@ static void witness_lane(uint8_t *p,unsigned t){
   hd_rect(p,96,y,108,4,HD_COPPER);
  hd_rect(p,99,96,4,24,HD_INK);
  hd_rect(p,198,96,4,24,HD_INK);
- paper(p,126,112,20,12,t);
- hd_actor_stage(p,59,143,1,t,t<78u?2:3);
- hd_actor_stage(p,179,143,4,t,t<65u?0:3);
- if(t>90u){
-  hd_rect(p,129,104,13,9,HD_PAPER);
-  hd_rect(p,131,105,9,1,HD_COPPER);
+ /* Danny closes the distance before accepting the witness's one note.
+    The donor's left hand supports it throughout; at the settled pose
+    Danny's right hand meets the same sheet, never a second floating
+    copy over the bench. Keep the wrists on the actor's breathing clock. */
+ unsigned approach=t>12u?t-12u:0u;
+ if(approach>84u)approach=84u;
+ int danny=59+(int)(approach*78u/84u);
+ int settled=approach==84u;
+ int breath=(int)((t/38u)&1u);
+ hd_actor_stage(p,danny,143,1,t,settled?0:2);
+ hd_actor_stage(p,179,143,4,t,t<55u?1:0);
+ hd_rect(p,148,107+breath,18,11,HD_BARK);
+ hd_rect(p,149,108+breath,16,9,HD_PAPER);
+ hd_line(p,150,109+breath,157,113+breath,HD_COPPER);
+ hd_line(p,164,109+breath,157,113+breath,HD_COPPER);
+ hd_rect(p,162,114+breath,3,4,HD_SKIN);
+ hd_pixel(p,162,115+breath,HD_SKIN_LIT);
+ if(settled){
+  hd_rect(p,151,114+breath,4,4,HD_SKIN);
+  hd_line(p,152,115+breath,154,115+breath,HD_SKIN_LIT);
  }
 }
 static void safehouse(uint8_t *p,unsigned t,int scene){
@@ -557,17 +577,34 @@ static void good_record(uint8_t *p,unsigned t){
   hd_rect(p,x+3,129,12,9,i&1?HD_BRICK:HD_LEAF_DARK);
   hd_line(p,x+4,135,x+12,135,HD_COPPER);
  }
- /* Record turntable has its own platter, spindle and anchored tonearm. */
- hd_ellipse(p,83,108,37,13,HD_INK);
- hd_ellipse(p,83,108,30,10,HD_STONE_DARK);
- hd_ellipse(p,83,108,25,8,HD_ROAD_COOL);
- hd_ellipse(p,83,108,5,4,HD_GOLD);
- hd_pixel(p,83,108,HD_PAPER);
+ /* A shallow plinth rests on the counter. The pivot is bolted into that
+    deck, and its bent tonearm ends in a cartridge touching the groove;
+    neither the arm nor the platter hangs unsupported above the table. */
+ hd_rect(p,45,98,99,19,HD_INK);
+ hd_rect(p,47,99,95,15,HD_STONE_DARK);
+ hd_rect(p,48,114,93,3,HD_BRICK_DARK);
+ hd_line(p,49,114,139,114,HD_COPPER);
+ hd_rect(p,52,117,8,2,HD_INK);
+ hd_rect(p,130,117,8,2,HD_INK);
+ hd_ellipse(p,83,104,35,10,HD_INK);
+ hd_ellipse(p,83,102,34,9,HD_INK);
+ hd_ellipse(p,83,102,28,7,HD_STONE_DARK);
+ hd_ellipse(p,83,102,23,6,HD_ROAD_COOL);
+ hd_ellipse(p,83,102,5,3,HD_GOLD);
+ hd_pixel(p,83,102,HD_PAPER);
  int angle=(int)(t/16u&3u);
- hd_line(p,83,108,83+((angle&1)?7:-7),105,HD_PAPER);
- hd_line(p,132,87,117,100,HD_COPPER);
- hd_rect(p,132,84,4,14,HD_COPPER);
- hd_rect(p,130,84,8,3,HD_GOLD);
+ hd_line(p,83,102,83+((angle&1)?7:-7),99,HD_PAPER);
+ hd_ellipse(p,134,102,5,3,HD_INK);
+ hd_ellipse(p,134,101,4,2,HD_COPPER);
+ hd_rect(p,132,94,4,8,HD_BARK);
+ hd_line(p,133,94,133,100,HD_GOLD);
+ hd_line(p,134,95,116,100,HD_COPPER);
+ hd_line(p,116,100,110,104,HD_COPPER);
+ hd_rect(p,108,102,7,3,HD_INK);
+ hd_line(p,109,103,113,103,HD_PAPER);
+ hd_line(p,110,105,110,106,HD_COPPER);
+ hd_rect(p,126,109,10,2,HD_INK);
+ hd_pixel(p,136,110,HD_LAMP);
  /* The album is HELD by Mara at the end of her raised right arm.
     Draw the arm first, then the sleeve and tiny supporting fingers:
     no separate levitating record over the turntable platter. */

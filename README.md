@@ -8,14 +8,17 @@ The city is closing, the last bus is leaving, and Danny is trying to determine w
 
 ## Potheads: newly staged opening and optional shifts
 
-**NEW GAME** now opens on a descending view of Potheads, then Danny in a
-banana costume dancing with his deliberately superimposed, hand-painted
-sidewalk sign. The 240x160 film uses a connected eight-pose animation,
-visible storefront architecture, moving pedestrians and a steady
-close-up. Danny does **not** love the mascot job: he is grateful it pays
-the rent, which makes it possible to pursue music and painting after
-hours. The seven dialogue beats preserve the underlying doctor/Mara/bus
-story rather than turning the opening into a career tutorial.
+**NEW GAME** opens with a continuous descent to Potheads, then the full
+reference dance: side steps, overhead sign turns, release, hop, scissoring
+inversion, supported bridge, repeated floor spins and the partial right-edge
+exit. The motion uses **110 measured poses across the complete 18.3-second
+source**, with explicit palm/sole contacts, changing limb order and the bag's
+fall. The 240×135 film area keeps the source camera's framing; dialogue sits
+in the remaining 25 rows. The complete opening plays in roughly 21.3 seconds.
+
+Danny does **not** love the mascot job: he is grateful it pays the rent,
+which makes music and painting possible after hours. The seven dialogue beats
+preserve the doctor, Mara and bus story. A advances text; B skips immediately.
 
 The camera now hands off directly to gameplay at the same shop: new games
 start on the adjacent walkable pavement at (20,11), facing east. Existing
@@ -25,11 +28,13 @@ Only confirmed WORK gives +2 work and costs 1 energy; it never gates the chapter
 or forces Danny to enjoy the job. The interaction is deliberately
 disabled during Mara's unresolved missing-person crisis. The shop,
 dialogue, shift cue, native animation tests and renderer-derived
-screenshots all run from the same game code. A literal
-frame-by-frame trace from the user's dance reference is **not yet**
-implemented; the pose timeline is designed to accept it.
+screenshots all run from the same game code. The source landmarks are manually
+estimated and interpolated; costume planes and lighting remain authored pixel
+art. Inferred and cropped joints are identified explicitly in the trace data.
 
-See [the opening direction and engine notes](docs/POTHEADS_OPENING.md).
+See [the opening direction and engine notes](docs/POTHEADS_OPENING.md),
+[the actual-ROM opening film](docs/screenshots/opening.mp4), and
+[its capture provenance](docs/screenshots/opening_film.json).
 
 ## Controls
 
@@ -266,3 +271,4 @@ sampled vocals. L/R changes tabs, D-pad edits, A changes a value,
 SELECT previews, B exits. Every slot saves its own arrangement in
 a checksummed 24-byte extension without changing the main SRAM format.
 See docs/BORE_ADVANCED_STUDIO.md.
+

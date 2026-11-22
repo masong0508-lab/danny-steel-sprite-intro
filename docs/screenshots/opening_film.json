@@ -1,0 +1,266 @@
+{
+  "source_commit": "0ce824831e327da638fc2a19ad263ab5c9b50ecc",
+  "source_rom_sha256": "5179c81d3e7bbb951d5a33571757b9be186ded54117b46ec3958264f48423159",
+  "source_elf_sha256": "fce0fc5a73f9db82b8a40bd7e64c1460e1a38992e1701fb54152bdeb2a07e8c9",
+  "arm_build_toolchain": {
+    "file": "arm_build_toolchain.txt",
+    "sha256": "c33e409dd546449d34d7c53eea35941ff367b35c50ac89d7d8ad9a2b1c4aac31",
+    "record": "Source commit: 0ce824831e327da638fc2a19ad263ab5c9b50ecc\nDocker image reference: devkitpro/devkitarm\nImage ID: sha256:5850ea3193e95244827a1e38cf464a0e730d1b9cc7c276888ceed984cbe38912\nRepoDigests: [\"devkitpro/devkitarm@sha256:116afba8df8453961de2936ffab20dd441edf4d682856c1ec8b0e53d7ed0bbf5\"]\n\nARM compiler: /opt/devkitpro/devkitARM/bin/arm-none-eabi-gcc\narm-none-eabi-gcc (devkitARM) 16.1.0\nCopyright (C) 2026 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n"
+  },
+  "capture": {
+    "source": "mGBA completed GBA video scanout",
+    "emulator_version": "0.10.2",
+    "rom_crc32": "6ff38bad",
+    "elf_crc32": "3848fb05",
+    "elf_rom_bytes_verified": 899252,
+    "elf_match_excludes_gbafix_header_bytes": [
+      4,
+      191
+    ],
+    "width": 240,
+    "height": 160,
+    "frame_count": 1434,
+    "cpu_frequency_hz": 16777216,
+    "cycles_per_video_frame": 280896,
+    "video_rate_hz": 59.727500569606,
+    "requested_seconds": 24.0,
+    "duration_seconds": 24.00904083252,
+    "first_video_frame": 1976,
+    "last_video_frame": 3409,
+    "first_cinema_frame": 1,
+    "last_cinema_frame": 1434,
+    "displayed_page_flips": 491,
+    "changed_video_frames": 410,
+    "first_dialogue_page": 0,
+    "last_dialogue_page": 6,
+    "read_dialogue": true,
+    "dialogue_presses": 6,
+    "dialogue_cues": [
+      150,
+      300,
+      480,
+      810,
+      1020,
+      1200
+    ],
+    "max_cinema_clock_error_ticks": 0,
+    "input_samples_dropped": 0,
+    "game_memory_writes": false,
+    "audio_included": false,
+    "capture_start": "first complete video frame beginning with the opening runtime active",
+    "state_note": "cinema_frame and dialogue_page are read at scanout start; they may lead the previously rendered displayed page",
+    "inputs": [
+      {
+        "video_frame": 1650,
+        "keys": 8,
+        "cinema_frame": 0,
+        "dialogue_page": 0,
+        "cue_cinema_frame": 0
+      },
+      {
+        "video_frame": 1682,
+        "keys": 0,
+        "cinema_frame": 0,
+        "dialogue_page": 0,
+        "cue_cinema_frame": 0
+      },
+      {
+        "video_frame": 1809,
+        "keys": 1,
+        "cinema_frame": 0,
+        "dialogue_page": 0,
+        "cue_cinema_frame": 0
+      },
+      {
+        "video_frame": 1841,
+        "keys": 0,
+        "cinema_frame": 0,
+        "dialogue_page": 0,
+        "cue_cinema_frame": 0
+      },
+      {
+        "video_frame": 1968,
+        "keys": 1,
+        "cinema_frame": 0,
+        "dialogue_page": 0,
+        "cue_cinema_frame": 0
+      },
+      {
+        "video_frame": 1977,
+        "keys": 0,
+        "cinema_frame": 1,
+        "dialogue_page": 0,
+        "cue_cinema_frame": 0
+      },
+      {
+        "video_frame": 2127,
+        "keys": 1,
+        "cinema_frame": 151,
+        "dialogue_page": 0,
+        "cue_cinema_frame": 150
+      },
+      {
+        "video_frame": 2128,
+        "keys": 0,
+        "cinema_frame": 152,
+        "dialogue_page": 1,
+        "cue_cinema_frame": 150
+      },
+      {
+        "video_frame": 2277,
+        "keys": 1,
+        "cinema_frame": 301,
+        "dialogue_page": 1,
+        "cue_cinema_frame": 300
+      },
+      {
+        "video_frame": 2278,
+        "keys": 0,
+        "cinema_frame": 302,
+        "dialogue_page": 2,
+        "cue_cinema_frame": 300
+      },
+      {
+        "video_frame": 2457,
+        "keys": 1,
+        "cinema_frame": 481,
+        "dialogue_page": 2,
+        "cue_cinema_frame": 480
+      },
+      {
+        "video_frame": 2458,
+        "keys": 0,
+        "cinema_frame": 482,
+        "dialogue_page": 3,
+        "cue_cinema_frame": 480
+      },
+      {
+        "video_frame": 2787,
+        "keys": 1,
+        "cinema_frame": 811,
+        "dialogue_page": 3,
+        "cue_cinema_frame": 810
+      },
+      {
+        "video_frame": 2788,
+        "keys": 0,
+        "cinema_frame": 812,
+        "dialogue_page": 4,
+        "cue_cinema_frame": 810
+      },
+      {
+        "video_frame": 2996,
+        "keys": 1,
+        "cinema_frame": 1020,
+        "dialogue_page": 4,
+        "cue_cinema_frame": 1020
+      },
+      {
+        "video_frame": 2997,
+        "keys": 0,
+        "cinema_frame": 1021,
+        "dialogue_page": 5,
+        "cue_cinema_frame": 1020
+      },
+      {
+        "video_frame": 3177,
+        "keys": 1,
+        "cinema_frame": 1201,
+        "dialogue_page": 5,
+        "cue_cinema_frame": 1200
+      },
+      {
+        "video_frame": 3178,
+        "keys": 0,
+        "cinema_frame": 1202,
+        "dialogue_page": 6,
+        "cue_cinema_frame": 1200
+      }
+    ]
+  },
+  "phase_cadence": [
+    {
+      "phase": "descent",
+      "cinema_tick_range": [
+        0,
+        180
+      ],
+      "range_end_exclusive": true,
+      "video_frames": 181,
+      "page_flips": 31,
+      "seconds": 3.030429840087882,
+      "page_flips_per_second": 10.229571920761249,
+      "max_complete_flip_interval": 6
+    },
+    {
+      "phase": "standing",
+      "cinema_tick_range": [
+        180,
+        750
+      ],
+      "range_end_exclusive": true,
+      "video_frames": 569,
+      "page_flips": 190,
+      "seconds": 9.526599884033176,
+      "page_flips_per_second": 19.944156604965098,
+      "max_complete_flip_interval": 3
+    },
+    {
+      "phase": "floor",
+      "cinema_tick_range": [
+        750,
+        1274
+      ],
+      "range_end_exclusive": true,
+      "video_frames": 523,
+      "page_flips": 189,
+      "seconds": 8.756435394287085,
+      "page_flips_per_second": 21.58412544484806,
+      "max_complete_flip_interval": 3
+    },
+    {
+      "phase": "final_hold",
+      "cinema_tick_range": [
+        1274,
+        65536
+      ],
+      "range_end_exclusive": true,
+      "video_frames": 161,
+      "page_flips": 81,
+      "seconds": 2.6955757141113206,
+      "page_flips_per_second": 30.049239417006746,
+      "max_complete_flip_interval": 2
+    }
+  ],
+  "display_scale": 3,
+  "scaling_filter": "nearest-neighbor",
+  "sampling_note": "20/30 FPS derivatives sample source timestamps; their final hold can round by less than one output interval",
+  "mp4": {
+    "file": "opening.mp4",
+    "sha256": "c4acbfcc6be6c658a1a6b359d7e171b3d3ddf122b751356fee16f5f63aef57db",
+    "requested_rate": "native",
+    "video": {
+      "codec_name": "h264",
+      "width": 720,
+      "height": 480,
+      "r_frame_rate": "262144/4389",
+      "avg_frame_rate": "262144/4389",
+      "duration": "24.009041",
+      "nb_frames": "1434"
+    }
+  },
+  "gif": {
+    "file": "opening.gif",
+    "sha256": "233f99427de7fce7182a321a4b53a58ac9442ed58faf92c742d7d41df5f6b472",
+    "requested_rate": "20",
+    "video": {
+      "codec_name": "gif",
+      "width": 720,
+      "height": 480,
+      "r_frame_rate": "20/1",
+      "avg_frame_rate": "20/1",
+      "duration": "24.000000",
+      "nb_frames": "480"
+    }
+  }
+}
