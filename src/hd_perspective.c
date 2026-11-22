@@ -300,6 +300,20 @@ typedef struct {
  int16_t sx,ground,height,depth;
  uint8_t kind;
 } SceneBillboard;
+/* Exactly the interactive/nonwall actors in story.c's 24x18 map, in the
+   original row-major order. Kept in cartridge ROM, not a dynamic pool.
+   The old painter rescanned all 432 tiles for these 13 static entries on
+   every first-person frame. Host map/anchor tests keep the list honest. */
+typedef struct {
+ uint8_t x,y,kind;
+} SceneAnchor;
+static const SceneAnchor scene_anchors[]={
+ {7,2,'H'},
+ {4,5,'L'},{16,5,'K'},{19,5,'B'},
+ {14,6,'R'},
+ {3,7,'P'},{11,7,'C'},{17,7,'V'},{19,7,'M'},{21,7,'S'},
+ {6,11,'W'},{8,11,'F'},{18,12,'Q'}
+};
 #define MAX_VISIBLE_BILLBOARDS 24u
 static SceneBillboard visible[MAX_VISIBLE_BILLBOARDS];
 /* Restore occluding wall columns AFTER a sprite is drawn.
@@ -320,11 +334,10 @@ static void restore_occluding_wall(uint8_t *p,int sx,int h,int depth){
 static void render_billboards(uint8_t *p,int cx,int cy,
                               int fx,int fy,int rx,int ry,unsigned tick){
  unsigned count=0;
- for(int y=0;y<STORY_H;y++)for(int x=0;x<STORY_W;x++){
-  char kind=story_tile(x,y);
-  if(kind!='F'&&kind!='C'&&kind!='B'&&kind!='L'&&kind!='P'&&
-     kind!='V'&&kind!='Q'&&kind!='S'&&kind!='W'&&kind!='H'&&
-     kind!='R'&&kind!='M'&&kind!='K')continue;
+ for(unsigned i=0;i<sizeof scene_anchors/sizeof scene_anchors[0];i++){
+  const SceneAnchor *a=&scene_anchors[i];
+  int x=(int)a->x,y=(int)a->y;
+  char kind=(char)a->kind;
   int dx=x*256+128-cx,dy=y*256+128-cy;
   int forward=dx*fx+dy*fy,side=dx*rx+dy*ry;
   if(forward<85||forward>2200||abs_i(side)>forward*4/3)continue;
