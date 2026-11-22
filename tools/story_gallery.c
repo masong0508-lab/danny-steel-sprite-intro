@@ -208,12 +208,17 @@ int main(int argc,char **argv){
  s.studio_tab=STUDIO_PERFORM;s.activity_choice=1;
  studio_motif_step(18u,&(MotifBeat){0});
  write_frame("12_advanced_studio_perform",&s,110);
+ studio_motif_step(17u,&(MotifBeat){0});
+ write_frame("12a_advanced_studio_rest",&s,110);
+ studio_motif_step(18u,&(MotifBeat){0});
  s.studio_tab=STUDIO_SONG;s.studio_cursor=0;
  write_frame("15_advanced_studio_song",&s,125);
  s.studio_tab=STUDIO_ORDER;s.studio_cursor=2;
  write_frame("16_advanced_studio_order",&s,135);
  s.studio_tab=STUDIO_LYRICS;
  write_frame("17_advanced_studio_lyrics",&s,148);
+ s.studio_tab=STUDIO_CHOIR;
+ write_frame("17a_advanced_studio_choir",&s,148);
  /* Additional actual in-game plot states exercise the expanded native
     cinematics; no art is fabricated for the screenshot pipeline. */
  s.activity=0;s.activity_choice=0;s.dialogue=0;s.ended=0;

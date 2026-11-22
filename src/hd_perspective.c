@@ -5,12 +5,14 @@
 /* A full 240-column perspective renderer for the actual same 24x18
    collision map. All steps and ray offsets are fixed-point, cardinal facing
    exactly matches story_tick(). There is no second depth framebuffer:
-   the 240 x uint16 z strip is a small persistent work array. */
+   the 240 x uint16 z strip is a small persistent work array.
+   Consecutive columns with the SAME original quantized direction share
+   ray and wall shading work; every native column and depth entry remains. */
 static uint16_t wall_depth[HD_W];
 /* Sparse native-column depth/texture cache, not another framebuffer. */
 static uint8_t wall_type[HD_W],wall_u[HD_W],wall_tx[HD_W],wall_ty[HD_W];
 static int abs_i(int a){return a<0?-a:a;}
-static unsigned texel(unsigned x,unsigned y){
+static HD_CANVAS_CODE inline unsigned texel(unsigned x,unsigned y){
  uint32_t v=(x+31u)*1664525u+(y+79u)*1013904223u;
  v^=v>>13;v*=2246822519u;return (unsigned)(v^(v>>11));
 }
@@ -58,7 +60,7 @@ static void set_sky(uint8_t *p,unsigned tick,int facing,int cx,int cy){
  /* A flat-toned, quiet horizon instead of procedural neon sky. */
  hd_line(p,0,79,239,79,HD_STONE);
 }
-static unsigned floor_ink(char t,int wx,int wy,int x,int y,unsigned tick){
+static HD_CANVAS_CODE inline unsigned floor_ink(char t,int wx,int wy,int x,int y,unsigned tick){
  int fx=wx&255,fy=wy&255;
  if(t=='~'){
   if(((fy+((int)tick*2))&63)<4)return HD_GLASS_LIT;
@@ -81,7 +83,9 @@ static unsigned floor_ink(char t,int wx,int wy,int x,int y,unsigned tick){
  if((n&7u)==1u)return HD_ROAD_LIGHT;
  return (x+y)%17==0?HD_ROAD_COOL:HD_ROAD;
 }
-static void floor_render(uint8_t *p,const Story *s,int cx,int cy,
+/* Keep the measured pixel loops in ARM/IWRAM. noinline prevents the
+   Thumb entry point from absorbing them back into cartridge code. */
+static HD_CANVAS_CODE __attribute__((noinline)) void floor_render(uint8_t *p,const Story *s,int cx,int cy,
                          int fx,int fy,int rx,int ry,unsigned tick){
  (void)s;
  /* One projection calculation per scanline, and half-rate horizontal
@@ -90,9 +94,19 @@ static void floor_render(uint8_t *p,const Story *s,int cx,int cy,
   int dist=13500/(y-75); if(dist>2304)dist=2304;
   int side_unit=dist*3*256/480;
   int step=y<98?2:1;
+  /* Existing wall bottom is 79 + floor(10400/(depth+60)).
+     Thus y is covered exactly when depth <= 10400/(y-78)-60.
+     At these floor rows the original 3..150 height clamp cannot alter
+     that test. Reuse the depth strip instead of an extra coverage buffer. */
+  int wall_limit=10400/(y-78)-60;
   int last_tx=-99,last_ty=-99;
   char tile='.';
   for(int x=0;x<240;x+=step){
+   /* Far samples paint pairs. If only one member is exposed, retain
+      the original sample x and write just that visible member. */
+   int paint0=!wall_type[x]||wall_depth[x]>wall_limit;
+   int paint1=step==2&&(!wall_type[x+1]||wall_depth[x+1]>wall_limit);
+   if(!paint0&&!paint1)continue;
    int side=((x-120)*side_unit)>>8;
    int wx=cx+fx*dist+rx*side,wy=cy+fy*dist+ry*side;
    int tx=wx>>8,ty=wy>>8;
@@ -100,12 +114,12 @@ static void floor_render(uint8_t *p,const Story *s,int cx,int cy,
     last_tx=tx;last_ty=ty;tile=story_tile(tx,ty);
    }
    unsigned ink=floor_ink(tile,wx,wy,x,y,tick);
-   p[y*HD_W+x]=(uint8_t)ink;
-   if(step==2)p[y*HD_W+x+1]=(uint8_t)ink;
+   if(paint0)p[y*HD_W+x]=(uint8_t)ink;
+   if(paint1)p[y*HD_W+x+1]=(uint8_t)ink;
   }
  }
 }
-static void wall_column(uint8_t *p,int x,int top,int bottom,char type,
+static HD_CANVAS_CODE void wall_column(uint8_t *p,int x,int width,int top,int bottom,char type,
                         int u,int forward,int tx,int ty){
  int height=bottom-top;
  int tree=type=='T';
@@ -157,16 +171,23 @@ static void wall_column(uint8_t *p,int x,int top,int bottom,char type,
    int signage=hd_potheads_wall_ink(u,v);
    if(signage>=0)c=(unsigned)signage;
   }
-  p[y*HD_W+x]=(uint8_t)c;
+  /* These native spans are at most 11 bytes. Keep the short stores
+     here: GCC otherwise replaces them with a ROM memset per scanline. */
+  volatile uint8_t *out=p+y*HD_W+x;
+  for(int col=0;col<width;col++)out[col]=(uint8_t)c;
   v+=major;
   error+=minor;
   if(error>=height){v++;error-=height;}
  }
- if(top>18 && top<140)hd_pixel(p,x,top,tree?HD_LEAF_LIT:HD_STONE_LIT);
+ if(top>18 && top<140)hd_rect(p,x,top,width,1,tree?HD_LEAF_LIT:HD_STONE_LIT);
 }
-static void cast_walls(uint8_t *p,int cx,int cy,int fx,int fy,int rx,int ry){
- for(int x=0;x<HD_W;x++){
+static HD_CANVAS_CODE __attribute__((noinline)) void cast_walls(uint8_t *p,int cx,int cy,int fx,int fy,int rx,int ry){
+ for(int x=0;x<HD_W;){
   int side=((x-120)*3)/16; /* 0.75 FOV at each edge, fixed-point */
+  /* The original integer projection gives adjacent columns identical
+     directions. Reuse that exact result, without reducing sampling. */
+  int end=x+1;
+  while(end<HD_W && ((end-120)*3)/16==side)end++;
   int dx=fx*32+rx*side,dy=fy*32+ry*side;
   int wx=cx,wy=cy,hit_dist=2400,tx=0,ty=0;
   int previous_tx=cx>>8,previous_ty=cy>>8;
@@ -183,18 +204,23 @@ static void cast_walls(uint8_t *p,int cx,int cy,int fx,int fy,int rx,int ry){
    if(t=='#'||t=='A'||t=='T'){hit=t;hit_dist=step*32;break;}
   }
   if(hit_dist>2300)hit_dist=2300;
-  wall_depth[x]=(uint16_t)hit_dist;
-  wall_type[x]=(uint8_t)hit;
-  if(!hit)continue;
+  for(int col=x;col<end;col++){
+   wall_depth[col]=(uint16_t)hit_dist;
+   wall_type[col]=(uint8_t)hit;
+  }
+  if(!hit){x=end;continue;}
   int height=20800/(hit_dist+60);
   if(height>150)height=150;
   if(height<3)height=3;
   int top=79-height/2,bottom=79+height/2;
   int u=abs_i(dx)>abs_i(dy)?wy&255:wx&255;
-  wall_u[x]=(uint8_t)u;
-  wall_tx[x]=(uint8_t)tx;
-  wall_ty[x]=(uint8_t)ty;
-  wall_column(p,x,top,bottom,hit,u,hit_dist,tx,ty);
+  for(int col=x;col<end;col++){
+   wall_u[col]=(uint8_t)u;
+   wall_tx[col]=(uint8_t)tx;
+   wall_ty[col]=(uint8_t)ty;
+  }
+  wall_column(p,x,end-x,top,bottom,hit,u,hit_dist,tx,ty);
+  x=end;
  }
 }
 static void actor(uint8_t *p,int sx,int ground,int h,char kind,unsigned tick){
@@ -270,7 +296,7 @@ static void restore_occluding_wall(uint8_t *p,int sx,int h,int depth){
   int wh=20800/((int)wall_depth[x]+60);
   if(wh>150)wh=150;
   if(wh<3)wh=3;
-  wall_column(p,x,79-wh/2,79+wh/2,(char)wall_type[x],wall_u[x],
+  wall_column(p,x,1,79-wh/2,79+wh/2,(char)wall_type[x],wall_u[x],
               wall_depth[x],wall_tx[x],wall_ty[x]);
  }
 }
@@ -314,8 +340,10 @@ void hd_first_person_draw(uint8_t *p,const Story *s,unsigned tick){
   camy+=(s->prev_y-(int)s->y)*s->anim*64;
  }
  set_sky(p,tick,s->facing,camx,camy);
- floor_render(p,s,camx,camy,fx,fy,rx,ry,tick);
+ /* Walls use no destination reads. Paint them first so the floor can
+    omit only pixels those same opaque columns already cover. */
  cast_walls(p,camx,camy,fx,fy,rx,ry);
+ floor_render(p,s,camx,camy,fx,fy,rx,ry,tick);
  render_billboards(p,camx,camy,fx,fy,rx,ry,tick);
  /* Sparse rain, never an extra framebuffer or effect allocation. */
  for(unsigned i=0;i<24u;i++){
@@ -326,3 +354,4 @@ void hd_first_person_draw(uint8_t *p,const Story *s,unsigned tick){
           (i&3u)==0u?HD_STONE_LIT:HD_GLASS_LIT);
  }
 }
+

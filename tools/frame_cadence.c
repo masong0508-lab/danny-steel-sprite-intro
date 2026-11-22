@@ -5,10 +5,10 @@
  * Public APIs checked against mGBA 0.10.3 include/mgba/core/core.h.
  * runFrame advances emulated video time, NOT one completed game render.
  * Count DISPCNT page-select transitions at those boundaries instead. This
- * measures this ROM's displayed-page cadence on a scripted opening/town
+ * measures this ROM's displayed-page cadence on opening/town/first-person
  * route; it is not renderer CPU time, physical hardware timing or coverage
  * of every scene. Multiple flips within one video frame would be invisible
- * to this sampler, but play.c deliberately flips at most once per VBlank.
+ * to this sampler, but the runtime flips at most once per VBlank.
  * No game memory, save files, runtime code or emulator speed is modified.
  */
 #define _POSIX_C_SOURCE 200809L
@@ -22,7 +22,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-enum { SAMPLE_FRAMES = 600, KEY_A = 1, KEY_B = 2, KEY_START = 8 };
+enum { SAMPLE_FRAMES = 600, KEY_A = 1, KEY_B = 2, KEY_START = 8, KEY_L = 512 };
 
 static void log_errors(struct mLogger *logger, int category,
                        enum mLogLevel level, const char *format, va_list args) {
@@ -49,7 +49,8 @@ static void advance(struct mCore *core, unsigned frames) {
 static void press(struct mCore *core, unsigned key) {
     /* Polling happens between real renders. Two video-frame pulses can be
        missed while a slow draw is still running; hold through that work.
-       Menu/story handlers consume pressed edges, so this is still one tap. */
+       Menu/story handlers consume pressed edges, so this is still one tap.
+       This also keeps the route usable for comparison with pre-queue ROMs. */
     core->setKeys(core, key);
     advance(core, 32);
     core->setKeys(core, 0);
@@ -174,6 +175,13 @@ int main(int argc, char **argv) {
     picture(core, directory, "town-start");
     measure(core, "town after B dismisses opening", video_hz);
     picture(core, directory, "town-end");
+    /* The original first-person renderer can block for over half a second.
+       A long single hold keeps this comparison route valid on that baseline. */
+    core->setKeys(core,KEY_L); advance(core,96);
+    core->setKeys(core,0); advance(core,192);
+    picture(core,directory,"first-person-start");
+    measure(core,"first-person after L changes camera",video_hz);
+    picture(core,directory,"first-person-end");
     mCoreConfigDeinit(&core->config);
     core->deinit(core);
     free(pixels);

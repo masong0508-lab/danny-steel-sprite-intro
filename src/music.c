@@ -7,11 +7,13 @@
 #include "music_motifs.h"
 #include "studio.h"
 
-/* One 262144-Hz free-running hardware clock. No streaming, samples, interrupts,
- * synthesis buffers or per-frame floating-point work. The title uses its
+/* One 262144-Hz free-running hardware clock. No streaming, samples,
+ * synthesis buffers or per-frame floating-point work. VBlank only extends
+ * the clock through slow draws; all note sequencing stays on main. The title uses its
  * existing authored MIDI events; gameplay uses actual BORE-derived motifs. */
-static u32 total, start, loop_off, cue_next;
-static u16 last;
+static volatile u32 total;
+static u32 start, loop_off, cue_next;
+static volatile u16 last;
 static u32 crash_until;
 static int idx;
 static unsigned active_cue, pending_cue, cue_step;
@@ -46,7 +48,20 @@ static void load_wave(void){
     for(int i=0;i<8;i++)WAVE_RAM[i]=bass_wave[2*i]|(bass_wave[2*i+1]<<8);
     REG_SND3SEL=0x0080;
 }
-static void time_update(void){u16 n=REG_TM3CNT_L;total+=(u16)(n-last);last=n;}
+void music_clock_vblank(void){
+ u16 n=REG_TM3CNT_L;
+ total+=(u16)(n-last);
+ last=n;
+}
+static void time_update(void){
+ /* The two clock fields form one sample. Prevent the IRQ from inserting
+    its own sample between the main-thread read and write. This section
+    does no PSG work and lasts only a few loads/stores. */
+ u16 previous=REG_IME;
+ REG_IME=0;
+ music_clock_vblank();
+ REG_IME=previous;
+}
 void music_stop(void){REG_SND1CNT=0;REG_SND2CNT=0;REG_SND3CNT=0;REG_SND4CNT=0;}
 void music_init(void){
     REG_SNDSTAT=0x0080;
@@ -230,3 +245,4 @@ void music_set_volume(int pct){
     int v=(pct*7+50)/100;
     REG_SNDCTRL_L=(REG_SNDCTRL_L&~0x77)|(v<<4)|v;
 }
+

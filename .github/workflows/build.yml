@@ -65,6 +65,13 @@ jobs:
             src/hd_actor.c src/hd_special.c src/hd_overlay.c \
             tests/hd_nextgen_test.c -o /tmp/danny_hd_nextgen
           /tmp/danny_hd_nextgen
+      - name: Verify optimized first-person pixels and exact floor occlusion
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
+            src/story.c src/studio.c src/hd_canvas.c src/hd_world_atlas.c \
+            src/hd_facade_art.c src/hd_perspective.c \
+            tests/hd_perspective_equivalence_test.c -o /tmp/danny_perspective_equivalence
+          /tmp/danny_perspective_equivalence
       - name: Validate reference-ready Potheads opening, sign and all dance beats
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
@@ -93,6 +100,18 @@ jobs:
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/hd_canvas.c tests/canvas_span_test.c -o /tmp/danny_canvas_spans
           /tmp/danny_canvas_spans
+      - name: Verify chronological input, video clocks and completed-page publication
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/frame_runtime.c src/story.c src/studio.c tests/frame_runtime_test.c -o /tmp/danny_frame_runtime
+          /tmp/danny_frame_runtime
+      - name: Verify exact bitmap transfer and untouched VRAM page boundaries
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -DHOST_TEST -Isrc src/video_present.c tests/video_present_test.c -o /tmp/danny_video_present
+          /tmp/danny_video_present
+      - name: Verify studio controls, real musical feedback and readable selection
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/hd_canvas.c src/studio.c src/hd_studio.c tests/hd_studio_test.c -o /tmp/danny_studio_visual
+          /tmp/danny_studio_visual
       - name: Prove pixel-identical geometry, town coordinates and exact wall-projection rounding
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
@@ -202,6 +221,10 @@ jobs:
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Itests/stubs -Isrc -DHOST_MUSIC_TEST -include tests/stubs/gba.h src/music.c src/studio.c src/music_motifs.c tests/music_engine_test.c -o /tmp/danny_music_engine_test
           /tmp/danny_music_engine_test
+      - name: Verify music clock continuity through blocked drawing and timer wraps
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Itests/stubs -Isrc -DHOST_MUSIC_TEST -include tests/stubs/gba.h src/music.c src/studio.c src/music_motifs.c tests/music_clock_test.c -o /tmp/danny_music_clock
+          /tmp/danny_music_clock
       - name: Check full Here Today score in three endings and good coda
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Itests/stubs -Isrc -DHOST_MUSIC_TEST -include tests/stubs/gba.h src/music.c src/studio.c src/music_motifs.c tests/music_ending_test.c -o /tmp/danny_music_ending_test

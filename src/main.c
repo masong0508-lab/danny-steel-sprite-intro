@@ -10,6 +10,7 @@
 #include "intro.h"
 #include "menu.h"
 #include "play.h"
+#include "frame_runtime.h"
 
 #define TITLE_ROW 1                       // map rows for the text layers
 #define PRESS_ROW 16
@@ -125,12 +126,20 @@ int main(void) {
     logo_play();                                                          // boot logo (~8 s)
     build_sin();
     music_init();
+    frame_runtime_init();                                               // bounded VBlank clock/input, no game logic in IRQ
     intro_play();                                                         // sprite-only intro (~13 s, song starts with it)
     keep_music = 1;
     title_setup();
     int in_vblank = 0;
     for (;;) {
         music_poll();                                                     // keeps the song on time
+        if(in_game){
+            if(play_update()){
+                in_game=0;in_menu=1;menu_enter();
+                in_vblank=REG_VCOUNT>=160;
+            }
+            continue;
+        }
         if (REG_VCOUNT >= 160) {
             if (!in_vblank) {
                 in_vblank = 1;
@@ -138,11 +147,10 @@ int main(void) {
                     int action = menu_update();
                     if (action == 1) { in_menu = 0; intro_reload_title(); title_setup(); }
                     else if (action >= 2) { in_menu = 0; in_game = 1; play_enter(action >= 4, (action - 2) & 1); }
-                } else if (in_game) {
-                    if (play_update()) { in_game = 0; in_menu = 1; menu_enter(); }
                 } else frame_update();
             }
         }
         else in_vblank = 0;
     }
 }
+

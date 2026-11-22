@@ -1,106 +1,191 @@
-# Danny Steel — rendering and stability gate before further art/features
+# Danny Steel — runtime, rendering and release validation
 
-This is a strictly **optimization-only** change to the GBA game.
-No new sprites, maps, animations, features, story flags, soundtrack
-voices, saves or larger framebuffers are introduced. Improvements are
-deliberately required to retain the exact previously shipped pixels
-where the fast path changes.
+This gate records what the GBA build actually does and which evidence is
+required before publishing it. The current continuation fixes missed input
+and lost elapsed time during slow rendering, accelerates existing painters,
+and makes the six studio pages reflect the real editor and sequencer.
+Save formats, story branches, map collision and the shared 240×160 canvas
+remain unchanged. The rendering fast paths must preserve their reference
+pixels; deliberate studio presentation changes have separate functional
+and visual checks.
 
-## What the current GBA code actually guarantees
+## Runtime and presentation contract
 
-- `play_update` processes input, story and music every VBlank, and
-  **attempts** a new game render every other VBlank (~30 render
-  opportunities per second). The actual render can overrun the time
-  available; code inspection or a successful devkitARM build is not proof
-  of sustained 30 FPS.
-- The mode-4 pipeline paints into one 38,400-byte shared EWRAM canvas
-  and copies to the hidden VRAM page before flipping on a later VBlank.
-  The double-buffered video memory exists on GBA hardware; no second
-  EWRAM canvas is allocated.
-- Menus only redraw their animated rain/lighting at about 10 FPS,
-  but input-driven changes redraw immediately.
-- All 24 authored cinema scene types, the Advanced Studio and the
-  timecoded ending montage have higher-resolution artwork. Optional
-  combat now also renders at 240x160 via ROM-resident illustrations;
-  the original gameplay and hitbox tests remain mandatory. This
-  later upgrade is described in `NATIVE_MIRROR_ORCHARD.md`.
+- **VBlank captures time and input.** The interrupt records one key sample
+  per video frame in a fixed 64-entry `uint16_t` queue: 128 bytes plus its
+  counters, with no heap or second framebuffer. It also extends the existing
+  music timer and publishes a completed hidden page when one is ready.
+  Story mutation, painting and audio sequencing remain on the main thread.
+- **Main processes samples chronologically.** A slow draw can delay when
+  an action is applied, but its press/release history and elapsed simulation
+  ticks are retained within the queue's capacity. At most 64 samples are
+  consumed in one call. Overflow discards the oldest sample, retains recent
+  chronology and increments a diagnostic; acceptance probes require zero
+  overflow. This is a bounded recovery policy, not unlimited buffering.
+- **Rendering uses elapsed video frames.** A new draw requires consumed
+  input, no outstanding page publication and at least two real video frames
+  since the preceding draw started. The old alternating-call idle update
+  is gone. This is a pacing rule, not a guarantee of 30 completed frames/s.
+- **A complete page reaches VRAM before publication.** The renderer paints
+  into the existing 38,400-byte shared EWRAM canvas. DMA3 transfers the whole
+  aligned page into hidden VRAM, and only then can VBlank flip the display.
+  The two hardware VRAM pages do not require another EWRAM bitmap.
+- **Clock continuity is distinct from response latency.** The music IRQ
+  extension prevents timer wraps from being lost while main is painting;
+  it does not run PSG sequencing in the interrupt. Note events can still
+  be delayed until main resumes. Likewise, an accepted button sample may
+  need another completed presentation before its result becomes visible.
+- **Menu handoff preserves the held button state.** The A press used to
+  confirm New Game no longer becomes an extra opening-dialogue press.
+  Menu and gameplay transitions are covered by the actual-ROM probe.
 
-## Exact-pixel optimization performed
+The earlier synchronous runtime did not process gameplay every VBlank when
+rendering overran. Claims that it guaranteed that behavior were incorrect;
+its software tick counter advanced only when main returned from drawing.
 
-| Hot path | Previous cost | Optimized mechanism | Expected result |
-|---|---|---|---|
-| Tree canopy, actor shadow and record ellipses | Every raster row restarted width search from zero | Carry monotonic radius upward/downward through the ellipse | Identical pixels, fewer integer multiplications/iterations |
-| First-person facade wall-column textures | Software integer division on every shaded wall pixel | Compute quotient and remainder once per wall column; advance an exact integer remainder accumulator per pixel | Identical wall texture coordinate and shading, far fewer divisions |
-| Immutable town collision/art tiles | 10 independent location coordinate branches on every `story_tile` call | Encode the same 10 static overlays directly in the original 24x18 tile literals | Identical walkability, location IDs and NPC placement with fewer branches on every map lookup |
-| Street grout, menu rules and architectural line strokes | Bresenham stepping and bounds checks for every single axis-aligned pixel | One clipped horizontal or vertical fill; preserve original Bresenham for diagonals | Identical raster, fewer pixel loops for frequent straight strokes |
+## Local ARM validation for the continuation after PR #14
 
-These optimizations preserve the game's semantic input and timed
-animation behavior. In particular, they do **not** skip gameplay
-simulation or increase the frame interval, and they do not trade image
-detail for a fake performance claim.
+These measurements were collected with **Debian ARM GCC 14.2.1 and the
+official devkitPro CRT/specs**, running the resulting ARM ROM in **mGBA
+0.10.5**. They are local candidate results; final devkitARM CI and published
+ROM verification remain release gates. The baseline is the published
+PR #14 build, not the older PR #7 or PR #13 builds recorded below.
 
-## Mandatory regression gates
+### Presentation cadence
 
-- `tests/native_perf_equivalence_test.c` checks the exact pre-patch
-  town tiles, including out-of-range behavior; verifies every texture
-  coordinate for wall heights 1–150 against the original per-pixel
-  quotient; and compares all 38,400 pixels for **500** clipped and
-  unclipped ellipse shapes, plus **363** horizontal, vertical, diagonal,
-  reversed and clipped line strokes, against the original routines
-  with untouched reference drawing code.
-- Existing tests continue to cover native 2D/3D/cinema/studio/palette
-  bounds, complete story routes, rescue outcomes, save migrations,
-  audio continuity, cutscene timing, ending score and GBA ROM compilation.
-- `tests/render_cost_probe.c` prints per-mode average host CPU render
-  time for overhead, perspective, Mara scene, rescue scene, notes,
-  endings and native Mirror Orchard combat. This is an *informational
-  regression indicator on the CI
-  runner*, **not** an ARM7TDMI hardware benchmark or measured FPS.
-- The devkitARM build emits a GNU linker `.map` file and CI reports
-  linked sections plus binary bytes, without requiring the unavailable
-  `arm-none-eabi-size` utility. The baseline after this optimization was
-  **38,400 bytes of EWRAM** (one shared framebuffer), **8,880 bytes of
-  IWRAM BSS**, 20 bytes of linked IWRAM data and zero explicit IWRAM.
-  CI now rejects static EWRAM above **192 KiB** and static IWRAM
-  (.bss + .data + .iwram) above **24 KiB**, leaving at least 8 KiB of
-  IWRAM capacity for stack/interrupt headroom. These are static section
-  budgets, not a claim of measured runtime peak memory usage.
+Each window covers 600 emulated video frames. Rates count displayed Mode-4
+page changes, including identical content, per elapsed emulated second.
+They do not measure host execution speed.
 
-## Explicit hold point
+| State | Published PR #14 baseline | Local candidate | Baseline / candidate interval |
+|---|---:|---:|---:|
+| Potheads opening | 14.932 page flips/s | 19.909 page flips/s | 4 / 3 video frames |
+| Overhead town | 9.955 page flips/s | 14.932 page flips/s | 6 / 4 video frames |
+| First-person town | 1.394 page flips/s | 7.466 page flips/s | 43 / 8 video frames |
 
-Before authorizing further features or more detailed animation:
+The candidate's sampled first-person interval is **133.942 ms**, corresponding
+to 7.466 page flips/s, still below the intended 30 FPS. Three scripted samples do not
+certify worst-case behavior in every location, studio page, battle or ending,
+and no physical-GBA performance result is established here.
 
-1. Strict host tests and devkitARM ROM build must both pass.
-2. A fresh ROM must be published and basic mGBA gameplay/save
-   smoke checks should be repeated.
-3. A repeatable instrumented emulator or physical GBA test should
-   measure worst-case visible frame time in overhead, 3D, cutscenes,
-   Studio and Mirror Orchard. Only these measurements can establish
-   whether the intended 30 FPS target has adequate margin.
-4. If the render regularly exceeds its allotted two VBlanks, optimize
-   the worst scene first; do not add effects while that remains true.
+### Input and simulation timing
 
-**No real-device FPS data is available from these CI workflows yet.**
+The completed local `runtime_probe` run verified:
 
-## Verified optimization acceptance — 2026-11-21
+- 600 processed simulation ticks for 600 video frames, with queue depth
+  0 → 0, in each of the opening, overhead and first-person samples.
+- All **12/12 one-video-frame camera taps** retained, compared with **2/12**
+  in the published baseline test. Observed simulation-state response was
+  1–6 video frames; this is not a measurement of final visible response.
+- Four short first-person turns applied once, with observed state-response
+  intervals of 1, 7, 8 and 3 video frames.
+- Zero queue overflow, one action for a held camera button, correct held
+  movement, and successful pause, quit, menu and restart transitions.
+- Correct held-A handoff from the menu and exactly one dialogue-page advance
+  for a fresh one-frame A press.
+
+All **43 host workflow checks** also passed locally. The actual-ROM probe
+uses symbols from the matching ELF and reads state without patching the ROM,
+writing game state, injecting cheats or loading a user's save. Companion
+screenshots verify that its route reached the intended scenes.
+
+### Linked memory at this local checkpoint
+
+| Static section budget | Measured candidate | CI limit |
+|---|---:|---:|
+| EWRAM | 38,400 bytes | 196,608 bytes |
+| Total IWRAM: `.bss + .data + .iwram` | 17,296 bytes | 24,576 bytes |
+
+The IWRAM total includes fast executable code, the input queue and static
+state. These are linked static-section measurements, not measured peak
+stack usage. The queue adds no image buffer. Final CI must report the exact
+linked sections and ROM bytes for the source that is actually published.
+
+## Completed rendering and studio work
+
+| Area | Mechanism and preserved behavior |
+|---|---|
+| Canvas primitives | Aligned word fills, contiguous full-width spans and ARM/IWRAM primitives retain the exact palette indices and clipping. |
+| Isometric tile copies | Inline alignment-safe spans remove thousands of tiny library-copy calls; all 7,168 atlas bytes remain unchanged. |
+| Town sprites | Person and tree painters clip bounds once and run their transparency loops in ARM/IWRAM, with unchanged art and foot anchors. |
+| First-person walls | Columns with identical original quantized ray directions reuse traversal and shading work while retaining every native column and depth entry. |
+| First-person floor | Walls are established first; exact depth comparisons skip only floor pixels that those opaque walls cover. Pixel loops execute from ARM/IWRAM. |
+| Page transfer | DMA3 copies exactly one completed 38,400-byte canvas into the hidden VRAM page before display publication. |
+| Studio interface | Real patch values, transposed note previews and sequencer events drive the six pages. Correct controls, stopped transport and lyric cues replace misleading feedback. |
+| Studio overdraw | Nonoverlapping page bands and thin borders eliminate 46,536 redundant commanded rectangle pixels per frame with identical output for that isolated optimization. |
+
+The full studio presentation pass reduces measured rectangle-write area by
+42–51% across its six tabs. For example, NOTES falls from 95,426 to 49,306
+commanded pixels, and LIVE from 100,251 to 53,111. These counts describe
+renderer work; they are not emulator FPS measurements. No extra framebuffer,
+heap allocation or decoded image atlas is introduced.
+
+## Regression and release gates
+
+- [`tests/frame_runtime_test.c`](../tests/frame_runtime_test.c) checks
+  chronological taps and holds, elapsed ticks through blocked painting,
+  completed-page publication, bounded overflow and counter wrap.
+- [`tests/music_clock_test.c`](../tests/music_clock_test.c) checks timer-wrap
+  continuity, main/IRQ sampling without double counting, restoration of
+  interrupt state and absence of PSG sequencing in the clock callback.
+- [`tests/video_present_test.c`](../tests/video_present_test.c) checks the
+  full-page transfer contract and page boundaries.
+- [`tests/hd_perspective_equivalence_test.c`](../tests/hd_perspective_equivalence_test.c)
+  preserves **3,456 complete reference frames** across town positions,
+  facings, animation and weather states, plus **136,140** independent
+  floor/wall-depth comparisons. Four actual ARM-rendered frames at ticks
+  729, 737, 745 and 753 also matched the original 38,400-byte pixel output
+  exactly in local verification.
+- [`tests/hd_studio_test.c`](../tests/hd_studio_test.c) verifies all six pages,
+  stopped transport, visible grid/notes, actual transposed pitches,
+  **384** voice-event combinations, palette/guards and read-only rendering.
+- Existing exact-pixel checks retain **48,412** rectangle-span cases,
+  **25,088** golden tile copies, **500** ellipse and **363** line cases.
+  Story, rescue, save migration, music, endings and native graphics checks
+  remain mandatory.
+- [`tools/frame_cadence.c`](../tools/frame_cadence.c) measures the built ROM's
+  opening, overhead and first-person presentation. It is informational and
+  must be reviewed with the accompanying screenshots.
+- [`tools/runtime_probe.c`](../tools/runtime_probe.c) verifies actual ROM
+  timing, input and transitions using its matching ELF. Its assertions are
+  a required runtime gate, with source-tagged results in
+  [`screenshots/runtime_verification.txt`](screenshots/runtime_verification.txt).
+- The devkitARM CI build must pass and emit its real linker-map budgets.
+  The screenshot workflow must produce fresh captures and
+  [`screenshots/emulator_cadence.txt`](screenshots/emulator_cadence.txt) from
+  the same source. A published ROM must then be checked against that source
+  and exercised in mGBA before claiming a playable release was updated.
+
+The existing host render-cost probe remains a useful regression indicator
+for the CI runner. Host microseconds cannot be converted into GBA FPS.
+Future graphics work must keep its visible benefit proportional to its
+measured cost, retain these gates, and prioritize the slowest remaining
+scene rather than assuming that a scheduled two-frame interval is achieved.
+
+## Historical measurements — earlier accepted builds
+
+### PR #7 optimization acceptance — 2026-11-21
 
 [PR #7](https://github.com/masong0508-lab/danny-steel-sprite-intro/pull/7)
-was merged after the entire host regression suite and devkitARM ROM build
-passed on the feature branch
+merged after host tests and the devkitARM build passed on its feature branch
 ([workflow 44936047192](https://github.com/masong0508-lab/danny-steel-sprite-intro/actions/runs/44936047192)).
-The new CI budget gate itself passed with measured linked static sections:
+That build measured 38,400 bytes EWRAM; 8,880 bytes IWRAM BSS plus 20 bytes
+IWRAM data and zero explicit IWRAM code; and a 604,548-byte ROM. These are
+historical totals, not the memory footprint of the current candidate.
 
-- **EWRAM:** 38,400 bytes, against a 196,608-byte enforced limit.
-- **IWRAM:** 8,880 bytes BSS + 20 bytes data, against a 24,576-byte
-  enforced static limit; the physical IWRAM total is 32,768 bytes.
-- **ROM:** 604,548 bytes in the tested devkitARM branch build.
-- **Exact operation checks:** wall texture quotient divisions fall from
-  11,325 to 300 for the 150 tested heights, monotonic ellipse
-  radius comparisons from 128,960 to 25,700, and 363 line-raster
-  cases remain pixel-identical. Town-grid equality passed at 775
-  checked coordinates including out-of-bounds handling.
+Its exact-pixel optimizations carried ellipse scanline radii forward,
+replaced per-pixel wall-texture division with a remainder accumulator,
+encoded ten immutable town overlays in the existing 24×18 map, and used
+single spans for axis-aligned lines. Measured operation checks reduced wall
+texture divisions from 11,325 to 300 for 150 heights and ellipse comparisons
+from 128,960 to 25,700; 363 line cases and 775 town coordinates matched.
+These operation counts did not establish a real-device frame rate.
 
-These metrics are **not** a claim of sustained 30 FPS. The 30 Hz render
-schedule is only a target until a timed emulator/physical GBA benchmark
-establishes worst-case frame completion. No new visual effects or
-animation should be added before that check.
+### PR #13 and PR #14 presentation history
+
+The published PR #13 ROM measured 9.955 opening and 4.977 overhead-town page
+flips/s in mGBA 0.10.5. After the art, visibility and first drawing pass,
+the published PR #14 ROM measured 14.932 and 9.955 respectively on the same
+emulator version. The new first-person sample measured 1.394 page flips/s
+for that PR #14 baseline. The local continuation's three-state comparison
+appears above; the historical rates must not be presented as current results.
