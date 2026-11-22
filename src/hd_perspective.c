@@ -164,14 +164,24 @@ static HD_CANVAS_CODE void wall_column(uint8_t *p,int x,int width,int top,int bo
     DDA produces precisely floor((y-top)*256/height) per scanline, but
     pays for the division only twice per wall column. */
  int v=0,major=256/height,minor=256%height,error=0;
+ /* The wall's horizontal material coordinate is fixed per call.
+    Cache the exact texel result while the vertical 8/16-unit cell stays
+    constant; sprites, windows and mortar still use their normal paths. */
+ int last_vbucket=-1;
+ unsigned cached_texel=0;
  for(int y=top;y<bottom;y++){
   if((unsigned)y>=140u)break;
   unsigned c=base;
   if(tree){
    if(v>178 && u>91 && u<162)c=HD_BARK;
-   else if((texel((unsigned)(u>>3),(unsigned)(v>>3))&3u)==0u)
-    c=HD_LEAF_LIT;
-   else c=HD_LEAF;
+   else{
+    int vb=v>>3;
+    if(vb!=last_vbucket){
+     last_vbucket=vb;
+     cached_texel=texel((unsigned)(u>>3),(unsigned)vb);
+    }
+    c=(cached_texel&3u)==0u?HD_LEAF_LIT:HD_LEAF;
+   }
   }else{
    /* Facade windows fixed to wall texture coordinates, not screen x.
       Floor breaks, mortar and stone relief persist as camera moves. */
@@ -194,9 +204,15 @@ static HD_CANVAS_CODE void wall_column(uint8_t *p,int x,int width,int top,int bo
     else if(v<92&&u>140&&u<153)c=HD_LAMP;
     else if((u&31)<2)c=HD_COPPER;
     else c=((tx+ty)&1)?HD_GLASS_LIT:HD_GLASS;
-   }else if((texel((unsigned)(u>>4)+(unsigned)(tx+40),
-                         (unsigned)(v>>4)+(unsigned)(ty+40))&7u)==0u)
-    c=HD_BRICK_LIT;
+   }else{
+    int vb=v>>4;
+    if(vb!=last_vbucket){
+     last_vbucket=vb;
+     cached_texel=texel((unsigned)(u>>4)+(unsigned)(tx+40),
+                        (unsigned)vb+(unsigned)(ty+40));
+    }
+    if((cached_texel&7u)==0u)c=HD_BRICK_LIT;
+   }
   }
   if(v>225&&(u&15)==1)c=HD_STONE;
   /* Same Potheads shop, same town coordinate in both cameras. This is
