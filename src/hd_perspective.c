@@ -31,11 +31,16 @@ static void dirs(const Story *s,int *fx,int *fy,int *rx,int *ry){
  }
 }
 static void set_sky(uint8_t *p,unsigned tick,int facing,int cx,int cy){
- for(int y=0;y<160;y++){
-  unsigned c=y<24?19:y<54?17:y<74?HD_GLASS:y<84?HD_GLASS_LIT:
-             y<102?HD_ROAD_COOL:y<125?HD_ROAD_LIGHT:HD_ROAD;
-  hd_rect(p,0,y,240,1,c);
- }
+ /* Seven maximal horizontal material runs replace 160 independent row
+    painter calls. Pixel colors, cut lines and the horizon stay exact:
+    our full-width word-span painter writes each contiguous range once. */
+ hd_rect(p,0,0,HD_W,24,19);
+ hd_rect(p,0,24,HD_W,30,17);
+ hd_rect(p,0,54,HD_W,20,HD_GLASS);
+ hd_rect(p,0,74,HD_W,10,HD_GLASS_LIT);
+ hd_rect(p,0,84,HD_W,18,HD_ROAD_COOL);
+ hd_rect(p,0,102,HD_W,23,HD_ROAD_LIGHT);
+ hd_rect(p,0,125,HD_W,35,HD_ROAD);
  /* Layered, place-bound horizon. Neither buildings nor cloud positions
     randomly change when the shot cuts to a dialogue panel. */
  int pan=(facing*71+(cx+cy)/96)%53;
