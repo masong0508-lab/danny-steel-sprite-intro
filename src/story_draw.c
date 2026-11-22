@@ -882,7 +882,8 @@ void story_draw(const Story *s,int frame,uint8_t *p) {
                  "THE LAST PAINTING",20,29);
         else{
             text(p,3,74,story_action_hint(s),20,12);
-            text(p,49,74,"B RISK L VIEW R NOTES",18,26);
+            text(p,49,74,story_risk_available(s)?
+                 "B RISK L VIEW R NOTES":"L VIEW R NOTES",18,26);
         }
     }
 }

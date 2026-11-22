@@ -105,7 +105,7 @@ static void hud(uint8_t *p,const Story *s){
   hd_rect(p,4,34,72,12,HD_INK);
   hd_rect(p,4,34,72,1,HD_COPPER);
   hd_text(p,8,37,s->battle_choice==1?"CARE SHIELD":
-          s->battle_choice==2?"EXIT SAFELY":"FACTS DODGE",
+          s->battle_choice==2?"EXIT SAFELY":"FACTS COUNTER",
           HD_STONE_LIT,1,0);
   hd_rect(p,164,34,72,12,HD_INK);
   hd_rect(p,164,34,72,1,HD_COPPER);

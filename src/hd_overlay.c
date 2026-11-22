@@ -148,7 +148,9 @@ void hd_game_overlay(uint8_t *p,const Story *s){
   hd_rect(p,0,140,240,1,HD_COPPER);
   hd_text(p,8,145,story_action_hint(s),HD_LAMP,1,0);
   hd_text(p,87,145,"L MAP R NOTES",HD_PAPER,1,0);
-  hd_text(p,8,152,"B NEAR OBJECTS = OPTIONAL RISK",HD_STONE_LIT,1,0);
+  hd_text(p,8,152,story_risk_available(s)?
+          "B RISK / EXPLICIT CONFIRMATION":"B / NO RISK AT THIS LOCATION",
+          HD_STONE_LIT,1,0);
  }
 }
 

@@ -231,7 +231,9 @@ enum { D_NONE, D_OPEN, D_LETTER, D_LETTER_AGAIN, D_CLERK_LOCKED, D_CLERK, D_CLER
        D_GOOD_END_SCARS, D_RESCUE_LOST_REMOTE,
        D_SHIFT_EARLY, D_SHIFT_DONE, D_SHIFT_REPEAT,
        D_SHIFT_TIRED, D_SHIFT_PAUSED,
-       D_DOCTOR_RETURN_ALONE };
+       D_DOCTOR_RETURN_ALONE,
+       D_LOOK_POTHEADS, D_LOOK_CANAL, D_LOOK_MARKET,
+       D_LOOK_NORTH, D_LOOK_STREET };
 #define SCRIPT(name, ...) static const StoryPage name[] = { __VA_ARGS__ }
 /* The banana-sign shift is practical income, not Danny's calling. He is
    grateful for the stability without pretending to enjoy mascot work. */
@@ -315,6 +317,21 @@ SCRIPT(d_journal_3,
 SCRIPT(d_nothing,
  {"DANNY", "Nothing here for me.", "Where was I headed?"},
  {"POCKET NOTEBOOK", "Follow NEXT up top.", "R holds my notes."});
+SCRIPT(d_look_potheads,
+ {"DANNY", "Potheads. The suit", "still smells of rain."},
+ {"DANNY", "I can be grateful", "and still want more."});
+SCRIPT(d_look_canal,
+ {"DANNY", "The canal keeps", "its own kind of time."},
+ {"DANNY", "A hundred windows", "in every ripple."});
+SCRIPT(d_look_market,
+ {"DANNY", "Someone patched the", "awning by hand."},
+ {"DANNY", "Not every repair", "has to look new."});
+SCRIPT(d_look_north,
+ {"DANNY", "All these lit rooms.", "Lives I never knew."},
+ {"DANNY", "My song could reach", "one of them someday."});
+SCRIPT(d_look_street,
+ {"DANNY", "The old paving", "holds the rain."},
+ {"DANNY", "I should keep going.", "One block at a time."});
 SCRIPT(d_return,
  {"DANNY", "The city is still", "here. So am I."});
 /* Entirely fictional setting and people. The harm is serious; the bureaucracy is not. */
@@ -783,7 +800,9 @@ static const struct { const StoryPage *pages; uint8_t count; } scripts[] = {
   SEQ(d_good_end_scars), SEQ(d_rescue_lost_remote),
   SEQ(d_shift_early), SEQ(d_shift_done), SEQ(d_shift_repeat),
   SEQ(d_shift_tired), SEQ(d_shift_paused),
-  SEQ(d_doctor_return_alone)
+  SEQ(d_doctor_return_alone),
+  SEQ(d_look_potheads), SEQ(d_look_canal), SEQ(d_look_market),
+  SEQ(d_look_north), SEQ(d_look_street)
 };
 const StoryPage *story_pages(const Story *s, int *count) {
     unsigned id = s->dialogue;
@@ -986,9 +1005,12 @@ static void cult_tick(Story *s, uint16_t pressed) {
     ++s->battle_timer;
     if (s->battle_timer % STORY_BATTLE_BEAT == 0) {
         int beat = (int)(s->battle_timer / STORY_BATTLE_BEAT) - 1;
-        if (s->battle_lane == story_attack_lane(s, beat) && !s->battle_parry) {
-            if (s->battle_guard) s->battle_guard = 0;
-            else if (s->battle_focus) --s->battle_focus;
+        if(s->battle_lane==story_attack_lane(s,beat)){
+            if(s->battle_parry){
+                if(s->battle_choice==0u && s->battle_focus<4u)
+                    ++s->battle_focus; /* Accurate FACTS counter */
+            }else if(s->battle_guard) s->battle_guard=0;
+            else if(s->battle_focus) --s->battle_focus;
         }
     }
     if (s->battle_timer >= STORY_BATTLE_BEAT*STORY_BATTLE_STRIKES) {
@@ -1159,9 +1181,23 @@ static char nearby_actor(const Story *s){
     static const int dx[4]={1,0,-1,0},dy[4]={0,1,0,-1};
     char c=story_tile(s->x+dx[s->facing],s->y+dy[s->facing]);
     if(!actor_tile(c)){
-        for(int i=0;i<4;i++){
-            char a=story_tile(s->x+dx[i],s->y+dy[i]);
-            if(actor_tile(a)){c=a;break;}
+        /* At a four-way crossroads the old E/S/W/N fallback could select
+           the MUSIC station when the player had followed the LAST BUS
+           waypoint to its neighboring tile. Prefer the current objective
+           only when the player is not explicitly facing another actor. */
+        int gx=0,gy=0;const char *label=0;
+        if(story_goal(s,&gx,&gy,&label) &&
+           ((gx==(int)s->x &&
+              (gy==(int)s->y-1||gy==(int)s->y+1)) ||
+            (gy==(int)s->y &&
+              (gx==(int)s->x-1||gx==(int)s->x+1))) &&
+           actor_tile(story_tile(gx,gy))){
+            c=story_tile(gx,gy);
+        }else{
+            for(int i=0;i<4;i++){
+                char a=story_tile(s->x+dx[i],s->y+dy[i]);
+                if(actor_tile(a)){c=a;break;}
+            }
         }
     }
     return c;
@@ -1185,6 +1221,16 @@ const char *story_action_hint(const Story *s){
     case 'H':return "A DOOR";
     default:return "A LOOK";
     }
+}
+int story_risk_available(int story_risk_available(const Story *s){
+    char target=nearby_actor(s);
+    unsigned bit=target=='L'?STORY_BAD_LETTER:
+                 target=='C'?STORY_BAD_CLERK:
+                 target=='M'?STORY_BAD_MUSIC:
+                 target=='S'?STORY_BAD_SERVER:0u;
+    return bit && !(s->bad_mask&bit) &&
+           s->rescue_stage!=STORY_RESCUE_LOST &&
+           s->rescue_stage!=STORY_RESCUE_AFTERSHOCK;
 }
 static void begin_bad_film(Story *s){
     s->ended=1;s->ending=STORY_END_BAD;s->life_stage=STORY_LIFE_NONE;
@@ -1431,7 +1477,20 @@ static void interact(Story *s) {
         if (s->cult_stage == 2) { s->cult_stage = 3; talk(s, D_CULT_SAFETY); s->dirty = 1; }
         else talk(s, D_CULT_SAFE_AGAIN);
         break;
-    default: talk(s, D_NOTHING); break;
+    default:
+        /* Standing still    default:
+        /* Standing still is an invitation to notice the neighborhood,
+           not a dead control. Geography decides the short observation. */
+        if(s->x>=17u && s->y>=9u && s->y<=13u)
+            talk(s,D_LOOK_POTHEADS);
+        else if(s->x>=15u && s->y>=13u)
+            talk(s,D_LOOK_CANAL);
+        else if(s->x<=7u && s->y>=8u)
+            talk(s,D_LOOK_MARKET);
+        else if(s->y<=7u)
+            talk(s,D_LOOK_NORTH);
+        else talk(s,D_LOOK_STREET);
+        break;
     }
 }
 void story_tick(Story *s, uint16_t keys) {
@@ -1694,9 +1753,7 @@ void story_tick(Story *s, uint16_t keys) {
                      target=='C'?STORY_BAD_CLERK:
                      target=='M'?STORY_BAD_MUSIC:
                      target=='S'?STORY_BAD_SERVER:0u;
-        if(bit && !(s->bad_mask&bit) &&
-           s->rescue_stage!=STORY_RESCUE_LOST &&
-           s->rescue_stage!=STORY_RESCUE_AFTERSHOCK){
+        if(bit && story_risk_available(s)){
             s->risk_menu=(uint8_t)target;s->risk_choice=0;
             s->cinema=target=='L'?CINE_LETTER:
                 target=='C'?CINE_BORE:

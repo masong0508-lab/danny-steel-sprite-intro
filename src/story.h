@@ -121,6 +121,7 @@ int story_route(const Story *s, int *direction, int *steps);
 const char *story_goal_reason(const Story *s);
 /* Exactly the same adjacent target priority as pressing A. */
 const char *story_action_hint(const Story *s);
+int story_risk_available(const Story *s); /* only at confirmed optional risk sites */
 const StoryPage *story_pages(const Story *s, int *count);
 
 /* Deterministic enemy tells and waves: shared by logic, renderer and host tests. */
