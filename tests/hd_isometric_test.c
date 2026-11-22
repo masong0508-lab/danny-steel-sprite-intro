@@ -1,5 +1,6 @@
 #include "hd_canvas.h"
 #include "hd_isometric_atlas.h"
+#include "hd_world_atlas.h"
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -23,6 +24,39 @@ static uint32_t checksum_with(unsigned minimum){
  }
  assert(detail>minimum);
  return h;
+}
+/* Compare the real world frame to the known player sprite, not merely
+   to a changing scene checksum. The old spawn passed all checksum tests
+   while a foreground building covered every red-coat and skin pixel. */
+static void readable_player(const Story *s,unsigned frame,int cx,int foot){
+ uint8_t reference[22u*34u];
+ clear();memset(guarded.pixel,64,HD_BYTES);
+ hd_world_person_art(guarded.pixel,cx,foot,0u,s->facing,
+                     s->anim?((frame/7u)&1u):0u);
+ for(int y=0;y<34;y++)for(int x=0;x<22;x++)
+  reference[y*22+x]=guarded.pixel[(foot-32+y)*HD_W+cx-11+x];
+ clear();hd_world_draw(guarded.pixel,s,frame);checksum_with(1000u);
+ unsigned coat=0,skin=0,coat_total=0,skin_total=0;
+ for(int y=0;y<34;y++)for(int x=0;x<22;x++){
+  unsigned want=reference[y*22+x];
+  unsigned got=guarded.pixel[(foot-32+y)*HD_W+cx-11+x];
+  if(want==HD_RED||want==HD_RED_SHADE){
+   coat_total++;if(got==want)coat++;
+  }
+  if(want==HD_SKIN||want==HD_SKIN_LIT){
+   skin_total++;if(got==want)skin++;
+  }
+ }
+ assert(coat_total>100u&&skin_total>0u);
+ /* A tree, bus or small physical sign can still cover part of him;
+    depth is retained. His actual coat and skin must remain readable. */
+ assert(coat*4u>=coat_total);
+ assert(skin*8u>=skin_total);
+ if(s->x==20u&&s->y==11u&&!s->anim){
+  /* The first playable view has a much stronger readability contract. */
+  assert(coat*10u>=coat_total*9u);
+  assert(skin*4u>=skin_total*3u);
+ }
 }
 int main(void){
  Story s;story_new(&s,0);
@@ -72,6 +106,7 @@ int main(void){
    /* Legend remains grounded over geometry at the original HUD band. */
    assert(guarded.pixel[0]==HD_INK);
    assert(guarded.pixel[17*HD_W+25]==HD_COPPER);
+   readable_player(&s,100u,120,88);
    clear();hd_world_draw(guarded.pixel,&s,100u);
    assert(checksum_with(1000u)==views[facing]); /* deterministic authored view */
    s.anim=3;s.prev_x=s.x>0?s.x-1:s.x;
@@ -83,8 +118,30 @@ int main(void){
    assert(views[f]!=views[g]); /* directions remain distinguishable */
  }
  assert(checks>=24u);
+ /* Actual walkable steps into and out of the shop lane. Explicit screen
+    anchors cover both signs of fractional depth and all three gait
+    offsets, so a destination-only cutaway cannot regress moving actors. */
+ const int walks[][8]={
+  {20,11,19,11,3,108,82,0},{20,11,19,11,2,112,84,0},
+  {20,11,19,11,1,116,86,0},{19,11,20,11,3,132,94,1},
+  {19,11,20,11,2,128,92,1},{19,11,20,11,1,124,90,1},
+  {20,12,20,11,3,132,82,2},{20,12,20,11,2,128,84,2},
+  {20,12,20,11,1,124,86,2},{20,11,20,12,3,108,94,3},
+  {20,11,20,12,2,112,92,3},{20,11,20,12,1,116,90,3}
+ };
+ for(unsigned i=0;i<sizeof walks/sizeof walks[0];i++){
+  const int *w=walks[i];
+  assert(!story_solid(w[0],w[1])&&!story_solid(w[2],w[3]));
+  s.x=(uint8_t)w[0];s.y=(uint8_t)w[1];
+  s.prev_x=(uint8_t)w[2];s.prev_y=(uint8_t)w[3];
+  s.anim=(uint8_t)w[4];s.facing=(uint8_t)w[7];
+  readable_player(&s,100u,w[5],w[6]);
+  readable_player(&s,107u,w[5],w[6]);
+ }
  printf("isometric atlas: 14 distinct ROM diamonds and clipped sprite art OK\n");
  printf("isometric projection: %u compass/position frames, deterministic and guarded\n",checks);
+ puts("player visibility: 40 static views and 24 interpolated walking frames retain coat/skin");
  puts("Original 24x18 map, interactions, collision, SRAM layout and first-person camera unchanged");
  return 0;
 }
+

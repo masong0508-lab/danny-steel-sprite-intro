@@ -86,6 +86,11 @@ connected sleeves, trouser legs, distinct hair, tapered jaws and smaller eyes.
 Slate and burgundy material ramps sit behind warm practical lights and skin.
 Fourteen existing town diamonds are repainted in place: broken wet setts,
 connected moss, water and slate roof courses. Their ROM footprint is unchanged.
+Foreground buildings that cover Danny now become low architectural
+cross-sections. Their footprint and collision remain unchanged, and Potheads
+keeps its sign attached to a physical pier. The cutaway and depth insertion
+follow his interpolated position during a step. Regression captures check
+40 static views and 24 walking frames against his actual coat and skin pixels.
 
 The normal and missing-person café now share one facade painter with the same
 cornice, upper vents, awning, counter and cake stand. The empty chair stands
@@ -110,6 +115,17 @@ presentation rates, not the approximately 30 opportunities/second the source
 intends. Host microseconds cannot substitute for this check. The probe covers
 two scripted states, includes presentation stalls, and does not certify every
 scene or physical hardware. Review the new report before making an FPS claim.
+
+The canvas drawing primitives use ARM code copied to IWRAM by the existing
+devkitARM startup. Rectangle fills align their destination and write packed
+four-pixel words; full-width rectangles become one contiguous span. Tiny
+fills keep byte stores, and scale-one text writes clipped pixels directly.
+This preserves every palette index and uses the same implementation in host
+captures. The independent span test checks 48,412 rectangles, clipping and
+buffer alignment, with guard bytes around the output. The ARM linker gate
+counts executable IWRAM as well as static data and leaves at least 8 KiB for
+the stack. The emulator report, rather than the host test's runtime, determines
+whether this improves presentation cadence.
 
 ## Remaining visual priorities
 

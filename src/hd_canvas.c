@@ -56,9 +56,18 @@ static const uint8_t alphabet[36][7]={
  {14,17,17,14,17,17,14}, /* 8 */
  {14,17,17,15,1,1,30} /* 9 */
 };
-void hd_pixel(uint8_t *p,int x,int y,unsigned c){
+static inline __attribute__((always_inline))
+void canvas_pixel(uint8_t *p,int x,int y,unsigned c){
  if((unsigned)x<HD_W&&(unsigned)y<HD_H)p[y*HD_W+x]=(uint8_t)c;
 }
+void hd_pixel(uint8_t *p,int x,int y,unsigned c){
+ canvas_pixel(p,x,y,c);
+}
+/* The shared page is EWRAM, not VRAM. Byte heads/tails are legal here.
+   may_alias makes the aligned word stores valid over a uint8_t canvas;
+   volatile word stores prevent GCC replacing this IWRAM loop with a
+   ROM memset call. No DMA channel or interrupt state is touched. */
+typedef uint32_t CanvasWord __attribute__((may_alias));
 void hd_rect(uint8_t *p,int x,int y,int w,int h,unsigned c){
  int x2=x+w,y2=y+h;
  if(x<0)x=0;
@@ -66,7 +75,42 @@ void hd_rect(uint8_t *p,int x,int y,int w,int h,unsigned c){
  if(x2>HD_W)x2=HD_W;
  if(y2>HD_H)y2=HD_H;
  if(x>=x2||y>=y2)return;
- for(int yy=y;yy<y2;yy++)memset(p+yy*HD_W+x,(int)c,(unsigned)(x2-x));
+ unsigned width=(unsigned)(x2-x),rows=(unsigned)(y2-y);
+ uint8_t ink=(uint8_t)c,*row=p+y*HD_W+x;
+ /* One-pixel strokes are common and need no alignment setup. */
+ if(width<4u){
+  for(unsigned yy=0;yy<rows;yy++,row+=HD_W){
+   row[0]=ink;
+   if(width>1u)row[1]=ink;
+   if(width>2u)row[2]=ink;
+  }
+  return;
+ }
+ /* Consecutive full-width rows form one contiguous span. */
+ if(width==HD_W){width*=rows;rows=1u;}
+ unsigned head=(unsigned)(-(uintptr_t)row)&3u;
+ unsigned words=(width-head)>>2,tail=(width-head)&3u;
+ uint32_t fill=(uint32_t)ink*0x01010101u;
+ for(unsigned yy=0;yy<rows;yy++,row+=HD_W){
+  if(head){
+   row[0]=ink;
+   if(head>1u)row[1]=ink;
+   if(head>2u)row[2]=ink;
+  }
+  volatile CanvasWord *out=(volatile CanvasWord *)(void *)(row+head);
+  unsigned count=words;
+  while(count>=4u){
+   out[0]=fill;out[1]=fill;out[2]=fill;out[3]=fill;
+   out+=4;count-=4u;
+  }
+  while(count--)*out++=fill;
+  uint8_t *end=(uint8_t *)(void *)out;
+  if(tail){
+   end[0]=ink;
+   if(tail>1u)end[1]=ink;
+   if(tail>2u)end[2]=ink;
+  }
+ }
 }
 static int abs_i(int n){return n<0?-n:n;}
 void hd_line(uint8_t *p,int x,int y,int xx,int yy,unsigned c){
@@ -84,7 +128,7 @@ void hd_line(uint8_t *p,int x,int y,int xx,int yy,unsigned c){
  }
  int dx=abs_i(xx-x),dy=abs_i(yy-y),sx=x<xx?1:-1,sy=y<yy?1:-1,err=dx-dy;
  for(;;){
-  hd_pixel(p,x,y,c);
+  canvas_pixel(p,x,y,c);
   if(x==xx&&y==yy)break;
   int twice=2*err;
   if(twice>-dy){err-=dy;x+=sx;}
@@ -120,7 +164,10 @@ void hd_text(uint8_t *p,int x,int y,const char *s,unsigned ink,int scale,int tra
   unsigned n=c>='A'&&c<='Z'?(unsigned)(c-'A'):c>='0'&&c<='9'?(unsigned)(26+c-'0'):36u;
   if(n<36u){
    for(int j=0;j<7;j++)for(int i=0;i<5;i++)
-    if(alphabet[n][j]&(16u>>i))hd_rect(p,x+i*scale,y+j*scale,scale,scale,ink);
+    if(alphabet[n][j]&(16u>>i)){
+     if(scale==1)canvas_pixel(p,x+i,y+j,ink);
+     else hd_rect(p,x+i*scale,y+j*scale,scale,scale,ink);
+    }
   }else if(c=='.')hd_rect(p,x+2*scale,y+6*scale,scale,scale,ink);
   else if(c==':'){hd_rect(p,x+2*scale,y+2*scale,scale,scale,ink);hd_rect(p,x+2*scale,y+5*scale,scale,scale,ink);}
   else if(c=='/'){for(int j=0;j<7;j++)hd_rect(p,x+(4-j*2/3)*scale,y+j*scale,scale,scale,ink);}

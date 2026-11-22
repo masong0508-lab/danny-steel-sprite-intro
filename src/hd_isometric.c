@@ -69,8 +69,29 @@ static void potheads_fascia(uint8_t *p,int sx,int sy,int h){
  hd_line(p,x+12,y+8,x+7,y+10,HD_LEAF);
  hd_line(p,x+12,y+8,x+17,y+9,HD_LEAF);
 }
+/* A foreground building may hide the entire 34-pixel player at the
+   storefront spawn. Reveal only the architectural mass intersecting his
+   actual moving silhouette. This is a low wall cross-section, never a
+   second actor painted on top of a roof. All world footprints stay put. */
+static void cutaway(uint8_t *p,int sx,int sy,int front,int side){
+ const int h=6;
+ for(int col=0;col<16;col++){
+  if(front)hd_rect(p,sx+col,sy+8+col/2-h,1,h,HD_BRICK_DARK);
+  if(side)hd_rect(p,sx+16+col,sy+16-col/2-h,1,h,HD_SHADOW);
+ }
+ for(int row=1;row<15;row++){
+  int lo=row<8?16-row*2:(row-7)*2;
+  hd_rect(p,sx+lo,sy-h+row,32-lo*2,1,HD_WET);
+ }
+ /* A thick dark section and broken stone lip explain the removed roof. */
+ hd_line(p,sx+2,sy+8-h,sx+16,sy+15-h,HD_STONE_DARK);
+ hd_line(p,sx+17,sy+15-h,sx+29,sy+9-h,HD_STONE_DARK);
+ hd_line(p,sx+3,sy+8-h,sx+12,sy+12-h,HD_BARK);
+ hd_line(p,sx+20,sy+13-h,sx+27,sy+10-h,HD_MORTAR);
+}
 static void building(uint8_t *p,int sx,int sy,int wx,int wy,
-                     unsigned tick,char type){
+                     unsigned tick,char type,int actor_x,int actor_foot,
+                     int actor_depth){
  unsigned n=grain(wx,wy);
  /* Shared roof heights are deliberately keyed to 3x3 districts;
     visually contiguous blocks never extrude like shuffled cubes. */
@@ -81,6 +102,20 @@ static void building(uint8_t *p,int sx,int sy,int wx,int wy,
     selection is per district, NOT independent random shop wallpaper. */
  unsigned variant=(unsigned)(((wx/3)*5+(wy/3)*3)&7);
  int potheads=(wx==21&&wy==11);
+ /* Projected bounds include the small chimney above the roof. The
+    fixed-point depth uses the same gait interpolation as the actor. */
+ if((wx+wy)*8>actor_depth && sx<actor_x+12 && sx+32>actor_x-12 &&
+    sy-(int)h-5<actor_foot+2 && sy+16>actor_foot-32){
+  cutaway(p,sx,sy,front,side);
+  if(potheads&&side){
+   /* Retain the far sign pier, outside the walking silhouette, so the
+      existing bracket has a real attachment even with the roof cut. */
+   hd_rect(p,sx+30,sy-(int)h,3,(int)h+8,HD_SHADOW);
+   hd_rect(p,sx+31,sy-(int)h,1,(int)h+7,HD_LEAF_DARK);
+   potheads_fascia(p,sx,sy,(int)h);
+  }
+  return;
+ }
  if(potheads)variant=7u;
  else if(wx>=21&&wy>=10&&wy<=12)variant=4u;
  else if(type=='A')variant=6u;
@@ -207,37 +242,41 @@ void hd_isometric_draw(uint8_t *p,const Story *s,unsigned tick){
    hd_iso_tile(p,sx,sy,material(c,wx,wy));
   }
  rain(p,tick);
- unsigned player_depth=(unsigned)s->x+(unsigned)s->y;
+ int ox=0,oy=0;
+ if(s->anim){
+  ox=((int)s->prev_x-(int)s->x -
+      ((int)s->prev_y-(int)s->y))*s->anim*4;
+  oy=((int)s->prev_x-(int)s->x +
+      ((int)s->prev_y-(int)s->y))*s->anim*2;
+ }
+ int actor_x=120+ox,actor_foot=88+oy;
+ int player_depth=((int)s->x+(int)s->y)*8+oy;
  int drew_player=0;
  for(int depth=-2;depth<=STORY_W+STORY_H+1;depth++){
+  /* Insert between the actual fractional depth planes while walking;
+     drawing at the destination cell early would put him through walls. */
+  if(!drew_player&&depth*8>player_depth){
+   hd_world_person_art(p,actor_x,actor_foot,0u,s->facing,
+                       s->anim?((tick/7u)&1u):0u);
+   drew_player=1;
+  }
   for(int wx=-1;wx<=STORY_W;wx++){
    int wy=depth-wx;
    if(wy<-1||wy>STORY_H)continue;
    int sx,sy;projection(s,wx,wy,&sx,&sy);
    if(sx<=-48||sx>=256||sy<=-55||sy>=166)continue;
    char c=story_tile(wx,wy);
-   if(c=='#'||c=='A')building(p,sx,sy,wx,wy,tick,c);
+   if(c=='#'||c=='A')building(p,sx,sy,wx,wy,tick,c,
+                            actor_x,actor_foot,player_depth);
    else if(c=='T'||c=='F'||c=='C'||c=='P'||c=='V'||
            c=='Q'||c=='W'||c=='B'||c=='L'||c=='K'||
            c=='M'||c=='S'||c=='H'||c=='R'||c=='D')
     object(p,sx,sy,c,tick,wx,wy);
    if(wx==17&&wy==13)lamp(p,sx,sy,tick);
   }
-  if(!drew_player&&depth>=(int)player_depth){
-   int ox=0,oy=0;
-   if(s->anim){
-    ox=((int)s->prev_x-(int)s->x -
-        ((int)s->prev_y-(int)s->y))*s->anim*4;
-    oy=((int)s->prev_x-(int)s->x +
-        ((int)s->prev_y-(int)s->y))*s->anim*2;
-   }
-   hd_world_person_art(p,120+ox,88+oy,0u,s->facing,
-                       s->anim?((tick/7u)&1u):0u);
-   drew_player=1;
-  }
  }
  if(!drew_player)
-  hd_world_person_art(p,120,88,0u,s->facing,0u);
+  hd_world_person_art(p,actor_x,actor_foot,0u,s->facing,0u);
  /* The original story_goal is a logical coordinate, not a new quest.
     Render a restrained in-world cue only if the target is visible. */
  int gx,gy;
