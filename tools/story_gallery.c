@@ -303,6 +303,11 @@ int main(int argc,char **argv){
  s.battle_lane=0;s.battle_focus=2;s.battle_parry=5;
  write_frame("32_orchard_rebrand_parry",&s,291);
  s.battle=0;
+ /* A real, optional environmental remark from the actual game script. */
+ story_new(&s,0);s.dialogue=0;s.cinema=CINE_NONE;
+ stand(&s,20,11,1);press(&s,1u);
+ write_frame("40_potheads_street_observation",&s,210);
+ done(&s);
  puts("Actual Danny Steel story renderer gallery generated");
  return 0;
 }

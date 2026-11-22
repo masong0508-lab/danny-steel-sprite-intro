@@ -139,6 +139,18 @@ jobs:
             src/hd_ending.c src/hd_arena.c src/hd_arena_art.c \
             tests/render_cost_probe.c -o /tmp/danny_render_cost
           /tmp/danny_render_cost
+      - name: Follow the playable bus route and verify environmental interactions
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
+            src/story.c src/studio.c tests/guided_bus_interaction_test.c \
+            -o /tmp/danny_guided_bus_interaction
+          /tmp/danny_guided_bus_interaction
+      - name: Test precision FACTS counter versus CARE defensive guard
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
+            src/story.c src/studio.c tests/combat_focus_counter_test.c \
+            -o /tmp/danny_focus_counter
+          /tmp/danny_focus_counter
       - name: Test story progression and map accessibility
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c tests/story_test.c -o /tmp/danny_story_test
