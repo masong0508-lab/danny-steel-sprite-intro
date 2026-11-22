@@ -73,6 +73,12 @@
 #define BATTLE_NONE 0
 #define BATTLE_MENU 1
 #define BATTLE_DODGE 2
+/* A readable half-second attack tell at 60 VBlanks. Four strikes make
+   one wave, two waves make one duel. No extra battle or save fields. */
+#define STORY_BATTLE_BEAT 30u
+#define STORY_BATTLE_STRIKES 4u
+#define STORY_BATTLE_PARRY 15u
+#define STORY_BATTLE_PARRY_CD 30u
 
 typedef struct {
     uint8_t x, y, facing, view, flags, ended, ending, slot;
@@ -108,6 +114,13 @@ int story_solid(int x, int y);
 /* World-space primary story objective. Returns zero only after an ending.
    Pure query: does not change the optional Mirror Orchard progression. */
 int story_goal(const Story *s, int *x, int *y, const char **label);
+/* Route to a WALKABLE tile next to the current objective, not straight
+   through the wall containing it. Direction 0=E,1=S,2=W,3=N and -1=near.
+   steps is the remaining movement count; queries never change save data. */
+int story_route(const Story *s, int *direction, int *steps);
+const char *story_goal_reason(const Story *s);
+/* Exactly the same adjacent target priority as pressing A. */
+const char *story_action_hint(const Story *s);
 const StoryPage *story_pages(const Story *s, int *count);
 
 /* Deterministic enemy tells and waves: shared by logic, renderer and host tests. */

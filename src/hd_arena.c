@@ -28,8 +28,8 @@ static void enemy(uint8_t *p,unsigned rival,unsigned tick){
 static void telegraph(uint8_t *p,const Story *s,unsigned frame){
  (void)frame;
  if(s->battle!=BATTLE_DODGE)return;
- unsigned beat=s->battle_timer/15u;
- unsigned phase=s->battle_timer%15u;
+ unsigned beat=s->battle_timer/STORY_BATTLE_BEAT;
+ unsigned phase=s->battle_timer%STORY_BATTLE_BEAT;
  if(beat>=4u)return;
  unsigned lane=(unsigned)story_attack_lane(s,(int)beat);
  int target=57+(int)lane*63;
@@ -40,14 +40,14 @@ static void telegraph(uint8_t *p,const Story *s,unsigned frame){
  hd_ellipse(p,target,129,16,2,HD_COPPER);
  /* A crumpled paper warning travels down the appropriate attack
     corridor. On the fifteenth story frame the game checks this lane. */
- int x=120+(target-120)*(int)phase/14;
- int y=82+(int)phase*44/14;
- int size=5+(int)phase*9/14;
+ int x=120+(target-120)*(int)phase/(int)(STORY_BATTLE_BEAT-1u);
+ int y=82+(int)phase*44/(int)(STORY_BATTLE_BEAT-1u);
+ int size=5+(int)phase*9/(int)(STORY_BATTLE_BEAT-1u);
  hd_ellipse(p,x+2,y+2,size/2+1,size/2+1,HD_SHADOW);
  hd_ellipse(p,x,y,size/2+1,size/2+1,HD_PAPER);
  hd_line(p,x-size/3,y-size/3,x+size/3,y+size/3,HD_STONE);
  hd_line(p,x-size/3,y+size/3,x+size/3,y-size/3,HD_COPPER);
- if(phase>=8u)hd_pixel(p,x,y,HD_RED);
+ if(phase>=STORY_BATTLE_BEAT/2u)hd_pixel(p,x,y,HD_RED);
 
 }
 static void badge(uint8_t *p,int x,int y,const char *name,unsigned active){
@@ -104,18 +104,29 @@ static void hud(uint8_t *p,const Story *s){
      a full-width banner cropping the rival's hair, hat or costume ears. */
   hd_rect(p,4,34,72,12,HD_INK);
   hd_rect(p,4,34,72,1,HD_COPPER);
-  hd_text(p,8,37,"LEFT/RIGHT",HD_STONE_LIT,1,0);
+  hd_text(p,8,37,s->battle_choice==1?"CARE SHIELD":
+          s->battle_choice==2?"EXIT SAFELY":"FACTS DODGE",
+          HD_STONE_LIT,1,0);
   hd_rect(p,164,34,72,12,HD_INK);
   hd_rect(p,164,34,72,1,HD_COPPER);
   hd_text(p,168,37,"A PICK B EXIT",HD_STONE_LIT,1,0);
  }else{
+  /* A readable, explicit target card. The warning matches the SAME
+     strike used in cult_tick(); it is not a decorative random arrow. */
+  static const char *const lanes[3]={"DANGER LEFT","DANGER MIDDLE",
+                                   "DANGER RIGHT"};
+  unsigned next=s->battle_timer/STORY_BATTLE_BEAT;
+  if(next>=STORY_BATTLE_STRIKES)next=STORY_BATTLE_STRIKES-1u;
+  hd_rect(p,5,28,83,12,HD_INK);
+  hd_rect(p,5,28,83,1,HD_COPPER);
+  hd_text(p,9,31,lanes[story_attack_lane(s,(int)next)],HD_LAMP,1,0);
   char wave[]="ROUND 1/2";
   wave[6]=(char)('1'+(s->battle_progress&1u));
   hd_text(p,8,143,"LEFT RIGHT / MOVE",HD_PAPER,1,0);
   hd_text(p,151,143,"A / PARRY",HD_GOLD,1,0);
   hd_text(p,8,151,wave,HD_STONE_LIT,1,0);
   char hit[]="BEAT 1/4";
-  hit[5]=(char)('1'+(s->battle_timer/15u)%4u);
+  hit[5]=(char)('1'+(s->battle_timer/STORY_BATTLE_BEAT)%STORY_BATTLE_STRIKES);
   hd_text(p,154,151,hit,HD_STONE_LIT,1,0);
  }
 }

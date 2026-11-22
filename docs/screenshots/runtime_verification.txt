@@ -1,4 +1,4 @@
-Source commit: 00fc2b1296ff2b591771e4ee39aa15ec39cb84df
+Source commit: 2c44a1f3552ea6be83fbac781bf16fdd9a2d2602
 mGBA 0.10.2; read-only runtime verification, Story bytes=62
 PASS: built ROM exports its real input-queue counters
 opening state: scene=1, dialogue=1, page=0, ticks=176
@@ -17,7 +17,7 @@ PASS: active Mode4 display survives the clock window
 PASS: one-frame A press advances exactly one dialogue page
 PASS: B reaches overhead town gameplay
 PASS: actual ROM capture saved
-town clock: video=600, processed=600, queue=1->1, accounted=600
+town clock: video=600, processed=600, queue=0->0, accounted=600
 PASS: clock window advances 600 emulated video frames
 PASS: input queue remains bounded
 PASS: processed plus queued ticks track video time

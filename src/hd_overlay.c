@@ -133,14 +133,22 @@ void hd_game_overlay(uint8_t *p,const Story *s){
  if(s->view){
   int gx=0,gy=0;const char *goal="";
   int has=story_goal(s,&gx,&gy,&goal);
+  int dir=-1,steps=-1;
+  int route=story_route(s,&dir,&steps);
+  const char *relative=!route?"LOST":steps==0?"HERE":
+      (dir-(int)s->facing+4)%4==0?"AHEAD":
+      (dir-(int)s->facing+4)%4==1?"RIGHT":
+      (dir-(int)s->facing+4)%4==2?"BACK":"LEFT";
   hd_rect(p,0,0,240,18,HD_INK);
   hd_rect(p,0,17,240,1,HD_COPPER);
   hd_text(p,8,5,"OLD QUARTER",HD_PAPER,1,1);
-  hd_text(p,110,5,has?goal:"LOOK AROUND",HD_LAMP,1,1);
+  hd_text(p,106,5,has?goal:"LOOK AROUND",HD_LAMP,1,0);
+  hd_text(p,186,5,has?relative:"",HD_STONE_LIT,1,0);
   hd_rect(p,0,140,240,20,HD_INK);
   hd_rect(p,0,140,240,1,HD_COPPER);
-  hd_text(p,8,145,"AT STREET LEVEL",HD_LAMP,1,1);
-  hd_text(p,8,153,"A TALK   B CHOICE   L MAP   R JOURNAL",HD_PAPER,1,0);
+  hd_text(p,8,145,story_action_hint(s),HD_LAMP,1,0);
+  hd_text(p,87,145,"L MAP R NOTES",HD_PAPER,1,0);
+  hd_text(p,8,152,"B NEAR OBJECTS = OPTIONAL RISK",HD_STONE_LIT,1,0);
  }
 }
 

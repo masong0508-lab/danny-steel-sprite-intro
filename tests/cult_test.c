@@ -19,10 +19,10 @@ static void stand(Story *s,int x,int y,int facing){
     s->prev_x=s->x;s->prev_y=s->y;s->facing=(uint8_t)facing;
 }
 static void all_good(Story *s){
-    for(int i=0;i<200 && s->battle;i++){
+    for(int i=0;i<700 && s->battle;i++){
         if(s->battle==BATTLE_MENU)press(s,A);
         else {
-            int next=s->battle_timer / 15;
+            int next=s->battle_timer / STORY_BATTLE_BEAT;
             /* Choose a lane that will not be hit by the next incoming bubble. */
             int target=(story_attack_lane(s,next)+1)%3;
             if(s->battle_lane < target) press(s,RIGHT);

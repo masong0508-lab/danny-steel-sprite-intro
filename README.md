@@ -40,10 +40,12 @@ See [the opening direction and engine notes](docs/POTHEADS_OPENING.md),
 
 * **Title:** START for main menu.
 * **Menu:** LEFT/RIGHT, A select, B back; NEW GAME, CONTINUE and ERASE SAVE support two persistent slots. Erasing requires holding A on the chosen slot for 40 frames.
-* **Exploration, map:** D-pad walk, A talk/read/interact with adjacent objects, L or SELECT toggle to first-person, R journal.
-* **Exploration, first-person:** UP/DOWN move forward/backward, LEFT/RIGHT turn 90 degrees, A interact, L or SELECT return to map, R journal.
+* **Exploration, map:** D-pad walk, A talk/read/interact with adjacent objects, L or SELECT toggle first-person, R context notes. The top compass now shows a **walkable route** toward the current goal (direction plus number of steps to a valid interaction square), not a straight line through buildings. The lower A-button prompt names the nearby action.
+* **Exploration, first-person:** UP/DOWN move forward/backward, LEFT/RIGHT turn 90 degrees, A interact, L or SELECT return to map, R context notes. The compass turns with you (AHEAD/RIGHT/BACK/LEFT) so the indicated route stays usable in this view.
 * **Dialogue:** A next, B dismiss. At the bus choose GO or STAY with LEFT/RIGHT and A; B cancels. GO with 100% main-story completion produces the good epilogue; GO with enough but incomplete progress starts the numbered-day neutral route. STAY continues exploration.
-* **Pause:** START; B saves and returns to the menu.
+* **Pause:** START; B saves and returns to the menu. While paused, press R to cycle three completion/consequence checklists and the new **FIELD GUIDE** page with your next objective, its meaning, a safe route, and basic controls. B closes the journal without quitting; START resumes. Optional B choices near certain objects are always confirmed before they affect the story.
+
+For context-sensitive navigation, the four-page paused journal and the fairer optional combats, see [the playability overhaul](docs/PLAYABILITY_OVERHAUL.md).
 
 The **same grid coordinates and quest-state flags** drive the top-down map and pseudo-3D first-person view; neither mode is a disconnected cutscene. Both modes feature locations, streets, trees, the BORE clerk, Mara, the letter and bus. The camera interpolates steps. The overhead view, menus, first-person streets, all 24 authored cinematic scenes, the three music-synchronized endings and all six Studio pages now render natively at 240x160. Mirror Orchard combat now also has a native 240x160 renderer with three hand-authored ROM backgrounds and rival portraits instead of enlarged 120x80 art. The renderers use low-memory palette artwork and no heap-allocated framebuffers. The overhead city now uses **54,816 bytes of cartridge-native terrain, 4-direction citizen costume and tree artwork**, all sharing the existing Mode 4 screen buffer; the first-person renderer reuses those same character cels for consistent silhouettes. The default walking camera now uses a **native 2.5D isometric projection** with ROM-authored wet street, canal, roof and pavement diamonds, raised masonry and depth-sorted streets; L/SELECT retains the existing first-person camera, and the story grid remains unchanged. Before further visual effects or animation, the project now requires [pixel-equivalence and performance-budget checks](docs/GBA_PERFORMANCE_GATE.md); the rendering cadence targets 30 redraws per second but sustained 30 FPS on physical GBA is not yet measured. See [the native graphic overhaul](docs/TITLE_MENU_PRESENTATION.md), [second full-resolution graphics pass](docs/NATIVE_GRAPHICS_SECOND_PASS.md), [third cinematic/character refinement](docs/GBA_VISUAL_REFINEMENT_III.md) [the native Mirror Orchard battle art](docs/NATIVE_MIRROR_ORCHARD.md), [the cartridge-authored Old Quarter pass](docs/OLD_QUARTER_ATLAS_PASS.md), [the isometric rainy-city camera](docs/ISOMETRIC_RAINY_QUARTER.md) and [actual GBA screenshots](docs/SCREENSHOT_GALLERY.md).
 
@@ -54,9 +56,9 @@ GBA ROM: `make` with devkitARM installed. Output is `danny_steel_title.gba` to r
 Host tests locally:
 
 ```sh
-gcc -std=c11 -Wall -Wextra -Werror -Isrc src/story.c tests/story_test.c -o /tmp/danny_story_test
+gcc -std=c11 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c tests/story_test.c -o /tmp/danny_story_test
 /tmp/danny_story_test
-gcc -std=c11 -Wall -Wextra -Werror -Isrc src/story.c src/story_draw.c tests/render_test.c -o /tmp/danny_render_test
+gcc -std=c11 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c src/story_draw.c src/cinema.c tests/render_test.c -o /tmp/danny_render_test
 /tmp/danny_render_test
 ```
 
@@ -71,7 +73,7 @@ This is an **original** fictional fandom server and fictional characters, not a 
 The story's three recurring hecklers are visible as fixed, reachable NPCs in **both** overhead and first-person exploration. Press **A** beside them to enter a 3D-perspective speech duel. They appear *before* Danny learns of the server, *during* the investigation and *after* its conclusion, with different dialogue and attack patterns. These fights do **not** gate the main chapter or reward harm toward people.
 
 * **Encounter menu:** LEFT/RIGHT to select FACTS, CARE or EXIT; A confirm; B disengage. FACTS and CARE each begin a projected arena attack wave. CARE absorbs the first hit. Two completed waves end the duel.
-* **Perspective arena:** LEFT/RIGHT move between the three visible lanes. Incoming paper-warning tells originate at the rival's actual position, follow the game's target lane, and impact every 15 VBlanks. A parries for a six-frame window, with an eighteen-frame cooldown. Losing focus ends the encounter without a game-over; leave and return whenever you like.
+* **Perspective arena:** LEFT/RIGHT move between three lanes. A labelled LEFT/MIDDLE/RIGHT danger warning agrees with the paper projectile and its real collision lane. Attacks arrive every 30 VBlanks (half a second); a timed A parries for 15 frames with a 30-frame cooldown. CARE absorbs the first hit. Losing focus ends the encounter without a game-over; EXIT/B lets you withdraw safely.
 * **Side-story progression:** use the terminal in the eastern plaza → ask what the witness needs → find the offline safe house → return to the terminal to preserve evidence and file reports. Read R journal updates for the current step. All of this is optional and independent of the letter / stamp / Mara / bus arc.
 * **Persistence:** v2 SRAM save slots now track stage and pre/post fight outcomes. Existing 13-byte v1 slots load and automatically upgrade on a subsequent save. The battle itself is not serialized; it restarts cleanly when re-entered.
 
@@ -85,7 +87,7 @@ The instant two-way ending has been replaced with a longer, saved timeline. The 
 
 **Neutral ending — implemented.** Finish the three core main-story tasks but leave one or both art/music tasks incomplete, then choose GO. Instead of ending immediately, Danny remains in the Old Quarter, can keep exploring and painting, and starts a numbered life-simulator day. On Day 2 he receives a clinic notification, then can visit the outpatient office in the east quarter for the first doctor scene. On Day 3 he gets the final appointment notification and visits again for the diagnosis of advanced, unspecified-type cancer. There is no automatic ending timer after that visit: the player has to return to the rooftop stairway on the north plaza, where a 4,350-frame, 11-shot score-length sequence shows Danny making his last brushstrokes, gradually slumping against the canvas, and dying there. The scene stays grounded to the real rooftop, revisits earlier memories, and returns to the painting before the neutral screen appears. The death is non-graphic, and the scene cannot be speed-skipped into an accidental ending.
 
-**Bad ending — storyboarding, not yet playable.** The planned off-camera rooftop death and its dialogue require a careful, deliberately authored narrative path. There is deliberately no failure counter that automatically converts losing a fight or missing a collectible into a self-harm sequence.
+**Bad ending — implemented through deliberate harmful choices.** A third separately confirmed violation can trigger Mara's disappearance and a playable rescue investigation. Abandoning the safe-house rescue or choosing a fourth harmful act while Mara remains unverified leads to two playable days of hope and an unresolved, non-graphic ending. An additional deliberate violation after a successful rescue produces a distinct loss-of-trust film. Losing a fight, resting, declining a conversation, or taking ordinary creative choices never triggers that ending automatically.
 
 On the GBA, the same 120×80 bitmap and 32-entry color palette are reused for the doctor, notification, record-shop and rooftop cinematics. No framebuffer, heap allocation or procedural texture budget is added. The patient-facing medical storyline is fictional and deliberately does not specify a cancer subtype.
 
@@ -104,7 +106,7 @@ The opening chapter's dialogue now directs a **new low-memory cinematic renderer
 
 The GBA's gameplay score now uses authentic melodic note sequences taken from the BORE projects: **Whistler Man** for neighborhood exploration, **Nursery Time** for comical bureaucracy, and **Closer to the End** for the Mirror Orchard confrontations. The original Danny Steel D-major title theme is preserved.
 
-All endings use the complete 20-phrase **Here Today (Original)** tune, from the BORE source composition (86 actual melody notes over 72.5 seconds, not an endlessly recycled 32-note riff). Each ending starts the score **once**: subsequent dialogue lines or camera shots do not restart it. After Here Today resolves, only the good ending receives a separate 16-second Closer/Whistler BORE legacy coda. Neutral and the reserved bad-ending music hook end quietly. **The bad ending narrative route itself is still not playable.** For the timing and source provenance, see `docs/BORE_SOUNDTRACK.md`.
+All endings use the complete 20-phrase **Here Today (Original)** tune, from the BORE source composition (86 actual melody notes over 72.5 seconds, not an endlessly recycled 32-note riff). Each ending starts the score **once**: subsequent dialogue lines or camera shots do not restart it. After Here Today resolves, only the good ending receives a separate 16-second Closer/Whistler BORE legacy coda. Neutral and the reserved bad-ending music hook end quietly. **The bad ending is playable as a deliberately chosen consequence route.** For the timing and source provenance, see `docs/BORE_SOUNDTRACK.md`.
 
 The GBA audio implementation keeps four built-in PSG channels, uses the existing Timer 3 clock, retains old SRAM saves and renders no PCM buffers. The complete ending tune is stored as a compact timecoded event table. GitHub Actions now checks melodic material, PSG timing, score completion and the good-only coda. Real hardware audio and frame-rate testing is still needed.
 

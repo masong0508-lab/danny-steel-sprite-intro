@@ -14,7 +14,7 @@ enum {
     STORY_CHECK_MARA_SAFE,
     STORY_CHECK_COUNT
 };
-#define STORY_CHECK_PAGE_COUNT 3u
+#define STORY_CHECK_PAGE_COUNT 4u /* three checklists + live field guide */
 #define STORY_CHECKS_PER_PAGE 5u
 #define STORY_CHECK_PAGE_ACTIVE 0x80u
 #define STORY_CHECK_PAGE_MASK 0x06u

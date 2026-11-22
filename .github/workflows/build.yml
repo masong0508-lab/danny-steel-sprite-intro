@@ -151,6 +151,22 @@ jobs:
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c src/story_draw.c src/cinema.c tests/objective_test.c -o /tmp/danny_objective_test
           /tmp/danny_objective_test
+      - name: Validate navigable shortest route, context-sensitive controls and field guide
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
+            src/story.c src/studio.c src/story_draw.c src/cinema.c \
+            tests/story_navigation_test.c -o /tmp/danny_story_navigation
+          /tmp/danny_story_navigation
+      - name: Verify playable Mirror Orchard timing, legible danger and defensive choice
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
+            src/story.c src/studio.c src/hd_canvas.c src/hd_actor.c \
+            src/hd_arena.c src/hd_arena_art.c tests/combat_readability_test.c \
+            -o /tmp/danny_combat_readability
+          /tmp/danny_combat_readability
+      - name: Audit authored script readability, punctuation and missing placeholders
+        run: |
+          python3 tests/story_script_quality_test.py
       - name: Test five optional day activities, changing scenes and clinic access
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c src/story_draw.c src/cinema.c tests/daily_moments_test.c -o /tmp/danny_daily_moments_test
