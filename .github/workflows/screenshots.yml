@@ -7,6 +7,8 @@ on:
       - "tools/story_gallery.c"
       - "tools/frame_cadence.c"
       - "tools/runtime_probe.c"
+      - "tools/opening_film.c"
+      - "tools/encode_opening_film.py"
       - "Makefile"
       - "src/**"
       - "tests/potheads_open_test.c"
@@ -29,7 +31,7 @@ jobs:
       - name: Install screenshot tools and mGBA core
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq libmgba-dev libpng-dev imagemagick
+          sudo apt-get install -y -qq libmgba-dev libpng-dev imagemagick ffmpeg
       - name: Build mGBA headless picture capture
         run: |
           git clone --depth 1 https://github.com/JohnnySun/gba-rom-debugger.git /tmp/gba-rom-debugger
@@ -52,7 +54,24 @@ jobs:
           done
       - name: Compile this revision's playable ROM for mGBA capture
         run: |
-          docker run --rm -v "$PWD:/work" -w /work devkitpro/devkitarm make
+          set -euo pipefail
+          docker pull devkitpro/devkitarm
+          arm_image_id="$(docker image inspect --format '{{.Id}}' devkitpro/devkitarm)"
+          {
+            printf 'Source commit: %s\n' "$GITHUB_SHA"
+            printf 'Docker image reference: devkitpro/devkitarm\n'
+            printf 'Image ID: %s\n' "$arm_image_id"
+            docker image inspect --format 'RepoDigests: {{json .RepoDigests}}' "$arm_image_id"
+          } > docs/screenshots/arm_build_toolchain.txt
+          # Record the compiler from the same container that builds the ROM.
+          # Both operations use the resolved image ID, never the mutable tag.
+          docker run --rm -v "$PWD:/work" -w /work "$arm_image_id" sh -ec '
+            arm_compiler="${DEVKITARM:-${DEVKITPRO:-/opt/devkitpro}/devkitARM}/bin/arm-none-eabi-gcc"
+            printf "\nARM compiler: %s\n" "$arm_compiler" >> docs/screenshots/arm_build_toolchain.txt
+            "$arm_compiler" --version >> docs/screenshots/arm_build_toolchain.txt
+            make
+          '
+          cat docs/screenshots/arm_build_toolchain.txt
       - name: Run the current playable ROM in headless mGBA
         run: |
           /tmp/gba-rom-debugger/bin/gba-walk danny_steel_title.gba docs/screenshots             run:1650 snap:01_title             press:START:32 run:127 snap:02_main_menu             press:A:32 run:127 snap:03_save_slots             press:A:32 run:152 snap:04_story_in_emulator
@@ -75,6 +94,89 @@ jobs:
             printf 'Source commit: %s\n' "$GITHUB_SHA"
             /tmp/danny_runtime_probe danny_steel_title.gba danny_steel_title.elf docs/screenshots
           } | tee docs/screenshots/runtime_verification.txt
+      - name: Film the complete opening from the actual ROM with natural caption inputs
+        run: |
+          set -euo pipefail
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc tools/opening_film.c -lmgba -o /tmp/danny_opening_film
+          opening_capture="$(mktemp -d)"
+          trap 'rm -rf "$opening_capture"' EXIT
+          {
+            printf 'Source commit: %s\n' "$GITHUB_SHA"
+            /tmp/danny_opening_film danny_steel_title.gba danny_steel_title.elf "$opening_capture" 24 --read-dialogue
+            python3 tools/encode_opening_film.py "$opening_capture"
+          } | tee docs/screenshots/opening_capture.txt
+          cp "$opening_capture/opening.mp4" docs/screenshots/opening.mp4
+          cp "$opening_capture/opening.gif" docs/screenshots/opening.gif
+          # Publish a concise, portable provenance record. Native PPM frames
+          # remain temporary; the film is actual scanout, not the host gallery.
+          python3 - "$opening_capture" <<'PY'
+          import hashlib
+          import json
+          import csv
+          import os
+          from pathlib import Path
+          import sys
+
+          directory = Path(sys.argv[1])
+          capture = json.loads((directory / "capture.json").read_text())
+          encoded = json.loads((directory / "opening.json").read_text())
+          with (directory / "frames.csv").open(newline="") as stream:
+              timeline = list(csv.DictReader(stream))
+          phase_cadence = []
+          # Windows follow the observed cinema clock. Held final images are
+          # reported separately so they cannot inflate the motion's rate.
+          for name, low, high in (("descent", 0, 180), ("standing", 180, 750),
+                                  ("floor", 750, 1274), ("final_hold", 1274, 65536)):
+              indices = [i for i, row in enumerate(timeline)
+                         if low <= int(row["cinema_frame"]) < high]
+              flips = [i for i in indices if i > 0 and
+                       timeline[i]["display_page"] != timeline[i-1]["display_page"]]
+              gaps = [b-a for a, b in zip(flips, flips[1:])]
+              seconds = len(indices) / capture["video_rate_hz"]
+              phase_cadence.append({
+                  "phase": name, "cinema_tick_range": [low, high],
+                  "range_end_exclusive": True, "video_frames": len(indices),
+                  "page_flips": len(flips), "seconds": seconds,
+                  "page_flips_per_second": len(flips) / seconds if seconds else None,
+                  "max_complete_flip_interval": max(gaps) if gaps else None,
+              })
+          toolchain_path = Path("docs/screenshots/arm_build_toolchain.txt")
+          toolchain_record = toolchain_path.read_bytes()
+          capture_keys = (
+              "source", "emulator_version", "rom_crc32", "elf_crc32", "elf_rom_bytes_verified",
+              "elf_match_excludes_gbafix_header_bytes", "width", "height", "frame_count",
+              "cpu_frequency_hz", "cycles_per_video_frame", "video_rate_hz",
+              "requested_seconds", "duration_seconds", "first_video_frame",
+              "last_video_frame", "first_cinema_frame", "last_cinema_frame",
+              "displayed_page_flips", "changed_video_frames", "first_dialogue_page",
+              "last_dialogue_page", "read_dialogue", "dialogue_presses", "dialogue_cues",
+              "max_cinema_clock_error_ticks", "input_samples_dropped",
+              "game_memory_writes", "audio_included", "capture_start", "state_note", "inputs",
+          )
+          report = {
+              "source_commit": os.environ["GITHUB_SHA"],
+              "source_rom_sha256": encoded["source_rom_sha256"],
+              "source_elf_sha256": encoded["source_elf_sha256"],
+              "arm_build_toolchain": {
+                  "file": toolchain_path.name,
+                  "sha256": hashlib.sha256(toolchain_record).hexdigest(),
+                  "record": toolchain_record.decode("utf-8"),
+              },
+              "capture": {key: capture[key] for key in capture_keys},
+              "phase_cadence": phase_cadence,
+              "display_scale": encoded["display_scale"],
+              "scaling_filter": encoded["scaling_filter"],
+              "sampling_note": encoded["sampling_note"],
+          }
+          for kind in ("mp4", "gif"):
+              report[kind] = {
+                  "file": "opening." + kind,
+                  "sha256": encoded[kind]["sha256"],
+                  "requested_rate": encoded[kind]["requested_rate"],
+                  "video": encoded[kind]["probe"]["streams"][0],
+              }
+          Path("docs/screenshots/opening_film.json").write_text(json.dumps(report, indent=2) + "\n")
+          PY
       - name: Verify dimensions and save contact sheet
         run: |
           identify -format '%f %wx%h\n' docs/screenshots/*.png
@@ -89,7 +191,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add docs/screenshots
           if ! git diff --cached --quiet; then
-            git commit -m "docs: capture actual mGBA and game-renderer screenshots [skip ci]"
+            git commit -m "docs: capture actual mGBA opening film and game screenshots [skip ci]"
             # Do not attach old captures or runtime results to newer code.
             # A concurrent ROM/image publication has no effect on these tests.
             git fetch origin "${GITHUB_REF_NAME}"

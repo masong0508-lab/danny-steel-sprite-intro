@@ -214,11 +214,14 @@ thread.
    1× and nearest-neighbor enlargement. Keep the actor and current story prop
    readable before increasing texture density.
 2. Continue measuring actual ROM cadence, input response and linked memory
-   headroom. The published release still takes 117.199 ms between sampled
-   first-person presentations; the 30 FPS target has not been achieved.
-3. Exact rotoscope of Danny's Potheads dance when the original reference
-   video is available to this coding workspace. The present eight samples
-   are artist-authored, not a claim to traced footage.
+   headroom. The PR15 published baseline took 117.199 ms between sampled
+   first-person presentations. Current measurements are recorded separately
+   in the capture reports; a game-wide 30 FPS target remains unachieved.
+3. Continue comparing costume contours and anatomical overlap against the
+   complete Potheads reference. The original source is now available and the
+   opening uses 110 measured poses through its floor turns and partial exit;
+   visibility, inference and source crop are explicit in the committed trace.
+   See [the full motion and capture notes](POTHEADS_OPENING.md).
 
 The three outside-game examples supplied for quality critique are a
 visual warning against flatness, not assets transplanted into Danny Steel or

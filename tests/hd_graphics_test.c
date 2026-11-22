@@ -57,8 +57,14 @@ int main(void){
  prepare();memset(view.pixels,HD_ROAD,HD_BYTES);
  hd_game_overlay(view.pixels,&s);
  check();
+ assert(view.pixels[135*HD_W]==HD_GOLD);
+ assert(view.pixels[103*HD_W+8]==HD_ROAD); /* opening leaves full source crop clear */
+ s.cinema=CINE_LETTER; /* ordinary conversations retain the larger native panel */
+ hd_game_overlay(view.pixels,&s);
+ check();
  assert(view.pixels[103*HD_W+8]==HD_COPPER);
  assert(menu_erase_step(0,0,1)==0);
  puts("native 240x160 scenes: bounded drawing, all menus, traversal, overlays and in-place upscale OK");
  return 0;
 }
+

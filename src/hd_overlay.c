@@ -26,6 +26,20 @@ void hd_game_overlay(uint8_t *p,const Story *s){
   int count=0;const StoryPage *pages=story_pages(s,&count);
   if(pages && s->page<(unsigned)count){
    const StoryPage *d=&pages[s->page];
+   if(s->cinema==CINE_OPEN){
+    /* Full 240x135 source framing stays above this film caption. */
+    hd_rect(p,0,135,240,25,HD_INK);
+    hd_rect(p,0,135,240,1,HD_GOLD);
+    hd_text(p,6,139,d->speaker,HD_LAMP,1,0);
+    hd_rect(p,37,139,1,16,HD_STONE_DARK);
+    hd_text(p,44,139,d->line1,HD_PAPER,1,0);
+    hd_text(p,44,149,d->line2,HD_PAPER,1,0);
+    hd_text(p,201,139,"A NEXT",HD_STONE_LIT,1,0);
+    hd_text(p,201,149,"B SKIP",HD_STONE_LIT,1,0);
+    for(int i=0;i<count&&i<9;i++)
+     hd_rect(p,7+i*4,150,2,3,i<=s->page?HD_LAMP:HD_STONE_DARK);
+    return;
+   }
    framebox(p,8,103,224,54);
    hd_rect(p,13,108,4,10,HD_GOLD);
    hd_rect(p,19,106,91,13,HD_BRICK_DARK);
@@ -129,3 +143,4 @@ void hd_game_overlay(uint8_t *p,const Story *s){
   hd_text(p,8,153,"A TALK   B CHOICE   L MAP   R JOURNAL",HD_PAPER,1,0);
  }
 }
+

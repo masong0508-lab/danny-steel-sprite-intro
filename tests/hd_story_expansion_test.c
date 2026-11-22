@@ -64,6 +64,38 @@ int main(void){
  for(int y=6;y<31;y++)for(int x=6;x<234;x++)
   sky_repeat=(sky_repeat^frame.pixels[y*HD_W+x])*16777619u;
  assert(sky_before==sky_repeat);
+ /* A single physical envelope stays in the witness's hand while Danny
+    approaches. At contact both wrists support that same sheet. Test
+    approach boundaries and both breathing poses; the old shot had an
+    extra floating copy and neither actor could reach it. */
+ unsigned handoff_frames[]={0u,54u,83u,95u,96u,110u,152u,188u};
+ for(unsigned k=0;k<sizeof handoff_frames/sizeof handoff_frames[0];k++){
+  unsigned t=handoff_frames[k],breath=(t/38u)&1u;
+  clear();hd_cinema_draw(frame.pixels,&s,t);
+  (void)checksum();
+  unsigned paper_pixels=0u;
+  for(int y=104;y<136;y++)for(int x=90;x<176;x++){
+   if(frame.pixels[y*HD_W+x]==HD_PAPER){
+    assert(x>=149&&x<=164);
+    assert(y>=108+(int)breath&&y<=116+(int)breath);
+    paper_pixels++;
+   }
+  }
+  assert(paper_pixels>80u);
+  assert(frame.pixels[(115u+breath)*HD_W+162u]==HD_SKIN_LIT);
+  if(t>=96u)
+   assert(frame.pixels[(115u+breath)*HD_W+153u]==HD_SKIN_LIT);
+ }
+ /* Tiny documents must not spill their printed lines onto a counter or
+    floor. These are separate actual scenes using two paper sizes. */
+ s.cinema=CINE_SERVER;s.page=1;
+ clear();hd_cinema_draw(frame.pixels,&s,119u);(void)checksum();
+ assert(frame.pixels[118u*HD_W+145u]==HD_BARK);
+ assert(frame.pixels[123u*HD_W+145u]!=HD_STONE);
+ s.cinema=CINE_FINALE;s.page=6;
+ clear();hd_cinema_draw(frame.pixels,&s,3000u);(void)checksum();
+ for(int y=150;y<157;y++)for(int x=106;x<121;x++)
+  assert(frame.pixels[y*HD_W+x]!=HD_STONE);
  /* An empty café still has a real illuminated counter; adding detail
     must NEVER accidentally add Mara when she is missing. In a separate
     scene, the safehouse sconce remains anchored across the rescue door
@@ -91,6 +123,14 @@ int main(void){
     color, not the black turntable that occupied its old floating spot. */
  assert(frame.pixels[86u*HD_W+69u]==HD_GLASS_LIT);
  assert(frame.pixels[91u*HD_W+75u]==HD_GOLD);
+ /* The turntable has a counter-supported plinth, an attached pivot and
+    a cartridge resting on the vinyl. The old arm stopped in midair. */
+ assert(frame.pixels[114u*HD_W+139u]==HD_COPPER);
+ assert(frame.pixels[117u*HD_W+134u]==HD_INK);
+ assert(frame.pixels[100u*HD_W+133u]==HD_GOLD);
+ assert(frame.pixels[103u*HD_W+134u]==HD_COPPER);
+ assert(frame.pixels[103u*HD_W+111u]==HD_PAPER);
+ assert(frame.pixels[106u*HD_W+110u]==HD_COPPER);
  for(int y=20;y<99;y++)for(int x=133;x<231;x++){
   unsigned c=frame.pixels[y*HD_W+x];
   if(c==HD_GOLD||c==HD_COPPER||c==HD_PAPER)warm_record++;
@@ -165,3 +205,4 @@ int main(void){
  puts("rescue-specific cafe and door scenes remain different; five characters distinct");
  return 0;
 }
+

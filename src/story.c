@@ -701,7 +701,7 @@ const StoryPage *story_pages(const Story *s, int *count) {
    the VBlank clock never runs backwards. Longer live reads continue at
    their naturally advanced frame without replaying a shot. */
 static uint16_t dialogue_shot_beat(unsigned script,unsigned page){
- static const uint16_t opening[]={0u,36u,76u,132u,178u,218u,254u};
+ static const uint16_t opening[]={0u,90u,180u,450u,780u,990u,1188u};
  static const uint16_t letter[]={0u,55u,108u,160u};
  static const uint16_t mara[]={0u,66u,108u,151u,190u};
  static const uint16_t bus[]={0u,118u,183u};
@@ -925,7 +925,7 @@ static void moment_menu(Story *s,unsigned station){
         station=='C'?CINE_BORE:
         (station=='M'||station=='E')?CINE_MUSIC:
         station=='J'?CINE_OPEN:CINE_ART);
-    s->cinema_frame=station=='J'?136u:0u;
+    s->cinema_frame=station=='J'?184u:0u;
 }
 static void stat_gain(uint8_t *v,unsigned gain){
     unsigned sum=(unsigned)*v+gain;
@@ -990,7 +990,7 @@ static void finish_moment(Story *s){
             s->dirty=1;
             talk(s,D_SHIFT_DONE);
         }
-        s->cinema_frame=136u; /* avoid replaying the full aerial intro */
+        s->cinema_frame=184u; /* avoid replaying the full aerial intro */
         return;
     }
     if(station=='E'){
@@ -1140,7 +1140,7 @@ static void interact(Story *s) {
         else if(!s->energy)talk(s,D_SHIFT_TIRED);
         else moment_menu(s,'J'); /* WORK / LEAVE, no automatic cost */
         /* Repeated visits never replay the whole aerial approach. */
-        s->cinema_frame=136u;
+        s->cinema_frame=184u;
         return;
     }
     char c=nearby_actor(s);
@@ -1614,3 +1614,4 @@ void story_tick(Story *s, uint16_t keys) {
         }
     }
 }
+
