@@ -1,4 +1,5 @@
 #include "hd_canvas.h"
+#include "story_checks.h"
 
 /* Native-pixel film subtitles, menus and prompts shared by the painted map
    and legacy cinematic/raycast frames. Narrative text is never removed. */
@@ -13,6 +14,57 @@ static void framebox(uint8_t *p,int x,int y,int w,int h){
  hd_line(p,x+w-11,y+3,x+w-4,y+3,HD_GOLD);
  hd_line(p,x+w-4,y+3,x+w-4,y+10,HD_GOLD);
  hd_rect(p,x+5,y+4,w-10,1,HD_BRICK_DARK);
+}
+/* The guide is transient and shows REAL objective and path queries.
+   In-world directions come from the same walkable map as Danny, and all
+   controls remain available without spending a day or modifying SRAM. */
+static void field_guide(uint8_t *p,const Story *s){
+ framebox(p,10,29,220,128);
+ if(s->choice&STORY_FIELD_GUIDE_DETAIL){
+  hd_text(p,20,37,"FIELD GUIDE / HOW TO PLAY",HD_LAMP,1,0);
+  hd_line(p,20,49,218,49,HD_STONE_DARK);
+  hd_text(p,20,55,"CORE / LETTER THEN BORE THEN MARA",HD_PAPER,1,0);
+  hd_text(p,20,66,"CREATE MUSIC + ART FOR FULL STORY",HD_PAPER,1,0);
+  hd_text(p,20,77,"OTHERWISE BUS MAY START NEW DAYS",HD_STONE_LIT,1,0);
+  hd_line(p,20,89,218,89,HD_STONE_DARK);
+  hd_text(p,20,94,"ENERGY / REST OR SPEND ON WORK",HD_PAPER,1,0);
+  hd_text(p,20,105,"SPARK / MAKES YOUR ART STRONGER",HD_PAPER,1,0);
+  hd_text(p,20,116,"BOND / TIME AND TRUST WITH MARA",HD_PAPER,1,0);
+  hd_text(p,20,127,"WORK / CREATIVE EFFORT NOT A GATE",HD_PAPER,1,0);
+  hd_text(p,20,144,"LEFT/RIGHT PAGE   B BACK   R CHECKS",HD_LAMP,1,0);
+  return;
+ }
+ hd_text(p,20,37,"FIELD GUIDE / OLD QUARTER",HD_LAMP,1,0);
+ hd_line(p,20,49,218,49,HD_STONE_DARK);
+ int gx=0,gy=0;const char *goal="";
+ int has=story_goal(s,&gx,&gy,&goal);
+ hd_text(p,20,54,has?"CURRENT DESTINATION":"NO ACTIVE ERRAND",
+         HD_STONE_LIT,1,0);
+ if(has){
+  hd_text(p,20,65,goal,HD_PAPER,1,0);
+  unsigned direction=4,steps=0;
+  if(story_route(s,&direction,&steps)){
+   static const char *const dirs[]={"EAST","SOUTH","WEST","NORTH","HERE"};
+   char count[]="00";
+   unsigned n=steps>99u?99u:steps;
+   count[0]=(char)('0'+n/10u);count[1]=(char)('0'+n%10u);
+   hd_text(p,121,65,dirs[direction],HD_GOLD,1,0);
+   hd_text(p,190,65,count,HD_GOLD,1,0);
+  }else hd_text(p,121,65,"NO WALKABLE ROUTE",HD_RED,1,0);
+  hd_text(p,20,77,story_goal_reason(s),HD_PAPER,1,0);
+ }
+ hd_line(p,20,89,218,89,HD_STONE_DARK);
+ hd_text(p,20,94,story_action_hint(s),HD_LAMP,1,0);
+ hd_text(p,95,94,story_risk_available(s)?"B RISK / OPTIONAL":"B NO RISK HERE",
+         HD_STONE_LIT,1,0);
+ hd_text(p,20,106,"L CAMERA ON STREET / A TO TALK",HD_PAPER,1,0);
+ hd_text(p,20,118,"R NOTES ON STREET / R CHECKLIST HERE",HD_PAPER,1,0);
+ char stats[]="ENERGY 0  SPARK 0  BOND 0";
+ stats[7]=(char)('0'+(s->energy>5u?5u:s->energy));
+ stats[16]=(char)('0'+(s->spark>5u?5u:s->spark));
+ stats[24]=(char)('0'+(s->bond>5u?5u:s->bond));
+ hd_text(p,20,129,stats,HD_GOLD,1,0);
+ hd_text(p,20,143,"LEFT/RIGHT PAGE  B BACK  R CHECKS",HD_STONE_LIT,1,0);
 }
 static void selectable(uint8_t *p,int x,int y,int w,const char *label,int selected){
  hd_rect(p,x,y,w,21,selected?HD_ROAD_COOL:HD_SHADOW);
@@ -53,13 +105,15 @@ void hd_game_overlay(uint8_t *p,const Story *s){
   }
   return;
  }
- if(s->paused && !(s->choice&0x80u)){
+ if(s->paused && !(s->choice&STORY_CHECK_PAGE_ACTIVE)){
+  if(s->choice&STORY_FIELD_GUIDE_ACTIVE){field_guide(p,s);return;}
   framebox(p,16,67,208,87);
   hd_text(p,29,79,"A MOMENT TO BREATHE",HD_PAPER,1,1);
   hd_line(p,29,92,210,92,HD_STONE_DARK);
-  hd_text(p,30,101,"START  RETURN TO STREET",HD_PAPER,1,0);
-  hd_text(p,30,116,"R  LIFE AND CONSEQUENCES",HD_STONE_LIT,1,0);
-  hd_text(p,30,131,"B  SAVE AND LEAVE",HD_LAMP,1,0);
+  hd_text(p,30,99,"START  RETURN TO STREET",HD_PAPER,1,0);
+  hd_text(p,30,110,"L  FIELD GUIDE / WHERE NEXT",HD_LAMP,1,0);
+  hd_text(p,30,121,"R  LIFE AND CONSEQUENCES",HD_STONE_LIT,1,0);
+  hd_text(p,30,132,"B  SAVE AND LEAVE",HD_PAPER,1,0);
   return;
  }
  if(s->risk_menu){
@@ -136,11 +190,20 @@ void hd_game_overlay(uint8_t *p,const Story *s){
   hd_rect(p,0,0,240,18,HD_INK);
   hd_rect(p,0,17,240,1,HD_COPPER);
   hd_text(p,8,5,"OLD QUARTER",HD_PAPER,1,1);
-  hd_text(p,110,5,has?goal:"LOOK AROUND",HD_LAMP,1,1);
+  hd_text(p,104,5,has?goal:"LOOK AROUND",HD_LAMP,1,1);
+  unsigned d=4,n=0;
+  if(has&&story_route(s,&d,&n)){
+   char hint[]="E00";const char compass[]="ESWN-";
+   hint[0]=compass[d];if(n>99u)n=99u;
+   hint[1]=(char)('0'+n/10u);hint[2]=(char)('0'+n%10u);
+   hd_text(p,218,5,hint,HD_GOLD,1,0);
+  }
   hd_rect(p,0,140,240,20,HD_INK);
   hd_rect(p,0,140,240,1,HD_COPPER);
   hd_text(p,8,145,"AT STREET LEVEL",HD_LAMP,1,1);
-  hd_text(p,8,153,"A TALK   B CHOICE   L MAP   R JOURNAL",HD_PAPER,1,0);
+  hd_text(p,8,153,story_action_hint(s),HD_PAPER,1,0);
+  hd_text(p,90,153,story_risk_available(s)?"B RISK":"L MAP",HD_STONE_LIT,1,0);
+  hd_text(p,157,153,"R NOTES  START GUIDE",HD_PAPER,1,0);
  }
 }
 

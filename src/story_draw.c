@@ -285,11 +285,12 @@ static void cult_arena(const Story *s,int tick,uint8_t *p) {
         text(p,3,71,"FACTS  CARE  EXIT",20,25);
         int arrowx=s->battle_choice==0?3:s->battle_choice==1?31:55;
         box(p,arrowx,78,17,1,26);
-        text(p,81,71,"A PICK",18,8);
+        text(p,81,71,s->battle_choice==0u?"FAST":
+             s->battle_choice==1u?"GUARD":"EXIT",18,6);
     } else {
         box(p,0,71,120,9,21);
         text(p,3,73,"LEFT RIGHT DODGE",20,17);
-        text(p,81,73,"A PARRY",26,8);
+        text(p,81,73,s->battle_parry_cd?"A WAIT":"A PARRY",26,8);
     }
 }
 /* Dedicated low-memory cinematic scenes. They use the same 120x80 buffer
@@ -394,6 +395,42 @@ static void check_icon(uint8_t *p,int x,int y,int result,int harmful){
         put(p,x+2,y+3,20);put(p,x+3,y+4,20);
         put(p,x+4,y+3,20);put(p,x+5,y+2,20);
     }
+}
+static void field_guide_120(uint8_t *p,const Story *s){
+    box(p,2,9,116,71,3);box(p,4,11,112,67,21);
+    box(p,4,11,112,12,24);
+    if(s->choice&STORY_FIELD_GUIDE_DETAIL){
+        text(p,8,14,"GUIDE / HOW TO PLAY",20,25);
+        text(p,7,26,"CORE: LETTER BORE MARA",20,27);
+        text(p,7,34,"MUSIC AND ART FOR FULL",20,27);
+        text(p,7,42,"OTHERWISE THE DAYS GO ON",18,27);
+        box(p,7,51,106,1,3);
+        text(p,7,55,"ENERGY / REST OR SPEND",20,27);
+        text(p,7,63,"SPARK ART / BOND MARA",20,27);
+        text(p,7,72,"LEFT RIGHT PAGE B BACK",18,27);
+        return;
+    }
+    text(p,8,14,"FIELD GUIDE",20,21);
+    int gx,gy;const char *goal="";
+    int has=story_goal(s,&gx,&gy,&goal);
+    text(p,7,26,has?"NEXT":"FREE TIME",18,12);
+    if(has){
+        text(p,30,26,goal,20,19);
+        unsigned direction=4u,steps=0u;
+        if(story_route(s,&direction,&steps)){
+            static const char *const dirs[]={"EAST","SOUTH","WEST","NORTH","HERE"};
+            char n[]="00";if(steps>99u)steps=99u;
+            n[0]=(char)('0'+steps/10u);n[1]=(char)('0'+steps%10u);
+            text(p,7,34,dirs[direction],20,7);
+            text(p,34,34,n,18,2);
+        }else text(p,7,34,"NO WALKABLE ROUTE",18,24);
+        text(p,7,43,story_goal_reason(s),20,27);
+    }
+    box(p,7,53,106,1,3);
+    text(p,7,57,story_action_hint(s),20,16);
+    text(p,57,57,story_risk_available(s)?"B RISK":"B NOT HERE",18,15);
+    text(p,7,65,"L VIEW / R NOTES / A ACT",20,27);
+    text(p,7,73,"LEFT RIGHT PAGE B BACK",18,26);
 }
 static void consequence_board(uint8_t *p,const Story *s){
     unsigned page=story_check_page(s);
@@ -749,9 +786,10 @@ void story_draw(const Story *s,int frame,uint8_t *p) {
        the objective visible even when its actor is behind a wall. */
     int gx=s->x,gy=s->y; const char *goal="";
     int has_goal=story_goal(s,&gx,&gy,&goal);
-    int ddx=gx-(int)s->x,ddy=gy-(int)s->y;
-    const char *direction=ddx==0&&ddy==0?"HERE":
-        abs_i(ddx)>abs_i(ddy)?(ddx>0?"E":"W"):(ddy>0?"S":"N");
+    unsigned direction=4u,steps=0u;
+    int on_route=has_goal&&story_route(s,&direction,&steps);
+    const char *compass[]={"E","S","W","N","H"};
+    const char *route_dir=on_route?compass[direction]:"?";
     if(s->rescue_stage==STORY_RESCUE_LOST){
         char number[]="DAY 0/2";
         number[4]=(char)('0'+(s->day_number>2u?2u:s->day_number));
@@ -764,13 +802,13 @@ void story_draw(const Story *s,int frame,uint8_t *p) {
         text(p,3,2,number,20,7);
         int progress=s->day_frame*48/STORY_DAY_FRAMES;
         box(p,30,3,20,2,3);box(p,30,3,progress*20/48,2,18);
-        if(has_goal){text(p,54,2,goal,20,7);text(p,84,2,direction,18,1);}
+        if(has_goal){text(p,54,2,goal,20,7);text(p,84,2,route_dir,18,1);}
     } else if(s->ended) {
         text(p,3,2,s->ending==STORY_END_GOOD?"GOOD END":
             s->ending==STORY_END_BAD?"BAD END":"NEUTRAL END",20,20);
     } else {
         if(has_goal){text(p,3,2,"NEXT",18,4);
-            text(p,23,2,goal,20,12);text(p,75,2,direction,18,4);}
+            text(p,23,2,goal,20,12);text(p,75,2,route_dir,18,1);}
         else text(p,3,2,"DANNY / OLD QUARTER",20,29);
     }
     for(int i=0;i<5;i++){
@@ -796,13 +834,15 @@ void story_draw(const Story *s,int frame,uint8_t *p) {
     } else if(s->paused){
         if(s->choice&STORY_CHECK_PAGE_ACTIVE){
             consequence_board(p,s);
+        }else if(s->choice&STORY_FIELD_GUIDE_ACTIVE){
+            field_guide_120(p,s);
         }else{
             panel(p,38,80);
             box(p,4,41,112,1,18);
             text(p,6,44,"PAUSED / OLD QUARTER",20,27);
-            text(p,6,54,"R  LIFE CONSEQUENCES",18,27);
-            text(p,6,63,"START  RESUME GAME",20,27);
-            text(p,6,72,"B  SAVE AND MENU",20,27);
+            text(p,6,53,"L  FIELD GUIDE  R JOURNAL",18,27);
+            text(p,6,62,"START  RESUME GAME",20,27);
+            text(p,6,71,"B  SAVE AND MENU",20,27);
         }
     } else {
         box(p,0,72,120,8,21);
@@ -832,9 +872,10 @@ void story_draw(const Story *s,int frame,uint8_t *p) {
             hint[20]=(char)('0'+s->work/10);
             hint[21]=(char)('0'+s->work%10);
             text(p,3,74,hint,20,29);
-        } else text(p,3,74,s->ended?"START / RETURN TO MENU":
-             s->life_stage==STORY_LIFE_FINALE?"THE LAST PAINTING":
-             s->view?"L MAP  A TALK  B RISK  R NOTE":
-                      "L 3D  A TALK  B RISK  R NOTE",20,29);
+        } else {
+            text(p,3,74,story_action_hint(s),20,15);
+            text(p,58,74,story_risk_available(s)?"B RISK":"L VIEW",18,10);
+            text(p,93,74,"R NOTE",20,6);
+        }
     }
 }

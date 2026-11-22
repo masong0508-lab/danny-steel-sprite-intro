@@ -4,6 +4,7 @@
  * Top-level title/menu frames come from a separate headless mGBA run.
  */
 #include "story.h"
+#include "story_checks.h"
 #include "story_draw.h"
 #include "studio.h"
 #include "hd_canvas.h"
@@ -295,6 +296,30 @@ int main(int argc,char **argv){
  s.battle_lane=0;s.battle_focus=2;s.battle_parry=5;
  write_frame("32_orchard_rebrand_parry",&s,291);
  s.battle=0;
+ /* Player-facing navigation screens are captured from the same native
+    GBA renderer, not an illustrated tutorial mockup. */
+ story_new(&s,0);s.dialogue=0;s.cinema=CINE_NONE;
+ s.x=20;s.y=11;s.facing=0;s.prev_x=s.x;s.prev_y=s.y;
+ write_frame("40_quarter_contextual_actions",&s,193);
+ s.paused=1;s.choice=STORY_FIELD_GUIDE_ACTIVE;
+ write_frame("41_field_guide_home_letter",&s,193);
+ s.choice=STORY_FIELD_GUIDE_ACTIVE|STORY_FIELD_GUIDE_DETAIL;
+ write_frame("41a_field_guide_how_to_play",&s,193);
+ s.paused=0;s.choice=0;
+ s.rescue_stage=STORY_RESCUE_TRACE;s.x=14;s.y=8;
+ s.prev_x=s.x;s.prev_y=s.y;
+ s.paused=1;s.choice=STORY_FIELD_GUIDE_ACTIVE;
+ write_frame("42_field_guide_rescue_route",&s,219);
+ s.paused=0;s.choice=0;s.rescue_stage=STORY_RESCUE_NONE;
+ s.battle=BATTLE_MENU;s.cult_enemy=1;s.battle_choice=0;
+ s.battle_focus=4;s.battle_guard=0;
+ write_frame("43_orchard_facts_tactic",&s,229);
+ s.battle_choice=1;
+ write_frame("44_orchard_care_tactic",&s,229);
+ s.battle=BATTLE_DODGE;s.battle_choice=0;
+ s.battle_timer=11;s.battle_parry_cd=0;
+ s.battle_lane=(uint8_t)story_attack_lane(&s,0);
+ write_frame("45_orchard_incoming_beat",&s,231);
  puts("Actual Danny Steel story renderer gallery generated");
  return 0;
 }

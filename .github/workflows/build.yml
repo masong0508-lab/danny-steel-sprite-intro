@@ -57,6 +57,13 @@ jobs:
             src/hd_arena.c src/hd_arena_art.c tests/hd_arena_test.c \
             -o /tmp/danny_native_arena
           /tmp/danny_native_arena
+      - name: Check fair FACTS and CARE combat timing, focus and tactical UI
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
+            src/story.c src/studio.c src/hd_canvas.c src/hd_actor.c \
+            src/hd_arena.c src/hd_arena_art.c tests/combat_balance_test.c \
+            -o /tmp/danny_combat_balance
+          /tmp/danny_combat_balance
       - name: Validate native perspective, six-tab studio, story scenes and pixel safety
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
@@ -143,6 +150,13 @@ jobs:
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c tests/story_test.c -o /tmp/danny_story_test
           /tmp/danny_story_test
+      - name: Prove walkable-route hints, genuine field-guide UI and ambient street choices
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
+            src/story.c src/studio.c src/story_draw.c src/cinema.c \
+            src/hd_canvas.c src/hd_overlay.c tests/navigation_guide_test.c \
+            -o /tmp/danny_navigation_guide
+          /tmp/danny_navigation_guide
       - name: Test both render modes
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c src/story_draw.c src/cinema.c tests/render_test.c -o /tmp/danny_render_test

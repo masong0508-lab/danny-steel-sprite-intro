@@ -69,8 +69,8 @@ static void huddle(uint8_t *p,const Story *s,unsigned tick){
  hd_rect(p,x-16,131,32,1,HD_STONE_LIT);
  hd_actor_stage(p,x,134,1,tick,s->battle_parry?3:move?2:0);
  if(s->battle_parry){
-  /* Parry is six simulation ticks: only draw when story has actually
-     armed it; no false permanent shield or misleading dodge invulnerability. */
+  /* The painted guard only appears during the REAL strategy-dependent
+     parry window. Neither a completed redraw nor low FPS prolongs it. */
   hd_line(p,x-26,86,x-20,79,HD_GOLD);
   hd_line(p,x-20,79,x-10,75,HD_COPPER);
   hd_line(p,x+26,86,x+20,79,HD_GOLD);
@@ -108,15 +108,27 @@ static void hud(uint8_t *p,const Story *s){
   hd_rect(p,164,34,72,12,HD_INK);
   hd_rect(p,164,34,72,1,HD_COPPER);
   hd_text(p,168,37,"A PICK B EXIT",HD_STONE_LIT,1,0);
+  hd_rect(p,34,121,180,12,HD_INK);
+  hd_rect(p,34,121,180,1,HD_COPPER);
+  hd_text(p,42,124,s->battle_choice==0u?
+          "FACTS: QUICK PARRY / COUNTER":s->battle_choice==1u?
+          "CARE: SHIELD ONE MISTAKE":"EXIT: NO PENALTY",
+          HD_PAPER,1,0);
  }else{
   char wave[]="ROUND 1/2";
   wave[6]=(char)('1'+(s->battle_progress&1u));
   hd_text(p,8,143,"LEFT RIGHT / MOVE",HD_PAPER,1,0);
-  hd_text(p,151,143,"A / PARRY",HD_GOLD,1,0);
+  hd_text(p,151,143,s->battle_parry_cd?"PARRY / WAIT":"A / PARRY READY",
+          s->battle_parry_cd?HD_STONE_LIT:HD_GOLD,1,0);
   hd_text(p,8,151,wave,HD_STONE_LIT,1,0);
   char hit[]="BEAT 1/4";
   hit[5]=(char)('1'+(s->battle_timer/15u)%4u);
-  hd_text(p,154,151,hit,HD_STONE_LIT,1,0);
+  hd_text(p,137,151,hit,HD_STONE_LIT,1,0);
+  char incoming[]="IN 00";
+  unsigned gap=15u-(s->battle_timer%15u);
+  incoming[3]=(char)('0'+gap/10u);
+  incoming[4]=(char)('0'+gap%10u);
+  hd_text(p,203,151,incoming,HD_GOLD,1,0);
  }
 }
 void hd_arena_draw(uint8_t *p,const Story *s,unsigned frame){
