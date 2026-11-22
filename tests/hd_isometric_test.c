@@ -109,8 +109,69 @@ static void verify_iso_copies(void){
  }
  printf("isometric ROM copies: %u exact golden-byte clipping/alignment cases\n",cases);
 }
+/* Exhaustively prove the monotone visible-span traversal visits exactly
+   the same world tiles in the same painter order as the original loops.
+   This host-only test also exercises negative/off-map coordinates. */
+static uint32_t tile_mix(uint32_t h,int wx,int wy,int sx,int sy){
+ h=(h^(uint32_t)(wx+2))*16777619u;
+ h=(h^(uint32_t)(wy+2))*16777619u;
+ h=(h^(uint32_t)(sx+1024))*16777619u;
+ return (h^(uint32_t)(sy+1024))*16777619u;
+}
+static void verify_visible_spans(void){
+ unsigned views=0;
+ for(int px=0;px<STORY_W;px++)for(int py=0;py<STORY_H;py++){
+  uint32_t old_ground=2166136261u,new_ground=2166136261u;
+  unsigned old_count=0,new_count=0;
+  for(int wy=-1;wy<=STORY_H;wy++)
+   for(int wx=-1;wx<=STORY_W;wx++){
+    int sx=104+16*((wx-px)-(wy-py));
+    int sy=72+8*((wx-px)+(wy-py));
+    if(sx<=-32||sx>=240||sy<=-18||sy>=154)continue;
+    old_ground=tile_mix(old_ground,wx,wy,sx,sy);old_count++;
+   }
+  for(int wy=-1;wy<=STORY_H;wy++){
+   int sx=104+16*(-1-wy-px+py),sy=72+8*(-1+wy-px-py);
+   for(int wx=-1;wx<=STORY_W;wx++,sx+=16,sy+=8){
+    if(sx<=-32||sy<=-18)continue;
+    if(sx>=240||sy>=154)break;
+    new_ground=tile_mix(new_ground,wx,wy,sx,sy);new_count++;
+   }
+  }
+  assert(old_count==new_count&&old_ground==new_ground);
+  uint32_t old_depth=2166136261u,new_depth=2166136261u;
+  old_count=new_count=0;
+  for(int depth=-2;depth<=STORY_W+STORY_H+1;depth++)
+   for(int wx=-1;wx<=STORY_W;wx++){
+    int wy=depth-wx;
+    if(wy<-1||wy>STORY_H)continue;
+    int sx=104+16*((wx-px)-(wy-py));
+    int sy=72+8*((wx-px)+(wy-py));
+    if(sx<=-48||sx>=256||sy<=-55||sy>=166)continue;
+    old_depth=tile_mix(old_depth,wx,wy,sx,sy);old_count++;
+   }
+  for(int depth=-2;depth<=STORY_W+STORY_H+1;depth++){
+   int sy=72+8*(depth-px-py);
+   if(sy<=-55||sy>=166)continue;
+   int first=depth-STORY_H,last=depth+1;
+   if(first<-1)first=-1;
+   if(last>STORY_W)last=STORY_W;
+   int sx=104+16*(2*first-depth-px+py);
+   for(int wx=first;wx<=last;wx++,sx+=32){
+    if(sx<=-48)continue;
+    if(sx>=256)break;
+    new_depth=tile_mix(new_depth,wx,depth-wx,sx,sy);new_count++;
+   }
+  }
+  assert(old_count==new_count&&old_depth==new_depth);
+  views++;
+ }
+ assert(views==STORY_W*STORY_H);
+ puts("isometric visible spans: all 432 camera cells preserve original tile order and pixels");
+}
 int main(void){
  verify_iso_copies();
+ verify_visible_spans();
  Story s;story_new(&s,0);
  s.cinema=CINE_NONE;s.dialogue=0;s.activity=0;s.battle=0;
  s.ended=0;s.scene=STORY_SCENE_NONE;

@@ -14,11 +14,6 @@ static unsigned grain(int x,int y){
             (uint32_t)(y+131)*668265263u;
  n^=n>>13;n*=1274126177u;return (unsigned)(n^(n>>16));
 }
-static void projection(const Story *s,int wx,int wy,int *sx,int *sy){
- int dx=wx-(int)s->x,dy=wy-(int)s->y;
- *sx=104+16*(dx-dy); /* left edge: center of player's diamond is x=120 */
- *sy=72+8*(dx+dy);   /* feet stand at y=88, under the scene overlay */
-}
 static int exposed(int x,int y){
  char c=story_tile(x,y);
  return c!='#'&&c!='A';
@@ -307,16 +302,22 @@ void hd_isometric_draw(uint8_t *p,const Story *s,unsigned tick){
  night(p);
  /* Terrain first. Occlusion and architectural depth sorted by world
     x+y, the exact order of isometric foot placement. */
- for(int wy=-1;wy<=STORY_H;wy++)
-  for(int wx=-1;wx<=STORY_W;wx++){
-   int sx,sy;projection(s,wx,wy,&sx,&sy);
-   if(sx<=-32||sx>=240||sy<=-18||sy>=154)continue;
+ /* A tile row projects to two monotone screen coordinates. Keep the
+    exact original draw order while avoiding per-tile projection and
+    stopping as soon as the remainder of a row is off-screen. */
+ for(int wy=-1;wy<=STORY_H;wy++){
+  int sx=104+16*(-1-wy-(int)s->x+(int)s->y);
+  int sy=72+8*(-1+wy-(int)s->x-(int)s->y);
+  for(int wx=-1;wx<=STORY_W;wx++,sx+=16,sy+=8){
+   if(sx<=-32||sy<=-18)continue;
+   if(sx>=240||sy>=154)break;
    char c=story_tile(wx,wy);
    unsigned n=grain(wx,wy);
    hd_iso_tile(p,sx,sy,material(c,n));
    if(c=='~'||c==','||c=='='||c=='.')
     ground_detail(p,sx,sy,n,c,tick);
   }
+ }
  rain(p,tick);
  int gx=0,gy=0;
  const char *goal=0;
@@ -340,11 +341,19 @@ void hd_isometric_draw(uint8_t *p,const Story *s,unsigned tick){
                        s->anim?((tick/7u)&1u):0u);
    drew_player=1;
   }
-  for(int wx=-1;wx<=STORY_W;wx++){
+  /* Depth slices share a screen Y. Clamp the world span first; each
+     successive X then advances exactly 32 screen pixels. This avoids
+     traversing invisible map rows without touching the painter order. */
+  int sy=72+8*(depth-(int)s->x-(int)s->y);
+  if(sy<=-55||sy>=166)continue;
+  int first=depth-STORY_H,last=depth+1;
+  if(first< -1)first=-1;
+  if(last>STORY_W)last=STORY_W;
+  int sx=104+16*(2*first-depth-(int)s->x+(int)s->y);
+  for(int wx=first;wx<=last;wx++,sx+=32){
+   if(sx<=-48)continue;
+   if(sx>=256)break;
    int wy=depth-wx;
-   if(wy<-1||wy>STORY_H)continue;
-   int sx,sy;projection(s,wx,wy,&sx,&sy);
-   if(sx<=-48||sx>=256||sy<=-55||sy>=166)continue;
    char c=story_tile(wx,wy);
    if(has_goal&&wx==gx&&wy==gy)
     ground_goal(p,sx,sy,tick);
