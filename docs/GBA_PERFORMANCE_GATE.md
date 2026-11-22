@@ -47,9 +47,9 @@ its software tick counter advanced only when main returned from drawing.
 
 These measurements were collected with **Debian ARM GCC 14.2.1 and the
 official devkitPro CRT/specs**, running the resulting ARM ROM in **mGBA
-0.10.5**. They are local candidate results; final devkitARM CI and published
-ROM verification remain release gates. The baseline is the published
-PR #14 build, not the older PR #7 or PR #13 builds recorded below.
+0.10.5**. Both columns use locally rebuilt ARM binaries. The baseline is
+the PR #14 source rebuilt with that compiler, not the downloaded PR #14
+production binary. Final production acceptance is recorded separately below.
 
 ### Presentation cadence
 
@@ -57,7 +57,7 @@ Each window covers 600 emulated video frames. Rates count displayed Mode-4
 page changes, including identical content, per elapsed emulated second.
 They do not measure host execution speed.
 
-| State | Published PR #14 baseline | Local candidate | Baseline / candidate interval |
+| State | Local PR #14 source rebuild | Local candidate | Baseline / candidate interval |
 |---|---:|---:|---:|
 | Potheads opening | 14.932 page flips/s | 19.909 page flips/s | 4 / 3 video frames |
 | Overhead town | 9.955 page flips/s | 14.932 page flips/s | 6 / 4 video frames |
@@ -75,7 +75,7 @@ The completed local `runtime_probe` run verified:
 - 600 processed simulation ticks for 600 video frames, with queue depth
   0 → 0, in each of the opening, overhead and first-person samples.
 - All **12/12 one-video-frame camera taps** retained, compared with **2/12**
-  in the published baseline test. Observed simulation-state response was
+  in the local PR #14-source baseline test. Observed simulation-state response was
   1–6 video frames; this is not a measurement of final visible response.
 - Four short first-person turns applied once, with observed state-response
   intervals of 1, 7, 8 and 3 video frames.
@@ -100,6 +100,43 @@ The IWRAM total includes fast executable code, the input queue and static
 state. These are linked static-section measurements, not measured peak
 stack usage. The queue adds no image buffer. Final CI must report the exact
 linked sections and ROM bytes for the source that is actually published.
+
+## Verified production release — PR #15
+
+[PR #15](https://github.com/masong0508-lab/danny-steel-sprite-intro/pull/15)
+merged as `fd73feee131650313906c44cbf84cbf7bc28afbe`. The main
+[build workflow](https://github.com/masong0508-lab/danny-steel-sprite-intro/actions/runs/44977185075)
+passed all 43 host checks, devkitARM compilation and the memory gate. It
+reported 17,264 bytes static IWRAM (9,024 BSS + 24 data + 8,216 code),
+38,400 bytes EWRAM and an 860,972-byte ROM.
+
+The main
+[emulator workflow](https://github.com/masong0508-lab/danny-steel-sprite-intro/actions/runs/44977185083)
+passed in mGBA 0.10.2 with zero runtime failures or emulator errors,
+12/12 short camera taps, exactly one held-button toggle, all four turns,
+timed movement, pause, menu exit and restart. Peak queue loss was zero.
+All three clock windows account for exactly 600 video frames. The first-person
+window processes 602 ticks while draining two previously queued samples;
+opening and town each process 600 with no queue change.
+
+The published ROM was downloaded, verified against its Git blob, and tested
+again in mGBA 0.10.5. The previous downloaded PR #14 ROM was checked with the
+same three-scene probe and emulator. Both raw runs and SHA256 hashes are in
+[`screenshots/published_rom_comparison.txt`](screenshots/published_rom_comparison.txt).
+
+| Published ROM comparison | PR #14 | PR #15 | Complete presentation interval |
+|---|---:|---:|---:|
+| Opening | 14.932 page flips/s | 19.909 page flips/s | 4 → 3 video frames |
+| Overhead town | 9.955 page flips/s | 14.932 page flips/s | 6 → 4 video frames |
+| First-person town | 1.493 page flips/s | 8.461 page flips/s | 41 → 7 video frames |
+
+The final first-person interval is 117.199 ms, down from 686.451 ms in the
+previous published binary. The local baseline's 1.394 page flips/s and
+43-frame interval must not be labeled as the production baseline. The
+production result still does not achieve the intended 30 FPS target.
+
+Published ROM SHA256:
+`9813e417aa3237f66d6e9c65c5cc906531999b5ba1d24d05482a3f9ad9e75b07`.
 
 ## Completed rendering and studio work
 
@@ -186,6 +223,7 @@ These operation counts did not establish a real-device frame rate.
 The published PR #13 ROM measured 9.955 opening and 4.977 overhead-town page
 flips/s in mGBA 0.10.5. After the art, visibility and first drawing pass,
 the published PR #14 ROM measured 14.932 and 9.955 respectively on the same
-emulator version. The new first-person sample measured 1.394 page flips/s
-for that PR #14 baseline. The local continuation's three-state comparison
-appears above; the historical rates must not be presented as current results.
+emulator version. The downloaded PR #14 first-person sample measured 1.493
+page flips/s; the local GCC 14.2.1 rebuild measured 1.394. The local and
+published three-state comparisons appear separately above; historical rates
+must not be presented as current results.

@@ -137,20 +137,34 @@ source SHA and measurements in
 [`screenshots/emulator_cadence.txt`](screenshots/emulator_cadence.txt).
 
 The continuation after PR #14 produced the following **local ARM-build
-measurements**, before final devkitARM CI acceptance. The local compiler was
-Debian ARM GCC 14.2.1 with the official devkitPro CRT and specs; the emulator
-was mGBA 0.10.5. The rates use elapsed emulated video time.
+measurements**. Both baseline and candidate were rebuilt with Debian ARM
+GCC 14.2.1 and the official devkitPro CRT/specs, then run in mGBA 0.10.5.
+The rates use elapsed emulated video time. This controlled compiler comparison
+is separate from the downloaded production-ROM comparison below.
 
-| Sampled scene | Published PR #14 baseline | Local candidate | Candidate presentation interval |
+| Sampled scene | Local PR #14 source rebuild | Local candidate | Candidate presentation interval |
 |---|---:|---:|---:|
 | Potheads opening | 14.932 page flips/s | 19.909 page flips/s | 3 video frames |
 | Overhead town | 9.955 page flips/s | 14.932 page flips/s | 4 video frames |
 | First-person town | 1.394 page flips/s | 7.466 page flips/s | 8 video frames / 133.942 ms |
 
-These are sampled presentation rates, including flips to identical content.
-They do not establish sustained 30 FPS or performance on physical hardware.
-The source-tagged CI reports and a check of the published ROM remain the
-release evidence; local compiler results alone do not replace those gates.
+Both production CI workflows passed on the merged source, and the downloaded
+860,972-byte release ROM was then checked in the same mGBA 0.10.5 setup as the
+previous downloaded release. That published-to-published comparison is:
+
+| Sampled scene | Published PR #14 ROM | Published PR #15 ROM |
+|---|---:|---:|
+| Potheads opening | 14.932 page flips/s | 19.909 page flips/s |
+| Overhead town | 9.955 page flips/s | 14.932 page flips/s |
+| First-person town | 1.493 page flips/s | 8.461 page flips/s |
+
+The production first-person interval falls from 41 to 7 video frames:
+686.451 ms to 117.199 ms. The earlier 1.394 figure belongs to the local
+baseline rebuild, not the downloaded PR #14 binary. The
+[published-ROM comparison](screenshots/published_rom_comparison.txt) records
+both file hashes and raw measurements. These are sampled presentation rates,
+including flips to identical content; they do not establish sustained 30 FPS
+or performance on physical hardware.
 See [the performance gate](GBA_PERFORMANCE_GATE.md) for timing, input,
 memory and exact-image validation details.
 
@@ -200,7 +214,7 @@ thread.
    1× and nearest-neighbor enlargement. Keep the actor and current story prop
    readable before increasing texture density.
 2. Continue measuring actual ROM cadence, input response and linked memory
-   headroom. The local candidate still takes 133.942 ms between sampled
+   headroom. The published release still takes 117.199 ms between sampled
    first-person presentations; the 30 FPS target has not been achieved.
 3. Exact rotoscope of Danny's Potheads dance when the original reference
    video is available to this coding workspace. The present eight samples
