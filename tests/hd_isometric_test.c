@@ -190,6 +190,27 @@ int main(void){
   readable_player(&s,100u,w[5],w[6]);
   readable_player(&s,107u,w[5],w[6]);
  }
+ /* Route cues must be tied to the objective's real town tile. With
+    identical weather and camera, changing story progress changes the
+    world image, not just a HUD label. */
+ story_new(&s,0);
+ s.x=11;s.y=8;s.prev_x=s.x;s.prev_y=s.y;
+ s.anim=0;s.dialogue=0;s.cinema=CINE_NONE;
+ clear();hd_isometric_draw(guarded.pixel,&s,96u);
+ uint32_t letter_world=checksum_with(1000u);
+ s.flags|=STORY_HOME;
+ clear();hd_isometric_draw(guarded.pixel,&s,96u);
+ uint32_t clerk_world=checksum_with(1000u);
+ assert(letter_world!=clerk_world);
+ /* Animated sheen must keep the same guarded Mode-4 buffer, with no
+    change to the original walkable world or player's sprite bytes. */
+ s.x=18;s.y=13;s.prev_x=s.x;s.prev_y=s.y;
+ clear();hd_isometric_draw(guarded.pixel,&s,96u);
+ uint32_t canal_a=checksum_with(1000u);
+ clear();hd_isometric_draw(guarded.pixel,&s,159u);
+ uint32_t canal_b=checksum_with(1000u);
+ assert(canal_a!=canal_b);
+ puts("route markers remain grounded; wet-town animation remains bounded");
  printf("isometric atlas: 14 distinct ROM diamonds and clipped sprite art OK\n");
  printf("isometric projection: %u compass/position frames, deterministic and guarded\n",checks);
  puts("player visibility: 40 static views and 24 interpolated walking frames retain coat/skin");
