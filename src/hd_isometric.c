@@ -23,8 +23,7 @@ static int exposed(int x,int y){
  char c=story_tile(x,y);
  return c!='#'&&c!='A';
 }
-static unsigned material(char t,int x,int y){
- unsigned n=grain(x,y);
+static unsigned material(char t,unsigned n){
  if(t=='~')return 8u+(n&1u);
  if(t=='g'||t=='T')return 6u+(n&1u);
  if(t==','||t=='=')return 4u+(n&1u);
@@ -266,9 +265,8 @@ static void object(uint8_t *p,int sx,int sy,char kind,unsigned tick,int wx,int w
 }
 /* Tiny grounded material accents; the same coordinates remain under every
    camera pan. Draw these BEFORE architecture so rain never covers faces. */
-static void ground_detail(uint8_t *p,int sx,int sy,int wx,int wy,
+static void ground_detail(uint8_t *p,int sx,int sy,unsigned n,
                           char tile,unsigned tick){
- unsigned n=grain(wx,wy);
  if(tile=='~'){
   int cx=sx+16,cy=sy+8;
   int span=3+(int)((tick/18u+n)%6u);
@@ -314,8 +312,10 @@ void hd_isometric_draw(uint8_t *p,const Story *s,unsigned tick){
    int sx,sy;projection(s,wx,wy,&sx,&sy);
    if(sx<=-32||sx>=240||sy<=-18||sy>=154)continue;
    char c=story_tile(wx,wy);
-   hd_iso_tile(p,sx,sy,material(c,wx,wy));
-   ground_detail(p,sx,sy,wx,wy,c,tick);
+   unsigned n=grain(wx,wy);
+   hd_iso_tile(p,sx,sy,material(c,n));
+   if(c=='~'||c==','||c=='='||c=='.')
+    ground_detail(p,sx,sy,n,c,tick);
   }
  rain(p,tick);
  int gx=0,gy=0;
