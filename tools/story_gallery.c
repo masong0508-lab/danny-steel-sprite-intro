@@ -4,6 +4,7 @@
  * Top-level title/menu frames come from a separate headless mGBA run.
  */
 #include "story.h"
+#include "story_checks.h"
 #include "story_draw.h"
 #include "studio.h"
 #include "hd_canvas.h"
@@ -17,7 +18,10 @@ static void write_frame(const char *name,const Story *s,unsigned t){
  char filename[700];
  snprintf(filename,sizeof(filename),"%s/%s.ppm",outdir,name);
  memset(canvas,0,sizeof canvas);
- if(s->battle){
+ if(s->paused && (s->choice & STORY_CHECK_PAGE_ACTIVE)){
+  story_draw(s,(int)t,canvas);
+  hd_upscale_inplace(canvas);
+ }else if(s->battle){
   hd_arena_draw(canvas,s,t);
  }else if(s->life_stage==STORY_LIFE_FINALE ||
     (s->ended && (s->ending==STORY_END_GOOD ||
@@ -40,7 +44,8 @@ static void write_frame(const char *name,const Story *s,unsigned t){
   story_draw(&visual,(int)t,canvas);
   hd_upscale_inplace(canvas);
  }
- hd_game_overlay(canvas,s);
+ if(!(s->paused && (s->choice & STORY_CHECK_PAGE_ACTIVE)))
+  hd_game_overlay(canvas,s);
  FILE *f=fopen(filename,"wb");if(!f){perror(filename);return;}
  fprintf(f,"P6\n240 160\n255\n");
  for(unsigned i=0;i<HD_BYTES;i++){
@@ -166,6 +171,9 @@ int main(int argc,char **argv){
  /* The first controllable view is now the same storefront as the film. */
  stand(&s,20,11,0);
  write_frame("06_gameplay_overhead",&s,90);
+ s.paused=1;s.choice=(uint8_t)(STORY_CHECK_PAGE_ACTIVE|(3u<<1));
+ write_frame("06a_new_field_guide",&s,90);
+ s.paused=0;s.choice=0;
  /* The same real map in four directions, captured from valid walkable
     tiles. Material, silhouette, footprint and foliage differ by location. */
  stand(&s,11,8,1);
