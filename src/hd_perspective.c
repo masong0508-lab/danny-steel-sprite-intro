@@ -71,6 +71,15 @@ static void set_sky(uint8_t *p,unsigned tick,int facing,int cx,int cy){
  /* A flat-toned, quiet horizon instead of procedural neon sky. */
  hd_line(p,0,79,239,79,HD_STONE);
 }
+/* Nearby road pixels share their 16-unit hashed texture cell. */
+static HD_CANVAS_CODE inline unsigned road_ink(int wx,int wy,int x,int y,
+                                               unsigned n){
+ int fx=wx&255,fy=wy&255;
+ if((fx<5||fy<5)&&(wx+wy)%3==0)return HD_ROAD_COOL;
+ if((n&31u)==0u)return HD_REFLECT;
+ if((n&7u)==1u)return HD_ROAD_LIGHT;
+ return (x+y)%17==0?HD_ROAD_COOL:HD_ROAD;
+}
 static HD_CANVAS_CODE inline unsigned floor_ink(char t,int wx,int wy,int x,int y,unsigned tick){
  int fx=wx&255,fy=wy&255;
  if(t=='~'){
@@ -88,11 +97,8 @@ static HD_CANVAS_CODE inline unsigned floor_ink(char t,int wx,int wy,int x,int y
   return HD_LEAF_DARK;
  }
  if(t=='#'||t=='A')return HD_BRICK_DARK;
- unsigned n=texel((unsigned)(wx>>4),(unsigned)(wy>>4));
- if((fx<5||fy<5)&&(wx+wy)%3==0)return HD_ROAD_COOL;
- if((n&31u)==0u)return HD_REFLECT;
- if((n&7u)==1u)return HD_ROAD_LIGHT;
- return (x+y)%17==0?HD_ROAD_COOL:HD_ROAD;
+ return road_ink(wx,wy,x,y,texel((unsigned)(wx>>4),
+                                   (unsigned)(wy>>4)));
 }
 /* Keep the measured pixel loops in ARM/IWRAM. noinline prevents the
    Thumb entry point from absorbing them back into cartridge code. */
@@ -111,6 +117,9 @@ static HD_CANVAS_CODE __attribute__((noinline)) void floor_render(uint8_t *p,con
      that test. Reuse the depth strip instead of an extra coverage buffer. */
   int wall_limit=10400/(y-78)-60;
   int last_tx=-99,last_ty=-99;
+  /* Exact-key cache lives only on this stack row, not in an atlas. */
+  int last_hx=-2147483647,last_hy=-2147483647;
+  unsigned cached_road_hash=0;
   char tile='.';
   int begin=0;
   for(unsigned ray=0;ray<sizeof ray_end;ray++){
@@ -125,7 +134,15 @@ static HD_CANVAS_CODE __attribute__((noinline)) void floor_render(uint8_t *p,con
      if(tx!=last_tx||ty!=last_ty){
       last_tx=tx;last_ty=ty;tile=story_tile(tx,ty);
      }
-     unsigned ink=floor_ink(tile,wx,wy,x,y,tick);
+     unsigned ink;
+     if(tile=='.'){
+      int hx=wx>>4,hy=wy>>4;
+      if(hx!=last_hx||hy!=last_hy){
+       last_hx=hx;last_hy=hy;
+       cached_road_hash=texel((unsigned)hx,(unsigned)hy);
+      }
+      ink=road_ink(wx,wy,x,y,cached_road_hash);
+     }else ink=floor_ink(tile,wx,wy,x,y,tick);
      /* An odd run edge may split a far sample. Keep its original
         even sample x, then paint only this run's visible member(s). */
      if(x>=begin)p[y*HD_W+x]=(uint8_t)ink;
