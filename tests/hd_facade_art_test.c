@@ -27,7 +27,57 @@ static uint32_t inspect(unsigned minimum){
  assert(count>=minimum);
  return v;
 }
+/* Pre-change 16x40 source hashes protect the art itself. Expected scaled
+   frames then use an independent per-pixel mathematical crop, not the
+   optimized pair copies or quotient/remainder recurrence. */
+static void verify_facade_copies(void){
+ static const uint32_t original_hash[2][8]={
+  {0x66d0a358u,0xa9d7b1ffu,0x49c6e3b3u,0x39bef9deu,
+   0x79e1acf9u,0x8822894cu,0x83bc8b89u,0xec9ce590u},
+  {0xd319b16au,0x7f61342bu,0xfc0613b7u,0x9e01dcddu,
+   0xf73f3501u,0xd9b73fa4u,0x81857c4eu,0x6563b823u}
+ };
+ static uint8_t expected[HD_BYTES+132] __attribute__((aligned(4)));
+ static uint8_t actual[HD_BYTES+132] __attribute__((aligned(4)));
+ uint8_t original[16u*40u];
+ const int xs[]={-17,-16,-15,-14,-3,-2,-1,0,1,2,103,104,105,
+                 224,225,237,238,239,240};
+ const int ys[]={-50,-10,-1,0,1,40,72,158,159,160,180,220};
+ const int heights[]={-3,0,1,2,3,7,16,24,27,36,40,44,64,95,127};
+ unsigned cases=0;
+ for(unsigned side=0;side<2u;side++)for(unsigned variant=0;variant<8u;variant++){
+  reset();memset(image.frame,HD_ROAD,HD_BYTES);
+  hd_facade_wall(image.frame,64,64,40,variant,side);
+  uint32_t hash=2166136261u;
+  for(int y=0;y<40;y++)for(int x=0;x<16;x++){
+   int yy=64+(side?16-x/2:8+x/2)-40+y;
+   unsigned ink=image.frame[yy*HD_W+64+x];
+   original[y*16+x]=(uint8_t)ink;
+   hash=(hash^ink)*16777619u;
+  }
+  assert(hash==original_hash[side][variant]);
+  for(unsigned align=0;align<4u;align++)
+   for(unsigned xi=0;xi<sizeof xs/sizeof xs[0];xi++)
+    for(unsigned yi=0;yi<sizeof ys/sizeof ys[0];yi++)
+     for(unsigned hi=0;hi<sizeof heights/sizeof heights[0];hi++){
+      memset(expected,0xB2,sizeof expected);memset(actual,0xB2,sizeof actual);
+      uint8_t *want=expected+64u+align,*got=actual+64u+align;
+      memset(want,HD_ROAD,HD_BYTES);memset(got,HD_ROAD,HD_BYTES);
+      int sx=xs[xi],sy=ys[yi],height=heights[hi];
+      for(int y=0;y<height;y++)for(int x=0;x<16;x++){
+       int xx=sx+x,yy=sy+(side?16-x/2:8+x/2)-height+y;
+       if((unsigned)xx<HD_W&&(unsigned)yy<HD_H)
+        want[yy*HD_W+xx]=original[(y*40/height)*16+x];
+      }
+      hd_facade_wall(got,sx,sy,height,variant+((cases&1u)?8u:0u),side);
+      assert(memcmp(expected,actual,sizeof actual)==0);
+      cases++;
+     }
+ }
+ printf("facade copies: %u golden scale/clip/alignment cases and guards matched\n",cases);
+}
 int main(void){
+ verify_facade_copies();
  uint32_t fronts[2][8];
  for(unsigned side=0;side<2;side++){
   for(unsigned v=0;v<8;v++){
@@ -92,3 +142,4 @@ int main(void){
  puts("Original clinic/bus/letter objectives, movement and save structure unchanged");
  return 0;
 }
+

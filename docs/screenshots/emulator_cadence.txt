@@ -1,10 +1,13 @@
-Source commit: 1f3f1f9745e4fcb034c3a63a7606a2b558b8992e
+Source commit: 07df02fd0edca4b0d0cd441d0a5b8e078c3164db
 mGBA 0.10.2; emulated video 59.727500570 Hz (280896 cycles/frame, 16777216 Hz CPU)
 Cadence counts presented Mode4 page changes, including identical content. It does not measure host speed or certify all-scene 30 FPS.
 Stage names describe the scripted route; verify the accompanying cadence pictures before treating them as scene measurements.
-opening after New Game: video_frames=600, active_mode4_samples=600/600, page_flips=150, emulated_seconds=10.045624, observed_page_flips_per_second=14.932
+opening after New Game: video_frames=600, active_mode4_samples=600/600, page_flips=200, emulated_seconds=10.045624, observed_page_flips_per_second=19.909
+  complete flip intervals: count=199, min=3, mean=3.000, max=3 video_frames (max 50.228 ms), over_two_frames=199
+  window edges: 1 frames before first observed flip, 2 after last (partial intervals)
+town after B dismisses opening: video_frames=600, active_mode4_samples=600/600, page_flips=150, emulated_seconds=10.045624, observed_page_flips_per_second=14.932
   complete flip intervals: count=149, min=4, mean=4.000, max=4 video_frames (max 66.971 ms), over_two_frames=149
   window edges: 1 frames before first observed flip, 3 after last (partial intervals)
-town after B dismisses opening: video_frames=600, active_mode4_samples=600/600, page_flips=100, emulated_seconds=10.045624, observed_page_flips_per_second=9.955
-  complete flip intervals: count=99, min=6, mean=6.000, max=6 video_frames (max 100.456 ms), over_two_frames=99
-  window edges: 3 frames before first observed flip, 3 after last (partial intervals)
+first-person after L changes camera: video_frames=600, active_mode4_samples=600/600, page_flips=85, emulated_seconds=10.045624, observed_page_flips_per_second=8.461
+  complete flip intervals: count=84, min=7, mean=7.000, max=7 video_frames (max 117.199 ms), over_two_frames=84
+  window edges: 7 frames before first observed flip, 5 after last (partial intervals)

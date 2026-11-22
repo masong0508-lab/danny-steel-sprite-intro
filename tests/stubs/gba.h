@@ -19,4 +19,6 @@ extern volatile uint16_t test_timer;
 #define REG_SNDSTAT test_sound_regs[12]
 #define REG_TM3CNT_H test_sound_regs[13]
 #define REG_TM3CNT_L test_timer
+#define REG_IME test_sound_regs[14]
 #define WAVE_RAM test_wave_regs
+

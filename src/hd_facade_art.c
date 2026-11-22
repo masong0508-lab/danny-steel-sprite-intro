@@ -2,7 +2,7 @@
 /* Original pre-painted ROM art: eight real district frontage types, each
    with two facing light treatments. No heap, extra palette or framebuffer.
    Pixels are existing GBA palette slots 32..63, never a transparent key. */
-static const uint8_t fronts[2][8][640]={
+static const uint8_t fronts[2][8][640] __attribute__((aligned(4)))={
  {
   {
    56,50,56,56,56,56,56,56,56,56,56,56,56,56,41,56,56,50,41,41,41,41,41,41,41,41,41,41,41,41,41,56,
@@ -360,23 +360,34 @@ static const uint8_t fronts[2][8][640]={
   },
  },
 };
-/* The isometric wall face is 16 pixels wide, sloping 8 pixels in
-   world space; sample a hand-authored 16x40 source without a per-pixel
-   division by using one quotient/remainder step per vertical pixel. */
+/* A sheared facade has identical vertical sampling in adjacent pairs
+   of columns. Clip each pair once and copy its original two ROM pixels
+   together where alignment permits. No raster/texture cache is added. */
+typedef uint16_t FacadeHalf __attribute__((may_alias));
 void hd_facade_wall(uint8_t *p,int sx,int sy,int height,
                     unsigned variant,unsigned side){
- if(height<=0)return;
+ if(height<=0||sx<=-16||sx>=HD_W)return;
  const uint8_t *a=fronts[side&1u][variant&7u];
+ int x0=sx<0?-sx:0,x1=sx+16>HD_W?HD_W-sx:16;
  int major=40/height,minor=40%height;
- for(int col=0;col<16;col++){
-  int xx=sx+col;
-  if((unsigned)xx>=HD_W)continue;
-  int ytop=sy+(side?16-col/2:8+col/2)-height;
-  int row=0,remain=0;
-  for(int step=0;step<height;step++){
-   int yy=ytop+step;
-   if((unsigned)yy<HD_H)
-    p[yy*HD_W+xx]=a[row*16+col];
+ for(int pair=0;pair<16;pair+=2){
+  int col=pair<x0?x0:pair,end=pair+2>x1?x1:pair+2;
+  if(col>=end)continue;
+  int ytop=sy+(side?16-pair/2:8+pair/2)-height;
+  int first=ytop<0?-ytop:0,last=ytop+height>HD_H?HD_H-ytop:height;
+  if(first>=last)continue;
+  int scaled=first*40,row=scaled/height,remain=scaled%height;
+  int xx=sx+col,width=end-col;
+  int paired=width==2&&
+      ((((uintptr_t)(p+xx)|(uintptr_t)(a+col))&1u)==0u);
+  for(int step=first;step<last;step++){
+   uint8_t *out=p+(ytop+step)*HD_W+xx;
+   const uint8_t *in=a+row*16+col;
+   if(paired)*(FacadeHalf *)(void *)out=*(const FacadeHalf *)(const void *)in;
+   else{
+    out[0]=in[0];
+    if(width==2)out[1]=in[1];
+   }
    row+=major;remain+=minor;
    if(remain>=height){row++;remain-=height;}
   }
@@ -409,3 +420,4 @@ int hd_potheads_wall_ink(int u,int v){
  }
  return HD_LEAF_DARK;
 }
+

@@ -101,20 +101,63 @@ steps out. Hall reflections are behind the people, and her walk stops at the
 contact position. The memorial retains Mara and the clerk, with subdued light
 planes rather than intersecting bright lines; Danny does not appear alive.
 
+## Studio presentation and control feedback
+
+The six studio pages now explain the real editor state with a consistent
+rule: amber marks the edited selection, and green marks playback.
+
+| Page | Completed improvement |
+|---|---|
+| SONG | Tempo and feel fields have separate bounds from the turntable. The record stops when preview stops, and the footer correctly identifies field selection and editing controls. |
+| NOTES | Selected columns retain every pitch-grid line. Playback markers sit beside notes; rests remain visible. The small level strips reflect the existing global feel setting, without inventing a per-note velocity editor. |
+| ORDER | Each phrase previews the saved melody at its actual transposition. These are musical values, rather than decorative random bars. |
+| LYRICS | Four cue choices, a cue number and a word underline follow the existing eight-step phrase. The cue remains separate from the instrumental audio. |
+| CHOIR | OFF, FIFTH, OCTAVE and HIGH expose the editable harmony setting. The four voice patterns agree with the sequencer's actual note, harmony, bass and beat events. |
+| LIVE | Current part and step, arrangement labels and voice activity reflect playback. A silent step displays silent channels. |
+
+Drawing these screens changes neither the saved patch nor the sequencer's
+position. The renderer regression checks 384 combinations of mood, harmony,
+part and step against actual musical events, along with stopped transport,
+pitch previews, selected grid lines, palette bounds and framebuffer guards.
+
+The clearer interface also removes unnecessary painting. Three page bands
+and thin panel borders replace overlapping full-page and full-panel fills.
+That isolated change preserves the six images byte for byte and eliminates
+46,536 commanded rectangle pixels per frame. Including the complete visual
+pass, rectangle-write area falls by 42–51% across the six tabs. This is a
+measure of drawing work, not an emulator FPS result.
+
 ## Actual emulator cadence
 
-`tools/frame_cadence.c` runs the built ROM in mGBA, enters New Game with robust
-button holds, and measures Mode-4 displayed-page changes over 600 emulated
-video frames for the opening and town. Companion captures validate the route.
-The current workflow publishes its source SHA and results in
+`tools/frame_cadence.c` runs the built ROM in mGBA, enters New Game, and
+measures displayed Mode-4 page changes over 600 emulated video frames in
+three states: the Potheads opening, overhead town and first-person town.
+Companion captures verify the actual route. The workflow publishes the
+source SHA and measurements in
 [`screenshots/emulator_cadence.txt`](screenshots/emulator_cadence.txt).
 
-The published pre-pass PR #13 ROM was measured in mGBA 0.10.5 at 9.955 opening
-page flips/second and 4.977 town flips/second. Those are actual sampled emulator
-presentation rates, not the approximately 30 opportunities/second the source
-intends. Host microseconds cannot substitute for this check. The probe covers
-two scripted states, includes presentation stalls, and does not certify every
-scene or physical hardware. Review the new report before making an FPS claim.
+The continuation after PR #14 produced the following **local ARM-build
+measurements**, before final devkitARM CI acceptance. The local compiler was
+Debian ARM GCC 14.2.1 with the official devkitPro CRT and specs; the emulator
+was mGBA 0.10.5. The rates use elapsed emulated video time.
+
+| Sampled scene | Published PR #14 baseline | Local candidate | Candidate presentation interval |
+|---|---:|---:|---:|
+| Potheads opening | 14.932 page flips/s | 19.909 page flips/s | 3 video frames |
+| Overhead town | 9.955 page flips/s | 14.932 page flips/s | 4 video frames |
+| First-person town | 1.394 page flips/s | 7.466 page flips/s | 8 video frames / 133.942 ms |
+
+These are sampled presentation rates, including flips to identical content.
+They do not establish sustained 30 FPS or performance on physical hardware.
+The source-tagged CI reports and a check of the published ROM remain the
+release evidence; local compiler results alone do not replace those gates.
+See [the performance gate](GBA_PERFORMANCE_GATE.md) for timing, input,
+memory and exact-image validation details.
+
+For historical comparison, the earlier **PR #13** published ROM measured
+9.955 opening and 4.977 overhead-town page flips/s in mGBA 0.10.5. Those
+figures belong to the build before the art pass, not the starting baseline
+of the current continuation.
 
 The canvas drawing primitives use ARM code copied to IWRAM by the existing
 devkitARM startup. Rectangle fills align their destination and write packed
@@ -136,13 +179,29 @@ crop/guard comparisons protect every material, alignment and clipped edge.
 The unchanged person and tree sprites clip their bounds once before their
 ARM/IWRAM transparency loops, rather than checking screen bounds per pixel.
 
+The first-person follow-up retains the shipped image while reusing rays
+with identical quantized directions, avoiding floor work hidden behind
+walls, and placing the measured pixel loops in ARM/IWRAM. It preserves
+3,456 complete reference frames and passes 136,140 independent floor/wall
+depth comparisons. The 240-column view, scene details and palette remain.
+
+Presentation and simulation now have separate responsibilities. VBlank
+records video-time input into a bounded 64-sample queue; the main thread
+processes those samples in order and then paints. Whole-page DMA3 copies
+finish before a completed hidden page can be published. This keeps short
+presses and elapsed story time from disappearing during a slow draw, while
+visible response still depends on when that draw completes. The IRQ only
+extends the music clock; musical events are still sequenced on the main
+thread.
+
 ## Remaining visual priorities
 
 1. Review new roles, rescue intermediate frames and all town facings at native
    1× and nearest-neighbor enlargement. Keep the actor and current story prop
    readable before increasing texture density.
-2. Continue measuring actual ROM cadence and linked memory headroom. The
-   existing GBA presentation target is not proof that it is achieved.
+2. Continue measuring actual ROM cadence, input response and linked memory
+   headroom. The local candidate still takes 133.942 ms between sampled
+   first-person presentations; the 30 FPS target has not been achieved.
 3. Exact rotoscope of Danny's Potheads dance when the original reference
    video is available to this coding workspace. The present eight samples
    are artist-authored, not a claim to traced footage.

@@ -7,6 +7,8 @@
 #include "rescue_save.h"
 #include "studio.h"
 #include "hd_canvas.h"
+#include "frame_runtime.h"
+#include "video_present.h"
 
 #define REG_BG2PA R16(0x04000020)
 #define REG_BG2PB R16(0x04000022)
@@ -20,7 +22,8 @@
 static volatile u8 *const save_ram = (volatile u8 *)0x0E000000;
 const char story_sram_id[] __attribute__((used)) = "SRAM_V113";
 static Story game;
-static int shown_page, pending, pending_page, clock_ticks, save_cooldown;
+static unsigned clock_ticks;
+static int save_cooldown;
 
 /* Shared musical language for Danny and BORE. The same cue is heard in the
    associated 2D/3D location and during its corresponding cinematic. */
@@ -135,10 +138,10 @@ static void draw_hidden(int page){
        game.activity!=STORY_ACT_STUDIO &&
        !(game.paused && (game.choice & 0x80u)))
         hd_game_overlay((u8*)hd_shared_frame,&game);
-    volatile u32 *dest=(volatile u32*)(VRAM8+(page?0xA000:0));
-    for(unsigned i=0;i<HD_BYTES/4u;i++)dest[i]=hd_shared_frame[i];
+    video_copy_frame(hd_shared_frame,(unsigned)page);
 }
 void play_enter(int want_load,int slot){
+    frame_runtime_stop();
     u8 b[SAVE_LEN];
     studio_reset();
     if(want_load&&read_slot(slot,b)){
@@ -202,7 +205,7 @@ void play_enter(int want_load,int slot){
        (game.ended && game.ending>=STORY_END_GOOD && game.ending<=STORY_END_BAD))
         music_begin_ending(game.ended?game.ending:STORY_END_NEUTRAL);
     else music_set_cue(scene_music_cue());
-    clock_ticks=0;shown_page=0;pending=0;pending_page=0;save_cooldown=0;
+    clock_ticks=0;save_cooldown=0;
     REG_DISPCNT=0;REG_BLDCNT=0;REG_BLDY=0;
     for(int i=0;i<256;i++)PAL16[i]=i<32?story_palette[i]:
                          i<64?hd_extra_palette[i-32]:0;
@@ -211,16 +214,18 @@ void play_enter(int want_load,int slot){
     REG_BG2X=0;REG_BG2Y=0;REG_BGCNT(2)=0;
     draw_hidden(0);
     REG_DISPCNT=4|DCNT_BG2;
+    /* A held menu confirmation belongs to the menu. Only a release and
+       new press may advance the opening after its initial page appears. */
+    game.old_keys=(u16)(~REG_KEYINPUT&0x03ffu);
+    frame_runtime_start(0u);
     music_set_volume(65);
 }
-int play_update(void){
-    if(pending){
-        shown_page=pending_page;
-        REG_DISPCNT=4|DCNT_BG2|(shown_page?0x10:0);
-        pending=0;
+static int play_tick(u16 keys){
+    story_tick(&game,keys);
+    if(game.quit){
+        frame_runtime_stop();
+        write_save();music_set_cue(MUSIC_CUE_TITLE);music_set_volume(40);return 1;
     }
-    story_tick(&game,(u16)(~REG_KEYINPUT&0x03FF));
-    if(game.quit){write_save();music_set_cue(MUSIC_CUE_TITLE);music_set_volume(40);return 1;}
     if(game.life_stage==STORY_LIFE_FINALE ||
        (game.ended && game.ending>=STORY_END_GOOD && game.ending<=STORY_END_BAD))
         music_begin_ending(game.ended?game.ending:STORY_END_NEUTRAL);
@@ -244,11 +249,21 @@ int play_update(void){
          game.rescue_stage==STORY_RESCUE_LOST) &&
          (clock_ticks%600)==599)game.dirty=1;
     if(game.dirty&&++save_cooldown>=120){write_save();save_cooldown=0;}
-    if((clock_ticks++&1)==0){
-        /* Draw the hidden bitmap; the hardware page flips on the NEXT VBlank. */
-        pending_page=shown_page^1;
-        draw_hidden(pending_page);
-        pending=1;
+    ++clock_ticks;
+    return 0;
+}
+int play_update(void){
+    u16 keys;
+    /* Story mutation is always on main, in the exact order sampled by
+       VBlank. A draw can delay processing, but cannot slow the clock or
+       turn a short press/release into a permanently missed action. */
+    for(unsigned i=0;i<FRAME_RUNTIME_QUEUE_CAPACITY&&frame_runtime_next(&keys);i++)
+        if(play_tick(keys))return 1;
+    unsigned page;
+    if(frame_runtime_begin_render(&page)){
+        draw_hidden((int)page);
+        frame_runtime_submit(page);
     }
     return 0;
 }
+

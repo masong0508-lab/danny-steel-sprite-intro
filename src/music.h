@@ -5,6 +5,13 @@ void music_init(void);
 void music_start(void);
 void music_stop(void);
 void music_poll(void);
+#if defined(__arm__)
+#define MUSIC_CLOCK_CODE __attribute__((section(".iwram"),long_call,target("arm")))
+#else
+#define MUSIC_CLOCK_CODE
+#endif
+/* IRQ samples only the free-running clock. PSG sequencing remains on main. */
+MUSIC_CLOCK_CODE void music_clock_vblank(void);
 void music_set_volume(int pct);
 void music_set_cue(unsigned cue);
 unsigned music_get_cue(void);
@@ -17,3 +24,4 @@ unsigned music_get_cue(void);
    Calls are idempotent so changing cutscene shots cannot restart the song. */
 void music_begin_ending(unsigned ending); /* 1 good, 2 neutral, 3 bad */
 unsigned music_ending_phase(void);       /* 0 no ending, 1 HERE TODAY, 2 good coda, 3 completed */
+

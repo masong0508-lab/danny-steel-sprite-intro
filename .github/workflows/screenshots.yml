@@ -6,24 +6,10 @@ on:
       - ".github/workflows/screenshots.yml"
       - "tools/story_gallery.c"
       - "tools/frame_cadence.c"
-      - "src/hd_studio.c"
-      - "src/hd_perspective.c"
-      - "src/hd_cinema.c"
-      - "src/hd_canvas.c"
-      - "src/hd_overlay.c"
-      - "src/story.c"
-      - "src/hd_world.c"
+      - "tools/runtime_probe.c"
+      - "Makefile"
+      - "src/**"
       - "tests/potheads_open_test.c"
-      - "src/hd_actor.c"
-      - "src/hd_special.c"
-      - "src/hd_ending.c"
-      - "src/hd_arena.c"
-      - "src/hd_arena_art.c"
-      - "src/hd_world.c"
-      - "src/hd_isometric.c"
-      - "src/hd_facade_art.c"
-      - "src/hd_isometric_atlas.c"
-      - "src/hd_world_atlas.c"
   workflow_dispatch:
 
 permissions:
@@ -75,16 +61,25 @@ jobs:
           done
       - name: Measure actual ROM presentation cadence in mGBA
         run: |
+          set -euo pipefail
           gcc -std=c11 -O2 -Wall -Wextra -Werror tools/frame_cadence.c -lmgba -o /tmp/danny_frame_cadence
           {
             printf 'Source commit: %s\n' "$GITHUB_SHA"
             /tmp/danny_frame_cadence danny_steel_title.gba docs/screenshots
           } | tee docs/screenshots/emulator_cadence.txt
+      - name: Verify real ROM clocks, short presses, held movement and queue headroom
+        run: |
+          set -euo pipefail
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc tools/runtime_probe.c src/story.c src/studio.c -lmgba -o /tmp/danny_runtime_probe
+          {
+            printf 'Source commit: %s\n' "$GITHUB_SHA"
+            /tmp/danny_runtime_probe danny_steel_title.gba danny_steel_title.elf docs/screenshots
+          } | tee docs/screenshots/runtime_verification.txt
       - name: Verify dimensions and save contact sheet
         run: |
           identify -format '%f %wx%h\n' docs/screenshots/*.png
-          # Exclude the previous contact sheet: it must not appear as tile 13.
-          montage docs/screenshots/[0-9][0-9]_*.png -tile 3x -geometry 480x320+6+6 \
+          # Only authored gallery frames; include lettered rest/choir variants.
+          montage docs/screenshots/[0-9][0-9]*_*.png -tile 3x -geometry 480x320+6+6 \
             -background '#171919' docs/screenshots/contact_sheet.png
       # The repository stores the images directly; Actions artifact upload is
       # intentionally omitted because this account has reached its quota.
@@ -95,9 +90,16 @@ jobs:
           git add docs/screenshots
           if ! git diff --cached --quiet; then
             git commit -m "docs: capture actual mGBA and game-renderer screenshots [skip ci]"
-            # Source commits can advance while mGBA is capturing. Fast-forward
-            # first; never force-push or discard new game code.
+            # Do not attach old captures or runtime results to newer code.
+            # A concurrent ROM/image publication has no effect on these tests.
             git fetch origin "${GITHUB_REF_NAME}"
+            current_branch="$(git rev-parse "origin/${GITHUB_REF_NAME}")"
+            unsafe="$(git diff --name-only "$GITHUB_SHA" "$current_branch" | grep -Ev '^(docs/screenshots/|dist/danny_steel_title[.]gba$)' || true)"
+            if [ -n "$unsafe" ]; then
+              echo "Skipping captures; a newer source revision needs its own run:"
+              printf '%s\n' "$unsafe"
+              exit 0
+            fi
             git rebase "origin/${GITHUB_REF_NAME}"
             git push origin "HEAD:${GITHUB_REF_NAME}"
           fi

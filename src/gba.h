@@ -15,6 +15,7 @@ extern u16 host_pal[512];
 
 #define R16(a) (*(volatile u16 *)(a))
 #define REG_DISPCNT   R16(0x04000000)
+#define REG_DISPSTAT  R16(0x04000004)
 #define REG_VCOUNT    R16(0x04000006)
 #define REG_BGCNT(n)  R16(0x04000008 + (n) * 2)
 #define REG_BGHOFS(n) R16(0x04000010 + (n) * 4)
@@ -22,6 +23,9 @@ extern u16 host_pal[512];
 #define REG_BLDCNT    R16(0x04000050)
 #define REG_BLDY      R16(0x04000054)
 #define REG_KEYINPUT  R16(0x04000130)
+#define REG_IE        R16(0x04000200)
+#define REG_IF        R16(0x04000202)
+#define REG_IME       R16(0x04000208)
 #define KEY_START 8
 #define KEY_A 1
 #define KEY_B 2
@@ -52,3 +56,4 @@ extern u16 host_pal[512];
 #define WAVE_RAM ((volatile u16 *)0x04000090)
 #define REG_TM3CNT_L  R16(0x0400010C)
 #define REG_TM3CNT_H  R16(0x0400010E)
+
