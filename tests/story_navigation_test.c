@@ -101,6 +101,13 @@ int main(void){
  assert(!strcmp(story_action_hint(&s),"A CLERK"));
  s.x=8;s.y=12;s.facing=3;
  assert(!strcmp(story_action_hint(&s),"A MARA"));
+ s.rescue_stage=STORY_RESCUE_MISSING;
+ assert(!strcmp(story_action_hint(&s),"A EMPTY CAFE"));
+ s.rescue_stage=STORY_RESCUE_LOST;
+ assert(!strcmp(story_action_hint(&s),"A PHONE"));
+ s.rescue_stage=STORY_RESCUE_SAVED;
+ assert(!strcmp(story_action_hint(&s),"A MARA"));
+ s.rescue_stage=STORY_RESCUE_NONE;
  s.x=12;s.y=13;s.facing=0;
  assert(!strcmp(story_action_hint(&s),"A LOOK"));
  /* The fourth page is a genuine live field guide in BOTH camera modes.

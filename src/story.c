@@ -1172,7 +1172,9 @@ const char *story_action_hint(const Story *s){
     switch(nearby_actor(s)){
     case 'L':return "A READ";
     case 'C':return "A CLERK";
-    case 'F':return "A MARA";
+    case 'F':return s->rescue_stage==STORY_RESCUE_LOST?"A PHONE":
+          (s->rescue_stage>=STORY_RESCUE_MISSING&&
+           s->rescue_stage<=STORY_RESCUE_TRACE)?"A EMPTY CAFE":"A MARA";
     case 'B':return "A BUS";
     case 'M':return "A MUSIC";
     case 'R':return "A CANVAS";
