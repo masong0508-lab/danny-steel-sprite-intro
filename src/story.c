@@ -96,6 +96,102 @@ int story_solid(int x, int y) {
     const char c = story_tile(x, y);
     return c == '#' || c == 'A' || c == 'T' || c == '~' || c == 'L' || c == 'C' || c == 'F' || c == 'B' || c == 'P' || c == 'V' || c == 'Q' || c == 'S' || c == 'W' || c == 'H' || c == 'R' || c == 'M' || c == 'K';
 }
+/* A tiny cached pathfinder follows the ORIGINAL 24x18 walkable town.
+   A direct compass bearing is useless when a building is in the way. The
+   shortest route ends at a walkable interaction square beside a solid
+   objective; it never tells Danny to walk INSIDE the counter or clinic.
+   Fixed ~1.3 KiB static scratch, no heap, no framebuffer, no save data.
+   Repeated HUD draws cost only a coordinate cache check; recalculate on
+   movement or changed objective, never once per pixel or ray. */
+int story_route(const Story *s, int *direction, int *steps){
+    static struct {
+        int sx,sy,gx,gy,dir,steps,valid,found;
+    } cache;
+    int gx=0,gy=0;const char *name=0;
+    if(!story_goal(s,&gx,&gy,&name)){
+        if(direction)*direction=-1;
+        if(steps)*steps=-1;
+        return 0;
+    }
+    int sx=(int)s->x,sy=(int)s->y;
+    if(!cache.valid||cache.sx!=sx||cache.sy!=sy||
+       cache.gx!=gx||cache.gy!=gy){
+        cache.valid=1;cache.sx=sx;cache.sy=sy;
+        cache.gx=gx;cache.gy=gy;cache.found=0;
+        cache.dir=-1;cache.steps=-1;
+        if(!story_solid(sx,sy)){
+            int gxsolid=story_solid(gx,gy);
+            int distance=(sx>gx?sx-gx:gx-sx)+
+                         (sy>gy?sy-gy:gy-sy);
+            if((gxsolid&&distance==1)||(!gxsolid&&distance==0)){
+                cache.found=1;cache.steps=0;
+            }else{
+                static uint16_t queue[STORY_W*STORY_H];
+                static uint8_t first[STORY_W*STORY_H];
+                static const int8_t dx[4]={1,0,-1,0};
+                static const int8_t dy[4]={0,1,0,-1};
+                for(unsigned i=0;i<STORY_W*STORY_H;i++)first[i]=255u;
+                unsigned read=0,write=0,count=1,depth=0;
+                unsigned start=(unsigned)sy*STORY_W+(unsigned)sx;
+                first[start]=4u;queue[write++]=(uint16_t)start;
+                while(read<write && !cache.found){
+                    unsigned next_count=0;
+                    for(unsigned k=0;k<count&&!cache.found;k++){
+                        unsigned cell=queue[read++];
+                        int cx=(int)(cell%STORY_W),cy=(int)(cell/STORY_W);
+                        for(unsigned d=0;d<4u;d++){
+                            int nx=cx+dx[d],ny=cy+dy[d];
+                            if((unsigned)nx>=STORY_W||
+                               (unsigned)ny>=STORY_H||story_solid(nx,ny))
+                                continue;
+                            unsigned nid=(unsigned)ny*STORY_W+(unsigned)nx;
+                            if(first[nid]!=255u)continue;
+                            first[nid]=(uint8_t)(cell==start?d:first[cell]);
+                            queue[write++]=(uint16_t)nid;
+                            ++next_count;
+                            int near=(nx>gx?nx-gx:gx-nx)+
+                                     (ny>gy?ny-gy:gy-ny);
+                            if((gxsolid&&near==1)||(!gxsolid&&near==0)){
+                                cache.found=1;cache.dir=(int)first[nid];
+                                cache.steps=(int)depth+1;
+                                break;
+                            }
+                        }
+                    }
+                    count=next_count;++depth;
+                }
+            }
+        }
+    }
+    if(direction)*direction=cache.dir;
+    if(steps)*steps=cache.steps;
+    return cache.found;
+}
+const char *story_goal_reason(const Story *s){
+    if(s->ended||s->life_stage==STORY_LIFE_FINALE)
+        return "YOUR STORY IS STILL HERE";
+    switch(s->rescue_stage){
+    case STORY_RESCUE_MISSING:return "ASK THE WITNESS FOR CLUES";
+    case STORY_RESCUE_WITNESS:return "TRACE THE VEHICLE WITH CARE";
+    case STORY_RESCUE_TRACE:return "HELP MARA AT THE SAFE HOUSE";
+    case STORY_RESCUE_LOST:return "NO VERIFIED RECOVERY YET";
+    default:break;
+    }
+    switch(s->life_stage){
+    case STORY_LIFE_CLINIC:case STORY_LIFE_FINAL_CLINIC:
+        return "THE DOCTOR IS WAITING";
+    case STORY_LIFE_LAST_WORK:return "FINISH THE LAST PAINTING";
+    case STORY_LIFE_WAIT:case STORY_LIFE_FOLLOWUP_WAIT:
+        return "MAKE MEMORIES AT YOUR PACE";
+    default:break;
+    }
+    if(!(s->flags&STORY_HOME))return "START WITH THE OLD LETTER";
+    if(!(s->flags&STORY_STAMP))return "THE CLERK NEEDS YOUR LETTER";
+    if(!(s->flags&STORY_MARA))return "SPEAK HONESTLY WITH MARA";
+    if(!(s->flags&STORY_MUSIC))return "THE BORE ARCHIVE HAS A TAPE";
+    if(!(s->flags&STORY_ART))return "PUT SOME COLOR ON THE ROOF";
+    return "THE LAST BUS IS WAITING";
+}
 
 enum { D_NONE, D_OPEN, D_LETTER, D_LETTER_AGAIN, D_CLERK_LOCKED, D_CLERK, D_CLERK_AGAIN,
        D_MARA_LOCKED, D_MARA, D_MARA_AGAIN, D_BUS_LOCKED, D_BUS_READY, D_END_GO,
@@ -208,16 +304,17 @@ SCRIPT(d_end_stay,
  {"DANNY", "I call it THE END.", "We're open Tuesday."},
  {"THE END", "Tomorrow came on", "foot after all."});
 SCRIPT(d_journal_0,
- {"POCKET NOTEBOOK", "Letter: missing.", "BORE stamp: missing."},
- {"POCKET NOTEBOOK", "Mara: waiting.", "Bus: on schedule."});
+ {"POCKET NOTEBOOK", "First: the old letter.", "Then the BORE clerk."},
+ {"DANNY", "One street at a time.", "I can take my time."});
 SCRIPT(d_journal_1,
- {"POCKET NOTEBOOK", "Letter: kept safe.", "Find the BORE clerk."});
+ {"POCKET NOTEBOOK", "The letter is safe.", "BORE needs proof."});
 SCRIPT(d_journal_2,
- {"POCKET NOTEBOOK", "Stamp: acquired.", "Go see Mara."});
+ {"POCKET NOTEBOOK", "The clerk stamped it.", "Mara deserves the truth."});
 SCRIPT(d_journal_3,
- {"POCKET NOTEBOOK", "Promise: made.", "The bus is waiting."});
+ {"POCKET NOTEBOOK", "I made the promise.", "One last bus to decide."});
 SCRIPT(d_nothing,
- {"DANNY", "Nothing to do", "with that. Yet."});
+ {"DANNY", "Nothing here for me.", "Where was I headed?"},
+ {"POCKET NOTEBOOK", "Follow NEXT up top.", "R holds my notes."});
 SCRIPT(d_return,
  {"DANNY", "The city is still", "here. So am I."});
 /* Entirely fictional setting and people. The harm is serious; the bureaucracy is not. */
@@ -883,18 +980,18 @@ static void cult_tick(Story *s, uint16_t pressed) {
     if (s->battle_parry) --s->battle_parry;
     if (s->battle_parry_cd) --s->battle_parry_cd;
     if ((pressed & A) && !s->battle_parry_cd) {
-        s->battle_parry = 6;
-        s->battle_parry_cd = 18;
+        s->battle_parry = STORY_BATTLE_PARRY;
+        s->battle_parry_cd = STORY_BATTLE_PARRY_CD;
     }
     ++s->battle_timer;
-    if (s->battle_timer % 15 == 0) {
-        int beat = s->battle_timer / 15 - 1;
+    if (s->battle_timer % STORY_BATTLE_BEAT == 0) {
+        int beat = (int)(s->battle_timer / STORY_BATTLE_BEAT) - 1;
         if (s->battle_lane == story_attack_lane(s, beat) && !s->battle_parry) {
             if (s->battle_guard) s->battle_guard = 0;
             else if (s->battle_focus) --s->battle_focus;
         }
     }
-    if (s->battle_timer >= 60) {
+    if (s->battle_timer >= STORY_BATTLE_BEAT*STORY_BATTLE_STRIKES) {
         if (!s->battle_focus) { cult_finish(s, -1); return; }
         if (++s->battle_progress >= 2) { cult_finish(s, 1); return; }
         s->battle = BATTLE_MENU;
@@ -1068,6 +1165,24 @@ static char nearby_actor(const Story *s){
         }
     }
     return c;
+}
+const char *story_action_hint(const Story *s){
+    /* This special storefront interaction is checked BEFORE all actors. */
+    if(s->x==20u&&s->y==11u&&s->facing==0u)return "A SHIFT";
+    switch(nearby_actor(s)){
+    case 'L':return "A READ";
+    case 'C':return "A CLERK";
+    case 'F':return "A MARA";
+    case 'B':return "A BUS";
+    case 'M':return "A MUSIC";
+    case 'R':return "A CANVAS";
+    case 'K':return "A CLINIC";
+    case 'P':case 'V':case 'Q':return "A DUEL";
+    case 'S':return "A TERMINAL";
+    case 'W':return "A WITNESS";
+    case 'H':return "A DOOR";
+    default:return "A LOOK";
+    }
 }
 static void begin_bad_film(Story *s){
     s->ended=1;s->ending=STORY_END_BAD;s->life_stage=STORY_LIFE_NONE;
