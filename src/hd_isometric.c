@@ -23,8 +23,7 @@ static int exposed(int x,int y){
  char c=story_tile(x,y);
  return c!='#'&&c!='A';
 }
-static unsigned material(char t,int x,int y){
- unsigned n=grain(x,y);
+static unsigned material(char t,unsigned n){
  if(t=='~')return 8u+(n&1u);
  if(t=='g'||t=='T')return 6u+(n&1u);
  if(t==','||t=='=')return 4u+(n&1u);
@@ -193,31 +192,105 @@ static void object(uint8_t *p,int sx,int sy,char kind,unsigned tick,int wx,int w
   hd_line(p,cx+6,foot-9,cx,foot-3,HD_COPPER);
   return;
  }
- if(kind=='M'||kind=='K'||kind=='S'||kind=='H'||kind=='R'){
-  /* Reachable landmark, not an impassable new building. A physically
-     placed shop sign leaves story collisions and objectives intact. */
-  hd_rect(p,cx-10,foot-20,20,19,HD_BRICK_DARK);
-  hd_rect(p,cx-8,foot-18,16,13,HD_GLASS);
-  hd_rect(p,cx-9,foot-21,18,3,HD_COPPER);
-  hd_rect(p,cx-6,foot-16,12,2,HD_PAPER);
-  if(kind=='M'){
-   hd_ellipse(p,cx,foot-10,5,5,HD_INK);
-   hd_ellipse(p,cx,foot-10,2,2,HD_GOLD);
-  }else if(kind=='K'){
-   hd_rect(p,cx-1,foot-14,2,8,HD_PAPER);
-   hd_rect(p,cx-4,foot-11,8,2,HD_PAPER);
-  }else if(kind=='R'){
-   hd_rect(p,cx-4,foot-14,9,7,HD_GOLD);
-  }else{
-   hd_rect(p,cx-3,foot-14,7,5,HD_GLASS_LIT);
-  }
-  hd_rect(p,cx-9,foot-1,18,2,HD_STONE_DARK);
+ if(kind=='M'){
+  /* A grounded record player: spindle, tonearm and separate speakers. */
+  hd_ellipse(p,cx,foot+1,13,3,HD_SHADOW);
+  hd_rect(p,cx-12,foot-14,24,12,HD_BARK);
+  hd_rect(p,cx-10,foot-12,20,8,HD_BRICK);
+  hd_ellipse(p,cx-3,foot-8,6,4,HD_INK);
+  hd_ellipse(p,cx-3,foot-8,2,2,HD_COPPER);
+  hd_pixel(p,cx-3,foot-8,HD_GOLD);
+  hd_line(p,cx+6,foot-11,cx+6,foot-7,HD_PAPER);
+  hd_line(p,cx+6,foot-7,cx+1,foot-6,HD_PAPER);
+  hd_rect(p,cx-14,foot-16,3,10,HD_SHADOW);
+  hd_rect(p,cx+11,foot-16,3,10,HD_SHADOW);
+  hd_pixel(p,cx+9,foot-5,HD_LAMP);
+  return;
+ }
+ if(kind=='R'){
+  /* Freestanding painting with visible three-legged wooden easel. */
+  hd_ellipse(p,cx,foot,10,3,HD_SHADOW);
+  hd_line(p,cx-7,foot,cx-2,foot-19,HD_BARK);
+  hd_line(p,cx+7,foot,cx+2,foot-19,HD_BARK);
+  hd_line(p,cx,foot,cx,foot-17,HD_COPPER);
+  hd_rect(p,cx-8,foot-19,16,14,HD_BARK);
+  hd_rect(p,cx-6,foot-17,12,10,HD_PAPER);
+  hd_rect(p,cx-5,foot-16,10,4,HD_GLASS);
+  hd_line(p,cx-4,foot-9,cx,foot-13,HD_RED_SHADE);
+  hd_line(p,cx,foot-13,cx+5,foot-9,HD_GOLD);
+  hd_rect(p,cx-10,foot-5,20,2,HD_COPPER);
+  return;
+ }
+ if(kind=='K'){
+  /* Tiled entrance and a real cross rather than an interchangeable sign. */
+  hd_ellipse(p,cx,foot+1,12,3,HD_SHADOW);
+  hd_rect(p,cx-11,foot-21,22,21,HD_STONE_DARK);
+  hd_rect(p,cx-9,foot-19,18,17,HD_PLASTER);
+  hd_rect(p,cx-5,foot-16,10,14,HD_GLASS);
+  hd_rect(p,cx-1,foot-16,2,14,HD_BRICK_DARK);
+  hd_rect(p,cx-7,foot-23,14,5,HD_INK);
+  hd_rect(p,cx-1,foot-22,2,4,HD_PAPER);
+  hd_rect(p,cx-3,foot-21,6,2,HD_PAPER);
+  hd_pixel(p,cx+6,foot-6,HD_LAMP);
+  return;
+ }
+ if(kind=='S'){
+  /* Information terminal with a grounded keyboard and active signal. */
+  hd_ellipse(p,cx,foot+1,10,3,HD_SHADOW);
+  hd_rect(p,cx-9,foot-22,18,17,HD_INK);
+  hd_rect(p,cx-7,foot-20,14,12,HD_GLASS);
+  hd_rect(p,cx-5,foot-18,10,2,HD_GLASS_LIT);
+  hd_rect(p,cx-5,foot-14,7,1,HD_LEAF_LIT);
+  hd_pixel(p,cx+4,foot-11,(tick/26u)&1u?HD_LAMP:HD_PAPER);
+  hd_rect(p,cx-10,foot-7,20,3,HD_STONE_DARK);
+  hd_rect(p,cx-6,foot-4,12,4,HD_BARK);
+  return;
+ }
+ if(kind=='H'){
+  /* Heavy rescue threshold with cross-bracing and an actual latch. */
+  hd_ellipse(p,cx,foot+1,11,3,HD_SHADOW);
+  hd_rect(p,cx-10,foot-24,20,24,HD_STONE_DARK);
+  hd_rect(p,cx-8,foot-22,16,21,HD_BRICK_DARK);
+  hd_rect(p,cx-6,foot-20,12,18,HD_BARK);
+  hd_rect(p,cx-6,foot-20,12,2,HD_COPPER);
+  hd_line(p,cx-4,foot-17,cx+4,foot-7,HD_BRICK);
+  hd_line(p,cx+4,foot-17,cx-4,foot-7,HD_BRICK);
+  hd_rect(p,cx+3,foot-10,2,3,HD_LAMP);
   return;
  }
  if(kind=='D'){
   hd_rect(p,cx-4,foot-9,8,8,HD_PLASTER);
   hd_rect(p,cx-3,foot-7,6,5,HD_GLASS);
  }
+}
+/* Tiny grounded material accents; the same coordinates remain under every
+   camera pan. Draw these BEFORE architecture so rain never covers faces. */
+static void ground_detail(uint8_t *p,int sx,int sy,unsigned n,
+                          char tile,unsigned tick){
+ if(tile=='~'){
+  int cx=sx+16,cy=sy+8;
+  int span=3+(int)((tick/18u+n)%6u);
+  hd_line(p,cx-span,cy-1,cx+span,cy-1,HD_GLASS_LIT);
+  if((n&3u)==0u)
+   hd_line(p,cx-5,cy+2,cx+3,cy+2,HD_REFLECT);
+ }else if((tile==','||tile=='=') && (n&15u)==0u){
+  hd_line(p,sx+10,sy+9,sx+16,sy+9,HD_REFLECT);
+  hd_pixel(p,sx+19,sy+10,HD_STONE_LIT);
+ }else if(tile=='.' && (n&31u)==0u){
+  hd_line(p,sx+12,sy+8,sx+17,sy+8,HD_STONE_DARK);
+  hd_pixel(p,sx+13,sy+9,HD_MORTAR);
+  hd_pixel(p,sx+16,sy+9,HD_MORTAR);
+ }
+}
+/* Unlike a top-layer sparkle, this route cue cannot glow through roofs:
+   the objective's pavement is decorated at its natural depth. */
+static void ground_goal(uint8_t *p,int sx,int sy,unsigned tick){
+ unsigned ink=((tick/24u)&1u)?HD_COPPER:HD_GOLD;
+ hd_line(p,sx+5,sy+10,sx+11,sy+13,ink);
+ hd_line(p,sx+11,sy+13,sx+16,sy+11,ink);
+ hd_line(p,sx+27,sy+10,sx+21,sy+13,ink);
+ hd_line(p,sx+21,sy+13,sx+16,sy+11,ink);
+ hd_pixel(p,sx+16,sy+8,HD_LAMP);
 }
 static void rain(uint8_t *p,unsigned tick){
  /* Fourteen subdued strokes behind the depth-sorted architecture and
@@ -239,9 +312,16 @@ void hd_isometric_draw(uint8_t *p,const Story *s,unsigned tick){
    int sx,sy;projection(s,wx,wy,&sx,&sy);
    if(sx<=-32||sx>=240||sy<=-18||sy>=154)continue;
    char c=story_tile(wx,wy);
-   hd_iso_tile(p,sx,sy,material(c,wx,wy));
+   unsigned n=grain(wx,wy);
+   hd_iso_tile(p,sx,sy,material(c,n));
+   if(c=='~'||c==','||c=='='||c=='.')
+    ground_detail(p,sx,sy,n,c,tick);
   }
  rain(p,tick);
+ int gx=0,gy=0;
+ const char *goal=0;
+ int has_goal=story_goal(s,&gx,&gy,&goal);
+ (void)goal;
  int ox=0,oy=0;
  if(s->anim){
   ox=((int)s->prev_x-(int)s->x -
@@ -266,6 +346,8 @@ void hd_isometric_draw(uint8_t *p,const Story *s,unsigned tick){
    int sx,sy;projection(s,wx,wy,&sx,&sy);
    if(sx<=-48||sx>=256||sy<=-55||sy>=166)continue;
    char c=story_tile(wx,wy);
+   if(has_goal&&wx==gx&&wy==gy)
+    ground_goal(p,sx,sy,tick);
    if(c=='#'||c=='A')building(p,sx,sy,wx,wy,tick,c,
                             actor_x,actor_foot,player_depth);
    else if(c=='T'||c=='F'||c=='C'||c=='P'||c=='V'||
@@ -277,18 +359,7 @@ void hd_isometric_draw(uint8_t *p,const Story *s,unsigned tick){
  }
  if(!drew_player)
   hd_world_person_art(p,actor_x,actor_foot,0u,s->facing,0u);
- /* The original story_goal is a logical coordinate, not a new quest.
-    Render a restrained in-world cue only if the target is visible. */
- int gx,gy;
- const char *title;
- if(story_goal(s,&gx,&gy,&title)){
-  int sx,sy;projection(s,gx,gy,&sx,&sy);
-  if(sx>4&&sx<208&&sy>45&&sy<123){
-   int cx=sx+16,top=sy-9-(int)((tick/24u)&1u);
-   hd_pixel(p,cx,top,HD_GOLD);
-   hd_line(p,cx-4,top+3,cx,top+6,HD_LAMP);
-   hd_line(p,cx+4,top+3,cx,top+6,HD_LAMP);
-  }
- }
+ /* World-space goal cues are already depth sorted. The compass provides
+    a reliable fallback when the target is behind buildings. */
 }
 
