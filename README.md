@@ -274,3 +274,5 @@ SELECT previews, B exits. Every slot saves its own arrangement in
 a checksummed 24-byte extension without changing the main SRAM format.
 See docs/BORE_ADVANCED_STUDIO.md.
 
+
+The new ambient street observations describe five areas of Old Quarter; A on a neutral approach to the Last Bus prioritizes the marked objective. A skillful FACTS parry can restore a point of focus, while CARE prevents one missed hit. These actions are optional and preserve the same save and story layout.
