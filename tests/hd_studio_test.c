@@ -101,8 +101,16 @@ int main(void){
    gates++;
   }
  }
- s.studio_tab=STUDIO_PERFORM;s.activity_choice=0;render(&s,0);
- for(unsigned voice=0;voice<4u;voice++)assert(pixel(22+(int)voice*53,115)==HD_STONE_DARK);
+ s.studio_tab=STUDIO_PERFORM;s.activity_choice=0;
+ unsigned stopped_stage=render(&s,0);
+ for(unsigned voice=0;voice<4u;voice++)
+  assert(pixel(22+(int)voice*53,115)==HD_STONE_DARK);
+ /* All four hand-drawn instrument silhouettes must exist at rest, and
+    a stopped transport must not animate or mutate the sequencer. */
+ assert(pixel(55,110)==HD_COPPER); /* lead microphone stand */
+ assert(pixel(108,108)==HD_PAPER); /* actual keyboard whites */
+ assert(pixel(211,106)==HD_STONE_LIT); /* drum cymbal, clear of its stand */
+ assert(stopped_stage==render(&s,173));
 
  s.studio_tab=STUDIO_LYRICS;s.activity_choice=1;
  studio_motif_step(0u,&(MotifBeat){0});render(&s,0);

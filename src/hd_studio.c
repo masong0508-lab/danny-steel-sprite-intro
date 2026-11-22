@@ -196,7 +196,43 @@ static void choir(uint8_t *p,const StudioPatch *a,int playing){
   }
  }
 }
-static void perform(uint8_t *p,const StudioPatch *a,int playing){
+/* Four recognizable miniature instruments share one 48x21 stage module.
+   The cues are driven by emitted PSG event bits, not random animation. */
+static void stage_symbol(uint8_t *p,int x,int y,unsigned voice,int lit,
+                         unsigned tick){
+ unsigned shine=lit?((tick/12u)&1u?HD_LAMP:HD_PAPER):HD_STONE_LIT;
+ int cx=x+37;
+ switch(voice){
+ case 0: /* LEAD - a microphone and full stand */
+  hd_ellipse(p,cx,y-5,3,2,shine);
+  hd_line(p,cx,y-3,cx,y+3,HD_COPPER);
+  hd_line(p,cx-3,y+3,cx+3,y+3,HD_STONE_LIT);
+  break;
+ case 1: /* HARM - twin rows of a tiny electric keyboard */
+  hd_rect(p,x+31,y-8,15,8,HD_INK);
+  hd_rect(p,x+32,y-7,13,6,HD_PAPER);
+  hd_rect(p,x+34,y-7,2,3,HD_SHADOW);
+  hd_rect(p,x+39,y-7,2,3,HD_SHADOW);
+  hd_rect(p,x+43,y-7,1,3,HD_SHADOW);
+  hd_rect(p,x+32,y-1,13,1,shine);
+  break;
+ case 2: /* BASS - rounded instrument body and straight strings */
+  hd_ellipse(p,cx-2,y-1,4,3,shine);
+  hd_line(p,cx,y-4,cx+5,y-9,HD_COPPER);
+  hd_line(p,cx-2,y-3,cx+4,y-9,HD_STONE_LIT);
+  hd_pixel(p,cx-2,y-1,HD_INK);
+  break;
+ default: /* BEAT - drum, rim and mounted cymbal */
+  hd_ellipse(p,cx,y-1,5,3,HD_STONE_LIT);
+  hd_rect(p,cx-4,y-1,8,4,HD_BARK);
+  hd_line(p,cx-5,y-5,cx+5,y-5,shine);
+  hd_line(p,cx,y-5,cx,y-9,HD_COPPER);
+  hd_line(p,cx,y+3,cx,y+4,HD_COPPER);
+  break;
+ }
+}
+static void perform(uint8_t *p,const StudioPatch *a,int playing,
+                    unsigned tick){
  char position[]="PART 1/4   STEP 1/8";
  unsigned head=studio_playhead(),playpart=studio_playpart();
  position[5]=(char)('1'+playpart);
@@ -206,14 +242,28 @@ static void perform(uint8_t *p,const StudioPatch *a,int playing){
  for(unsigned part=0;part<4u;part++){
   int x=18+(int)part*53;
   int current=playing&&part==playpart;
+  int lit=(events&(1u<<part))!=0u;
   hd_rect(p,x,84,48,13,current?HD_ROAD_COOL:HD_SHADOW);
   hd_rect(p,x,84,48,2,current?HD_LEAF_LIT:HD_STONE_DARK);
   char num[2]={(char)('1'+part),0};
   hd_text(p,x+3,89,num,current?HD_PAPER:HD_STONE_LIT,1,0);
   hd_text(p,x+13,89,phrase_names[a->order[part]],HD_STONE_LIT,1,0);
-  hd_rect(p,x,101,48,21,HD_ROAD);
+  /* Each voice lives on a physical stage lane, not a generic meter box. */
+  hd_rect(p,x,101,48,21,HD_SHADOW);
+  hd_rect(p,x,101,48,1,lit?HD_COPPER:HD_STONE_DARK);
+  hd_rect(p,x,101,1,21,HD_STONE_DARK);
+  hd_rect(p,x+47,101,1,21,HD_STONE_DARK);
+  hd_rect(p,x+1,120,46,2,HD_ROAD_COOL);
+  if(lit){
+   unsigned ray=(tick/15u)&1u?HD_COPPER:HD_ROAD_COOL;
+   hd_line(p,x+27,102,x+33,111,ray);
+   hd_line(p,x+44,102,x+41,110,ray);
+  }
   hd_text(p,x+4,103,voice_names[part],HD_PAPER,1,0);
-  hd_rect(p,x+4,114,40,4,(events&(1u<<part))?HD_LAMP:HD_STONE_DARK);
+  /* Keep the instrument identity above its gate strip at native scale. */
+  stage_symbol(p,x,111,part,lit,tick);
+  /* Existing test-proven PSG gate remains at exactly y=114..117. */
+  hd_rect(p,x+4,114,40,4,lit?HD_LAMP:HD_STONE_DARK);
  }
  hd_text(p,18,124,studio_lyric(a->lyric),HD_STONE_LIT,1,0);
 }
@@ -229,7 +279,7 @@ void hd_studio_draw(uint8_t *p,const Story *s,unsigned tick){
   case STUDIO_ORDER:order(p,a,cursor,playing);break;
   case STUDIO_LYRICS:lyrics(p,a,playing);break;
   case STUDIO_CHOIR:choir(p,a,playing);break;
-  default:perform(p,a,playing);break;
+  default:perform(p,a,playing,tick);break;
  }
  /* Match story_tick: LEFT/RIGHT selects fields; UP/DOWN edits. Keep
     the actual preview toggle visible on every page, including NOTES. */
