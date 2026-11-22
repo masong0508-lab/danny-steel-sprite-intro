@@ -66,6 +66,7 @@ int main(void){
  assert(story_check_page(&s)==0);guards(&s);
  press(&s,R);assert(story_check_page(&s)==1);guards(&s);
  press(&s,R);assert(story_check_page(&s)==2);guards(&s);
+ press(&s,R);assert(story_check_page(&s)==3);guards(&s);
  press(&s,R);assert(story_check_page(&s)==0);guards(&s);
  press(&s,B);assert(!(s.choice&STORY_CHECK_PAGE_ACTIVE));
  assert(s.paused&&!s.quit);guards(&s);
@@ -106,6 +107,6 @@ int main(void){
  assert(art.activity=='M');guards(&art);
  art.activity_choice=1;guards(&art);
  assert(sizeof(Story)<64);
- puts("consequences: 15 live checks, 3 journal pages, honest risks, trust/investigation/painting branches and 2D/3D guards OK");
+ puts("consequences: 15 live checks, 3 checklist pages + live field guide, honest risks, trust/investigation/painting branches and 2D/3D guards OK");
  return 0;
 }

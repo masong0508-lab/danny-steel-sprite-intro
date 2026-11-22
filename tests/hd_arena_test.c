@@ -53,10 +53,10 @@ int main(void){
    s.battle=BATTLE_DODGE;
    for(unsigned beat=0;beat<4u;beat++){
     s.battle_lane=1;
-    for(unsigned phase=0;phase<15u;phase+=7u){
-     s.battle_timer=(uint8_t)(beat*15u+phase);
+    for(unsigned phase=0;phase<STORY_BATTLE_BEAT;phase+=13u){
+     s.battle_timer=(uint8_t)(beat*STORY_BATTLE_BEAT+phase);
      s.battle_progress=(uint8_t)(beat/2u);
-     s.battle_parry=(uint8_t)(phase>=7u?4u:0u);
+     s.battle_parry=(uint8_t)(phase>=13u?4u:0u);
      assert(story_attack_lane(&s,(int)beat)>=0);
      assert(story_attack_lane(&s,(int)beat)<3);
      clear();hd_arena_draw(guarded.frame,&s,170u+beat*17u+phase);
@@ -65,9 +65,8 @@ int main(void){
    }
   }
  }
- /* HUD controls must not clip the enemy's face, ears or headgear.
-    The upper-middle art region is identical between a menu and a dodge
-    view with no projectile in that region. */
+ /* The small new danger label is left of the opponent; its face,
+    ears and headgear remain untouched in both menu and dodge modes. */
  {
   Story menu=s;
   menu.cult_enemy=0;menu.cult_stage=0;
@@ -75,13 +74,13 @@ int main(void){
   menu.battle_parry=0;menu.battle_timer=0;
   menu.battle=BATTLE_MENU;
   clear();hd_arena_draw(guarded.frame,&menu,121);
-  uint8_t upper[17*80];
+  uint8_t upper[17*70];
   for(int y=28;y<45;y++)
-   memcpy(upper+(y-28)*80,guarded.frame+y*HD_W+80,80);
+   memcpy(upper+(y-28)*70,guarded.frame+y*HD_W+90,70);
   menu.battle=BATTLE_DODGE;
   clear();hd_arena_draw(guarded.frame,&menu,121);
   for(int y=28;y<45;y++)
-   assert(memcmp(upper+(y-28)*80,guarded.frame+y*HD_W+80,80)==0);
+   assert(memcmp(upper+(y-28)*70,guarded.frame+y*HD_W+90,70)==0);
   inspect();cases++;
  }
  assert(rival_hashes[0]!=rival_hashes[1]);
@@ -95,7 +94,7 @@ int main(void){
    int lane=story_attack_lane(&s,beat);
    s.battle_lane=(uint8_t)lane;
    s.battle_focus=4;s.battle= BATTLE_DODGE;
-   s.battle_timer=(uint8_t)(beat*15);
+   s.battle_timer=(uint8_t)(beat*STORY_BATTLE_BEAT);
    clear();hd_arena_draw(guarded.frame,&s,200);
    inspect();cases++;
   }
