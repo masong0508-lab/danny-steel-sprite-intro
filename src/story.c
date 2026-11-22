@@ -96,6 +96,85 @@ int story_solid(int x, int y) {
     const char c = story_tile(x, y);
     return c == '#' || c == 'A' || c == 'T' || c == '~' || c == 'L' || c == 'C' || c == 'F' || c == 'B' || c == 'P' || c == 'V' || c == 'Q' || c == 'S' || c == 'W' || c == 'H' || c == 'R' || c == 'M' || c == 'K';
 }
+/* A compact, cacheable four-neighbor route through the actual game grid.
+   Walking to a solid quest actor means reaching any non-solid neighbor.
+   One 432-byte parent map and one 864-byte FIFO are reused between route
+   changes; there is no heap, saved-state expansion, or work every draw.
+   A parent byte stores the return direction plus one; 5 marks the root. */
+static uint8_t route_parent[STORY_W*STORY_H];
+static uint16_t route_queue[STORY_W*STORY_H];
+static uint8_t route_cached,route_x,route_y,route_gx,route_gy,route_ok,
+               route_direction;
+static uint16_t route_steps;
+int story_route(const Story *s,unsigned *direction,unsigned *steps){
+    int gx=0,gy=0;const char *title=0;
+    if(!story_goal(s,&gx,&gy,&title)||story_solid(s->x,s->y))return 0;
+    if(!route_cached || route_x!=s->x || route_y!=s->y ||
+       route_gx!=gx || route_gy!=gy){
+        static const int dx[4]={1,0,-1,0},dy[4]={0,1,0,-1};
+        route_cached=1;route_x=s->x;route_y=s->y;
+        route_gx=(uint8_t)gx;route_gy=(uint8_t)gy;
+        route_ok=0;route_direction=4;route_steps=0;
+        for(unsigned i=0;i<STORY_W*STORY_H;i++)route_parent[i]=0;
+        unsigned head=0,tail=0;
+        int goal_walkable=!story_solid(gx,gy);
+        unsigned origin=(unsigned)s->y*STORY_W+s->x;
+        route_parent[origin]=5;
+        route_queue[tail++]=(uint16_t)origin;
+        while(head<tail){
+            unsigned cell=route_queue[head++];
+            int x=(int)(cell%STORY_W),y=(int)(cell/STORY_W);
+            int manhattan=(x>gx?x-gx:gx-x)+(y>gy?y-gy:gy-y);
+            /* Some authored targets (the home letter) mark the exact
+               walkable standing tile; most others name a solid actor.
+               Stopping one tile early at a walkable target would leave
+               the player unable to actually interact with the letter. */
+            if((goal_walkable&&manhattan==0)||
+               (!goal_walkable&&manhattan<=1)){
+                route_ok=1;
+                while(cell!=origin){
+                    unsigned back=(unsigned)route_parent[cell]-1u;
+                    route_direction=(uint8_t)((back+2u)&3u);
+                    cell=(unsigned)((int)cell+dx[back]+dy[back]*STORY_W);
+                    ++route_steps;
+                }
+                break;
+            }
+            for(unsigned d=0;d<4;d++){
+                int xx=x+dx[d],yy=y+dy[d];
+                if(xx<0||xx>=STORY_W||yy<0||yy>=STORY_H||
+                   story_solid(xx,yy))continue;
+                unsigned next=(unsigned)yy*STORY_W+(unsigned)xx;
+                if(route_parent[next])continue;
+                route_parent[next]=(uint8_t)(((d+2u)&3u)+1u);
+                route_queue[tail++]=(uint16_t)next;
+            }
+        }
+    }
+    if(!route_ok)return 0;
+    if(direction)*direction=route_direction;
+    if(steps)*steps=route_steps;
+    return 1;
+}
+const char *story_goal_reason(const Story *s){
+    if(s->rescue_stage==STORY_RESCUE_MISSING)return "ASK THE WITNESS FOR A LEAD";
+    if(s->rescue_stage==STORY_RESCUE_WITNESS)return "CHECK THE TERMINAL'S CLUE";
+    if(s->rescue_stage==STORY_RESCUE_TRACE)return "CHOOSE AT THE SAFEHOUSE";
+    if(s->rescue_stage==STORY_RESCUE_LOST)return "NO CONFIRMED NEWS TRY PHONE";
+    if(s->life_stage==STORY_LIFE_CLINIC ||
+       s->life_stage==STORY_LIFE_FINAL_CLINIC)return "ATTEND YOUR APPOINTMENT";
+    if(s->life_stage==STORY_LIFE_LAST_WORK)return "FINISH THE FINAL CANVAS";
+    if(s->life_stage==STORY_LIFE_WAIT ||
+       s->life_stage==STORY_LIFE_FOLLOWUP_WAIT)
+        return "OPTIONAL MOMENTS NO DEADLINE";
+    if(!(s->flags&STORY_HOME))return "READ THE LETTER FROM HOME";
+    if(!(s->flags&STORY_STAMP))return "TAKE THE LETTER TO BORE";
+    if(!(s->flags&STORY_MARA))return "TALK TO MARA AND KEEP WORD";
+    if(!(s->flags&STORY_MUSIC))return "FIND YOUR MUSIC IN ARCHIVE";
+    if(!(s->flags&STORY_ART))return "VISIT THE ROOFTOP CANVAS";
+    if(!s->ended)return "THE BUS WAITS GO OR STAY";
+    return "YOUR STORY CONTINUES";
+}
 
 enum { D_NONE, D_OPEN, D_LETTER, D_LETTER_AGAIN, D_CLERK_LOCKED, D_CLERK, D_CLERK_AGAIN,
        D_MARA_LOCKED, D_MARA, D_MARA_AGAIN, D_BUS_LOCKED, D_BUS_READY, D_END_GO,
@@ -135,7 +214,9 @@ enum { D_NONE, D_OPEN, D_LETTER, D_LETTER_AGAIN, D_CLERK_LOCKED, D_CLERK, D_CLER
        D_GOOD_END_SCARS, D_RESCUE_LOST_REMOTE,
        D_SHIFT_EARLY, D_SHIFT_DONE, D_SHIFT_REPEAT,
        D_SHIFT_TIRED, D_SHIFT_PAUSED,
-       D_DOCTOR_RETURN_ALONE };
+       D_DOCTOR_RETURN_ALONE,
+       D_LOOK_POTHEADS, D_LOOK_CANAL, D_LOOK_MARKET,
+       D_LOOK_NORTH, D_LOOK_STREET };
 #define SCRIPT(name, ...) static const StoryPage name[] = { __VA_ARGS__ }
 /* The banana-sign shift is practical income, not Danny's calling. He is
    grateful for the stability without pretending to enjoy mascot work. */
@@ -217,7 +298,24 @@ SCRIPT(d_journal_2,
 SCRIPT(d_journal_3,
  {"POCKET NOTEBOOK", "Promise: made.", "The bus is waiting."});
 SCRIPT(d_nothing,
- {"DANNY", "Nothing to do", "with that. Yet."});
+ {"DANNY", "Quiet street today.", "Might be worth a look."});
+/* Low-cost ambient interactions give exploration personality without a
+   mandatory marker, new quest flag, hidden bad check or arbitrary reward. */
+SCRIPT(d_look_potheads,
+ {"DANNY", "Potheads. The suit", "still smells of rain."},
+ {"DANNY", "I can be grateful", "and still want more."});
+SCRIPT(d_look_canal,
+ {"DANNY", "The canal keeps", "its own kind of time."},
+ {"DANNY", "A hundred windows", "in every ripple."});
+SCRIPT(d_look_market,
+ {"DANNY", "Someone patched the", "awning by hand."},
+ {"DANNY", "Not every repair", "has to look new."});
+SCRIPT(d_look_north,
+ {"DANNY", "All these lit rooms.", "Lives I never knew."},
+ {"DANNY", "My song could reach", "one of them someday."});
+SCRIPT(d_look_street,
+ {"DANNY", "The old paving", "holds the rain."},
+ {"DANNY", "I should keep going.", "One block at a time."});
 SCRIPT(d_return,
  {"DANNY", "The city is still", "here. So am I."});
 /* Entirely fictional setting and people. The harm is serious; the bureaucracy is not. */
@@ -686,7 +784,9 @@ static const struct { const StoryPage *pages; uint8_t count; } scripts[] = {
   SEQ(d_good_end_scars), SEQ(d_rescue_lost_remote),
   SEQ(d_shift_early), SEQ(d_shift_done), SEQ(d_shift_repeat),
   SEQ(d_shift_tired), SEQ(d_shift_paused),
-  SEQ(d_doctor_return_alone)
+  SEQ(d_doctor_return_alone),
+  SEQ(d_look_potheads), SEQ(d_look_canal), SEQ(d_look_market),
+  SEQ(d_look_north), SEQ(d_look_street)
 };
 const StoryPage *story_pages(const Story *s, int *count) {
     unsigned id = s->dialogue;
@@ -832,8 +932,10 @@ void story_resume(Story *s, int slot, int x, int y, int facing, int view, int fl
         s->life_stage=STORY_LIFE_FINALE;
     } else talk(s,D_RETURN);
 }
-/* Two attack waves with four clearly telegraphed speech-bubble hazards each.
-   Players dodge LEFT/RIGHT in three projected lanes; A parries for six frames. */
+/* Two attack waves, four predictable incoming bubbles each. Both tactical
+   choices are useful: FACTS has a broader parry / quicker recovery and a
+   precision counter can restore one focus; CARE gives one blocked mistake.
+   All windows use simulation ticks, even on a slower GBA renderer. */
 int story_attack_lane(const Story *s, int beat) {
     return (beat * 2 + s->cult_enemy + (s->cult_stage >= CULT_RESOLVED ? 1 : 0)) % 3;
 }
@@ -883,15 +985,22 @@ static void cult_tick(Story *s, uint16_t pressed) {
     if (s->battle_parry) --s->battle_parry;
     if (s->battle_parry_cd) --s->battle_parry_cd;
     if ((pressed & A) && !s->battle_parry_cd) {
-        s->battle_parry = 6;
-        s->battle_parry_cd = 18;
+        s->battle_parry = (uint8_t)(s->battle_choice==0u?
+           STORY_FACTS_PARRY_TICKS:STORY_CARE_PARRY_TICKS);
+        s->battle_parry_cd = (uint8_t)(s->battle_choice==0u?
+           STORY_FACTS_PARRY_COOLDOWN:STORY_CARE_PARRY_COOLDOWN);
     }
     ++s->battle_timer;
     if (s->battle_timer % 15 == 0) {
         int beat = s->battle_timer / 15 - 1;
-        if (s->battle_lane == story_attack_lane(s, beat) && !s->battle_parry) {
-            if (s->battle_guard) s->battle_guard = 0;
-            else if (s->battle_focus) --s->battle_focus;
+        if (s->battle_lane == story_attack_lane(s, beat)) {
+            if(s->battle_parry){
+                /* A deliberate close-range FACTS parry counters misinformation
+                   and can restore ONE lost focus, never above the original 4. */
+                if(s->battle_choice==0u && s->battle_focus<4u)
+                    ++s->battle_focus;
+            }else if(s->battle_guard) s->battle_guard=0;
+            else if(s->battle_focus) --s->battle_focus;
         }
     }
     if (s->battle_timer >= 60) {
@@ -1062,12 +1171,53 @@ static char nearby_actor(const Story *s){
     static const int dx[4]={1,0,-1,0},dy[4]={0,1,0,-1};
     char c=story_tile(s->x+dx[s->facing],s->y+dy[s->facing]);
     if(!actor_tile(c)){
-        for(int i=0;i<4;i++){
-            char a=story_tile(s->x+dx[i],s->y+dy[i]);
-            if(actor_tile(a)){c=a;break;}
+        /* At a four-way crossroads the old E/S/W/N fallback could select
+           the MUSIC station when the player had followed the LAST BUS
+           waypoint to its neighboring tile. Prefer the current objective
+           only when the player is not explicitly facing another actor. */
+        int gx=0,gy=0;const char *label=0;
+        if(story_goal(s,&gx,&gy,&label) &&
+           ((gx==(int)s->x &&
+              (gy==(int)s->y-1||gy==(int)s->y+1)) ||
+            (gy==(int)s->y &&
+              (gx==(int)s->x-1||gx==(int)s->x+1))) &&
+           actor_tile(story_tile(gx,gy))){
+            c=story_tile(gx,gy);
+        }else{
+            for(int i=0;i<4;i++){
+                char a=story_tile(s->x+dx[i],s->y+dy[i]);
+                if(actor_tile(a)){c=a;break;}
+            }
         }
     }
     return c;
+}
+const char *story_action_hint(const Story *s){
+    if(s->x==20u && s->y==11u && s->facing==0u)return "A SHIFT";
+    switch(nearby_actor(s)){
+    case 'L':return "A LETTER";
+    case 'C':return "A BORE";
+    case 'F':return "A MARA";
+    case 'B':return "A BUS";
+    case 'M':return "A MUSIC";
+    case 'R':return "A CANVAS";
+    case 'K':return "A CLINIC";
+    case 'P':case 'V':case 'Q':return "A CHALLENGE";
+    case 'S':return "A TERMINAL";
+    case 'W':return "A WITNESS";
+    case 'H':return "A DOOR";
+    default:return "A LOOK";
+    }
+}
+int story_risk_available(const Story *s){
+    char target=nearby_actor(s);
+    unsigned bit=target=='L'?STORY_BAD_LETTER:
+                 target=='C'?STORY_BAD_CLERK:
+                 target=='M'?STORY_BAD_MUSIC:
+                 target=='S'?STORY_BAD_SERVER:0u;
+    return bit && !(s->bad_mask&bit) &&
+           s->rescue_stage!=STORY_RESCUE_LOST &&
+           s->rescue_stage!=STORY_RESCUE_AFTERSHOCK;
 }
 static void begin_bad_film(Story *s){
     s->ended=1;s->ending=STORY_END_BAD;s->life_stage=STORY_LIFE_NONE;
@@ -1314,7 +1464,19 @@ static void interact(Story *s) {
         if (s->cult_stage == 2) { s->cult_stage = 3; talk(s, D_CULT_SAFETY); s->dirty = 1; }
         else talk(s, D_CULT_SAFE_AGAIN);
         break;
-    default: talk(s, D_NOTHING); break;
+    default:
+        /* Standing still is an invitation to notice the neighborhood,
+           not a dead control. Geography decides the short observation. */
+        if(s->x>=17u && s->y>=9u && s->y<=13u)
+            talk(s,D_LOOK_POTHEADS);
+        else if(s->x>=15u && s->y>=13u)
+            talk(s,D_LOOK_CANAL);
+        else if(s->x<=7u && s->y>=8u)
+            talk(s,D_LOOK_MARKET);
+        else if(s->y<=7u)
+            talk(s,D_LOOK_NORTH);
+        else talk(s,D_LOOK_STREET);
+        break;
     }
 }
 void story_tick(Story *s, uint16_t keys) {
@@ -1526,13 +1688,20 @@ void story_tick(Story *s, uint16_t keys) {
         return;
     }
     if(s->paused){
-        if(pressed&R){
+        if(pressed&L){
+            if(s->choice&STORY_FIELD_GUIDE_ACTIVE)s->choice&=1u;
+            else s->choice=(uint8_t)((s->choice&1u)|STORY_FIELD_GUIDE_ACTIVE);
+        }else if((pressed&(LEFT|RIGHT)) &&
+                 (s->choice&STORY_FIELD_GUIDE_ACTIVE)){
+            s->choice^=STORY_FIELD_GUIDE_DETAIL;
+        }else if(pressed&R){
             unsigned page=(s->choice&STORY_CHECK_PAGE_ACTIVE)?
                 (story_check_page(s)+1u)%STORY_CHECK_PAGE_COUNT:0u;
             s->choice=(uint8_t)((s->choice&1u)|STORY_CHECK_PAGE_ACTIVE|
                                 (page<<1));
         }else if(pressed&B){
-            if(s->choice&STORY_CHECK_PAGE_ACTIVE)s->choice&=1u;
+            if(s->choice&(STORY_CHECK_PAGE_ACTIVE|STORY_FIELD_GUIDE_ACTIVE))
+                s->choice&=1u;
             else s->quit=1;
         }
         return;
@@ -1577,9 +1746,7 @@ void story_tick(Story *s, uint16_t keys) {
                      target=='C'?STORY_BAD_CLERK:
                      target=='M'?STORY_BAD_MUSIC:
                      target=='S'?STORY_BAD_SERVER:0u;
-        if(bit && !(s->bad_mask&bit) &&
-           s->rescue_stage!=STORY_RESCUE_LOST &&
-           s->rescue_stage!=STORY_RESCUE_AFTERSHOCK){
+        if(bit && story_risk_available(s)){
             s->risk_menu=(uint8_t)target;s->risk_choice=0;
             s->cinema=target=='L'?CINE_LETTER:
                 target=='C'?CINE_BORE:

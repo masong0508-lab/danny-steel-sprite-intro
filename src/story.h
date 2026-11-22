@@ -73,6 +73,12 @@
 #define BATTLE_NONE 0
 #define BATTLE_MENU 1
 #define BATTLE_DODGE 2
+/* FACTS rewards accurate counters; CARE offers a forgiving first mistake.
+   Windows are VBlank ticks, not variable-duration renderer frames. */
+#define STORY_FACTS_PARRY_TICKS 10u
+#define STORY_CARE_PARRY_TICKS 8u
+#define STORY_FACTS_PARRY_COOLDOWN 14u
+#define STORY_CARE_PARRY_COOLDOWN 20u
 
 typedef struct {
     uint8_t x, y, facing, view, flags, ended, ending, slot;
@@ -108,6 +114,16 @@ int story_solid(int x, int y);
 /* World-space primary story objective. Returns zero only after an ending.
    Pure query: does not change the optional Mirror Orchard progression. */
 int story_goal(const Story *s, int *x, int *y, const char **label);
+/* Navigation follows walkable town tiles to a tile adjacent to the goal,
+   not a misleading straight line through buildings. Direction: 0=E, 1=S,
+   2=W, 3=N, 4=ARRIVED. Zero means no reachable active goal. The query
+   never changes saved Story state, and its cached flood fill only rebuilds
+   after a player step or objective change. */
+int story_route(const Story *s, unsigned *direction, unsigned *steps);
+/* Contextual controls and succinct reasons for the next suggestion. */
+const char *story_action_hint(const Story *s);
+const char *story_goal_reason(const Story *s);
+int story_risk_available(const Story *s);
 const StoryPage *story_pages(const Story *s, int *count);
 
 /* Deterministic enemy tells and waves: shared by logic, renderer and host tests. */

@@ -17,6 +17,9 @@ enum {
 #define STORY_CHECK_PAGE_COUNT 3u
 #define STORY_CHECKS_PER_PAGE 5u
 #define STORY_CHECK_PAGE_ACTIVE 0x80u
+/* Transient pause-only guide flag in the existing choice byte. */
+#define STORY_FIELD_GUIDE_ACTIVE 0x40u
+#define STORY_FIELD_GUIDE_DETAIL 0x10u /* second guide page, transient */
 #define STORY_CHECK_PAGE_MASK 0x06u
 static inline unsigned story_check_page(const Story *s){
     return (unsigned)((s->choice>>1)&3u);
