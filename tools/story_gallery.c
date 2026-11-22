@@ -232,6 +232,8 @@ int main(int argc,char **argv){
  s.cinema=CINE_RESCUE_SAVED;s.page=1;
  write_frame("23_story_rescue_saved",&s,150);
  write_frame("23a_rescue_hands_meet",&s,270);
+ write_frame("23b_rescue_step_out",&s,170);
+ write_frame("23c_rescue_cross_threshold",&s,195);
  s.cinema=CINE_NONE;s.ended=1;s.dialogue=0;
  s.ending=STORY_END_NEUTRAL;s.rescue_stage=STORY_RESCUE_NONE;
  s.finale_frame=3790u;
@@ -274,3 +276,4 @@ int main(int argc,char **argv){
  puts("Actual Danny Steel story renderer gallery generated");
  return 0;
 }
+

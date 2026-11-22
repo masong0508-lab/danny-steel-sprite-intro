@@ -2,19 +2,18 @@
 #include <string.h>
 uint32_t hd_shared_frame[HD_BYTES/4] __attribute__((section(".ewram"), aligned(4)));
 #define RGB(r,g,b) ((uint16_t)((r)|((g)<<5)|((b)<<10)))
-/* 32 measured dusk / ink / skin / rain tones in the spare half of the
-   mode-4 palette. Existing story colors 0..31 are untouched. */
+/* Blue-hour material ramps: quiet slate/brick midtones, warm practical
+   lights, and distinct skin planes. These are the same 32 Mode-4 slots;
+   original story colors 0..31 and every framebuffer remain unchanged. */
 const uint16_t hd_extra_palette[32]={
- RGB(7,9,13),RGB(10,13,17),RGB(12,16,20),RGB(6,8,11),
- RGB(14,17,20),RGB(17,18,19),RGB(23,22,21),RGB(11,12,13),
- /* Warm terracotta, theatrical gold and twilight cyan have enough
-    chroma to read at actual LCD scale without extra palette entries. */
- RGB(13,8,12),RGB(23,11,13),RGB(31,18,14),RGB(21,18,16),
- RGB(25,22,19),RGB(4,5,8),RGB(31,28,12),RGB(12,23,25),
- RGB(18,28,29),RGB(8,17,26),RGB(30,18,12),RGB(5,14,10),
- RGB(8,23,13),RGB(16,28,18),RGB(15,11,8),RGB(30,28,22),
- RGB(4,5,7),RGB(20,21,20),RGB(31,9,13),RGB(18,8,13),
- RGB(29,19,15),RGB(31,24,18),RGB(20,14,9),RGB(31,27,7)
+ RGB(6,8,11),RGB(8,11,14),RGB(10,14,17),RGB(4,7,10),
+ RGB(12,15,17),RGB(15,17,18),RGB(22,22,20),RGB(9,11,13),
+ RGB(11,8,11),RGB(17,9,11),RGB(25,15,12),RGB(17,16,15),
+ RGB(23,21,17),RGB(3,4,7),RGB(31,26,15),RGB(8,15,18),
+ RGB(17,24,24),RGB(12,20,24),RGB(23,14,9),RGB(5,11,10),
+ RGB(9,17,11),RGB(17,23,15),RGB(11,8,7),RGB(29,27,21),
+ RGB(2,3,5),RGB(21,22,20),RGB(25,8,11),RGB(13,6,10),
+ RGB(29,19,15),RGB(31,24,18),RGB(12,8,6),RGB(28,21,10)
 };
 #undef RGB
 /* A drawn screen has no relation to 120x80 scaled text: these are true
@@ -154,3 +153,4 @@ void hd_upscale_inplace(uint8_t *p){
   p[i]=ink;p[i+1]=ink;p[i+HD_W]=ink;p[i+HD_W+1]=ink;
  }
 }
+

@@ -40,11 +40,11 @@ static void dusk(uint8_t *p,unsigned frame,int night){
  for(int i=0;i<5;i++){
   int xx=8+i*53+(int)((frame/(i&1?109u:171u))%6u);
   int yy=19+(i*11)%30;
-  hd_rect(p,xx-11,yy,34,4,HD_BRICK_LIT);
-  hd_rect(p,xx-4,yy-3,21,3,night?HD_RED_SHADE:HD_PAPER);
-  hd_rect(p,xx+3,yy-5,12,2,night?HD_COPPER:HD_LAMP);
+  hd_rect(p,xx-11,yy,34,3,night?HD_ROAD_COOL:HD_BRICK_LIT);
+  hd_rect(p,xx-4,yy-3,21,3,night?HD_BRICK_DARK:HD_PAPER);
+  hd_rect(p,xx+3,yy-5,12,2,night?HD_ROAD_LIGHT:HD_LAMP);
  }
- hd_ellipse(p,186,34,9,9,night?HD_COPPER:HD_LAMP);
+ hd_ellipse(p,186,34,9,9,night?HD_ROAD_LIGHT:HD_LAMP);
  for(int i=0;i<18;i++){
   int x=i*20-12;
   int h=18+(int)(hash(i,11)%31u);
@@ -67,17 +67,13 @@ static void sidewalk(uint8_t *p,unsigned frame){
  hd_rect(p,0,111,240,49,HD_ROAD);
  hd_rect(p,0,111,240,4,HD_STONE_LIT);
  hd_rect(p,0,115,240,2,HD_STONE_DARK);
- for(int i=-1;i<14;i++){
-  int x=i*23+(i*7%11);
-  hd_line(p,x,119,x-8,159,HD_ROAD_COOL);
-  hd_line(p,x+2,117,x+2,121,HD_MORTAR);
+ /* Quiet wet paving with partial seams: density follows stone edges,
+    leaving space around the actor instead of a bright debug-like grid. */
+ for(int i=0;i<18;i++){
+  int x=(i*43+7)%238,y=122+(i*13)%34;
+  hd_line(p,x,y,x+8+(i&3)*2,y,HD_ROAD_LIGHT);
+  if(i%3==0)hd_line(p,x-1,y+1,x-3,y+5,HD_WET);
  }
- for(int y=122;y<160;y+=9)
-  for(int i=0;i<12;i++){
-   int x=i*21+((int)hash(i,y)%7);
-   hd_rect(p,x,y,8,1,HD_ROAD_LIGHT);
-   hd_pixel(p,x+3,y+3,HD_REFLECT);
-  }
  /* The bus stop's actual lamp, stable in every exterior scene. */
  hd_rect(p,213,42,3,74,HD_INK);
  hd_rect(p,209,42,12,3,HD_COPPER);
@@ -519,54 +515,7 @@ static void potheads_open(uint8_t *p,unsigned t){
 
 static void cafe(uint8_t *p,unsigned t){
  street(p,t,1);
- hd_rect(p,4,42,102,70,HD_BRICK_DARK);
- for(int y=48;y<109;y+=8){
-  hd_line(p,5,y,103,y,HD_BRICK);
-  for(int x=12+(y/8%2)*8;x<102;x+=19)
-   hd_line(p,x,y,x,y+6,HD_BRICK);
- }
- hd_rect(p,8,57,94,10,HD_GOLD);
- hd_rect(p,11,60,88,5,HD_BRICK_DARK);
- hd_text(p,19,59,"MARA'S CAFE",HD_PAPER,1,1);
- for(int i=0;i<2;i++){
-  int x=14+i*42;
-  hd_rect(p,x,71,35,35,HD_INK);
-  hd_rect(p,x+3,74,29,28,HD_GLASS_LIT);
-  hd_rect(p,x+3,96,29,6,HD_COPPER);
-  hd_rect(p,x+16,74,2,27,HD_BRICK_DARK);
-  hd_rect(p,x+4,87,27,2,HD_COPPER);
- }
- hd_line(p,8,110,105,110,HD_PLASTER_LIT);
- /* Warm shop windows are real little scenes: hanging bulbs, pastries,
-    flower pots and a lived-in counter, not empty colored rectangles. */
- for(int i=0;i<2;i++){
-  int wx=18+i*42;
-  hd_rect(p,wx+2,90,26,2,HD_BARK);
-  hd_rect(p,wx+4,87,4,3,HD_GOLD);
-  hd_rect(p,wx+11,86,6,4,HD_BRICK_LIT);
-  hd_rect(p,wx+20,85,4,5,HD_GLASS);
-  hd_line(p,wx+13,72,wx+13,78,HD_COPPER);
-  hd_ellipse(p,wx+13,80,4,3,HD_LAMP);
- }
- for(int i=0;i<3;i++){
-  int px=9+i*38;
-  hd_rect(p,px,100,7,9,HD_BARK);
-  hd_ellipse(p,px+3,98,7,5,HD_LEAF);
-  hd_line(p,px+4,100,px+11,92,HD_LEAF_LIT);
-  hd_pixel(p,px+9,91,HD_RED_SHADE);
- }
- /* Café shade, textured awning, lit service interior and rain reflections. */
- hd_rect(p,5,67,98,4,HD_BARK);
- for(int k=0;k<11;k++)
-  hd_rect(p,7+k*9,68,5,3,(k&1)?HD_GOLD:HD_RED_SHADE);
- hd_rect(p,17,78,23,5,HD_STONE_LIT);
- hd_rect(p,59,77,21,4,HD_STONE_LIT);
- hd_rect(p,27,84,8,12,HD_LEAF_DARK);
- hd_rect(p,67,82,7,15,HD_BARK);
- hd_rect(p,73,85,5,5,HD_SKIN); /* silhouette behind the glass */
- hd_rect(p,72,90,7,12,HD_STONE_DARK);
- for(int i=0;i<3;i++)
-  hd_line(p,18+i*28,116,30+i*28,118,HD_REFLECT);
+ hd_cafe_facade(p,4,38,t);
 }
 static void table(uint8_t *p,int x,int y,unsigned t){
  hd_ellipse(p,x,y+21,36,6,HD_SHADOW);
@@ -1001,3 +950,4 @@ void hd_cinema_draw(uint8_t *p,const Story *s,unsigned t){
  hd_rect(p,0,0,240,2,HD_INK);
  hd_rect(p,0,158,240,2,HD_INK);
 }
+

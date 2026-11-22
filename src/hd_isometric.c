@@ -33,12 +33,10 @@ static unsigned material(char t,int x,int y){
  return n&3u;
 }
 static void night(uint8_t *p){
- for(int y=0;y<160;y++){
-  unsigned c=y<34?HD_ROAD_COOL:
-             y<84?HD_STONE_DARK:
-             y<126?HD_ROAD:HD_ROAD_COOL;
-  hd_rect(p,0,y,240,1,c);
- }
+ hd_rect(p,0,0,240,34,HD_ROAD_COOL);
+ hd_rect(p,0,34,240,50,HD_STONE_DARK);
+ hd_rect(p,0,84,240,42,HD_ROAD);
+ hd_rect(p,0,126,240,34,HD_ROAD_COOL);
  /* Rooftop silhouettes at the margins make clipped edge-of-map camera
     views feel like a larger city; no claims that these are walkable. */
  for(int i=-1;i<13;i++){
@@ -90,10 +88,19 @@ static void building(uint8_t *p,int sx,int sy,int wx,int wy,
  if(front)hd_facade_wall(p,sx,sy,(int)h,variant,0u);
  if(side)hd_facade_wall(p,sx+16,sy,(int)h,variant,1u);
  hd_iso_tile(p,sx,sy-(int)h,10u+(n&1u));
- /* Roof edges, gutters and shadowed coping belong to the building
-    footprint; do not paint an unrelated rectangle over the street. */
- hd_line(p,sx+1,sy+8-(int)h,sx+16,sy+15-(int)h,HD_COPPER);
- hd_line(p,sx+17,sy+15-(int)h,sx+31,sy+8-(int)h,HD_STONE_LIT);
+ /* Only an exposed eave gets a coping edge. Outlining every internal
+    roof tile in copper made contiguous blocks look like a glowing grid.
+    A dark underside and a short, cool worn edge give the roof thickness. */
+ if(front){
+  hd_line(p,sx+1,sy+9-(int)h,sx+16,sy+16-(int)h,HD_INK);
+  hd_line(p,sx+1,sy+8-(int)h,sx+16,sy+15-(int)h,HD_STONE_DARK);
+  hd_line(p,sx+4,sy+9-(int)h,sx+10,sy+12-(int)h,HD_MORTAR);
+ }
+ if(side){
+  hd_line(p,sx+17,sy+16-(int)h,sx+31,sy+9-(int)h,HD_INK);
+  hd_line(p,sx+17,sy+15-(int)h,sx+31,sy+8-(int)h,HD_ROAD_LIGHT);
+  hd_line(p,sx+23,sy+12-(int)h,sx+29,sy+9-(int)h,HD_MORTAR);
+ }
  if(front){
   hd_line(p,sx+1,sy+8,sx+15,sy+15,HD_STONE_DARK);
   hd_rect(p,sx+11,sy+11-(int)h/3,3,5,HD_GLASS);
@@ -102,25 +109,24 @@ static void building(uint8_t *p,int sx,int sy,int wx,int wy,
  if(side)hd_line(p,sx+17,sy+15,sx+31,sy+8,HD_STONE_DARK);
  if((n&3u)==0u){
   hd_rect(p,sx+16,sy-3-(int)h,3,5,HD_STONE_DARK);
-  hd_rect(p,sx+16,sy-4-(int)h,5,1,HD_PLASTER);
+  hd_rect(p,sx+16,sy-4-(int)h,5,1,HD_MORTAR);
  }
  if(potheads&&side)potheads_fascia(p,sx,sy,(int)h);
  (void)tick;
 }
 static void lamp(uint8_t *p,int sx,int sy,unsigned tick){
  int x=sx+16,y=sy+12;
- hd_ellipse(p,x+4,y+2,9,3,HD_ROAD_COOL);
+ /* Reflections are short horizontal breaks under the visible source. */
+ hd_ellipse(p,x+2,y+3,10,3,HD_WET);
+ hd_line(p,x-5,y+1,x+7,y+1,HD_ROAD_LIGHT);
+ hd_line(p,x-2,y+3,x+5,y+3,HD_COPPER);
+ hd_line(p,x-4,y+5,x+2,y+5,HD_ROAD_COOL);
  hd_rect(p,x-1,y-29,3,29,HD_INK);
  hd_rect(p,x-3,y-31,7,2,HD_COPPER);
  hd_rect(p,x-5,y-28,11,4,HD_PLASTER);
  hd_rect(p,x-4,y-27,9,3,HD_LAMP);
  hd_pixel(p,x,y-27,HD_PAPER);
- for(int k=0;k<5;k++){
-  int off=k*3;
-  hd_pixel(p,x-off,y+off/2,HD_ROAD_LIGHT);
-  if(((tick/45u)&1u)==0u)
-   hd_pixel(p,x+off,y+off/3,HD_REFLECT);
- }
+ if(((tick/45u)&1u)==0u)hd_rect(p,x-1,y+3,3,1,HD_GOLD);
 }
 static void bus(uint8_t *p,int sx,int sy,unsigned tick){
  int y=sy+5;
@@ -179,14 +185,14 @@ static void object(uint8_t *p,int sx,int sy,char kind,unsigned tick,int wx,int w
  }
 }
 static void rain(uint8_t *p,unsigned tick){
- /* Screen-space weather is bounded and intentionally subtle: only
-    24 light strokes per frame, unaffected by the time-of-day scripts. */
- for(int k=0;k<24;k++){
+ /* Fourteen subdued strokes behind the depth-sorted architecture and
+    people: rain cannot scribble across Danny's face or a shop sign. */
+ for(int k=0;k<14;k++){
   unsigned seed=grain(k+17,k*7+13);
   int x=(int)((seed+tick*2u)%252u)-8;
   int y=19+(int)((seed/97u+tick*3u)%119u);
-  int len=(k&3)==0?7:4;
-  hd_line(p,x,y,x-2,y+len,k%3u==0u?HD_STONE_LIT:HD_GLASS_LIT);
+  int len=(k&3)==0?5:3;
+  hd_line(p,x,y,x-1,y+len,k%4u==0u?HD_MORTAR:HD_ROAD_COOL);
  }
 }
 void hd_isometric_draw(uint8_t *p,const Story *s,unsigned tick){
@@ -200,6 +206,7 @@ void hd_isometric_draw(uint8_t *p,const Story *s,unsigned tick){
    char c=story_tile(wx,wy);
    hd_iso_tile(p,sx,sy,material(c,wx,wy));
   }
+ rain(p,tick);
  unsigned player_depth=(unsigned)s->x+(unsigned)s->y;
  int drew_player=0;
  for(int depth=-2;depth<=STORY_W+STORY_H+1;depth++){
@@ -244,5 +251,5 @@ void hd_isometric_draw(uint8_t *p,const Story *s,unsigned tick){
    hd_line(p,cx+4,top+3,cx,top+6,HD_LAMP);
   }
  }
- rain(p,tick);
 }
+
