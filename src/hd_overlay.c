@@ -146,11 +146,16 @@ void hd_game_overlay(uint8_t *p,const Story *s){
   hd_text(p,186,5,has?relative:"",HD_STONE_LIT,1,0);
   hd_rect(p,0,140,240,20,HD_INK);
   hd_rect(p,0,140,240,1,HD_COPPER);
-  hd_text(p,8,145,story_action_hint(s),HD_LAMP,1,0);
-  hd_text(p,87,145,"L MAP R NOTES",HD_PAPER,1,0);
-  hd_text(p,8,152,story_risk_available(s)?
-          "B RISK / EXPLICIT CONFIRMATION":"B / NO RISK AT THIS LOCATION",
-          HD_STONE_LIT,1,0);
+  /* A two-row native HUD, each label inside its own unclipped lane.
+     Risk is contextual, not a permanent alarm while exploring. */
+  hd_rect(p,8,143,3,7,HD_GOLD);
+  hd_text(p,16,143,story_action_hint(s),HD_PAPER,1,0);
+  hd_rect(p,92,143,1,14,HD_STONE_DARK);
+  hd_text(p,100,143,"L MAP  R GUIDE",HD_STONE_LIT,1,0);
+  int risk=story_risk_available(s);
+  hd_text(p,16,152,risk?
+          "B RISK  CONFIRM FIRST":"B NO RISK AT THIS LOCATION",
+          risk?HD_LAMP:HD_STONE_LIT,1,0);
  }
 }
 
