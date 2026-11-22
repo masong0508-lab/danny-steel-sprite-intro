@@ -19,81 +19,207 @@ int hd_special_supports(unsigned scene){
  }
 }
 static void inside(uint8_t *p,unsigned t,int window){
- unsigned wall=window?HD_BRICK_DARK:HD_STONE_DARK;
- hd_rect(p,0,0,240,114,wall);
- hd_rect(p,0,110,240,50,HD_BARK);
- hd_rect(p,0,107,240,4,HD_COPPER);
- for(int y=118;y<160;y+=8)hd_line(p,0,y,239,y,HD_BRICK_DARK);
- for(int x=13;x<240;x+=29)
-  hd_line(p,x,112,x-9,159,HD_BRICK_DARK);
- /* The same skyline through each reachable window. */
- hd_rect(p,16,12,108,84,HD_INK);
- hd_rect(p,19,16,101,76,HD_GLASS);
- for(int i=0;i<9;i++){
-  int x=20+i*12,h=26+(int)(hash((unsigned)i,23u)%31u);
-  hd_rect(p,x,92-h,12,h,HD_STONE_DARK);
-  for(int k=4;k<h-2;k+=10)
-   hd_rect(p,x+4,92-h+k,3,3,
-          (((unsigned)i+(unsigned)k+t/100u)%7u)==0u?HD_LAMP:HD_GLASS_LIT);
+ /* Quiet wall masses, a recessed sash and broad floorboards. Light is
+    attached to the room; no uniformly bright window or wireframe floor. */
+ hd_rect(p,0,0,240,113,window?HD_BRICK_DARK:HD_STONE_DARK);
+ hd_rect(p,0,0,240,7,HD_SHADOW);
+ hd_rect(p,0,7,240,2,HD_BARK);
+ hd_rect(p,0,89,240,20,HD_BARK);
+ hd_rect(p,0,89,240,2,HD_RED_SHADE);
+ for(int x=3;x<240;x+=40){
+  hd_rect(p,x,93,35,13,HD_BRICK_DARK);
+  hd_line(p,x+2,94,x+31,94,HD_BARK);
  }
- hd_rect(p,70,16,3,80,HD_BARK);
- hd_rect(p,19,66,105,3,HD_BARK);
+ hd_rect(p,0,109,240,51,HD_BARK);
+ hd_rect(p,0,109,240,3,HD_SHADOW);
+ for(int row=0;row<5;row++){
+  int y=117+row*9;
+  hd_line(p,0,y,239,y,HD_BRICK_DARK);
+  int x=18+((row*43)%67);
+  for(;x<240;x+=83){
+   hd_line(p,x,y-7,x-3,y,HD_SHADOW);
+   hd_line(p,x+8,y-3,x+24+(row&1)*9,y-3,HD_BRICK_DARK);
+  }
+ }
+ /* Recess depth, not an illuminated cyan panel. */
+ hd_rect(p,12,9,116,94,HD_SHADOW);
+ hd_rect(p,15,11,110,88,HD_BARK);
+ hd_rect(p,19,16,101,76,HD_ROAD);
+ hd_rect(p,19,48,101,44,HD_ROAD_COOL);
+ for(int i=0;i<8;i++){
+  int x=20+i*13,h=21+(int)(hash((unsigned)i,23u)%32u);
+  hd_rect(p,x,92-h,13,h,i&1?HD_STONE_DARK:HD_WET);
+  hd_rect(p,x+1,91-h,10,1,HD_ROAD_LIGHT);
+  for(int k=5;k<h-3;k+=11)
+   if((i+k)%3!=0)hd_rect(p,x+4,92-h+k,2,3,
+       (i+k)%7==0?HD_GOLD:HD_GLASS);
+ }
+ hd_line(p,27,19,45,19,HD_ROAD_COOL);
+ hd_line(p,22,23,35,23,HD_ROAD_LIGHT);
+ hd_line(p,101,19,116,19,HD_ROAD_COOL);
+ hd_rect(p,69,16,4,80,HD_SHADOW);
+ hd_rect(p,70,16,2,77,HD_BARK);
+ hd_rect(p,19,65,101,4,HD_SHADOW);
+ hd_rect(p,19,65,101,1,HD_PLASTER);
  hd_rect(p,15,12,5,85,HD_BARK);
- hd_rect(p,119,12,5,85,HD_BARK);
- hd_rect(p,15,95,110,5,HD_BRICK);
- hd_line(p,14,11,124,11,HD_GOLD);
- hd_rect(p,130,21,100,4,HD_COPPER);
+ hd_rect(p,119,12,5,85,HD_SHADOW);
+ hd_rect(p,14,95,112,4,HD_PLASTER);
+ hd_line(p,17,95,122,95,HD_STONE_LIT);
+ hd_rect(p,17,99,107,3,HD_SHADOW);
+ hd_line(p,15,11,124,11,HD_COPPER);
+ /* Short reflected streaks stay inside the window's floor footprint. */
+ for(int i=0;i<4;i++){
+  int x=28+i*24;
+  hd_line(p,x,123+i*4,x+14,123+i*4,HD_BRICK_DARK);
+ }
+ (void)t;
 }
 static void rainy_lane(uint8_t *p,unsigned t){
- /* Four pixel-identical city bands replace 160 tiny rect calls per shot.
-    Keep all rain, building silhouettes and narrative placements intact. */
- hd_rect(p,0,0,240,30,19);
- hd_rect(p,0,30,240,45,HD_GLASS);
- hd_rect(p,0,75,240,30,HD_STONE_DARK);
- hd_rect(p,0,105,240,55,HD_ROAD);
- for(int i=0;i<14;i++){
-  int x=i*19-7,h=26+(int)(hash((unsigned)i,8u)%28u);
-  hd_rect(p,x,109-h,19,h,HD_BRICK_DARK);
-  hd_rect(p,x+2,109-h,15,3,HD_BRICK);
-  for(int yy=109-h+8;yy<106;yy+=10)
-   if(((i+yy)&3)!=1)hd_rect(p,x+6,yy,4,4,HD_GLASS_LIT);
+ /* Three depths of unequal roof masses. Far architecture stays quiet;
+    the shop, people and physical streetlamp own the high contrast. */
+ hd_rect(p,0,0,240,54,19);
+ hd_rect(p,0,54,240,52,HD_ROAD_COOL);
+ hd_rect(p,0,106,240,54,HD_ROAD);
+ for(int i=0;i<7;i++){
+  int x=i*39-13,h=22+(int)(hash((unsigned)i,8u)%29u);
+  hd_rect(p,x,85-h,35,h+20,HD_STONE_DARK);
+  hd_rect(p,x+6,81-h,18,4,HD_STONE_DARK);
+  hd_line(p,x+1,85-h,x+33,85-h,HD_MORTAR);
+  for(int yy=92-h;yy<98;yy+=12)
+   for(int j=0;j<2;j++)
+    if(((i+yy+j)&3)!=1)hd_rect(p,x+6+j*14,yy,3,4,
+                                      (i+yy+j)%9==0?HD_GOLD:HD_GLASS);
  }
- hd_rect(p,0,106,240,4,HD_STONE);
- hd_rect(p,0,110,240,3,HD_BRICK_DARK);
- for(int i=-1;i<16;i++){
-  int x=i*19;
-  hd_line(p,x,114,x-6,159,HD_ROAD_COOL);
+ hd_rect(p,0,87,29,20,HD_WET);
+ hd_rect(p,134,70,44,37,HD_WET);
+ hd_rect(p,138,67,35,3,HD_STONE_DARK);
+ hd_rect(p,181,82,43,25,HD_BRICK_DARK);
+ for(int i=0;i<3;i++){
+  int x=141+i*12;
+  hd_rect(p,x,77,7,13,HD_SHADOW);
+  hd_rect(p,x+1,80,3,6,i==1?HD_COPPER:HD_ROAD_COOL);
  }
- for(int y=115;y<160;y+=7)
-  for(int x=3;x<240;x+=31){
-   hd_line(p,x+(y&7),y,x+11+(y&7),y,HD_ROAD_LIGHT);
-   hd_pixel(p,x+5,y+2,HD_REFLECT);
-  }
- hd_line(p,0,80,239,80,HD_ROAD_COOL);
- hd_rect(p,216,50,3,67,HD_INK);
- hd_rect(p,210,50,16,4,HD_COPPER);
- hd_rect(p,213,54,10,4,HD_LAMP);
- for(int k=0;k<4;k++)
-  hd_line(p,204+k*7,126,198+k*9,146,
-           k==1?HD_REFLECT:HD_ROAD_LIGHT);
- /* Depth-aware rain is painted AFTER the distant skyline but BEFORE
-    the actual people/props. Coarse integer phase shifts keep the weather
-    alive in story cutscenes without an overlay texture, heap allocation
-    or expensive full-screen per-pixel effects. */
+ hd_line(p,126,60,239,68,HD_SHADOW);
+ hd_line(p,127,62,239,70,HD_ROAD_LIGHT);
+ hd_rect(p,0,105,240,4,HD_STONE_DARK);
+ hd_line(p,0,106,239,106,HD_ROAD_COOL);
+ hd_rect(p,0,110,240,2,HD_WET);
+ /* Setts have broken joints and unequal clusters, never a full grid. */
+ for(int i=0;i<19;i++){
+  int x=(i*47+13)%239,y=118+(i*17)%39;
+  hd_line(p,x,y,x+6+(i%4)*3,y,HD_ROAD_LIGHT);
+  if(i%3==0)hd_line(p,x-1,y+1,x-2,y+4,HD_WET);
+ }
+ hd_rect(p,217,50,3,65,HD_INK);
+ hd_line(p,219,57,219,109,HD_STONE_DARK);
+ hd_rect(p,210,49,16,3,HD_BARK);
+ hd_rect(p,212,52,12,5,HD_COPPER);
+ hd_rect(p,214,53,8,4,HD_LAMP);
+ hd_line(p,215,57,221,57,HD_PAPER);
+ hd_rect(p,214,112,9,3,HD_SHADOW);
+ /* The pool is under its lamp. Broad midtone, broken wet highlights. */
+ hd_ellipse(p,216,128,18,5,HD_ROAD_LIGHT);
+ hd_line(p,204,125,224,125,HD_MORTAR);
+ hd_line(p,212,128,227,128,HD_COPPER);
+ hd_line(p,207,131,218,131,HD_STONE);
+ hd_line(p,215,135,221,135,HD_GOLD);
  for(int i=0;i<14;i++){
   int x=((i*43+(int)(hash((unsigned)i,47u)%19u)+
           (int)(t/3u))%256)-8;
   int y=6+((i*17+(int)(t/4u))%79);
   hd_line(p,x,y,x-2,y+5,i%4==0?HD_REFLECT:HD_GLASS_LIT);
  }
- /* Small puddle highlights are anchored to the stone joints. Only
-    their reflected gleam changes with the frame, not the street grid. */
  for(int i=0;i<5;i++){
   int x=27+i*46,y=133+(i*5)%18;
-  hd_line(p,x-7,y,x+6,y,HD_ROAD_LIGHT);
+  hd_line(p,x-7,y,x+6,y,HD_WET);
   if(((t/18u+(unsigned)i)&3u)==0u)
-   hd_line(p,x-4,y+2,x+3,y+2,HD_REFLECT);
+   hd_line(p,x-4,y+2,x+3,y+2,HD_ROAD_COOL);
  }
+}
+/* Shared facade across the conversation and missing-person chapter.
+   The shop has the same cornice, sash, counter and cake stand in both. */
+void hd_cafe_facade(uint8_t *p,int x,int y,unsigned t){
+ hd_rect(p,x+4,y-10,111,84,HD_SHADOW);
+ hd_rect(p,x,y-7,118,81,HD_BRICK_DARK);
+ hd_rect(p,x+118,y+2,9,72,HD_SHADOW);
+ hd_rect(p,x+1,y-7,116,3,HD_BRICK);
+ hd_rect(p,x-2,y-4,122,3,HD_BARK);
+ hd_line(p,x,y-4,x+117,y-4,HD_COPPER);
+ hd_rect(p,x+2,y,114,16,HD_BRICK_DARK);
+ /* Selective masonry chips and recessed upper vents. */
+ for(int i=0;i<8;i++){
+  int bx=x+5+(i*31)%105,by=y+3+(i%3)*5;
+  hd_line(p,bx,by,bx+5+(i&1)*3,by,HD_BRICK);
+ }
+ for(int i=0;i<3;i++){
+  int wx=x+17+i*34;
+  hd_rect(p,wx,y+2,22,11,HD_SHADOW);
+  hd_rect(p,wx+2,y+4,18,7,HD_BARK);
+  hd_line(p,wx+3,y+10,wx+19,y+10,HD_BRICK);
+  hd_line(p,wx+10,y+4,wx+10,y+9,HD_SHADOW);
+ }
+ hd_rect(p,x+4,y+15,110,12,HD_SHADOW);
+ hd_rect(p,x+5,y+16,109,10,HD_BARK);
+ hd_line(p,x+6,y+16,x+112,y+16,HD_COPPER);
+ hd_line(p,x+6,y+25,x+112,y+25,HD_GOLD);
+ hd_text(p,x+16,y+18,"MARA'S CAFE",HD_PAPER,1,1);
+ /* Two restrained lamps illuminate the board, not the entire sky. */
+ for(int i=0;i<2;i++){
+  int lx=x+20+i*76;
+  hd_line(p,lx,y+10,lx,y+14,HD_INK);
+  hd_rect(p,lx-4,y+13,9,2,HD_COPPER);
+  hd_rect(p,lx-2,y+15,5,1,HD_LAMP);
+ }
+ hd_rect(p,x+8,y+30,102,43,HD_SHADOW);
+ hd_rect(p,x+13,y+32,95,39,HD_INK);
+ hd_rect(p,x+17,y+35,87,33,HD_BARK);
+ hd_rect(p,x+20,y+38,81,17,HD_BRICK_DARK);
+ hd_rect(p,x+22,y+41,32,13,HD_BRICK);
+ hd_rect(p,x+60,y+41,39,13,HD_BRICK);
+ /* Amber practical light and utensils are seen through dark glazing. */
+ hd_rect(p,x+25,y+39,3,10,HD_COPPER);
+ hd_rect(p,x+71,y+39,3,10,HD_COPPER);
+ hd_rect(p,x+22,y+48,9,3,HD_GOLD);
+ hd_rect(p,x+68,y+48,9,3,HD_GOLD);
+ hd_rect(p,x+25,y+50,3,2,HD_LAMP);
+ hd_rect(p,x+71,y+50,3,2,HD_LAMP);
+ hd_rect(p,x+20,y+55,81,11,HD_SHADOW);
+ hd_rect(p,x+22,y+53,77,2,HD_COPPER);
+ hd_rect(p,x+83,y+45,15,4,HD_GOLD);
+ hd_rect(p,x+85,y+43,11,2,HD_PAPER);
+ hd_rect(p,x+89,y+41,3,2,HD_RED_SHADE);
+ hd_rect(p,x+38,y+49,5,4,HD_PLASTER);
+ hd_rect(p,x+45,y+49,4,4,HD_LEAF_DARK);
+ hd_line(p,x+49,y+48,x+50,y+45,HD_LEAF);
+ hd_rect(p,x+56,y+35,3,33,HD_SHADOW);
+ hd_line(p,x+57,y+35,x+57,y+65,HD_COPPER);
+ hd_rect(p,x+16,y+52,90,2,HD_BARK);
+ hd_line(p,x+18,y+35,x+50,y+35,HD_PLASTER);
+ hd_line(p,x+61,y+35,x+102,y+35,HD_PLASTER);
+ hd_rect(p,x+12,y+69,98,3,HD_PLASTER);
+ hd_line(p,x+14,y+69,x+107,y+69,HD_STONE_LIT);
+ hd_rect(p,x+10,y+72,102,3,HD_SHADOW);
+ /* Cloth scallops shade the top of the sash. */
+ hd_rect(p,x+7,y+27,107,5,HD_SHADOW);
+ for(int i=0;i<11;i++){
+  int ax=x+9+i*9;
+  hd_rect(p,ax,y+28,8,3,i&1?HD_BRICK:HD_BARK);
+  hd_rect(p,ax+1,y+31,6,2,i&1?HD_COPPER:HD_RED_SHADE);
+ }
+ /* Rain pipe and a grounded planter finish the silhouette. */
+ hd_rect(p,x+114,y+1,3,68,HD_SHADOW);
+ hd_line(p,x+115,y+2,x+115,y+64,HD_STONE_DARK);
+ hd_rect(p,x+111,y+45,7,2,HD_BARK);
+ hd_rect(p,x+110,y+67,10,6,HD_BARK);
+ hd_rect(p,x+111,y+65,9,3,HD_COPPER);
+ hd_line(p,x+115,y+65,x+111,y+57,HD_LEAF);
+ hd_line(p,x+115,y+65,x+120,y+55,HD_LEAF_DARK);
+ hd_line(p,x+115,y+63,x+118,y+59,HD_LEAF);
+ hd_line(p,x+23,y+82,x+45,y+82,HD_COPPER);
+ hd_line(p,x+28,y+85,x+42,y+85,HD_BARK);
+ hd_line(p,x+78,y+81,x+98,y+81,HD_COPPER);
+ hd_line(p,x+82,y+85,x+94,y+85,HD_BARK);
+ (void)t;
 }
 static void paper(uint8_t *p,int x,int y,int w,int h,unsigned t){
  hd_rect(p,x+2,y+2,w,h,HD_SHADOW);
@@ -156,9 +282,31 @@ static void witness_lane(uint8_t *p,unsigned t){
 }
 static void safehouse(uint8_t *p,unsigned t,int scene){
  inside(p,t,1);
+ /* The same window stays in place for the closed-door, saved, and
+    ordinary safehouse shots. Fabric folds and sconce make this a home,
+    not an empty cyan wall behind two actors. */
+ hd_rect(p,17,16,7,74,HD_RED_SHADE);
+ hd_rect(p,18,19,3,68,HD_BRICK);
+ hd_line(p,18,20,18,85,HD_COPPER);
+ hd_rect(p,115,16,7,74,HD_RED_SHADE);
+ hd_rect(p,119,19,2,68,HD_BRICK);
+ hd_rect(p,19,53,7,4,HD_GOLD);
+ hd_rect(p,113,53,9,4,HD_GOLD);
+ hd_rect(p,127,40,14,28,HD_BARK);
+ hd_rect(p,130,43,10,18,HD_BRICK);
+ hd_rect(p,125,38,16,3,HD_COPPER);
+ hd_rect(p,130,41,8,3,HD_BARK);
+ hd_rect(p,132,44,5,7,HD_LAMP);
+ hd_pixel(p,134,46,HD_PAPER);
+ hd_rect(p,58,138,76,17,HD_RED_SHADE);
+ hd_rect(p,61,140,70,13,HD_BRICK);
+ hd_line(p,63,143,129,143,HD_COPPER);
+ hd_line(p,63,150,129,150,HD_COPPER);
  /* A real wooden door, hinges, floor threshold and inviting tungsten lamp. */
  hd_rect(p,144,13,83,115,HD_INK);
  hd_rect(p,148,17,75,106,HD_BARK);
+ hd_line(p,147,16,222,16,HD_PLASTER);
+ hd_rect(p,221,18,3,105,HD_STONE_DARK);
  for(int i=0;i<3;i++)
   hd_rect(p,154,22+i*28,63,24,HD_BRICK_DARK);
  hd_rect(p,156,24,59,19,HD_BARK);
@@ -179,6 +327,15 @@ static void safehouse(uint8_t *p,unsigned t,int scene){
   /* No teleport: the wood leaf rotates into its archway and Mara waits
      behind it until the opening actually reveals the room. */
   hd_rect(p,151,21,65,100,HD_INK);
+  if(open){
+   /* Practical hall light and reflected threshold share the opening. */
+   hd_line(p,156,118,200,118,HD_LAMP);
+   hd_rect(p,156,119,44,3,HD_STONE_LIT);
+   hd_ellipse(p,180,132,24,5,HD_BRICK_DARK);
+   hd_line(p,163,128,198,128,HD_COPPER);
+   hd_line(p,170,133,192,133,HD_PLASTER);
+   hd_line(p,177,137,188,137,HD_BARK);
+  }
   int mara_x=178;
   if(open){
    hd_rect(p,155,25,57,92,HD_GLASS);
@@ -192,14 +349,20 @@ static void safehouse(uint8_t *p,unsigned t,int scene){
     if(move>95u)move=95u;
     int mx=178-(int)(move*36u/95u);
     mara_x=mx;
-    hd_ellipse(p,mx,145,16,3,HD_SHADOW);
-    hd_actor_stage(p,mx,145,2,t,t>=145u?2:t>=123u?1:0);
+    if(t<145u)hd_actor_stage(p,mx,145,2,t,t>=123u?1:0);
    }
   }
   hd_rect(p,153,23,63-open,96,HD_BARK);
   hd_rect(p,156,27,56-open,88,HD_BRICK_DARK);
   hd_rect(p,155,57,60-open,2,HD_COPPER);
+  hd_rect(p,214-open,24,2,94,HD_PLASTER);
+  hd_rect(p,153,37,2,7,HD_COPPER);
+  hd_rect(p,153,96,2,7,HD_COPPER);
   if(open<20)hd_rect(p,204-open/2,82,5,5,HD_LAMP);
+  /* Her feet have crossed the threshold: the complete actor now belongs
+     in front of the wood leaf, not sliced into it during the approach. */
+  if(open && t>=145u)
+   hd_actor_stage(p,mara_x,145,2,t,t<240u?2:0);
   /* After confirming Mara is there, Danny crosses the floor toward her.
      Both characters advance in world-space, not as detached hand cutouts. */
   int danny_x=63;
@@ -220,13 +383,7 @@ static void safehouse(uint8_t *p,unsigned t,int scene){
    hd_line(p,left,118,right,118,HD_SKIN_LIT);
    hd_ellipse(p,(left+right)/2,118,3,2,HD_SKIN_LIT);
   }
-  if(open){
-   /* Practical hall light and reflected threshold share the opening. */
-   hd_line(p,156,118,200,118,HD_LAMP);
-   hd_rect(p,156,119,44,3,HD_STONE_LIT);
-   for(int i=0;i<4;i++)
-    hd_line(p,161+i*9,122,154+i*11,141,HD_REFLECT);
-  }
+
  }else{
   hd_actor_stage(p,49,144,1,t,0);
   hd_actor_stage(p,113,144,4,t,t>78u?1:0);
@@ -234,31 +391,36 @@ static void safehouse(uint8_t *p,unsigned t,int scene){
 }
 static void empty_cafe(uint8_t *p,unsigned t){
  rainy_lane(p,t);
- hd_rect(p,8,38,118,76,HD_BRICK_DARK);
- for(int y=45;y<112;y+=8){
-  hd_line(p,9,y,124,y,HD_BRICK);
-  for(int x=16+(y/8%2)*8;x<124;x+=19)
-   hd_line(p,x,y,x,y+6,HD_BRICK);
- }
- hd_rect(p,13,54,109,10,HD_GOLD);
- hd_rect(p,14,55,107,8,HD_BARK);
- hd_text(p,24,56,"MARA'S CAFE",HD_PAPER,1,1);
- hd_rect(p,21,70,95,39,HD_INK);
- hd_rect(p,25,73,87,33,HD_GLASS_LIT);
- hd_rect(p,64,73,3,33,HD_BARK);
- hd_rect(p,24,90,90,3,HD_COPPER);
+ hd_cafe_facade(p,8,38,t);
+ hd_ellipse(p,145,149,48,4,HD_SHADOW);
  hd_rect(p,99,119,92,7,HD_BARK);
+ hd_rect(p,101,119,88,2,HD_PLASTER);
+ hd_line(p,101,122,187,122,HD_COPPER);
  hd_rect(p,105,125,7,24,HD_BARK);
  hd_rect(p,178,125,7,24,HD_BARK);
- hd_rect(p,114,110,15,9,HD_PAPER);
- hd_rect(p,113,109,17,2,HD_LAMP);
+ hd_rect(p,115,110,13,8,HD_PLASTER_LIT);
+ hd_rect(p,117,117,9,2,HD_PLASTER);
+ hd_rect(p,115,110,3,7,HD_PAPER);
+ hd_ellipse(p,121,110,7,2,HD_PAPER);
+ hd_line(p,118,110,125,110,HD_BARK);
+ hd_rect(p,128,112,3,4,HD_PAPER);
+ hd_pixel(p,129,113,HD_BARK);
  hd_rect(p,147,114,10,13,HD_INK);
  hd_rect(p,149,116,6,9,HD_GLASS);
  if((t/70u)&1u)hd_rect(p,151,118,2,1,HD_LAMP);
+ /* A vacant chair occupies clear space beside the table. Its back,
+    seat and separated feet read before its small material highlights. */
+ hd_ellipse(p,200,145,14,3,HD_SHADOW);
+ hd_rect(p,191,117,3,28,HD_INK);
+ hd_rect(p,208,117,3,28,HD_INK);
+ hd_rect(p,192,115,17,3,HD_BARK);
+ hd_line(p,194,115,207,115,HD_COPPER);
+ hd_rect(p,194,120,13,3,HD_BARK);
+ hd_rect(p,191,132,21,4,HD_BARK);
+ hd_line(p,193,132,209,132,HD_COPPER);
+ hd_line(p,194,136,191,148,HD_INK);
+ hd_line(p,209,136,212,148,HD_INK);
  /* Mara is absent. No unearned implication that she died or recovered. */
- hd_rect(p,198,112,27,4,HD_BARK);
- hd_rect(p,201,115,3,26,HD_BARK);
- hd_rect(p,219,115,3,26,HD_BARK);
  hd_actor_stage(p,45,143,1,t,7);
 }
 static void rooftop(uint8_t *p,unsigned t,int paint,int ending_state){
@@ -440,15 +602,22 @@ static void concert(uint8_t *p,unsigned t){
  hd_rect(p,77,22,86,14,HD_BRICK_DARK);
  hd_line(p,79,23,161,23,HD_COPPER);
  hd_text(p,82,26,"ONE MORE SONG",HD_PAPER,1,0);
+ /* Broad low-value light shapes establish volume; tiny practical bulbs
+    retain the brightest pixels. Background beams never cover actors. */
+ for(int beam=0;beam<2;beam++){
+  int source=beam?157:71,target=beam?126:78;
+  int sway=(int)((t/54u+(unsigned)beam)&3u)-1;
+  for(int y=56;y<116;y+=3){
+   int d=y-56,cx=source+(target-source)*d/60+sway;
+   int w=3+d/5;
+   hd_rect(p,cx-w,y,w*2,3,beam?HD_ROAD_LIGHT:HD_BARK);
+  }
+ }
  for(int i=0;i<5;i++){
   int x=28+i*43;
-  int sway=(int)((t/54u+(unsigned)i)&3u);
-  hd_rect(p,x,42,7,10,HD_GOLD);
+  hd_rect(p,x,42,7,10,HD_BARK);
+  hd_rect(p,x+1,50,5,3,HD_COPPER);
   hd_rect(p,x+2,53,3,3,HD_LAMP);
-  hd_line(p,x+3,55,118+sway*3,95,
-          i&1?HD_GLASS_LIT:HD_LAMP);
-  hd_line(p,x+4,55,118+sway*3+1,95,
-          i&1?HD_STONE_LIT:HD_COPPER);
  }
  /* Stage infrastructure and instruments stay behind the performers. */
  for(int i=0;i<2;i++){
@@ -532,3 +701,4 @@ int hd_special_cinema_draw(uint8_t *p,const Story *s,unsigned t){
  hd_rect(p,0,158,240,2,HD_INK);
  return 1;
 }
+

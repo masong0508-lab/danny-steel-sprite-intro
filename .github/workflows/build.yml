@@ -89,6 +89,10 @@ jobs:
             src/hd_ending.c tests/cinematic_staging_test.c \
             -o /tmp/danny_cinematic_staging
           /tmp/danny_cinematic_staging
+      - name: Verify aligned canvas fills against independent byte rendering
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/hd_canvas.c tests/canvas_span_test.c -o /tmp/danny_canvas_spans
+          /tmp/danny_canvas_spans
       - name: Prove pixel-identical geometry, town coordinates and exact wall-projection rounding
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
@@ -297,3 +301,4 @@ jobs:
         with:
           name: danny_steel_title
           path: "*.gba"
+

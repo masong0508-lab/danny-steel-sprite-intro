@@ -2,19 +2,18 @@
 #include <string.h>
 uint32_t hd_shared_frame[HD_BYTES/4] __attribute__((section(".ewram"), aligned(4)));
 #define RGB(r,g,b) ((uint16_t)((r)|((g)<<5)|((b)<<10)))
-/* 32 measured dusk / ink / skin / rain tones in the spare half of the
-   mode-4 palette. Existing story colors 0..31 are untouched. */
+/* Blue-hour material ramps: quiet slate/brick midtones, warm practical
+   lights, and distinct skin planes. These are the same 32 Mode-4 slots;
+   original story colors 0..31 and every framebuffer remain unchanged. */
 const uint16_t hd_extra_palette[32]={
- RGB(7,9,13),RGB(10,13,17),RGB(12,16,20),RGB(6,8,11),
- RGB(14,17,20),RGB(17,18,19),RGB(23,22,21),RGB(11,12,13),
- /* Warm terracotta, theatrical gold and twilight cyan have enough
-    chroma to read at actual LCD scale without extra palette entries. */
- RGB(13,8,12),RGB(23,11,13),RGB(31,18,14),RGB(21,18,16),
- RGB(25,22,19),RGB(4,5,8),RGB(31,28,12),RGB(12,23,25),
- RGB(18,28,29),RGB(8,17,26),RGB(30,18,12),RGB(5,14,10),
- RGB(8,23,13),RGB(16,28,18),RGB(15,11,8),RGB(30,28,22),
- RGB(4,5,7),RGB(20,21,20),RGB(31,9,13),RGB(18,8,13),
- RGB(29,19,15),RGB(31,24,18),RGB(20,14,9),RGB(31,27,7)
+ RGB(6,8,11),RGB(8,11,14),RGB(10,14,17),RGB(4,7,10),
+ RGB(12,15,17),RGB(15,17,18),RGB(22,22,20),RGB(9,11,13),
+ RGB(11,8,11),RGB(17,9,11),RGB(25,15,12),RGB(17,16,15),
+ RGB(23,21,17),RGB(3,4,7),RGB(31,26,15),RGB(8,15,18),
+ RGB(17,24,24),RGB(12,20,24),RGB(23,14,9),RGB(5,11,10),
+ RGB(9,17,11),RGB(17,23,15),RGB(11,8,7),RGB(29,27,21),
+ RGB(2,3,5),RGB(21,22,20),RGB(25,8,11),RGB(13,6,10),
+ RGB(29,19,15),RGB(31,24,18),RGB(12,8,6),RGB(28,21,10)
 };
 #undef RGB
 /* A drawn screen has no relation to 120x80 scaled text: these are true
@@ -57,9 +56,18 @@ static const uint8_t alphabet[36][7]={
  {14,17,17,14,17,17,14}, /* 8 */
  {14,17,17,15,1,1,30} /* 9 */
 };
-void hd_pixel(uint8_t *p,int x,int y,unsigned c){
+static inline __attribute__((always_inline))
+void canvas_pixel(uint8_t *p,int x,int y,unsigned c){
  if((unsigned)x<HD_W&&(unsigned)y<HD_H)p[y*HD_W+x]=(uint8_t)c;
 }
+void hd_pixel(uint8_t *p,int x,int y,unsigned c){
+ canvas_pixel(p,x,y,c);
+}
+/* The shared page is EWRAM, not VRAM. Byte heads/tails are legal here.
+   may_alias makes the aligned word stores valid over a uint8_t canvas;
+   volatile word stores prevent GCC replacing this IWRAM loop with a
+   ROM memset call. No DMA channel or interrupt state is touched. */
+typedef uint32_t CanvasWord __attribute__((may_alias));
 void hd_rect(uint8_t *p,int x,int y,int w,int h,unsigned c){
  int x2=x+w,y2=y+h;
  if(x<0)x=0;
@@ -67,7 +75,42 @@ void hd_rect(uint8_t *p,int x,int y,int w,int h,unsigned c){
  if(x2>HD_W)x2=HD_W;
  if(y2>HD_H)y2=HD_H;
  if(x>=x2||y>=y2)return;
- for(int yy=y;yy<y2;yy++)memset(p+yy*HD_W+x,(int)c,(unsigned)(x2-x));
+ unsigned width=(unsigned)(x2-x),rows=(unsigned)(y2-y);
+ uint8_t ink=(uint8_t)c,*row=p+y*HD_W+x;
+ /* One-pixel strokes are common and need no alignment setup. */
+ if(width<4u){
+  for(unsigned yy=0;yy<rows;yy++,row+=HD_W){
+   row[0]=ink;
+   if(width>1u)row[1]=ink;
+   if(width>2u)row[2]=ink;
+  }
+  return;
+ }
+ /* Consecutive full-width rows form one contiguous span. */
+ if(width==HD_W){width*=rows;rows=1u;}
+ unsigned head=(unsigned)(-(uintptr_t)row)&3u;
+ unsigned words=(width-head)>>2,tail=(width-head)&3u;
+ uint32_t fill=(uint32_t)ink*0x01010101u;
+ for(unsigned yy=0;yy<rows;yy++,row+=HD_W){
+  if(head){
+   row[0]=ink;
+   if(head>1u)row[1]=ink;
+   if(head>2u)row[2]=ink;
+  }
+  volatile CanvasWord *out=(volatile CanvasWord *)(void *)(row+head);
+  unsigned count=words;
+  while(count>=4u){
+   out[0]=fill;out[1]=fill;out[2]=fill;out[3]=fill;
+   out+=4;count-=4u;
+  }
+  while(count--)*out++=fill;
+  uint8_t *end=(uint8_t *)(void *)out;
+  if(tail){
+   end[0]=ink;
+   if(tail>1u)end[1]=ink;
+   if(tail>2u)end[2]=ink;
+  }
+ }
 }
 static int abs_i(int n){return n<0?-n:n;}
 void hd_line(uint8_t *p,int x,int y,int xx,int yy,unsigned c){
@@ -85,7 +128,7 @@ void hd_line(uint8_t *p,int x,int y,int xx,int yy,unsigned c){
  }
  int dx=abs_i(xx-x),dy=abs_i(yy-y),sx=x<xx?1:-1,sy=y<yy?1:-1,err=dx-dy;
  for(;;){
-  hd_pixel(p,x,y,c);
+  canvas_pixel(p,x,y,c);
   if(x==xx&&y==yy)break;
   int twice=2*err;
   if(twice>-dy){err-=dy;x+=sx;}
@@ -121,7 +164,10 @@ void hd_text(uint8_t *p,int x,int y,const char *s,unsigned ink,int scale,int tra
   unsigned n=c>='A'&&c<='Z'?(unsigned)(c-'A'):c>='0'&&c<='9'?(unsigned)(26+c-'0'):36u;
   if(n<36u){
    for(int j=0;j<7;j++)for(int i=0;i<5;i++)
-    if(alphabet[n][j]&(16u>>i))hd_rect(p,x+i*scale,y+j*scale,scale,scale,ink);
+    if(alphabet[n][j]&(16u>>i)){
+     if(scale==1)canvas_pixel(p,x+i,y+j,ink);
+     else hd_rect(p,x+i*scale,y+j*scale,scale,scale,ink);
+    }
   }else if(c=='.')hd_rect(p,x+2*scale,y+6*scale,scale,scale,ink);
   else if(c==':'){hd_rect(p,x+2*scale,y+2*scale,scale,scale,ink);hd_rect(p,x+2*scale,y+5*scale,scale,scale,ink);}
   else if(c=='/'){for(int j=0;j<7;j++)hd_rect(p,x+(4-j*2/3)*scale,y+j*scale,scale,scale,ink);}
@@ -154,3 +200,4 @@ void hd_upscale_inplace(uint8_t *p){
   p[i]=ink;p[i+1]=ink;p[i+HD_W]=ink;p[i+HD_W+1]=ink;
  }
 }
+

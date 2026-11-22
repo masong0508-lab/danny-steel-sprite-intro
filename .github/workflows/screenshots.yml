@@ -5,6 +5,7 @@ on:
     paths:
       - ".github/workflows/screenshots.yml"
       - "tools/story_gallery.c"
+      - "tools/frame_cadence.c"
       - "src/hd_studio.c"
       - "src/hd_perspective.c"
       - "src/hd_cinema.c"
@@ -68,10 +69,17 @@ jobs:
           docker run --rm -v "$PWD:/work" -w /work devkitpro/devkitarm make
       - name: Run the current playable ROM in headless mGBA
         run: |
-          /tmp/gba-rom-debugger/bin/gba-walk danny_steel_title.gba docs/screenshots             run:1650 snap:01_title             press:START:2 run:95 snap:02_main_menu             press:A:2 run:95 snap:03_save_slots             press:A:2 run:120 snap:04_story_in_emulator
+          /tmp/gba-rom-debugger/bin/gba-walk danny_steel_title.gba docs/screenshots             run:1650 snap:01_title             press:START:32 run:127 snap:02_main_menu             press:A:32 run:127 snap:03_save_slots             press:A:32 run:152 snap:04_story_in_emulator
           for f in docs/screenshots/0[1-4]_*.png; do
             convert "$f" -filter point -resize 200% "$f"
           done
+      - name: Measure actual ROM presentation cadence in mGBA
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror tools/frame_cadence.c -lmgba -o /tmp/danny_frame_cadence
+          {
+            printf 'Source commit: %s\n' "$GITHUB_SHA"
+            /tmp/danny_frame_cadence danny_steel_title.gba docs/screenshots
+          } | tee docs/screenshots/emulator_cadence.txt
       - name: Verify dimensions and save contact sheet
         run: |
           identify -format '%f %wx%h\n' docs/screenshots/*.png
@@ -93,3 +101,4 @@ jobs:
             git rebase "origin/${GITHUB_REF_NAME}"
             git push origin "HEAD:${GITHUB_REF_NAME}"
           fi
+

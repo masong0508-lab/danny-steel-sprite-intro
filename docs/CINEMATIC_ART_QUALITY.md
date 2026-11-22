@@ -24,6 +24,11 @@ workflow. It is not a request to produce standalone concept art.
 - Backgrounds should feel lived-in with grounded props and physical
   shadows. Preserve the room's identity between close-ups and wide
   framings. Keep characters clear of the bottom dialogue matte.
+- In the missing-Mara chapter, the cafe retains its counter, lamps and
+  empty outside chair: routine interrupted rather than an unverified
+  claim of death. The rescue safehouse keeps the same curtained window,
+  wall sconce and floor rug through the closed/open door and reunion
+  shots. Treat these as spatial continuity anchors, not disposable art.
 - The medical follow-up has an actual clinic approach: fixed glazed
   doors, foyer lighting, projecting cross, sheltered bench and reflective
   pavement; dialogue cuts from the establishment to Mara and then
@@ -60,27 +65,88 @@ workflow. It is not a request to produce standalone concept art.
 - Keep the existing per-scene render-cost probe; host microseconds are
   not emulated GBA FPS.
 
-## Next visual priorities
+## Reference-led blue-hour art pass
 
-1. Compare the revamped bust portraits at native 1× and screenshot 4×
-   against the prior floating-oval composition, then adjust jaw/neck
-   and clothing connections as necessary.
-2. Review the expanded record-store finale and memorial concert at native
-   1× and 4×. The record store has varied sleeves, a warm listening light,
-   and an anchored turntable. Four different cover illustrations
-   represent Danny's master, the neighborhood, the score and after-hours
-   sketches, rather than eight copy-pasted record icons.
-   Mara physically holds an album above the platter, rather than a
-   floating card stamped on the record.
-   The concert has a lit truss, instruments, speakers, foreground patrons,
-   and a microphone aligned with Mara's actual reaching hand. Neither
-   should imply Danny is alive at his posthumous legacy performance.
-3. Measured GBA emulator FPS / VRAM budget; scale back decorative
-   loops if any cinematic scene exceeds the per-frame budget.
-4. Exact rotoscope of Danny's Potheads dance when the original reference
-   video is available to this coding workspace. The present eight
-   samples are artist-authored, not a claim to traced footage.
+The art direction draws composition lessons from official reference material:
+
+- [Eastward media gallery](https://eastwardgame.com/media/): articulated
+  vertical architecture beside quiet traversable ground, recessed doors,
+  selective clusters that describe a material instead of evenly spread noise.
+- [The Last Night by Odd Tales](https://oddtales.net/thelastnight/): unequal
+  building masses, cool ambient darkness and light attached to a visible
+  practical source. Modern volumetric effects are not imported into the GBA.
+- [EggNut on Backbone's art direction](https://www.unrealengine.com/developer-interviews/developer-eggnut-highlights-how-they-created-backbone-s-dystopian-noir-2-5d-pixel-art-style?lang=en-US):
+  establish the story, scene tone and consistent world rules before details.
+
+These are our design interpretations, not copied art or assets. The actual
+implementation uses the existing palette slots and production C renderer.
+
+The pass reshapes all five stage actors and portraits, with sloped shoulders,
+connected sleeves, trouser legs, distinct hair, tapered jaws and smaller eyes.
+Slate and burgundy material ramps sit behind warm practical lights and skin.
+Fourteen existing town diamonds are repainted in place: broken wet setts,
+connected moss, water and slate roof courses. Their ROM footprint is unchanged.
+Foreground buildings that cover Danny now become low architectural
+cross-sections. Their footprint and collision remain unchanged, and Potheads
+keeps its sign attached to a physical pier. The cutaway and depth insertion
+follow his interpolated position during a step. Regression captures check
+40 static views and 24 walking frames against his actual coat and skin pixels.
+
+The normal and missing-person café now share one facade painter with the same
+cornice, upper vents, awning, counter and cake stand. The empty chair stands
+beside its table. Interiors use a recessed night window and broad floorboards;
+their walls no longer compete with the characters through uniform cyan light.
+The rescue's intermediate frames place Mara in front of the door after she
+steps out. Hall reflections are behind the people, and her walk stops at the
+contact position. The memorial retains Mara and the clerk, with subdued light
+planes rather than intersecting bright lines; Danny does not appear alive.
+
+## Actual emulator cadence
+
+`tools/frame_cadence.c` runs the built ROM in mGBA, enters New Game with robust
+button holds, and measures Mode-4 displayed-page changes over 600 emulated
+video frames for the opening and town. Companion captures validate the route.
+The current workflow publishes its source SHA and results in
+[`screenshots/emulator_cadence.txt`](screenshots/emulator_cadence.txt).
+
+The published pre-pass PR #13 ROM was measured in mGBA 0.10.5 at 9.955 opening
+page flips/second and 4.977 town flips/second. Those are actual sampled emulator
+presentation rates, not the approximately 30 opportunities/second the source
+intends. Host microseconds cannot substitute for this check. The probe covers
+two scripted states, includes presentation stalls, and does not certify every
+scene or physical hardware. Review the new report before making an FPS claim.
+
+The canvas drawing primitives use ARM code copied to IWRAM by the existing
+devkitARM startup. Rectangle fills align their destination and write packed
+four-pixel words; full-width rectangles become one contiguous span. Tiny
+fills keep byte stores, and scale-one text writes clipped pixels directly.
+This preserves every palette index and uses the same implementation in host
+captures. The independent span test checks 48,412 rectangles, clipping and
+buffer alignment, with guard bytes around the output. The ARM linker gate
+counts executable IWRAM as well as static data and leaves at least 8 KiB for
+the stack. The emulator report, rather than the host test's runtime, determines
+whether this improves presentation cadence.
+
+Town diamonds also copy their visible ROM spans directly from IWRAM code.
+Matching source/destination alignment permits word and halfword transfers;
+odd and clipped spans retain a byte-safe fallback. This removes more than
+2,300 tiny library-copy calls in the sampled storefront view without changing
+the 7,168 atlas bytes. Independent pre-change tile hashes and 25,088 full-frame
+crop/guard comparisons protect every material, alignment and clipped edge.
+The unchanged person and tree sprites clip their bounds once before their
+ARM/IWRAM transparency loops, rather than checking screen bounds per pixel.
+
+## Remaining visual priorities
+
+1. Review new roles, rescue intermediate frames and all town facings at native
+   1× and nearest-neighbor enlargement. Keep the actor and current story prop
+   readable before increasing texture density.
+2. Continue measuring actual ROM cadence and linked memory headroom. The
+   existing GBA presentation target is not proof that it is achieved.
+3. Exact rotoscope of Danny's Potheads dance when the original reference
+   video is available to this coding workspace. The present eight samples
+   are artist-authored, not a claim to traced footage.
 
 The three outside-game examples supplied for quality critique are a
-**visual warning against flatness**, not assets transplanted into Danny
-Steel or evidence that unrelated projects have been modified.
+visual warning against flatness, not assets transplanted into Danny Steel or
+evidence that unrelated projects have been modified.

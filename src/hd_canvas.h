@@ -18,11 +18,19 @@ enum {
 extern const uint16_t hd_extra_palette[32];
 /* Mutually exclusive title/menu and gameplay share this one EWRAM page. */
 extern uint32_t hd_shared_frame[HD_BYTES/4];
-void hd_rect(uint8_t *p,int x,int y,int w,int h,unsigned c);
-void hd_pixel(uint8_t *p,int x,int y,unsigned c);
-void hd_line(uint8_t *p,int x,int y,int xx,int yy,unsigned c);
-void hd_ellipse(uint8_t *p,int cx,int cy,int rx,int ry,unsigned c);
-void hd_text(uint8_t *p,int x,int y,const char *s,unsigned ink,int scale,int track);
+/* devkitARM's crt0 copies .iwram before main. Advertise both the ARM ISA
+   and long-call boundary to every Thumb caller, not just the definitions.
+   Host captures execute the same portable painters without attributes. */
+#if defined(__arm__)
+#define HD_CANVAS_CODE __attribute__((section(".iwram"),long_call,target("arm")))
+#else
+#define HD_CANVAS_CODE
+#endif
+HD_CANVAS_CODE void hd_rect(uint8_t *p,int x,int y,int w,int h,unsigned c);
+HD_CANVAS_CODE void hd_pixel(uint8_t *p,int x,int y,unsigned c);
+HD_CANVAS_CODE void hd_line(uint8_t *p,int x,int y,int xx,int yy,unsigned c);
+HD_CANVAS_CODE void hd_ellipse(uint8_t *p,int cx,int cy,int rx,int ry,unsigned c);
+HD_CANVAS_CODE void hd_text(uint8_t *p,int x,int y,const char *s,unsigned ink,int scale,int track);
 int hd_text_width(const char *s,int scale,int track);
 void hd_copy_120_to_240(uint8_t *out,const uint8_t *in);
 void hd_upscale_inplace(uint8_t *pixels);
@@ -40,5 +48,7 @@ void hd_actor_stage(uint8_t *p,int x,int feet,int role,unsigned frame,int emotio
 void hd_actor_closeup(uint8_t *p,int x,int base,int role,unsigned frame,int emotion);
 int hd_special_cinema_draw(uint8_t *p,const Story *s,unsigned frame);
 int hd_special_supports(unsigned scene);
+void hd_cafe_facade(uint8_t *p,int x,int y,unsigned frame);
 void hd_ending_draw(uint8_t *p,const Story *s,unsigned frame);
 void hd_arena_draw(uint8_t *p,const Story *s,unsigned frame);
+

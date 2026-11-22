@@ -64,6 +64,24 @@ int main(void){
  for(int y=6;y<31;y++)for(int x=6;x<234;x++)
   sky_repeat=(sky_repeat^frame.pixels[y*HD_W+x])*16777619u;
  assert(sky_before==sky_repeat);
+ /* An empty café still has a real illuminated counter; adding detail
+    must NEVER accidentally add Mara when she is missing. In a separate
+    scene, the safehouse sconce remains anchored across the rescue door
+    and hand-contact framings. Both share the original guarded buffer. */
+ s.cinema=CINE_MARA_EMPTY;s.page=1;
+ clear();hd_cinema_draw(frame.pixels,&s,131u);
+ assert(frame.pixels[84u*HD_W+95u]==HD_GOLD);
+ unsigned cafe_detail=checksum();
+ clear();hd_cinema_draw(frame.pixels,&s,131u);
+ assert(checksum()==cafe_detail);
+ s.cinema=CINE_RESCUE_DOOR;s.page=1;
+ clear();hd_cinema_draw(frame.pixels,&s,40u);
+ assert(frame.pixels[46u*HD_W+134u]==HD_PAPER);
+ unsigned safehouse_closed=checksum();
+ s.cinema=CINE_RESCUE_SAVED;
+ clear();hd_cinema_draw(frame.pixels,&s,270u);
+ assert(frame.pixels[46u*HD_W+134u]==HD_PAPER);
+ assert(checksum()!=safehouse_closed);
  /* The final tribute is not a blank stage: recordshop and concert
     must be different real sets with light, albums and a performer. */
  s.cinema=CINE_GOOD;s.page=3;s.ended=0;

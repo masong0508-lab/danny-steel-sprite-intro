@@ -267,6 +267,18 @@ int main(void){
  uint32_t door_early=film(&s,CINE_RESCUE_SAVED,80u,1u);
  uint32_t door_late=film(&s,CINE_RESCUE_SAVED,240u,2u);
  assert(door_early!=door_late);
+ /* Once Mara walks onto the foreground floor, the open door must not
+    erase her face. These intermediate production frames caught a real
+    layer-order bug that the closed-door and final-contact shots missed. */
+ for(unsigned t=145u;t<=195u;t+=25u){
+  (void)film(&s,CINE_RESCUE_SAVED,t,2u);
+  unsigned visible_face=0u;
+  for(int yy=75;yy<96;yy++)for(int xx=140;xx<196;xx++){
+   unsigned c=color(xx,yy);
+   if(c==HD_SKIN||c==HD_SKIN_LIT)visible_face++;
+  }
+  assert(visible_face>35u);
+ }
  /* A saved Mara and Danny are actually together by the final beat.
     A doorway and two separated characters are not a reunion. */
  uint32_t contact=film(&s,CINE_RESCUE_SAVED,265u,2u);
@@ -277,3 +289,4 @@ int main(void){
  puts("rescue-aware clinic, 240x160 palette, frame bounds and reunion OK");
  return 0;
 }
+
