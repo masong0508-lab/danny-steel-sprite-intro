@@ -2558,30 +2558,41 @@ void hd_world_person_art(uint8_t *dst,int center_x,int foot_y,unsigned role,
                          unsigned facing,unsigned gait){
  const uint8_t *src=person_pixels[((role%7u)*4u+(facing&3u))*2u+(gait&1u)];
  int left=center_x-PERSON_W/2,top=foot_y-32;
- for(int y=0;y<PERSON_H;y++){
-  int yy=top+y;
-  if((unsigned)yy>=HD_H)continue;
-  int row=yy*HD_W;
-  for(int x=0;x<PERSON_W;x++){
-   int xx=left+x;
-   if((unsigned)xx>=HD_W)continue;
-   unsigned ink=src[y*PERSON_W+x];
-   if(ink<64u)dst[row+xx]=(uint8_t)ink;
+ /* Clip the sprite rectangle once. The ARM/IWRAM paint loop then only
+    tests the original transparent key; ROM art and foot anchors stay
+    byte-identical, including clipped corners and unaligned canvases. */
+ int x0=left<0?-left:0,y0=top<0?-top:0;
+ int x1=left+PERSON_W>HD_W?HD_W-left:PERSON_W;
+ int y1=top+PERSON_H>HD_H?HD_H-top:PERSON_H;
+ if(x0>=x1||y0>=y1)return;
+ unsigned width=(unsigned)(x1-x0),height=(unsigned)(y1-y0);
+ src+=y0*PERSON_W+x0;
+ dst+=(top+y0)*HD_W+left+x0;
+ for(unsigned y=0;y<height;y++){
+  const uint8_t *line=src+y*PERSON_W;
+  uint8_t *out=dst+y*HD_W;
+  for(unsigned x=0;x<width;x++){
+   unsigned ink=line[x];
+   if(ink<64u)out[x]=(uint8_t)ink;
   }
  }
 }
 void hd_world_tree_art(uint8_t *dst,int center_x,int foot_y,unsigned kind,unsigned phase){
  const uint8_t *src=tree_pixels[(kind%3u)*2u+(phase&1u)];
  int left=center_x-TREE_W/2,top=foot_y-36;
- for(int y=0;y<TREE_H;y++){
-  int yy=top+y;
-  if((unsigned)yy>=HD_H)continue;
-  int row=yy*HD_W;
-  for(int x=0;x<TREE_W;x++){
-   int xx=left+x;
-   if((unsigned)xx>=HD_W)continue;
-   unsigned ink=src[y*TREE_W+x];
-   if(ink<64u)dst[row+xx]=(uint8_t)ink;
+ int x0=left<0?-left:0,y0=top<0?-top:0;
+ int x1=left+TREE_W>HD_W?HD_W-left:TREE_W;
+ int y1=top+TREE_H>HD_H?HD_H-top:TREE_H;
+ if(x0>=x1||y0>=y1)return;
+ unsigned width=(unsigned)(x1-x0),height=(unsigned)(y1-y0);
+ src+=y0*TREE_W+x0;
+ dst+=(top+y0)*HD_W+left+x0;
+ for(unsigned y=0;y<height;y++){
+  const uint8_t *line=src+y*TREE_W;
+  uint8_t *out=dst+y*HD_W;
+  for(unsigned x=0;x<width;x++){
+   unsigned ink=line[x];
+   if(ink<64u)out[x]=(uint8_t)ink;
   }
  }
 }

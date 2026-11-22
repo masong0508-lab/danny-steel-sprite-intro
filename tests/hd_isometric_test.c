@@ -58,7 +58,59 @@ static void readable_player(const Story *s,unsigned frame,int cx,int foot){
   assert(skin*4u>=skin_total*3u);
  }
 }
+/* Captured from the pre-optimization byte/memcpy painter, with untouched
+   transparent pixels set to64. These independent complete-tile hashes
+   prevent a broken full-tile copy becoming its own clipping reference. */
+static void verify_iso_copies(void){
+ static const uint32_t original_hash[14]={
+  0x2d8388fau,0x6bc59cb7u,0x159b230bu,0x046cc262u,
+  0xa474720au,0x4f55d4d2u,0x9d73d9aau,0x7efe7777u,
+  0xc92c28f1u,0xcfe281d5u,0xfc984ed3u,0xef48ddf8u,
+  0xd9da39a5u,0x5bf7b2f1u
+ };
+ static uint8_t expected[HD_BYTES+132] __attribute__((aligned(4)));
+ static uint8_t actual[HD_BYTES+132] __attribute__((aligned(4)));
+ uint8_t original[32u*16u];
+ const int xs[]={-33,-32,-31,-30,-29,-28,-27,-3,-2,-1,0,1,2,3,
+                 4,5,6,7,103,104,105,207,208,209,210,235,236,237,
+                 238,239,240,241};
+ const int ys[]={-16,-15,-14,-13,-1,0,1,70,145,146,157,158,159,160};
+ unsigned cases=0;
+ for(unsigned material=0;material<14u;material++){
+  clear();memset(guarded.pixel,64,HD_BYTES);
+  hd_iso_tile(guarded.pixel,104,70,material);
+  uint32_t hash=2166136261u;
+  for(int y=0;y<16;y++)for(int x=0;x<32;x++){
+   unsigned ink=guarded.pixel[(70+y)*HD_W+104+x];
+   original[y*32+x]=(uint8_t)ink;
+   hash=(hash^ink)*16777619u;
+  }
+  assert(hash==original_hash[material]);
+  for(unsigned align=0;align<4u;align++)
+   for(unsigned xi=0;xi<sizeof xs/sizeof xs[0];xi++)
+    for(unsigned yi=0;yi<sizeof ys/sizeof ys[0];yi++){
+     memset(expected,0xA7,sizeof expected);
+     memset(actual,0xA7,sizeof actual);
+     uint8_t *want=expected+64u+align,*got=actual+64u+align;
+     memset(want,HD_CHALK,HD_BYTES);memset(got,HD_CHALK,HD_BYTES);
+     int px=xs[xi],py=ys[yi];
+     /* Independent rectangular byte crop, with no diamond formula,
+        alignment arithmetic, word loads, or optimized span helper. */
+     for(int y=0;y<16;y++)for(int x=0;x<32;x++){
+      int xx=px+x,yy=py+y;
+      unsigned ink=original[y*32+x];
+      if(ink<64u&&(unsigned)xx<HD_W&&(unsigned)yy<HD_H)
+       want[yy*HD_W+xx]=(uint8_t)ink;
+     }
+     hd_iso_tile(got,px,py,material+((cases&1u)?14u:0u));
+     assert(memcmp(expected,actual,sizeof expected)==0);
+     cases++;
+    }
+ }
+ printf("isometric ROM copies: %u exact golden-byte clipping/alignment cases\n",cases);
+}
 int main(void){
+ verify_iso_copies();
  Story s;story_new(&s,0);
  s.cinema=CINE_NONE;s.dialogue=0;s.activity=0;s.battle=0;
  s.ended=0;s.scene=STORY_SCENE_NONE;

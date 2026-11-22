@@ -1,12 +1,11 @@
 #include "hd_isometric_atlas.h"
 #include <stdint.h>
-#include <string.h>
 /* Fourteen authored native-pixel materials in the original 7 KiB ROM
    footprint. Broken low-contrast joints leave quiet planes around actors;
    connected moss, slate wear and lateral water ripples carry the material.
    Strong warm reflections belong beneath visible lamps, not every tile.
    Transparency key 64 remains outside each original diamond footprint. */
-static const uint8_t faces[14][32*16]={
+static const uint8_t faces[14][32*16] __attribute__((aligned(4)))={
  {
   64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,
   64,64,64,64,64,64,64,64,64,64,64,64,64,64,32,32,32,32,64,64,64,64,64,64,64,64,64,64,64,64,64,64,
@@ -260,22 +259,68 @@ static const uint8_t faces[14][32*16]={
   64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,
  },
 };
+/* These aliases allow wide reads of the byte-authored ROM atlas without
+   violating C aliasing. Volatile output stores keep GCC from replacing
+   these tiny inlined spans with thousands of out-of-line memcpy calls.
+   The destination remains the existing EWRAM page, never live VRAM. */
+typedef uint32_t IsoWord __attribute__((may_alias));
+typedef uint16_t IsoHalf __attribute__((may_alias));
+static inline __attribute__((always_inline))
+void iso_span(uint8_t *out,const uint8_t *src,unsigned count){
+ /* Normal projected tiles have matching word alignment. A clipped edge
+    advances both pointers equally; arbitrary odd test/caller coordinates
+    retain a byte-safe fallback instead of rotating unaligned ARM loads. */
+ if((((uintptr_t)out^(uintptr_t)src)&3u)==0u){
+  if(count&&((uintptr_t)out&1u)){
+   *out++=*src++;count--;
+  }
+  if(count>=2u&&((uintptr_t)out&2u)){
+   *(volatile IsoHalf *)(void *)out=*(const IsoHalf *)(const void *)src;
+   out+=2;src+=2;count-=2u;
+  }
+  if(count>=4u){
+   volatile IsoWord *dst32=(volatile IsoWord *)(void *)out;
+   const IsoWord *src32=(const IsoWord *)(const void *)src;
+   while(count>=16u){
+    dst32[0]=src32[0];dst32[1]=src32[1];
+    dst32[2]=src32[2];dst32[3]=src32[3];
+    dst32+=4;src32+=4;count-=16u;
+   }
+   while(count>=4u){*dst32++=*src32++;count-=4u;}
+   out=(uint8_t *)(void *)dst32;src=(const uint8_t *)(const void *)src32;
+  }
+  if(count>=2u){
+   *(volatile IsoHalf *)(void *)out=*(const IsoHalf *)(const void *)src;
+   out+=2;src+=2;count-=2u;
+  }
+ }
+ volatile uint8_t *tail=out;
+ while(count--)*tail++=*src++;
+}
 void hd_iso_tile(uint8_t *p,int px,int py,unsigned material){
- const uint8_t *src=faces[material%14u];
- /* A diamond row contains ONE contiguous non-transparent span.
-    Copy it directly from cartridge into the existing Mode-4 frame.
-    This replaces 512 per-pixel transparency checks per visible tile
-    with at most 14 clipped ROM row copies; no decoded art or new RAM. */
- for(int y=1;y<15;y++){
-  int yy=py+y;
-  if((unsigned)yy>=HD_H)continue;
-  int lo=y<8?16-y*2:(y-7)*2;
-  int start=px+lo,width=32-lo*2,cut=0;
-  if(width<=0||start>=HD_W||start+width<=0)continue;
-  if(start<0){cut=-start;width+=start;start=0;}
-  if(start+width>HD_W)width=HD_W-start;
-  if(width>0)
-   memcpy(p+yy*HD_W+start,src+y*32+lo+cut,(unsigned)width);
+ if(px<=-32||px>=HD_W||py<=-15||py>=HD_H-1)return;
+ if(material>=14u)material%=14u;
+ const uint8_t *src=faces[material];
+ int first=py<0?-py:1,last=HD_H-py;
+ if(last>15)last=15;
+ /* Vertical clipping happens once; most of the town has a completely
+    visible diamond width and needs no horizontal tests per scanline.
+    Its existing 7 KiB ROM artwork and transparency stay byte-identical. */
+ if(px>=0&&px<=HD_W-32){
+  for(int y=first;y<last;y++){
+   int lo=y<8?16-y*2:(y-7)*2;
+   iso_span(p+(py+y)*HD_W+px+lo,src+y*32+lo,(unsigned)(32-lo*2));
+  }
+ }else{
+  for(int y=first;y<last;y++){
+   int lo=y<8?16-y*2:(y-7)*2;
+   int start=px+lo,width=32-lo*2,cut=0;
+   if(start>=HD_W||start+width<=0)continue;
+   if(start<0){cut=-start;width+=start;start=0;}
+   if(start+width>HD_W)width=HD_W-start;
+   if(width>0)
+    iso_span(p+(py+y)*HD_W+start,src+y*32+lo+cut,(unsigned)width);
+  }
  }
 }
 

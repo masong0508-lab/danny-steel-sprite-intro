@@ -127,6 +127,15 @@ counts executable IWRAM as well as static data and leaves at least 8 KiB for
 the stack. The emulator report, rather than the host test's runtime, determines
 whether this improves presentation cadence.
 
+Town diamonds also copy their visible ROM spans directly from IWRAM code.
+Matching source/destination alignment permits word and halfword transfers;
+odd and clipped spans retain a byte-safe fallback. This removes more than
+2,300 tiny library-copy calls in the sampled storefront view without changing
+the 7,168 atlas bytes. Independent pre-change tile hashes and 25,088 full-frame
+crop/guard comparisons protect every material, alignment and clipped edge.
+The unchanged person and tree sprites clip their bounds once before their
+ARM/IWRAM transparency loops, rather than checking screen bounds per pixel.
+
 ## Remaining visual priorities
 
 1. Review new roles, rescue intermediate frames and all town facings at native
