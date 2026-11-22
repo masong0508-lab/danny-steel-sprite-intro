@@ -31,11 +31,16 @@ static void dirs(const Story *s,int *fx,int *fy,int *rx,int *ry){
  }
 }
 static void set_sky(uint8_t *p,unsigned tick,int facing,int cx,int cy){
- for(int y=0;y<160;y++){
-  unsigned c=y<24?19:y<54?17:y<74?HD_GLASS:y<84?HD_GLASS_LIT:
-             y<102?HD_ROAD_COOL:y<125?HD_ROAD_LIGHT:HD_ROAD;
-  hd_rect(p,0,y,240,1,c);
- }
+ /* Seven maximal horizontal material runs replace 160 independent row
+    painter calls. Pixel colors, cut lines and the horizon stay exact:
+    our full-width word-span painter writes each contiguous range once. */
+ hd_rect(p,0,0,HD_W,24,19);
+ hd_rect(p,0,24,HD_W,30,17);
+ hd_rect(p,0,54,HD_W,20,HD_GLASS);
+ hd_rect(p,0,74,HD_W,10,HD_GLASS_LIT);
+ hd_rect(p,0,84,HD_W,18,HD_ROAD_COOL);
+ hd_rect(p,0,102,HD_W,23,HD_ROAD_LIGHT);
+ hd_rect(p,0,125,HD_W,35,HD_ROAD);
  /* Layered, place-bound horizon. Neither buildings nor cloud positions
     randomly change when the shot cuts to a dialogue panel. */
  int pan=(facing*71+(cx+cy)/96)%53;
@@ -295,6 +300,36 @@ typedef struct {
  int16_t sx,ground,height,depth;
  uint8_t kind;
 } SceneBillboard;
+/* Exactly the interactive/nonwall actors in story.c's 24x18 map, in the
+   original row-major order. Kept in cartridge ROM, not a dynamic pool.
+   The old painter rescanned all 432 tiles for these 13 static entries on
+   every first-person frame. Host map/anchor tests keep the list honest. */
+typedef struct {
+ uint8_t x,y,kind;
+} SceneAnchor;
+static const SceneAnchor scene_anchors[]={
+ {7,2,'H'},
+ {4,5,'L'},{16,5,'K'},{19,5,'B'},
+ {14,6,'R'},
+ {3,7,'P'},{11,7,'C'},{17,7,'V'},{19,7,'M'},{21,7,'S'},
+ {6,11,'W'},{8,11,'F'},{18,12,'Q'}
+};
+#if !defined(__arm__)
+/* Host-only guard: refuse a stale ROM anchor table after any map edit. */
+int hd_first_person_anchor_map_valid(void){
+ unsigned count=0;
+ for(int y=0;y<STORY_H;y++)for(int x=0;x<STORY_W;x++){
+  char kind=story_tile(x,y);
+  if(kind!='F'&&kind!='C'&&kind!='B'&&kind!='L'&&kind!='P'&&
+     kind!='V'&&kind!='Q'&&kind!='S'&&kind!='W'&&kind!='H'&&
+     kind!='R'&&kind!='M'&&kind!='K')continue;
+  if(count>=sizeof scene_anchors/sizeof scene_anchors[0])return 0;
+  const SceneAnchor *a=&scene_anchors[count++];
+  if((int)a->x!=x||(int)a->y!=y||(char)a->kind!=kind)return 0;
+ }
+ return count==sizeof scene_anchors/sizeof scene_anchors[0];
+}
+#endif
 #define MAX_VISIBLE_BILLBOARDS 24u
 static SceneBillboard visible[MAX_VISIBLE_BILLBOARDS];
 /* Restore occluding wall columns AFTER a sprite is drawn.
@@ -315,11 +350,10 @@ static void restore_occluding_wall(uint8_t *p,int sx,int h,int depth){
 static void render_billboards(uint8_t *p,int cx,int cy,
                               int fx,int fy,int rx,int ry,unsigned tick){
  unsigned count=0;
- for(int y=0;y<STORY_H;y++)for(int x=0;x<STORY_W;x++){
-  char kind=story_tile(x,y);
-  if(kind!='F'&&kind!='C'&&kind!='B'&&kind!='L'&&kind!='P'&&
-     kind!='V'&&kind!='Q'&&kind!='S'&&kind!='W'&&kind!='H'&&
-     kind!='R'&&kind!='M'&&kind!='K')continue;
+ for(unsigned i=0;i<sizeof scene_anchors/sizeof scene_anchors[0];i++){
+  const SceneAnchor *a=&scene_anchors[i];
+  int x=(int)a->x,y=(int)a->y;
+  char kind=(char)a->kind;
   int dx=x*256+128-cx,dy=y*256+128-cy;
   int forward=dx*fx+dy*fy,side=dx*rx+dy*ry;
   if(forward<85||forward>2200||abs_i(side)>forward*4/3)continue;
