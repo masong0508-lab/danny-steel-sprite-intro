@@ -259,12 +259,13 @@ static void cult_arena(const Story *s,int tick,uint8_t *p) {
     person(p,60,49,enemy==0?'P':enemy==1?'V':'Q',28,tick);
     box(p,51,29,5,1,15);box(p,64,29,5,1,15);
     if(s->battle==BATTLE_DODGE) {
-        int beat=s->battle_timer/15;
-        int phase=s->battle_timer%15;
+        int beat=s->battle_timer/(int)STORY_BATTLE_BEAT;
+        int phase=s->battle_timer%(int)STORY_BATTLE_BEAT;
         if(beat<4) {
             int lane=story_attack_lane(s,beat);
-            int x=60+(lane-1)*(7+phase*17/15),y=48+phase*22/15;
-            int size=4+phase/3;
+            int x=60+(lane-1)*(7+phase*17/(int)STORY_BATTLE_BEAT),
+                y=48+phase*22/(int)STORY_BATTLE_BEAT;
+            int size=4+phase*5/(int)STORY_BATTLE_BEAT;
             box(p,x-size/2,y-size/2,size,size,23);
             box(p,x-size/2+1,y-size/2+1,size-2,size-2,20);
             if(size>6){text(p,x-2,y-2,"!",16,1);}
@@ -290,6 +291,13 @@ static void cult_arena(const Story *s,int tick,uint8_t *p) {
         box(p,0,71,120,9,21);
         text(p,3,73,"LEFT RIGHT DODGE",20,17);
         text(p,81,73,"A PARRY",26,8);
+        /* A small readable lane sign, not just an unidentified red square. */
+        const char *target=story_attack_lane(s,s->battle_timer/
+                       (int)STORY_BATTLE_BEAT)==0?"LEFT":
+                       story_attack_lane(s,s->battle_timer/
+                       (int)STORY_BATTLE_BEAT)==1?"MIDDLE":"RIGHT";
+        box(p,2,14,49,8,21);
+        text(p,4,16,target,20,11);
     }
 }
 /* Dedicated low-memory cinematic scenes. They use the same 120x80 buffer
@@ -398,6 +406,41 @@ static void check_icon(uint8_t *p,int x,int y,int result,int harmful){
 static void consequence_board(uint8_t *p,const Story *s){
     unsigned page=story_check_page(s);
     if(page>=STORY_CHECK_PAGE_COUNT)page=0;
+    if(page==3u){
+        int gx=0,gy=0,dir=-1,steps=-1;
+        const char *goal=0;
+        int has=story_goal(s,&gx,&gy,&goal);
+        int route=story_route(s,&dir,&steps);
+        const char *compass=dir==0?"EAST":dir==1?"SOUTH":
+            dir==2?"WEST":dir==3?"NORTH":"HERE";
+        box(p,2,9,116,71,3);
+        box(p,4,11,112,67,21);
+        box(p,4,11,112,13,24);
+        text(p,8,13,"FIELD GUIDE / WHAT NEXT",20,26);
+        text(p,8,25,has?"CURRENT OBJECTIVE":"NO URGENT OBJECTIVE",18,27);
+        if(has){
+            text(p,8,32,goal,20,23);
+            text(p,8,39,story_goal_reason(s),18,27);
+            if(route&&steps==0){
+                text(p,8,46,"YOU ARE HERE - PRESS A",20,27);
+            }else if(route){
+                char count[]="000 STEPS";
+                unsigned d=(unsigned)steps;
+                if(d>999u)d=999u;
+                count[0]=(char)('0'+d/100u);
+                count[1]=(char)('0'+(d/10u)%10u);
+                count[2]=(char)('0'+d%10u);
+                text(p,8,46,"WALK",20,4);
+                text(p,29,46,compass,18,5);
+                text(p,53,46,count+(d>=100u?0:d>=10u?1:2),20,9);
+            }else text(p,8,46,"NO SAFE PATH AVAILABLE",16,26);
+        }else text(p,8,39,"LOOK AROUND AND MAKE ART",20,27);
+        text(p,8,55,"A INTERACT  L CHANGE CAMERA",20,27);
+        text(p,8,63,"B NEAR OBJECTS = RISK MENU",18,27);
+        box(p,4,73,112,5,24);
+        text(p,6,73,"R NEXT  B BACK  START PLAY",20,27);
+        return;
+    }
     int risky=page==2u;
     unsigned total=risky?(unsigned)story_bad_count(s):
                           story_check_count_page(s,page);
@@ -749,9 +792,11 @@ void story_draw(const Story *s,int frame,uint8_t *p) {
        the objective visible even when its actor is behind a wall. */
     int gx=s->x,gy=s->y; const char *goal="";
     int has_goal=story_goal(s,&gx,&gy,&goal);
-    int ddx=gx-(int)s->x,ddy=gy-(int)s->y;
-    const char *direction=ddx==0&&ddy==0?"HERE":
-        abs_i(ddx)>abs_i(ddy)?(ddx>0?"E":"W"):(ddy>0?"S":"N");
+    int route_dir=-1,route_steps=-1;
+    int route=story_route(s,&route_dir,&route_steps);
+    const char *direction=!route?"?":route_steps==0?"HERE":
+        route_dir==0?"E":route_dir==1?"S":
+        route_dir==2?"W":"N";
     if(s->rescue_stage==STORY_RESCUE_LOST){
         char number[]="DAY 0/2";
         number[4]=(char)('0'+(s->day_number>2u?2u:s->day_number));
@@ -832,9 +877,12 @@ void story_draw(const Story *s,int frame,uint8_t *p) {
             hint[20]=(char)('0'+s->work/10);
             hint[21]=(char)('0'+s->work%10);
             text(p,3,74,hint,20,29);
-        } else text(p,3,74,s->ended?"START / RETURN TO MENU":
-             s->life_stage==STORY_LIFE_FINALE?"THE LAST PAINTING":
-             s->view?"L MAP  A TALK  B RISK  R NOTE":
-                      "L 3D  A TALK  B RISK  R NOTE",20,29);
+        } else if(s->ended || s->life_stage==STORY_LIFE_FINALE)
+            text(p,3,74,s->ended?"START / RETURN TO MENU":
+                 "THE LAST PAINTING",20,29);
+        else{
+            text(p,3,74,story_action_hint(s),20,12);
+            text(p,49,74,"B RISK L VIEW R NOTES",18,26);
+        }
     }
 }
