@@ -275,3 +275,5 @@ SELECT previews, B exits. Every slot saves its own arrangement in
 a checksummed 24-byte extension without changing the main SRAM format.
 See docs/BORE_ADVANCED_STUDIO.md.
 
+
+Combat timing: Mirror Orchard warning strikes travel for 30 VBlanks; FACTS offers a 15-tick skill parry and CARE offers a 12-tick parry plus one-hit shield. The visible lane sign matches the actual attack.

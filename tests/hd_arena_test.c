@@ -53,8 +53,8 @@ int main(void){
    s.battle=BATTLE_DODGE;
    for(unsigned beat=0;beat<4u;beat++){
     s.battle_lane=1;
-    for(unsigned phase=0;phase<15u;phase+=7u){
-     s.battle_timer=(uint8_t)(beat*15u+phase);
+    for(unsigned phase=0;phase<STORY_BATTLE_BEAT;phase+=14u){
+     s.battle_timer=(uint8_t)(beat*STORY_BATTLE_BEAT+phase);
      s.battle_progress=(uint8_t)(beat/2u);
      s.battle_parry=(uint8_t)(phase>=7u?4u:0u);
      assert(story_attack_lane(&s,(int)beat)>=0);
@@ -95,7 +95,7 @@ int main(void){
    int lane=story_attack_lane(&s,beat);
    s.battle_lane=(uint8_t)lane;
    s.battle_focus=4;s.battle= BATTLE_DODGE;
-   s.battle_timer=(uint8_t)(beat*15);
+   s.battle_timer=(uint8_t)(beat*STORY_BATTLE_BEAT);
    clear();hd_arena_draw(guarded.frame,&s,200);
    inspect();cases++;
   }

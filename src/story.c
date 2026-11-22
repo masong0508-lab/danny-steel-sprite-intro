@@ -289,14 +289,14 @@ SCRIPT(d_end_stay,
  {"DANNY", "I call it THE END.", "We're open Tuesday."},
  {"THE END", "Tomorrow came on", "foot after all."});
 SCRIPT(d_journal_0,
- {"POCKET NOTEBOOK", "Letter: missing.", "BORE stamp: missing."},
- {"POCKET NOTEBOOK", "Mara: waiting.", "Bus: on schedule."});
+ {"POCKET NOTEBOOK", "First: the old letter.", "Then the BORE clerk."},
+ {"DANNY", "One street at a time.", "I can take my time."});
 SCRIPT(d_journal_1,
- {"POCKET NOTEBOOK", "Letter: kept safe.", "Find the BORE clerk."});
+ {"POCKET NOTEBOOK", "The letter is safe.", "BORE needs proof."});
 SCRIPT(d_journal_2,
- {"POCKET NOTEBOOK", "Stamp: acquired.", "Go see Mara."});
+ {"POCKET NOTEBOOK", "The clerk stamped it.", "Mara deserves the truth."});
 SCRIPT(d_journal_3,
- {"POCKET NOTEBOOK", "Promise: made.", "The bus is waiting."});
+ {"POCKET NOTEBOOK", "I made the promise.", "One last bus to decide."});
 SCRIPT(d_nothing,
  {"DANNY", "Quiet street today.", "Might be worth a look."});
 /* Low-cost ambient interactions give exploration personality without a
@@ -991,8 +991,8 @@ static void cult_tick(Story *s, uint16_t pressed) {
            STORY_FACTS_PARRY_COOLDOWN:STORY_CARE_PARRY_COOLDOWN);
     }
     ++s->battle_timer;
-    if (s->battle_timer % 15 == 0) {
-        int beat = s->battle_timer / 15 - 1;
+    if (s->battle_timer % STORY_BATTLE_BEAT == 0) {
+        int beat = (int)(s->battle_timer / STORY_BATTLE_BEAT) - 1;
         if (s->battle_lane == story_attack_lane(s, beat)) {
             if(s->battle_parry){
                 /* A deliberate close-range FACTS parry counters misinformation
@@ -1003,7 +1003,7 @@ static void cult_tick(Story *s, uint16_t pressed) {
             else if(s->battle_focus) --s->battle_focus;
         }
     }
-    if (s->battle_timer >= 60) {
+    if (s->battle_timer >= STORY_BATTLE_BEAT*STORY_BATTLE_STRIKES) {
         if (!s->battle_focus) { cult_finish(s, -1); return; }
         if (++s->battle_progress >= 2) { cult_finish(s, 1); return; }
         s->battle = BATTLE_MENU;
@@ -1197,7 +1197,9 @@ const char *story_action_hint(const Story *s){
     switch(nearby_actor(s)){
     case 'L':return "A LETTER";
     case 'C':return "A BORE";
-    case 'F':return "A MARA";
+    case 'F':return s->rescue_stage==STORY_RESCUE_LOST?"A PHONE":
+        (s->rescue_stage>=STORY_RESCUE_MISSING &&
+         s->rescue_stage<=STORY_RESCUE_TRACE)?"A EMPTY CAFE":"A MARA";
     case 'B':return "A BUS";
     case 'M':return "A MUSIC";
     case 'R':return "A CANVAS";

@@ -196,6 +196,13 @@ void hd_game_overlay(uint8_t *p,const Story *s){
    char hint[]="E00";const char compass[]="ESWN-";
    hint[0]=compass[d];if(n>99u)n=99u;
    hint[1]=(char)('0'+n/10u);hint[2]=(char)('0'+n%10u);
+   /* World compass stays visible. The companion word translates the
+      route into a usable FIRST PERSON movement instruction. */
+   const char *relative=d==4u?"HERE":
+       ((d+4u-(unsigned)s->facing)&3u)==0u?"AHEAD":
+       ((d+4u-(unsigned)s->facing)&3u)==1u?"RIGHT":
+       ((d+4u-(unsigned)s->facing)&3u)==2u?"BACK":"LEFT";
+   hd_text(p,180,5,relative,HD_STONE_LIT,1,0);
    hd_text(p,218,5,hint,HD_GOLD,1,0);
   }
   hd_rect(p,0,140,240,20,HD_INK);

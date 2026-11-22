@@ -259,12 +259,13 @@ static void cult_arena(const Story *s,int tick,uint8_t *p) {
     person(p,60,49,enemy==0?'P':enemy==1?'V':'Q',28,tick);
     box(p,51,29,5,1,15);box(p,64,29,5,1,15);
     if(s->battle==BATTLE_DODGE) {
-        int beat=s->battle_timer/15;
-        int phase=s->battle_timer%15;
+        int beat=s->battle_timer/(int)STORY_BATTLE_BEAT;
+        int phase=s->battle_timer%(int)STORY_BATTLE_BEAT;
         if(beat<4) {
             int lane=story_attack_lane(s,beat);
-            int x=60+(lane-1)*(7+phase*17/15),y=48+phase*22/15;
-            int size=4+phase/3;
+            int x=60+(lane-1)*(7+phase*17/(int)STORY_BATTLE_BEAT),
+                y=48+phase*22/(int)STORY_BATTLE_BEAT;
+            int size=4+phase*5/(int)STORY_BATTLE_BEAT;
             box(p,x-size/2,y-size/2,size,size,23);
             box(p,x-size/2+1,y-size/2+1,size-2,size-2,20);
             if(size>6){text(p,x-2,y-2,"!",16,1);}
@@ -291,6 +292,12 @@ static void cult_arena(const Story *s,int tick,uint8_t *p) {
         box(p,0,71,120,9,21);
         text(p,3,73,"LEFT RIGHT DODGE",20,17);
         text(p,81,73,s->battle_parry_cd?"A WAIT":"A PARRY",26,8);
+        const char *target=story_attack_lane(s,s->battle_timer/
+                      (int)STORY_BATTLE_BEAT)==0?"HIT LEFT":
+                      story_attack_lane(s,s->battle_timer/
+                      (int)STORY_BATTLE_BEAT)==1?"HIT MIDDLE":"HIT RIGHT";
+        box(p,2,14,49,8,21);
+        text(p,4,16,target,20,11);
     }
 }
 /* Dedicated low-memory cinematic scenes. They use the same 120x80 buffer

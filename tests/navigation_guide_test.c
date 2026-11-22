@@ -138,7 +138,13 @@ int main(void){
  assert(story_risk_available(&s));
  s.bad_mask=STORY_BAD_LETTER;
  assert(!story_risk_available(&s));
- s.bad_mask=0;s.x=12;s.y=12;
+ s.bad_mask=0;s.x=8;s.y=12;
+ s.rescue_stage=STORY_RESCUE_MISSING;
+ assert(!strcmp(story_action_hint(&s),"A EMPTY CAFE"));
+ s.rescue_stage=STORY_RESCUE_LOST;
+ assert(!strcmp(story_action_hint(&s),"A PHONE"));
+ s.rescue_stage=STORY_RESCUE_NONE;
+ s.x=12;s.y=12;
  assert(!strcmp(story_action_hint(&s),"A LOOK"));
  press(&s,1u);
  assert(s.dialogue);int count=0;

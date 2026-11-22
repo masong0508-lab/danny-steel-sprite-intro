@@ -44,27 +44,27 @@ static void timing(unsigned mode,unsigned window,unsigned cooldown){
 static void collision(unsigned mode){
  Story s;base(&s,mode);
  int target=story_attack_lane(&s,0);
- s.battle_lane=(uint8_t)target;s.battle_timer=14;
+ s.battle_lane=(uint8_t)target;s.battle_timer=STORY_BATTLE_BEAT-1u;
  s.battle_parry=2;s.battle_focus=2;
  story_tick(&s,0u);
- assert(s.battle_timer==15u&&s.battle_focus==(mode==0u?3u:2u));
+ assert(s.battle_timer==STORY_BATTLE_BEAT&&s.battle_focus==(mode==0u?3u:2u));
  /* A dodge outside the target doesn't restore focus. */
- base(&s,mode);s.battle_timer=14;s.battle_parry=2;s.battle_focus=2;
+ base(&s,mode);s.battle_timer=STORY_BATTLE_BEAT-1u;s.battle_parry=2;s.battle_focus=2;
  s.battle_lane=(uint8_t)((story_attack_lane(&s,0)+1)%3);
  story_tick(&s,0u);
  assert(s.battle_focus==2u);
  /* No counter may overfill focus. */
- base(&s,mode);s.battle_timer=14;s.battle_parry=2;s.battle_focus=4;
+ base(&s,mode);s.battle_timer=STORY_BATTLE_BEAT-1u;s.battle_parry=2;s.battle_focus=4;
  s.battle_lane=(uint8_t)story_attack_lane(&s,0);
  story_tick(&s,0u);assert(s.battle_focus==4u);
  /* A missed hit costs focus for FACTS; CARE spends its shield first. */
- base(&s,mode);s.battle_timer=14;s.battle_focus=3;
+ base(&s,mode);s.battle_timer=STORY_BATTLE_BEAT-1u;s.battle_focus=3;
  s.battle_lane=(uint8_t)story_attack_lane(&s,0);
  story_tick(&s,0u);
  assert(s.battle_focus==(mode==1u?3u:2u));
  assert(s.battle_guard==0u);
  if(mode==1u){
-  s.battle_timer=29;s.battle_lane=(uint8_t)story_attack_lane(&s,1);
+  s.battle_timer=STORY_BATTLE_BEAT*2u-1u;s.battle_lane=(uint8_t)story_attack_lane(&s,1);
   story_tick(&s,0u);assert(s.battle_focus==2u);
  }
 }

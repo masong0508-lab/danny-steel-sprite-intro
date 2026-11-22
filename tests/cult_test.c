@@ -19,10 +19,10 @@ static void stand(Story *s,int x,int y,int facing){
     s->prev_x=s->x;s->prev_y=s->y;s->facing=(uint8_t)facing;
 }
 static void all_good(Story *s){
-    for(int i=0;i<200 && s->battle;i++){
+    for(int i=0;i<450 && s->battle;i++){
         if(s->battle==BATTLE_MENU)press(s,A);
         else {
-            int next=s->battle_timer / 15;
+            int next=s->battle_timer / (int)STORY_BATTLE_BEAT;
             /* Choose a lane that will not be hit by the next incoming bubble. */
             int target=(story_attack_lane(s,next)+1)%3;
             if(s->battle_lane < target) press(s,RIGHT);
@@ -74,7 +74,7 @@ static void test_renderer(void){
     struct { unsigned char guard[16]; unsigned char pixels[120*80]; unsigned char tail[16]; } out;
     memset(&out,0xAA,sizeof(out));
     s.battle=BATTLE_DODGE;s.battle_focus=3;s.cult_enemy=1;
-    for(int phase=0;phase<=60;phase++){
+    for(int phase=0;phase<=(int)(STORY_BATTLE_BEAT*STORY_BATTLE_STRIKES);phase++){
         s.battle_timer=(uint8_t)phase;
         story_draw(&s,phase,out.pixels);
         for(int i=0;i<16;i++) assert(out.guard[i]==0xAA && out.tail[i]==0xAA);

@@ -75,10 +75,12 @@
 #define BATTLE_DODGE 2
 /* FACTS rewards accurate counters; CARE offers a forgiving first mistake.
    Windows are VBlank ticks, not variable-duration renderer frames. */
-#define STORY_FACTS_PARRY_TICKS 10u
-#define STORY_CARE_PARRY_TICKS 8u
-#define STORY_FACTS_PARRY_COOLDOWN 14u
-#define STORY_CARE_PARRY_COOLDOWN 20u
+#define STORY_BATTLE_BEAT 30u
+#define STORY_BATTLE_STRIKES 4u
+#define STORY_FACTS_PARRY_TICKS 15u
+#define STORY_CARE_PARRY_TICKS 12u
+#define STORY_FACTS_PARRY_COOLDOWN 24u
+#define STORY_CARE_PARRY_COOLDOWN 30u
 
 typedef struct {
     uint8_t x, y, facing, view, flags, ended, ending, slot;

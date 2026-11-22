@@ -146,6 +146,9 @@ jobs:
             src/hd_ending.c src/hd_arena.c src/hd_arena_art.c \
             tests/render_cost_probe.c -o /tmp/danny_render_cost
           /tmp/danny_render_cost
+      - name: Audit all authored dialogue pages for readable lines and placeholder text
+        run: |
+          python3 tests/story_script_quality_test.py
       - name: Test story progression and map accessibility
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c tests/story_test.c -o /tmp/danny_story_test

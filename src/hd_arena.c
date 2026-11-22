@@ -28,8 +28,8 @@ static void enemy(uint8_t *p,unsigned rival,unsigned tick){
 static void telegraph(uint8_t *p,const Story *s,unsigned frame){
  (void)frame;
  if(s->battle!=BATTLE_DODGE)return;
- unsigned beat=s->battle_timer/15u;
- unsigned phase=s->battle_timer%15u;
+ unsigned beat=s->battle_timer/STORY_BATTLE_BEAT;
+ unsigned phase=s->battle_timer%STORY_BATTLE_BEAT;
  if(beat>=4u)return;
  unsigned lane=(unsigned)story_attack_lane(s,(int)beat);
  int target=57+(int)lane*63;
@@ -38,16 +38,16 @@ static void telegraph(uint8_t *p,const Story *s,unsigned frame){
 
  hd_ellipse(p,target,129,21,4,HD_RED_SHADE);
  hd_ellipse(p,target,129,16,2,HD_COPPER);
- /* A crumpled paper warning travels down the appropriate attack
-    corridor. On the fifteenth story frame the game checks this lane. */
- int x=120+(target-120)*(int)phase/14;
- int y=82+(int)phase*44/14;
- int size=5+(int)phase*9/14;
+ /* Give players half a second to read the red incoming lane even
+    when a detailed first-person frame took many VBlanks to draw. */
+ int x=120+(target-120)*(int)phase/(int)(STORY_BATTLE_BEAT-1u);
+ int y=82+(int)phase*44/(int)(STORY_BATTLE_BEAT-1u);
+ int size=5+(int)phase*9/(int)(STORY_BATTLE_BEAT-1u);
  hd_ellipse(p,x+2,y+2,size/2+1,size/2+1,HD_SHADOW);
  hd_ellipse(p,x,y,size/2+1,size/2+1,HD_PAPER);
  hd_line(p,x-size/3,y-size/3,x+size/3,y+size/3,HD_STONE);
  hd_line(p,x-size/3,y+size/3,x+size/3,y-size/3,HD_COPPER);
- if(phase>=8u)hd_pixel(p,x,y,HD_RED);
+ if(phase>=STORY_BATTLE_BEAT/2u)hd_pixel(p,x,y,HD_RED);
 
 }
 static void badge(uint8_t *p,int x,int y,const char *name,unsigned active){
@@ -115,6 +115,14 @@ static void hud(uint8_t *p,const Story *s){
           "CARE: SHIELD ONE MISTAKE":"EXIT: NO PENALTY",
           HD_PAPER,1,0);
  }else{
+  /* The danger indicator uses the actual lane selected by story_tick,
+     not decorative random motion. Place it LEFT of the rival portrait. */
+  static const char *const lanes[3]={"HIT LEFT","HIT MIDDLE","HIT RIGHT"};
+  unsigned beat=s->battle_timer/STORY_BATTLE_BEAT;
+  if(beat>=STORY_BATTLE_STRIKES)beat=STORY_BATTLE_STRIKES-1u;
+  hd_rect(p,5,28,74,12,HD_INK);
+  hd_rect(p,5,28,74,1,HD_COPPER);
+  hd_text(p,9,31,lanes[story_attack_lane(s,(int)beat)],HD_LAMP,1,0);
   char wave[]="ROUND 1/2";
   wave[6]=(char)('1'+(s->battle_progress&1u));
   hd_text(p,8,143,"LEFT RIGHT / MOVE",HD_PAPER,1,0);
@@ -122,10 +130,10 @@ static void hud(uint8_t *p,const Story *s){
           s->battle_parry_cd?HD_STONE_LIT:HD_GOLD,1,0);
   hd_text(p,8,151,wave,HD_STONE_LIT,1,0);
   char hit[]="BEAT 1/4";
-  hit[5]=(char)('1'+(s->battle_timer/15u)%4u);
+  hit[5]=(char)('1'+(s->battle_timer/STORY_BATTLE_BEAT)%4u);
   hd_text(p,137,151,hit,HD_STONE_LIT,1,0);
   char incoming[]="IN 00";
-  unsigned gap=15u-(s->battle_timer%15u);
+  unsigned gap=STORY_BATTLE_BEAT-(s->battle_timer%STORY_BATTLE_BEAT);
   incoming[3]=(char)('0'+gap/10u);
   incoming[4]=(char)('0'+gap%10u);
   hd_text(p,203,151,incoming,HD_GOLD,1,0);
