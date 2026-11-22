@@ -314,6 +314,22 @@ static const SceneAnchor scene_anchors[]={
  {3,7,'P'},{11,7,'C'},{17,7,'V'},{19,7,'M'},{21,7,'S'},
  {6,11,'W'},{8,11,'F'},{18,12,'Q'}
 };
+#if !defined(__arm__)
+/* Host-only guard: refuse a stale ROM anchor table after any map edit. */
+int hd_first_person_anchor_map_valid(void){
+ unsigned count=0;
+ for(int y=0;y<STORY_H;y++)for(int x=0;x<STORY_W;x++){
+  char kind=story_tile(x,y);
+  if(kind!='F'&&kind!='C'&&kind!='B'&&kind!='L'&&kind!='P'&&
+     kind!='V'&&kind!='Q'&&kind!='S'&&kind!='W'&&kind!='H'&&
+     kind!='R'&&kind!='M'&&kind!='K')continue;
+  if(count>=sizeof scene_anchors/sizeof scene_anchors[0])return 0;
+  const SceneAnchor *a=&scene_anchors[count++];
+  if((int)a->x!=x||(int)a->y!=y||(char)a->kind!=kind)return 0;
+ }
+ return count==sizeof scene_anchors/sizeof scene_anchors[0];
+}
+#endif
 #define MAX_VISIBLE_BILLBOARDS 24u
 static SceneBillboard visible[MAX_VISIBLE_BILLBOARDS];
 /* Restore occluding wall columns AFTER a sprite is drawn.
