@@ -3,6 +3,9 @@
 #include <stdio.h>
 #include <string.h>
 
+/* Host-only validator is deliberately excluded from the cartridge. */
+int hd_first_person_anchor_map_valid(void);
+
 /* Captured from the original shipped PR14 painter before changing its
    ray reuse, floor ordering or instruction placement. Each value covers
    every walkable town tile in a fixed facing/animation/weather state.
@@ -18,6 +21,7 @@ static struct {
 } canvas;
 
 int main(void){
+ assert(hd_first_person_anchor_map_valid());
  Story s;story_new(&s,0);
  const unsigned ticks[3]={0,71,433};
  const int dx[4]={1,0,-1,0},dy[4]={0,1,0,-1};
