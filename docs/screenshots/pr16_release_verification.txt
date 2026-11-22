@@ -1,0 +1,39 @@
+Danny Steel PR #16 — published ROM verification
+Source merge: 00fc2b1296ff2b591771e4ee39aa15ec39cb84df
+ROM publication: 497398be0f5b3904271a98fe746ea493997555da
+Git blob: a54395d72c427d2f54c428faa5d55de5fad4f72d
+ROM bytes: 899440
+ROM SHA256: 5179c81d3e7bbb951d5a33571757b9be186ded54117b46ec3958264f48423159
+Published ROM matches the source_rom_sha256 in opening_film.json.
+
+Build: https://github.com/masong0508-lab/danny-steel-sprite-intro/actions/runs/44983584093
+Capture: https://github.com/masong0508-lab/danny-steel-sprite-intro/actions/runs/44983584095
+Both workflows completed successfully. All 45 host gates passed.
+Compiler: arm-none-eabi-gcc (devkitARM) 16.1.0
+Static IWRAM: 20112 bytes (11064 code + 9024 BSS + 24 data); gate 24576.
+Static EWRAM: 38400 bytes; gate 196608.
+
+Hosted complete-film phase measurements (mGBA 0.10.2):
+descent: 181 video samples, 31 page changes, 10.229572 changes/s, longest complete interval 6 video frames
+standing: 569 video samples, 190 page changes, 19.944157 changes/s, longest complete interval 3 video frames
+floor: 523 video samples, 189 page changes, 21.584125 changes/s, longest complete interval 3 video frames
+final_hold: 161 video samples, 81 page changes, 30.049239 changes/s, longest complete interval 2 video frames
+The held final pose is not counted as moving choreography.
+Complete film: 1434 scanouts / 24.009041 seconds; all seven caption pages;
+six normal A taps; zero clock discrepancy, lost samples or emulator errors.
+Runtime route: zero failures. No game-memory writes were used.
+These are emulator measurements, not physical-hardware certification.
+
+Downloaded production ROM rechecked in local mGBA 0.10.5:
+mGBA 0.10.5; emulated video 59.727500570 Hz (280896 cycles/frame, 16777216 Hz CPU)
+Cadence counts presented Mode4 page changes, including identical content. It does not measure host speed or certify all-scene 30 FPS.
+Stage names describe the scripted route; verify the accompanying cadence pictures before treating them as scene measurements.
+opening after New Game: video_frames=600, active_mode4_samples=600/600, page_flips=199, emulated_seconds=10.045624, observed_page_flips_per_second=19.810
+  complete flip intervals: count=198, min=3, mean=3.000, max=3 video_frames (max 50.228 ms), over_two_frames=198
+  window edges: 6 frames before first observed flip, 0 after last (partial intervals)
+town after B dismisses opening: video_frames=600, active_mode4_samples=600/600, page_flips=150, emulated_seconds=10.045624, observed_page_flips_per_second=14.932
+  complete flip intervals: count=149, min=4, mean=4.000, max=4 video_frames (max 66.971 ms), over_two_frames=149
+  window edges: 3 frames before first observed flip, 1 after last (partial intervals)
+first-person after L changes camera: video_frames=600, active_mode4_samples=600/600, page_flips=100, emulated_seconds=10.045624, observed_page_flips_per_second=9.955
+  complete flip intervals: count=99, min=6, mean=6.000, max=6 video_frames (max 100.456 ms), over_two_frames=99
+  window edges: 3 frames before first observed flip, 3 after last (partial intervals)

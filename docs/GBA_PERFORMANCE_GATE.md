@@ -1,5 +1,55 @@
 # Danny Steel — runtime, rendering and release validation
 
+## Verified production release — full-reference opening, PR #16
+
+[PR #16](https://github.com/masong0508-lab/danny-steel-sprite-intro/pull/16)
+merged as `00fc2b1296ff2b591771e4ee39aa15ec39cb84df`. The main
+[build workflow](https://github.com/masong0508-lab/danny-steel-sprite-intro/actions/runs/44983584093)
+passed all 45 host gates, devkitARM compilation and the static-memory gate.
+The main
+[capture workflow](https://github.com/masong0508-lab/danny-steel-sprite-intro/actions/runs/44983584095)
+passed the actual-ROM runtime route and recorded the whole opening in mGBA
+0.10.2. The production compiler is devkitARM 16.1.0; the immutable build-image
+identity and compiler output are retained in `screenshots/arm_build_toolchain.txt`.
+
+The 899,440-byte ROM was published in commit
+`497398be0f5b3904271a98fe746ea493997555da`. Its downloaded bytes were checked
+against Git blob `a54395d72c427d2f54c428faa5d55de5fad4f72d` and the exact
+ROM SHA256 recorded by the opening-film capture:
+
+`5179c81d3e7bbb951d5a33571757b9be186ded54117b46ec3958264f48423159`.
+
+The production film has 1,434 video intervals over 24.009041 seconds. It reaches
+all seven captions through six normal A taps, with zero cinematic/runtime clock
+discrepancy, dropped input samples or emulator errors. The separate runtime
+probe reports zero failures. The source dance includes the final hand-supported
+floor rotations and partial right-edge crop; the held final pose is measured
+separately from the moving choreography.
+
+| Production opening phase | Video samples | Page changes | Changes/s |
+|---|---:|---:|---:|
+| Aerial descent | 181 | 31 | 10.230 |
+| Standing/sign work | 569 | 190 | 19.944 |
+| Floor work | 523 | 189 | 21.584 |
+| Final hold | 161 | 81 | 30.049 |
+
+These finite-window counts include completed pages with identical pixels.
+The final hold is not an animation-rate claim. The slowest complete descent
+gap is six video intervals (100.456 ms); 30 FPS throughout the opening remains
+unmet. This release has not been measured on physical GBA hardware.
+
+The downloaded production ROM was tested again in local mGBA 0.10.5. Its
+600-video-frame route windows reproduce CI's 19.810 opening, 14.932 town and
+9.955 first-person page changes/s. Complete intervals are respectively three,
+four and six video frames. The prior published PR #15 first-person result was
+8.461 changes/s with seven-frame intervals. Full timing and hash evidence is
+in `screenshots/pr16_release_verification.txt`.
+
+Production static IWRAM is 20,112 bytes (11,064 code + 9,024 BSS + 24 data),
+below the 24,576-byte gate. EWRAM remains 38,400 bytes. Source motion is 7,480
+ROM bytes and the immutable settled storefront is 22,476 ROM bytes; neither
+introduces an additional runtime framebuffer or heap allocation.
+
 ## Full-reference opening: local verification
 
 The opening now covers all 548 source frames with 110 measured key poses,

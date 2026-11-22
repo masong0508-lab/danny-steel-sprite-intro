@@ -58,4 +58,11 @@
 - [x] Verify the tool on an existing known ROM/ELF and capture the complete updated opening after integration.
 - [x] Run all existing host gates plus new motion checks, build ARM, verify RAM, real emulator input/runtime and measured opening/town/perspective cadence.
 - [x] Review the full film and independent reviewer findings; fix concrete issues before publishing.
-- [ ] Upload only explicit source changes, require successful CI, merge the authorized revision and verify the published ROM hash and playback. Deliver the playable ROM and full opening preview.
+- [x] Upload only explicit source changes, require successful CI, merge the authorized revision and verify the published ROM hash and playback. Deliver the playable ROM and full opening preview.
+
+Release evidence: PR #16 merged as `00fc2b1296ff2b591771e4ee39aa15ec39cb84df`.
+Main build `44983584093` and capture `44983584095` both passed. The published
+899,440-byte ROM in `497398be0f5b3904271a98fe746ea493997555da` was downloaded,
+matched against its Git blob and the full-film ROM hash, and rechecked in mGBA.
+See `docs/screenshots/pr16_release_verification.txt` and the production
+`opening.mp4`, `opening_film.json`, runtime and cadence reports.
