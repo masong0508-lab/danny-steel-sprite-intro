@@ -403,6 +403,46 @@ static void check_icon(uint8_t *p,int x,int y,int result,int harmful){
         put(p,x+4,y+3,20);put(p,x+5,y+2,20);
     }
 }
+/* Preserve the same direct guide in the legacy 120x80 painter
+   without hiding objective, control and save information. Every panel
+   uses live read-only path queries from the existing Story object. */
+static void field_guide_120(uint8_t *p,const Story *s){
+    box(p,2,9,116,71,3);box(p,4,11,112,67,21);
+    box(p,4,11,112,12,24);
+    if(s->choice&STORY_FIELD_GUIDE_DETAIL){
+        text(p,8,14,"GUIDE / HOW TO PLAY",20,25);
+        text(p,7,26,"CORE: LETTER BORE MARA",20,27);
+        text(p,7,34,"MUSIC AND ART ADD MORE",20,27);
+        text(p,7,42,"BUS MAY START NEW DAYS",18,27);
+        box(p,7,51,106,1,3);
+        text(p,7,55,"ENERGY / REST OR SPEND",20,27);
+        text(p,7,63,"SPARK ART / BOND MARA",20,27);
+        text(p,7,72,"LEFT RIGHT PAGE B BACK",18,27);
+        return;
+    }
+    text(p,8,14,"FIELD GUIDE",20,21);
+    int gx=0,gy=0;const char *goal=0;
+    int has=story_goal(s,&gx,&gy,&goal);
+    text(p,7,26,has?"NEXT":"FREE TIME",18,12);
+    if(has){
+        text(p,30,26,goal,20,19);
+        int dir=-1,steps=-1;
+        if(story_route(s,&dir,&steps)){
+            static const char *const headings[]={"EAST","SOUTH","WEST","NORTH","HERE"};
+            char n[]="00";
+            unsigned d=steps<0?0u:steps>99?99u:(unsigned)steps;
+            n[0]=(char)('0'+d/10u);n[1]=(char)('0'+d%10u);
+            text(p,7,34,headings[dir<0?4:dir],20,7);
+            text(p,39,34,n,18,2);
+        }else text(p,7,34,"NO WALKABLE ROUTE",18,24);
+        text(p,7,43,story_goal_reason(s),20,27);
+    }else text(p,7,43,"EXPLORE / CREATE / REST",20,27);
+    box(p,7,53,106,1,3);
+    text(p,7,57,story_action_hint(s),20,16);
+    text(p,57,57,story_risk_available(s)?"B RISK":"B NOT HERE",18,15);
+    text(p,7,65,"A ACT  L VIEW  R NOTES",20,27);
+    text(p,7,73,"LEFT RIGHT PAGE B BACK",18,26);
+}
 static void consequence_board(uint8_t *p,const Story *s){
     unsigned page=story_check_page(s);
     if(page>=STORY_CHECK_PAGE_COUNT)page=0;
@@ -841,13 +881,16 @@ void story_draw(const Story *s,int frame,uint8_t *p) {
     } else if(s->paused){
         if(s->choice&STORY_CHECK_PAGE_ACTIVE){
             consequence_board(p,s);
+        }else if(s->choice&STORY_FIELD_GUIDE_ACTIVE){
+            field_guide_120(p,s);
         }else{
             panel(p,38,80);
             box(p,4,41,112,1,18);
             text(p,6,44,"PAUSED / OLD QUARTER",20,27);
-            text(p,6,54,"R  LIFE CONSEQUENCES",18,27);
-            text(p,6,63,"START  RESUME GAME",20,27);
-            text(p,6,72,"B  SAVE AND MENU",20,27);
+            text(p,6,53,"L  FIELD GUIDE",20,27);
+            text(p,6,61,"R  LIFE CONSEQUENCES",18,27);
+            text(p,6,69,"START  RESUME GAME",20,27);
+            text(p,6,76,"B  SAVE AND MENU",20,27);
         }
     } else {
         box(p,0,72,120,8,21);

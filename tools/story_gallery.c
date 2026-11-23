@@ -173,6 +173,10 @@ int main(int argc,char **argv){
  write_frame("06_gameplay_overhead",&s,90);
  s.paused=1;s.choice=(uint8_t)(STORY_CHECK_PAGE_ACTIVE|(3u<<1));
  write_frame("06a_new_field_guide",&s,90);
+ s.choice=STORY_FIELD_GUIDE_ACTIVE;
+ write_frame("06b_direct_field_guide_next",&s,90);
+ s.choice=(uint8_t)(STORY_FIELD_GUIDE_ACTIVE|STORY_FIELD_GUIDE_DETAIL);
+ write_frame("06c_direct_field_guide_help",&s,90);
  s.paused=0;s.choice=0;
  /* The same real map in four directions, captured from valid walkable
     tiles. Material, silhouette, footprint and foliage differ by location. */

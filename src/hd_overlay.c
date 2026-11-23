@@ -1,4 +1,5 @@
 #include "hd_canvas.h"
+#include "story_checks.h"
 
 /* Native-pixel film subtitles, menus and prompts shared by the painted map
    and legacy cinematic/raycast frames. Narrative text is never removed. */
@@ -13,6 +14,61 @@ static void framebox(uint8_t *p,int x,int y,int w,int h){
  hd_line(p,x+w-11,y+3,x+w-4,y+3,HD_GOLD);
  hd_line(p,x+w-4,y+3,x+w-4,y+10,HD_GOLD);
  hd_rect(p,x+5,y+4,w-10,1,HD_BRICK_DARK);
+}
+/* This is deliberately drawn only while paused, over the existing
+   native scene. It is pure story/route information, not a new quest state
+   or a hidden framebuffer. All labels fit the actual 240x160 canvas. */
+static void field_guide(uint8_t *p,const Story *s){
+ framebox(p,12,20,216,135);
+ hd_rect(p,19,30,3,11,HD_GOLD);
+ if(s->choice&STORY_FIELD_GUIDE_DETAIL){
+  hd_text(p,27,31,"FIELD GUIDE / HOW TO PLAY",HD_LAMP,1,0);
+  hd_line(p,21,44,217,44,HD_STONE_DARK);
+  hd_text(p,22,52,"CORE / LETTER THEN BORE THEN MARA",HD_PAPER,1,0);
+  hd_text(p,22,63,"MUSIC + ART COMPLETE THE STORY",HD_PAPER,1,0);
+  hd_text(p,22,74,"BUS CAN START ANOTHER DAY",HD_STONE_LIT,1,0);
+  hd_line(p,21,85,217,85,HD_STONE_DARK);
+  hd_text(p,22,91,"A TALK / WORK / INTERACT",HD_PAPER,1,0);
+  hd_text(p,22,102,"L SWITCH CAMERA WHILE PLAYING",HD_PAPER,1,0);
+  hd_text(p,22,113,"B RISK ONLY NEAR MARKED SITES",HD_STONE_LIT,1,0);
+  hd_text(p,22,124,"REST GIVES ENERGY / BOND IS TRUST",HD_PAPER,1,0);
+  hd_text(p,22,135,"SPARK HELPS ART / DAYS ARE OPEN",HD_STONE_LIT,1,0);
+ }else{
+  hd_text(p,27,31,"FIELD GUIDE / OLD QUARTER",HD_LAMP,1,0);
+  hd_line(p,21,44,217,44,HD_STONE_DARK);
+  int gx=0,gy=0;const char *goal=0;
+  int has=story_goal(s,&gx,&gy,&goal);
+  hd_text(p,22,51,has?"NEXT DESTINATION":"NO URGENT ERRAND",
+          HD_STONE_LIT,1,0);
+  if(has){
+   hd_text(p,22,63,goal,HD_PAPER,1,0);
+   int dir=-1,steps=-1;
+   if(story_route(s,&dir,&steps)){
+    static const char *const compass[]={"AHEAD","RIGHT","BACK","LEFT"};
+    const char *heading=dir<0?"HERE":compass[(dir-(int)s->facing+4)&3];
+    char count[]="00 STEPS";
+    unsigned number=steps<0?0u:steps>99?99u:(unsigned)steps;
+    count[0]=(char)('0'+number/10u);
+    count[1]=(char)('0'+number%10u);
+    hd_text(p,139,63,heading,HD_GOLD,1,0);
+    hd_text(p,178,63,steps==0?"ACT NOW":count,HD_LAMP,1,0);
+   }else hd_text(p,121,63,"NO SAFE ROUTE",HD_RED,1,0);
+   hd_text(p,22,75,story_goal_reason(s),HD_PAPER,1,0);
+  }else hd_text(p,22,75,"EXPLORE AND MAKE SOMETHING",HD_PAPER,1,0);
+  hd_line(p,21,86,217,86,HD_STONE_DARK);
+  hd_text(p,22,93,story_action_hint(s),HD_LAMP,1,0);
+  hd_text(p,108,93,story_risk_available(s)?"B RISK / OPTIONAL":
+          "B NO RISK HERE",HD_STONE_LIT,1,0);
+  hd_text(p,22,105,"A TALK / WORK / INTERACT",HD_PAPER,1,0);
+  hd_text(p,22,117,"L CAMERA / R NOTES WHILE PLAYING",HD_PAPER,1,0);
+  char stats[]="ENERGY 0  SPARK 0  BOND 0";
+  stats[7]=(char)('0'+(s->energy>5u?5u:s->energy));
+  stats[16]=(char)('0'+(s->spark>5u?5u:s->spark));
+  stats[24]=(char)('0'+(s->bond>5u?5u:s->bond));
+  hd_text(p,22,132,stats,HD_GOLD,1,0);
+ }
+ hd_rect(p,19,143,202,1,HD_STONE_DARK);
+ hd_text(p,22,147,"LEFT/RIGHT PAGE  B BACK  R CHECKS",HD_STONE_LIT,1,0);
 }
 static void selectable(uint8_t *p,int x,int y,int w,const char *label,int selected){
  hd_rect(p,x,y,w,21,selected?HD_ROAD_COOL:HD_SHADOW);
@@ -53,13 +109,17 @@ void hd_game_overlay(uint8_t *p,const Story *s){
   }
   return;
  }
- if(s->paused && !(s->choice&0x80u)){
+ if(s->paused && (s->choice&STORY_FIELD_GUIDE_ACTIVE)){
+  field_guide(p,s);return;
+ }
+ if(s->paused && !(s->choice&STORY_CHECK_PAGE_ACTIVE)){
   framebox(p,16,67,208,87);
-  hd_text(p,29,79,"A MOMENT TO BREATHE",HD_PAPER,1,1);
-  hd_line(p,29,92,210,92,HD_STONE_DARK);
-  hd_text(p,30,101,"START  RETURN TO STREET",HD_PAPER,1,0);
-  hd_text(p,30,116,"R  LIFE AND CONSEQUENCES",HD_STONE_LIT,1,0);
-  hd_text(p,30,131,"B  SAVE AND LEAVE",HD_LAMP,1,0);
+  hd_text(p,29,77,"A MOMENT TO BREATHE",HD_PAPER,1,0);
+  hd_line(p,29,91,210,91,HD_STONE_DARK);
+  hd_text(p,30,96,"START  RETURN TO STREET",HD_PAPER,1,0);
+  hd_text(p,30,107,"L  FIELD GUIDE / WHERE NEXT",HD_LAMP,1,0);
+  hd_text(p,30,119,"R  JOURNAL / CONSEQUENCES",HD_STONE_LIT,1,0);
+  hd_text(p,30,137,"B  SAVE AND LEAVE",HD_PAPER,1,0);
   return;
  }
  if(s->risk_menu){
