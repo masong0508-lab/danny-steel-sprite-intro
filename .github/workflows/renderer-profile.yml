@@ -1,0 +1,43 @@
+name: Measure native first-person ARM renderer stages
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "perf/**"
+    paths:
+      - ".github/workflows/renderer-profile.yml"
+      - "src/hd_perspective.c"
+      - "tools/renderer_cycles.c"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: danny-stage-profile-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  profile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install mGBA profiler dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libmgba-dev
+      - name: Build instrumented ARM cartridge (not published)
+        run: |
+          set -euo pipefail
+          docker pull devkitpro/devkitarm
+          image_id="$(docker image inspect --format '{{.Id}}' devkitpro/devkitarm)"
+          docker run --rm -v "$PWD:/work" -w /work "$image_id" sh -ec '
+            make clean
+            make CFLAGS="-mthumb -mthumb-interwork -mcpu=arm7tdmi -O2 -Wall -std=gnu11 -fomit-frame-pointer -Isrc -DGBA_PROFILE_RENDER"
+          '
+      - name: Measure real mGBA ARM stage cycles, not host CPU timing
+        run: |
+          set -euo pipefail
+          gcc -std=c11 -O2 -Wall -Wextra -Werror tools/renderer_cycles.c -lmgba -o /tmp/danny-render-profile
+          /tmp/danny-render-profile danny_steel_title.gba danny_steel_title.elf
