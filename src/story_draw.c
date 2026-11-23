@@ -298,6 +298,10 @@ static void cult_arena(const Story *s,int tick,uint8_t *p) {
                        (int)STORY_BATTLE_BEAT)==1?"MIDDLE":"RIGHT";
         box(p,2,14,49,8,21);
         text(p,4,16,target,20,11);
+        /* Same tactical identity as the native 240x160 arena. */
+        box(p,54,14,64,8,21);
+        text(p,57,16,s->battle_choice==0?"FACTS / FAST":"CARE / GUARD",
+             20,15);
     }
 }
 /* Dedicated low-memory cinematic scenes. They use the same 120x80 buffer
