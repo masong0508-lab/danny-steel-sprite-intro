@@ -105,6 +105,10 @@ static HD_CANVAS_CODE __attribute__((noinline)) void floor_render(uint8_t *p,con
   int dist=13500/(y-75); if(dist>2304)dist=2304;
   int side_unit=dist*3*256/480;
   int step=y<98?2:1;
+  int side_delta=step*side_unit;
+  /* Rotate once per scanline, not once per floor texel. All 4 headings
+     share the same original fixed-point projection and exact pixels. */
+  int forward_x=cx+fx*dist,forward_y=cy+fy*dist;
   /* Existing wall bottom is 79 + floor(10400/(depth+60)).
      Thus y is covered exactly when depth <= 10400/(y-78)-60.
      At these floor rows the original 3..150 height clamp cannot alter
@@ -118,9 +122,14 @@ static HD_CANVAS_CODE __attribute__((noinline)) void floor_render(uint8_t *p,con
    /* cast_walls gives every column in this original direction run
       the same hit and depth. Test coverage once, not per hidden pixel. */
    if(!wall_type[begin]||wall_depth[begin]>wall_limit){
-    for(int x=begin&~(step-1);x<end;x+=step){
-     int side=((x-120)*side_unit)>>8;
-     int wx=cx+fx*dist+rx*side,wy=cy+fy*dist+ry*side;
+    /* Carry the same 24.8 signed side coordinate through this visible
+       run. One initialization replaces a multiply at every pixel, while
+       preserving the original arithmetic right shift for negative X. */
+    int start=begin&~(step-1);
+    int side_acc=(start-120)*side_unit;
+    for(int x=start;x<end;x+=step,side_acc+=side_delta){
+     int side=side_acc>>8;
+     int wx=forward_x+rx*side,wy=forward_y+ry*side;
      int tx=wx>>8,ty=wy>>8;
      if(tx!=last_tx||ty!=last_ty){
       last_tx=tx;last_ty=ty;tile=story_tile(tx,ty);
@@ -137,8 +146,15 @@ static HD_CANVAS_CODE __attribute__((noinline)) void floor_render(uint8_t *p,con
  }
 }
 static HD_CANVAS_CODE void wall_column(uint8_t *p,int x,int width,int top,int bottom,char type,
-                        int u,int forward,int tx,int ty){
+                        int u,int forward,int tx,int ty,int clip_top,int clip_bottom){
  int height=bottom-top;
+ /* Full spans are used for casting. During billboard restoration, only
+    pixels the sprite could have overwritten require another wall draw.
+    Offset the texture DDA exactly to the clipped start. */
+ int first=clip_top>top?clip_top:top;
+ int last=clip_bottom<bottom?clip_bottom:bottom;
+ if(last>140)last=140;
+ if(first>=last)return;
  int tree=type=='T';
  unsigned base=tree?HD_LEAF_DARK:type=='A'?HD_BRICK:HD_BRICK_DARK;
  if(forward>1200)base=tree?HD_LEAF_DARK:HD_STONE_DARK;
@@ -147,8 +163,12 @@ static HD_CANVAS_CODE void wall_column(uint8_t *p,int x,int width,int top,int bo
     DDA produces precisely floor((y-top)*256/height) per scanline, but
     pays for the division only twice per wall column. */
  int v=0,major=256/height,minor=256%height,error=0;
- for(int y=top;y<bottom;y++){
-  if((unsigned)y>=140u)break;
+ if(first!=top){
+  int numerator=(first-top)*256;
+  v=numerator/height;
+  error=numerator%height;
+ }
+ for(int y=first;y<last;y++){
   unsigned c=base;
   if(tree){
    if(v>178 && u>91 && u<162)c=HD_BARK;
@@ -196,8 +216,30 @@ static HD_CANVAS_CODE void wall_column(uint8_t *p,int x,int width,int top,int bo
   error+=minor;
   if(error>=height){v++;error-=height;}
  }
- if(top>18 && top<140)hd_rect(p,x,top,width,1,tree?HD_LEAF_LIT:HD_STONE_LIT);
+ if(top>18 && top>=first && top<last)
+  hd_rect(p,x,top,width,1,tree?HD_LEAF_LIT:HD_STONE_LIT);
 }
+/* Exact reciprocal quotients for 1..32-pixel ray velocities. Because a
+   next-tile gap is at most 256, ceil(65536/d) reproduces floor(n/d)
+   for n<=255 exactly. No software integer divisions in this hot loop. */
+static const uint16_t ray_reciprocal_q16[33]={
+ 0u, 0u, 32768u, 21846u, 16384u, 13108u, 10923u, 9363u, 8192u, 7282u, 6554u, 5958u, 5462u, 5042u, 4682u, 4370u, 4096u, 3856u, 3641u, 3450u, 3277u, 3121u, 2979u, 2850u, 2731u, 2622u, 2521u, 2428u, 2341u, 2260u, 2185u, 2115u, 2048u
+};
+static HD_CANVAS_CODE inline unsigned next_tile_sample(int position,int velocity){
+ if(velocity==0)return 76u;
+ int origin=(position>>8)*256;
+ unsigned gap=(unsigned)(velocity>0?
+                        origin+256-position:position-origin+1);
+ unsigned speed=(unsigned)(velocity>0?velocity:-velocity);
+ if(speed==1u)return gap;
+ return 1u+(((gap-1u)*ray_reciprocal_q16[speed])>>16);
+}
+#if !defined(__arm__)
+/* Exposed only to the host regression test. No extra GBA entry points. */
+unsigned hd_debug_next_tile_sample(int position,int velocity){
+ return next_tile_sample(position,velocity);
+}
+#endif
 static HD_CANVAS_CODE __attribute__((noinline)) void cast_walls(uint8_t *p,int cx,int cy,int fx,int fy,int rx,int ry){
  for(int x=0;x<HD_W;){
   int side=((x-120)*3)/16; /* 0.75 FOV at each edge, fixed-point */
@@ -207,18 +249,25 @@ static HD_CANVAS_CODE __attribute__((noinline)) void cast_walls(uint8_t *p,int c
   while(end<HD_W && ((end-120)*3)/16==side)end++;
   int dx=fx*32+rx*side,dy=fy*32+ry*side;
   int wx=cx,wy=cy,hit_dist=2400,tx=0,ty=0;
-  int previous_tx=cx>>8,previous_ty=cy>>8;
   char hit=0;
-  for(int step=1;step<76;step++){
-   wx+=dx;wy+=dy;
+  /* A ray can take many 32-unit samples before leaving its present tile.
+     Jump directly to the first ORIGINAL sample in the next X or Y tile.
+     Both axes are sampled together, preserving diagonal corner behavior
+     and the exact hit distance/texture U of the old 75-step traversal. */
+  unsigned step=0u;
+  while(step<75u){
+   unsigned skipx=next_tile_sample(wx,dx);
+   unsigned skipy=next_tile_sample(wy,dy);
+   unsigned advance=skipx<skipy?skipx:skipy;
+   if(advance>75u-step)break;
+   step+=advance;
+   wx+=dx*(int)advance;
+   wy+=dy*(int)advance;
    tx=wx>>8;ty=wy>>8;
-   /* 32-step ray samples often sit in the SAME town tile.
-      Only touch the story grid on cell crossings. Same collision set,
-      depth and view, but many fewer tile queries and branch chains. */
-   if(tx==previous_tx && ty==previous_ty)continue;
-   previous_tx=tx;previous_ty=ty;
    char t=story_tile(tx,ty);
-   if(t=='#'||t=='A'||t=='T'){hit=t;hit_dist=step*32;break;}
+   if(t=='#'||t=='A'||t=='T'){
+    hit=t;hit_dist=(int)step*32;break;
+   }
   }
   if(hit_dist>2300)hit_dist=2300;
   for(int col=x;col<end;col++){
@@ -236,7 +285,7 @@ static HD_CANVAS_CODE __attribute__((noinline)) void cast_walls(uint8_t *p,int c
    wall_tx[col]=(uint8_t)tx;
    wall_ty[col]=(uint8_t)ty;
   }
-  wall_column(p,x,end-x,top,bottom,hit,u,hit_dist,tx,ty);
+  wall_column(p,x,end-x,top,bottom,hit,u,hit_dist,tx,ty,top,bottom);
   x=end;
  }
 }
@@ -334,7 +383,10 @@ int hd_first_person_anchor_map_valid(void){
 static SceneBillboard visible[MAX_VISIBLE_BILLBOARDS];
 /* Restore occluding wall columns AFTER a sprite is drawn.
    This preserves hidden-surface order without a 240x160 sprite buffer. */
-static void restore_occluding_wall(uint8_t *p,int sx,int h,int depth){
+static void restore_occluding_wall(uint8_t *p,int sx,int ground,int h,int depth){
+ /* Projected people occupy [ground-h, ground); other miniatures may cast
+    a tiny foot-level shadow. Four pixels beyond ground covers both. */
+ int ground_clip_top=ground-h,ground_clip_bottom=ground+4;
  int radius=h*4/11+4;
  if(radius<8)radius=8;
  for(int x=sx-radius;x<=sx+radius;x++){
@@ -344,7 +396,7 @@ static void restore_occluding_wall(uint8_t *p,int sx,int h,int depth){
   if(wh>150)wh=150;
   if(wh<3)wh=3;
   wall_column(p,x,1,79-wh/2,79+wh/2,(char)wall_type[x],wall_u[x],
-              wall_depth[x],wall_tx[x],wall_ty[x]);
+              wall_depth[x],wall_tx[x],wall_ty[x],ground_clip_top,ground_clip_bottom);
  }
 }
 static void render_billboards(uint8_t *p,int cx,int cy,
@@ -374,7 +426,7 @@ static void render_billboards(uint8_t *p,int cx,int cy,
  for(unsigned i=0;i<count;i++){
   const SceneBillboard *item=&visible[i];
   actor(p,item->sx,item->ground,item->height,(char)item->kind,tick);
-  restore_occluding_wall(p,item->sx,item->height,item->depth);
+  restore_occluding_wall(p,item->sx,item->ground,item->height,item->depth);
  }
 }
 void hd_first_person_draw(uint8_t *p,const Story *s,unsigned tick){
