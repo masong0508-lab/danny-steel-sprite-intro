@@ -127,6 +127,8 @@ int story_goal(const Story *s, int *x, int *y, const char **label);
    steps is the remaining movement count; queries never change save data. */
 int story_route(const Story *s, int *direction, int *steps);
 const char *story_goal_reason(const Story *s);
+/* CORE, EXTRA, DAY, CARE, SAVE, HOPE, LAST or BUS; pure HUD tag. */
+const char *story_goal_kind(const Story *s);
 /* Exactly the same adjacent target priority as pressing A. */
 const char *story_action_hint(const Story *s);
 int story_risk_available(const Story *s); /* only at confirmed optional risk sites */

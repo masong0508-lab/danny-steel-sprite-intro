@@ -416,18 +416,18 @@ static void field_guide_120(uint8_t *p,const Story *s){
     if(s->choice&STORY_FIELD_GUIDE_DETAIL){
         text(p,8,14,"GUIDE / HOW TO PLAY",20,25);
         text(p,7,26,"CORE: LETTER BORE MARA",20,27);
-        text(p,7,34,"MUSIC AND ART ADD MORE",20,27);
-        text(p,7,42,"BUS MAY START NEW DAYS",18,27);
+        text(p,7,34,"BUS OPENS AFTER CORE",20,27);
+        text(p,7,42,"TAPE + ART CHANGE END",18,27);
         box(p,7,51,106,1,3);
-        text(p,7,55,"ENERGY / REST OR SPEND",20,27);
-        text(p,7,63,"SPARK ART / BOND MARA",20,27);
+        text(p,7,55,"TRY GO MAY START DAYS",20,27);
+        text(p,7,63,"REST ENERGY / BOND TRUST",20,27);
         text(p,7,72,"LEFT RIGHT PAGE B BACK",18,27);
         return;
     }
     text(p,8,14,"FIELD GUIDE",20,21);
     int gx=0,gy=0;const char *goal=0;
     int has=story_goal(s,&gx,&gy,&goal);
-    text(p,7,26,has?"NEXT":"FREE TIME",18,12);
+    text(p,7,26,has?story_goal_kind(s):"FREE TIME",18,12);
     if(has){
         text(p,30,26,goal,20,19);
         int dir=-1,steps=-1;
@@ -858,7 +858,7 @@ void story_draw(const Story *s,int frame,uint8_t *p) {
         text(p,3,2,s->ending==STORY_END_GOOD?"GOOD END":
             s->ending==STORY_END_BAD?"BAD END":"NEUTRAL END",20,20);
     } else {
-        if(has_goal){text(p,3,2,"NEXT",18,4);
+        if(has_goal){text(p,3,2,story_goal_kind(s),18,5);
             text(p,23,2,goal,20,12);text(p,75,2,direction,18,4);}
         else text(p,3,2,"DANNY / OLD QUARTER",20,29);
     }
@@ -879,7 +879,9 @@ void story_draw(const Story *s,int frame,uint8_t *p) {
     } else if(s->activity){
         activity_menu(p,s);
     } else if(s->choosing){
-        panel(p,49,80);text(p,4,53,"THE LAST BUS LEAVES.",20,28);
+        panel(p,49,80);text(p,4,53,
+            (s->flags&STORY_FULL)==STORY_FULL?"ALL WORK DONE: BOARD":
+            "CLINIC CALL STOPS TRIP",20,28);
         text(p,4,62,s->choice?"GO    > STAY":" > GO    STAY",18,28);
         text(p,4,72,"LEFT/RIGHT   A CHOOSE",20,29);
     } else if(s->paused){

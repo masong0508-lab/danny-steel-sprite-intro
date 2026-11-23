@@ -94,7 +94,7 @@ int main(void){
  s.rescue_stage=STORY_RESCUE_NONE;
  s.x=20;s.y=11;s.flags=0;s.facing=0;
  assert(!strcmp(story_action_hint(&s),"A SHIFT"));
- assert(!strcmp(story_goal_reason(&s),"START WITH THE OLD LETTER"));
+ assert(!strcmp(story_goal_reason(&s),"LETTER / WEST OLD QUARTER"));
  int dir,steps;
  assert(story_route(&s,&dir,&steps)&&steps>0);
  s.x=11;s.y=8;s.facing=3;

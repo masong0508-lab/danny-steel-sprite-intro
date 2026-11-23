@@ -155,6 +155,14 @@ jobs:
             src/story.c src/studio.c tests/combat_focus_counter_test.c \
             -o /tmp/danny_focus_counter
           /tmp/danny_focus_counter
+      - name: Prove coherent chapter goals, clinic-bus outcomes and native route art
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
+            src/story.c src/studio.c src/hd_canvas.c src/hd_world.c \
+            src/hd_isometric.c src/hd_isometric_atlas.c \
+            src/hd_facade_art.c src/hd_world_atlas.c src/hd_overlay.c \
+            tests/story_campaign_clarity_test.c -o /tmp/danny_campaign_clarity
+          /tmp/danny_campaign_clarity
       - name: Test story progression and map accessibility
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c tests/story_test.c -o /tmp/danny_story_test
