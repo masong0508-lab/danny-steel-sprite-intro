@@ -2,6 +2,26 @@
 
 A small, original bittersweet comedy-adventure, with a BORE-universe continuity-office cameo. The GBA build preserves the existing DippInn logo, animated sprite introduction, drifting-painting title and bossa-nova audio. The GBA menu and overhead Old Quarter now use native 240x160 artwork with a rainy-city, record-sleeve design instead of low-resolution placeholder swipes. **NEW GAME** now enters a playable opening chapter instead of returning to the title.
 
+## Campaign, narrative and route clarity (November 23 pass)
+
+The opening now names Danny's reason for avoiding the clinic, and each core
+stop causes the next: **family letter / proof of address → BORE stamp → honest
+conversation with Mara → bus choice**. Finishing the archive tape and rooftop
+painting is a **legacy bonus**, not a prerequisite for reaching the bus.
+
+On the bus screen, **TRY TO GO** with incomplete creative work triggers an
+explicit clinic phone call; Danny chooses to stay and begins the existing
+numbered-day campaign. With both creative tasks done, **BOARD** starts the
+good-ending film. **STAY** continues normal exploration. The quest header
+shows **CORE**, **EXTRA**, **BUS**, **DAY**, **CARE**, **SAVE**, **HOPE** or **LAST**
+as appropriate, and the isometric streets now paint a small next-step
+chevron along the actual walkable route. START then L opens the live field
+guide; R opens context notes. Saves and story milestones are unchanged.
+
+This is a coherence and readability pass on the **first playable chapter**,
+not a claim that the entire long-form campaign has been completed. See
+[the exact fixes, tests and remaining campaign priorities](docs/CAMPAIGN_CLARITY_AND_ART_20261123.md).
+
 ## Playable chapter: Old Quarter
 
 The city is closing, the last bus is leaving, and Danny is trying to determine which pieces of yesterday are worth carrying into tomorrow. Read a letter from home, have the BORE Continuity Office validate your existence, and speak to Mara before deciding whether to board the bus or remain behind. Finishing the optional music and art objectives raises *primary-story* completion to 100%, while the Mirror Orchard investigation remains independent. The prose is intentionally a little sad beneath the bureaucracy and bad jokes; the BORE reference is a light crossover and does not attempt to rewrite the larger game's canon.
