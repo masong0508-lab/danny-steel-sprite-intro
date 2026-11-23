@@ -77,8 +77,16 @@
    one wave, two waves make one duel. No extra battle or save fields. */
 #define STORY_BATTLE_BEAT 30u
 #define STORY_BATTLE_STRIKES 4u
-#define STORY_BATTLE_PARRY 15u
-#define STORY_BATTLE_PARRY_CD 30u
+/* FACTS rewards precise counters with a longer window and quicker
+   recharge; CARE offers one free guarded strike, but its parry is tighter.
+   Both modes retain the full 30-tick telegraph and four-focus limit. */
+#define STORY_FACTS_PARRY_TICKS 15u
+#define STORY_CARE_PARRY_TICKS 12u
+#define STORY_FACTS_PARRY_COOLDOWN 24u
+#define STORY_CARE_PARRY_COOLDOWN 30u
+/* Legacy public constants remain for older playthrough/test clients. */
+#define STORY_BATTLE_PARRY STORY_FACTS_PARRY_TICKS
+#define STORY_BATTLE_PARRY_CD STORY_CARE_PARRY_COOLDOWN
 
 typedef struct {
     uint8_t x, y, facing, view, flags, ended, ending, slot;
