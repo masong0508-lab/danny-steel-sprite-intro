@@ -146,8 +146,15 @@ static HD_CANVAS_CODE __attribute__((noinline)) void floor_render(uint8_t *p,con
  }
 }
 static HD_CANVAS_CODE void wall_column(uint8_t *p,int x,int width,int top,int bottom,char type,
-                        int u,int forward,int tx,int ty){
+                        int u,int forward,int tx,int ty,int clip_top,int clip_bottom){
  int height=bottom-top;
+ /* Full spans are used for casting. During billboard restoration, only
+    pixels the sprite could have overwritten require another wall draw.
+    Offset the texture DDA exactly to the clipped start. */
+ int first=clip_top>top?clip_top:top;
+ int last=clip_bottom<bottom?clip_bottom:bottom;
+ if(last>140)last=140;
+ if(first>=last)return;
  int tree=type=='T';
  unsigned base=tree?HD_LEAF_DARK:type=='A'?HD_BRICK:HD_BRICK_DARK;
  if(forward>1200)base=tree?HD_LEAF_DARK:HD_STONE_DARK;
@@ -156,8 +163,12 @@ static HD_CANVAS_CODE void wall_column(uint8_t *p,int x,int width,int top,int bo
     DDA produces precisely floor((y-top)*256/height) per scanline, but
     pays for the division only twice per wall column. */
  int v=0,major=256/height,minor=256%height,error=0;
- for(int y=top;y<bottom;y++){
-  if((unsigned)y>=140u)break;
+ if(first!=top){
+  int numerator=(first-top)*256;
+  v=numerator/height;
+  error=numerator%height;
+ }
+ for(int y=first;y<last;y++){
   unsigned c=base;
   if(tree){
    if(v>178 && u>91 && u<162)c=HD_BARK;
@@ -205,7 +216,8 @@ static HD_CANVAS_CODE void wall_column(uint8_t *p,int x,int width,int top,int bo
   error+=minor;
   if(error>=height){v++;error-=height;}
  }
- if(top>18 && top<140)hd_rect(p,x,top,width,1,tree?HD_LEAF_LIT:HD_STONE_LIT);
+ if(top>18 && top>=first && top<last)
+  hd_rect(p,x,top,width,1,tree?HD_LEAF_LIT:HD_STONE_LIT);
 }
 static HD_CANVAS_CODE __attribute__((noinline)) void cast_walls(uint8_t *p,int cx,int cy,int fx,int fy,int rx,int ry){
  for(int x=0;x<HD_W;){
@@ -245,7 +257,7 @@ static HD_CANVAS_CODE __attribute__((noinline)) void cast_walls(uint8_t *p,int c
    wall_tx[col]=(uint8_t)tx;
    wall_ty[col]=(uint8_t)ty;
   }
-  wall_column(p,x,end-x,top,bottom,hit,u,hit_dist,tx,ty);
+  wall_column(p,x,end-x,top,bottom,hit,u,hit_dist,tx,ty,top,bottom);
   x=end;
  }
 }
@@ -343,7 +355,10 @@ int hd_first_person_anchor_map_valid(void){
 static SceneBillboard visible[MAX_VISIBLE_BILLBOARDS];
 /* Restore occluding wall columns AFTER a sprite is drawn.
    This preserves hidden-surface order without a 240x160 sprite buffer. */
-static void restore_occluding_wall(uint8_t *p,int sx,int h,int depth){
+static void restore_occluding_wall(uint8_t *p,int sx,int ground,int h,int depth){
+ /* Projected people occupy [ground-h, ground); other miniatures may cast
+    a tiny foot-level shadow. Four pixels beyond ground covers both. */
+ int ground_clip_top=ground-h,ground_clip_bottom=ground+4;
  int radius=h*4/11+4;
  if(radius<8)radius=8;
  for(int x=sx-radius;x<=sx+radius;x++){
@@ -353,7 +368,7 @@ static void restore_occluding_wall(uint8_t *p,int sx,int h,int depth){
   if(wh>150)wh=150;
   if(wh<3)wh=3;
   wall_column(p,x,1,79-wh/2,79+wh/2,(char)wall_type[x],wall_u[x],
-              wall_depth[x],wall_tx[x],wall_ty[x]);
+              wall_depth[x],wall_tx[x],wall_ty[x],ground_clip_top,ground_clip_bottom);
  }
 }
 static void render_billboards(uint8_t *p,int cx,int cy,
@@ -383,7 +398,7 @@ static void render_billboards(uint8_t *p,int cx,int cy,
  for(unsigned i=0;i<count;i++){
   const SceneBillboard *item=&visible[i];
   actor(p,item->sx,item->ground,item->height,(char)item->kind,tick);
-  restore_occluding_wall(p,item->sx,item->height,item->depth);
+  restore_occluding_wall(p,item->sx,item->ground,item->height,item->depth);
  }
 }
 void hd_first_person_draw(uint8_t *p,const Story *s,unsigned tick){
