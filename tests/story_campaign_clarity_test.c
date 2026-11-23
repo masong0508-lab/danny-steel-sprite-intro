@@ -113,12 +113,14 @@ int main(void){
  assert(good.life_stage==STORY_LIFE_NONE);
 
  /* Native confirmation cards must visibly distinguish TRY from BOARD. */
- neutral.dialogue=good.dialogue=0;
- neutral.choosing=good.choosing=1;
- paint(screen_b.pixels,&neutral,1);
+ Story try_board=s,ready_to_board=s;
+ try_board.flags=STORY_ALL;try_board.dialogue=0;try_board.choosing=1;
+ ready_to_board.flags=STORY_FULL;ready_to_board.dialogue=0;
+ ready_to_board.choosing=1;
+ paint(screen_b.pixels,&try_board,1);
  unsigned char choice_image[HD_BYTES];
  memcpy(choice_image,screen_b.pixels,HD_BYTES);
- paint(screen_b.pixels,&good,1);
+ paint(screen_b.pixels,&ready_to_board,1);
  assert(memcmp(choice_image+93*HD_W,screen_b.pixels+93*HD_W,29*HD_W));
  /* Breadcrumb remains on the next walkable square, with guard bytes
     and no painted objective when a completed story is on screen. */
