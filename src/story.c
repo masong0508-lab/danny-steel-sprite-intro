@@ -1701,13 +1701,23 @@ void story_tick(Story *s, uint16_t keys) {
         return;
     }
     if(s->paused){
-        if(pressed&R){
+        /* L is a direct two-page help guide. R remains the four-page
+           consequences journal; both are transient and never save. */
+        if(pressed&L){
+            if(s->choice&STORY_FIELD_GUIDE_ACTIVE)s->choice&=1u;
+            else s->choice=(uint8_t)((s->choice&1u)|
+                                      STORY_FIELD_GUIDE_ACTIVE);
+        }else if((pressed&(LEFT|RIGHT)) &&
+                 (s->choice&STORY_FIELD_GUIDE_ACTIVE)){
+            s->choice^=STORY_FIELD_GUIDE_DETAIL;
+        }else if(pressed&R){
             unsigned page=(s->choice&STORY_CHECK_PAGE_ACTIVE)?
                 (story_check_page(s)+1u)%STORY_CHECK_PAGE_COUNT:0u;
             s->choice=(uint8_t)((s->choice&1u)|STORY_CHECK_PAGE_ACTIVE|
                                 (page<<1));
         }else if(pressed&B){
-            if(s->choice&STORY_CHECK_PAGE_ACTIVE)s->choice&=1u;
+            if(s->choice&(STORY_CHECK_PAGE_ACTIVE|STORY_FIELD_GUIDE_ACTIVE))
+                s->choice&=1u;
             else s->quit=1;
         }
         return;
