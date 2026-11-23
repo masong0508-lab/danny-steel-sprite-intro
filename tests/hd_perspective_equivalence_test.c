@@ -5,6 +5,16 @@
 
 /* Host-only validator is deliberately excluded from the cartridge. */
 int hd_first_person_anchor_map_valid(void);
+unsigned hd_debug_floor_dither17(int x,int y);
+static void verify_floor_dither(void){
+ unsigned cases=0u;
+ for(int y=80;y<140;y++)for(int x=0;x<HD_W;x++){
+  assert(hd_debug_floor_dither17(x,y)==(unsigned)((x+y)%17==0));
+  cases++;
+ }
+ assert(cases==60u*HD_W);
+ printf("native floor dither: %u exact original modulo locations\n",cases);
+}
 void hd_debug_wall_store_span(uint8_t *canvas,int x,int y,int width,uint8_t ink);
 void hd_debug_invalidate_wall_cache(void);
 
@@ -97,6 +107,7 @@ static void verify_camera_shade_cache(void){
  printf("camera wall-shade cache: %u cold/warm native full-frame matches\\n",cases);
 }
 int main(void){
+ verify_floor_dither();
  verify_halfword_wall_spans();
  verify_camera_shade_cache();
  assert(hd_first_person_anchor_map_valid());
