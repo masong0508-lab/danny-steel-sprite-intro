@@ -155,8 +155,9 @@ int main(int argc,char **argv){
  }
  if(walking)core->setKeys(core,0u);
  unsigned hz=(unsigned)core->frequency(core);
- printf("Native ARM renderer stage profiler (%s): %u sample(s) in %u video frames; ",walking?"held walking":"stationary"
-        "%u skipped sampled generations; CPU=%u Hz\n",samples,WINDOW_FRAMES,missed,hz);
+ printf("Native ARM renderer stage profiler (%s): %u sample(s) in %u video frames; "
+        "%u skipped sampled generations; CPU=%u Hz\n",
+        walking?"held walking":"stationary",samples,WINDOW_FRAMES,missed,hz);
  if(samples>=20u){
   for(unsigned i=0;i<STAGES;i++){
    double mean=(double)sum[i]/samples;
