@@ -22,7 +22,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-enum { SAMPLE_FRAMES = 600, KEY_A = 1, KEY_B = 2, KEY_START = 8, KEY_L = 512 };
+enum { SAMPLE_FRAMES = 600, KEY_A = 1, KEY_B = 2, KEY_START = 8,
+       KEY_UP = 64, KEY_DOWN = 128, KEY_L = 512 };
 
 static void log_errors(struct mLogger *logger, int category,
                        enum mLogLevel level, const char *format, va_list args) {
@@ -80,13 +81,22 @@ static void picture(struct mCore *core, const char *directory,
     if (!ok) fprintf(stderr, "Cannot encode %s\n", path);
 }
 
-static void measure(struct mCore *core, const char *name, double video_hz) {
+static void measure(struct mCore *core, const char *name, double video_hz,
+                    int moving) {
     unsigned flips = 0, mode4 = 0, intervals = 0, total_gap = 0;
     unsigned shortest = UINT_MAX, longest = 0, over_two = 0, previous_flip = 0;
     unsigned leading = SAMPLE_FRAMES, trailing = 0;
     uint32_t previous = core->busRead16(core, 0x04000000u);
     uint32_t start = core->frameCounter(core);
     for (unsigned f = 1; f <= SAMPLE_FRAMES; ++f) {
+        if (moving) {
+            /* Potheads starts at (20,11) facing east. This tested lane
+               has eight walkable tiles to the west, so alternate held
+               backwards/forwards in 48-video-frame intervals. It samples
+               real animated movement rather than a stationary benchmark. */
+            unsigned phase=(f-1u)%96u;
+            core->setKeys(core,phase<48u?KEY_DOWN:KEY_UP);
+        }
         advance(core, 1);
         uint32_t current = core->busRead16(core, 0x04000000u);
         if (is_mode4(current)) ++mode4;
@@ -105,6 +115,7 @@ static void measure(struct mCore *core, const char *name, double video_hz) {
         }
         previous = current;
     }
+    if(moving)core->setKeys(core,0u);
     trailing = SAMPLE_FRAMES - previous_flip;
     uint32_t elapsed = core->frameCounter(core) - start;
     double seconds = (double)elapsed / video_hz;
@@ -169,19 +180,24 @@ int main(int argc, char **argv) {
     press(core, KEY_A); advance(core, 120);
     const char *directory = argc == 3 ? argv[2] : NULL;
     picture(core, directory, "opening-start");
-    measure(core, "opening after New Game", video_hz);
+    measure(core, "opening after New Game", video_hz,0);
     picture(core, directory, "opening-end");
     press(core, KEY_B); advance(core, 120);
     picture(core, directory, "town-start");
-    measure(core, "town after B dismisses opening", video_hz);
+    measure(core, "town after B dismisses opening", video_hz,0);
     picture(core, directory, "town-end");
     /* The original first-person renderer can block for over half a second.
        A long single hold keeps this comparison route valid on that baseline. */
     core->setKeys(core,KEY_L); advance(core,96);
     core->setKeys(core,0); advance(core,192);
     picture(core,directory,"first-person-start");
-    measure(core,"first-person after L changes camera",video_hz);
+    measure(core,"first-person after L changes camera",video_hz,0);
     picture(core,directory,"first-person-end");
+    /* The same GBA ROM also needs an active-motion measurement: a cache
+       improving idle frames must not be mistaken for smooth walking. */
+    picture(core,directory,"first-person-walk-start");
+    measure(core,"first-person held walking (48-frame back/forward)",video_hz,1);
+    picture(core,directory,"first-person-walk-end");
     mCoreConfigDeinit(&core->config);
     core->deinit(core);
     free(pixels);
