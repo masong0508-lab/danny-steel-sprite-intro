@@ -1,6 +1,34 @@
 #include "hd_canvas.h"
 #include "hd_world_atlas.h"
 #include "hd_facade_art.h"
+#if defined(GBA_PROFILE_RENDER) && defined(__arm__)
+#include "gba.h"
+/* Debug-build-only counters. Normal release builds allocate NONE of these.
+   TM3 is reserved for PSG music; this probe temporarily uses TM0/TM1. */
+volatile uint32_t gba_profile_frames;
+volatile uint32_t gba_profile_sky_cycles;
+volatile uint32_t gba_profile_wall_cycles;
+volatile uint32_t gba_profile_wallshade_cycles;
+volatile uint32_t gba_profile_floor_cycles;
+volatile uint32_t gba_profile_billboard_cycles;
+volatile uint32_t gba_profile_weather_cycles;
+volatile uint32_t gba_profile_total_cycles;
+static void gba_profile_begin(void){
+ R16(0x04000102)=0u;R16(0x04000106)=0u;
+ R16(0x04000100)=0u;R16(0x04000104)=0u;
+ R16(0x04000106)=0x0084u; /* TM1 cascade from TM0 overflow */
+ R16(0x04000102)=0x0080u; /* TM0 full-rate CPU clock */
+}
+static uint32_t gba_profile_clock(void){
+ uint16_t hi,low;
+ do {
+  hi=R16(0x04000104);
+  low=R16(0x04000100);
+ }while(hi!=R16(0x04000104));
+ __asm__ volatile("" ::: "memory");
+ return ((uint32_t)hi<<16)|low;
+}
+#endif
 
 /* A full 240-column perspective renderer for the actual same 24x18
    collision map. All steps and ray offsets are fixed-point, cardinal facing
@@ -138,6 +166,9 @@ static HD_CANVAS_CODE __attribute__((noinline)) void floor_render(uint8_t *p,con
 }
 static HD_CANVAS_CODE void wall_column(uint8_t *p,int x,int width,int top,int bottom,char type,
                         int u,int forward,int tx,int ty){
+#if defined(GBA_PROFILE_RENDER) && defined(__arm__)
+ uint32_t wallshade_start=gba_profile_clock();
+#endif
  int height=bottom-top;
  int tree=type=='T';
  unsigned base=tree?HD_LEAF_DARK:type=='A'?HD_BRICK:HD_BRICK_DARK;
@@ -197,6 +228,9 @@ static HD_CANVAS_CODE void wall_column(uint8_t *p,int x,int width,int top,int bo
   if(error>=height){v++;error-=height;}
  }
  if(top>18 && top<140)hd_rect(p,x,top,width,1,tree?HD_LEAF_LIT:HD_STONE_LIT);
+#if defined(GBA_PROFILE_RENDER) && defined(__arm__)
+ gba_profile_wallshade_cycles+=gba_profile_clock()-wallshade_start;
+#endif
 }
 static HD_CANVAS_CODE __attribute__((noinline)) void cast_walls(uint8_t *p,int cx,int cy,int fx,int fy,int rx,int ry){
  for(int x=0;x<HD_W;){
@@ -378,6 +412,11 @@ static void render_billboards(uint8_t *p,int cx,int cy,
  }
 }
 void hd_first_person_draw(uint8_t *p,const Story *s,unsigned tick){
+#if defined(GBA_PROFILE_RENDER) && defined(__arm__)
+ gba_profile_begin();
+ gba_profile_wallshade_cycles=0u;
+ uint32_t profile_last=0u,profile_now=0u;
+#endif
  int fx,fy,rx,ry;
  dirs(s,&fx,&fy,&rx,&ry);
  int camx=(int)s->x*256+128,camy=(int)s->y*256+128;
@@ -386,11 +425,27 @@ void hd_first_person_draw(uint8_t *p,const Story *s,unsigned tick){
   camy+=(s->prev_y-(int)s->y)*s->anim*64;
  }
  set_sky(p,tick,s->facing,camx,camy);
+#if defined(GBA_PROFILE_RENDER) && defined(__arm__)
+ profile_now=gba_profile_clock();
+ gba_profile_sky_cycles=profile_now-profile_last;profile_last=profile_now;
+#endif
  /* Walls use no destination reads. Paint them first so the floor can
     omit only pixels those same opaque columns already cover. */
  cast_walls(p,camx,camy,fx,fy,rx,ry);
+#if defined(GBA_PROFILE_RENDER) && defined(__arm__)
+ profile_now=gba_profile_clock();
+ gba_profile_wall_cycles=profile_now-profile_last;profile_last=profile_now;
+#endif
  floor_render(p,s,camx,camy,fx,fy,rx,ry,tick);
+#if defined(GBA_PROFILE_RENDER) && defined(__arm__)
+ profile_now=gba_profile_clock();
+ gba_profile_floor_cycles=profile_now-profile_last;profile_last=profile_now;
+#endif
  render_billboards(p,camx,camy,fx,fy,rx,ry,tick);
+#if defined(GBA_PROFILE_RENDER) && defined(__arm__)
+ profile_now=gba_profile_clock();
+ gba_profile_billboard_cycles=profile_now-profile_last;profile_last=profile_now;
+#endif
  /* Sparse rain, never an extra framebuffer or effect allocation. */
  for(unsigned i=0;i<24u;i++){
   unsigned v=texel(i+31u,i*7u+41u);
@@ -399,5 +454,12 @@ void hd_first_person_draw(uint8_t *p,const Story *s,unsigned tick){
   hd_line(p,x,y,x-2,y+4+(int)(i&3u),
           (i&3u)==0u?HD_STONE_LIT:HD_GLASS_LIT);
  }
+#if defined(GBA_PROFILE_RENDER) && defined(__arm__)
+ profile_now=gba_profile_clock();
+ gba_profile_weather_cycles=profile_now-profile_last;
+ gba_profile_total_cycles=profile_now;
+ R16(0x04000102)=0u;R16(0x04000106)=0u;
+ ++gba_profile_frames; /* Publish the completed sample last. */
+#endif
 }
 
