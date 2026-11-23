@@ -1,11 +1,11 @@
 {
-  "source_commit": "18b39cc55821275caa1dccf08bb669860e392f23",
+  "source_commit": "8345b0d87a33541b928112b2d6365fc4e85a1993",
   "source_rom_sha256": "bbb31dbc2a11998500392809768fa8bed2e7d11338acd34ee55689446c1c8f2e",
   "source_elf_sha256": "9764e0b4a850edc2c68fedaa9c5a56b98e456224a31d5ad1ddfbf4fd0246e6d0",
   "arm_build_toolchain": {
     "file": "arm_build_toolchain.txt",
-    "sha256": "e7616d7d68cd3229c861591925e940fee40ba5e302c45968529e8cf8a01bab97",
-    "record": "Source commit: 18b39cc55821275caa1dccf08bb669860e392f23\nDocker image reference: devkitpro/devkitarm\nImage ID: sha256:5850ea3193e95244827a1e38cf464a0e730d1b9cc7c276888ceed984cbe38912\nRepoDigests: [\"devkitpro/devkitarm@sha256:116afba8df8453961de2936ffab20dd441edf4d682856c1ec8b0e53d7ed0bbf5\"]\n\nARM compiler: /opt/devkitpro/devkitARM/bin/arm-none-eabi-gcc\narm-none-eabi-gcc (devkitARM) 16.1.0\nCopyright (C) 2026 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n"
+    "sha256": "56f2491f574fa43f3803edc861f64f531469d3348c88dd77019d633203ace971",
+    "record": "Source commit: 8345b0d87a33541b928112b2d6365fc4e85a1993\nDocker image reference: devkitpro/devkitarm\nImage ID: sha256:5850ea3193e95244827a1e38cf464a0e730d1b9cc7c276888ceed984cbe38912\nRepoDigests: [\"devkitpro/devkitarm@sha256:116afba8df8453961de2936ffab20dd441edf4d682856c1ec8b0e53d7ed0bbf5\"]\n\nARM compiler: /opt/devkitpro/devkitARM/bin/arm-none-eabi-gcc\narm-none-eabi-gcc (devkitARM) 16.1.0\nCopyright (C) 2026 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n"
   },
   "capture": {
     "source": "mGBA completed GBA video scanout",
@@ -237,7 +237,7 @@
   "sampling_note": "20/30 FPS derivatives sample source timestamps; their final hold can round by less than one output interval",
   "mp4": {
     "file": "opening.mp4",
-    "sha256": "c4acbfcc6be6c658a1a6b359d7e171b3d3ddf122b751356fee16f5f63aef57db",
+    "sha256": "438accd411856a0c970b18b1fdbb73513bf230ff06dd755a65d82a75d0359168",
     "requested_rate": "native",
     "video": {
       "codec_name": "h264",
