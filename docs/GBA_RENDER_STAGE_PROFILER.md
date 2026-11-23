@@ -26,3 +26,18 @@ The tool reports completed first-person samples over 600 emulated video frames a
 ## Acceptance
 
 The ordinary `make` build must remain bit-identical at source level (no profiling code linked when the flag is absent), with the original tests and screenshot verification. The profiling-only build must compile, reach Mode4 first-person, gather at least 20 complete render samples, and print plausible per-stage CPU cycles. Never merge a graphics or FPS claim merely because profiler counters fall; require fresh full-ROM cadence and image checks.
+
+## Verified baseline reading
+
+On the instrumented build from profiling workflow run [45088515956](https://github.com/masong0508-lab/danny-steel-sprite-intro/actions/runs/45088515956) (source `b8c4fe5`), mGBA recorded **100 complete first-person frames in 600 video frames** with zero missed render generations. Each row is the mean across those completed frames:
+
+| GBA stage | ARM cycles | Time at 16.777216 MHz |
+|---|---:|---:|
+| Walls and depth | 899,630 | 53.622 ms |
+| Floor and materials | 263,721 | 15.719 ms |
+| Sky and skyline | 204,752 | 12.204 ms |
+| Weather | 42,820 | 2.552 ms |
+| Billboards and occlusion | 1,657 | 0.099 ms |
+| **Complete native renderer** | **1,412,580** | **84.196 ms** |
+
+Thus walls account for **63.7%** of first-person renderer time on this representative view, more than three times the floor. This also explains why repeated floor- and ray-step micro-optimizations were insufficient to cross the next presentation interval. The follow-up profiling pass now measures wall texture *painting* separately from cell traversal so the next CPU optimization targets the right operation. These measurements are from an emulated ARM cartridge with instrumentation overhead, not physical-console timing or host CPU performance.
