@@ -30,6 +30,37 @@ static void verify_original_road_material_rom(void){
  assert(hd_debug_road_rom_category(24,0,0,0)==255u);
  puts("packed road ROM: 61440 exact original shade categories, every map tile guarded");
 }
+void hd_debug_floor_store_two(uint8_t *row,int x,unsigned low,unsigned high);
+/* Verify byte-exact paired writes at all relevant native 240-column
+   boundaries and at both aligned and intentionally odd canvas addresses.
+   Non-target rows and full-frame guard bytes must never be modified. */
+static void verify_floor_halfword_pairs(void){
+ static uint8_t reference[HD_BYTES+128u],optimized[HD_BYTES+128u];
+ const int xs[]={0,2,4,38,118,120,200,234,236,238};
+ const int ys[]={0,1,80,98,119,139,159};
+ const unsigned ink[]={0u,17u,29u,43u,63u};
+ unsigned cases=0;
+ for(unsigned align=0;align<4u;align++)
+  for(unsigned yi=0;yi<sizeof ys/sizeof ys[0];yi++)
+   for(unsigned xi=0;xi<sizeof xs/sizeof xs[0];xi++)
+    for(unsigned a=0;a<sizeof ink/sizeof ink[0];a++)
+     for(unsigned b=0;b<sizeof ink/sizeof ink[0];b++){
+      memset(reference,0xCB,sizeof reference);
+      memset(optimized,0xCB,sizeof optimized);
+      uint8_t *want=reference+64u+align,*got=optimized+64u+align;
+      memset(want,HD_ROAD,HD_BYTES);
+      memset(got,HD_ROAD,HD_BYTES);
+      unsigned at=(unsigned)ys[yi]*HD_W+(unsigned)xs[xi];
+      want[at]=(uint8_t)ink[a];
+      want[at+1u]=(uint8_t)ink[b];
+      hd_debug_floor_store_two(got+(unsigned)ys[yi]*HD_W,
+                               xs[xi],ink[a],ink[b]);
+      assert(memcmp(reference,optimized,sizeof reference)==0);
+      cases++;
+     }
+ assert(cases==7000u);
+ printf("floor paired EWRAM pixels: %u byte-exact and guard cases\n",cases);
+}
 void hd_debug_wall_store_span(uint8_t *canvas,int x,int y,int width,uint8_t ink);
 void hd_debug_invalidate_wall_cache(void);
 
@@ -122,6 +153,7 @@ static void verify_camera_shade_cache(void){
  printf("camera wall-shade cache: %u cold/warm native full-frame matches\\n",cases);
 }
 int main(void){
+ verify_floor_halfword_pairs();
  verify_original_road_material_rom();
  verify_halfword_wall_spans();
  verify_camera_shade_cache();
