@@ -2,6 +2,7 @@
 #include "hd_canvas.h"
 #include "story_draw.h"
 #include "menu_ink.h"
+#include "menu_nav.h"
 #include "music.h"
 #include "play.h"
 #define R_BG2PA R16(0x04000020)
@@ -17,8 +18,8 @@
 enum { M_IDLE, M_TRANS };
 static unsigned page,pending,clock_frames,scene_frame;
 static int state,level,sel,mode,prev_main,dir,transition,switched;
-static int was_a,was_b,was_l,was_r,was_start,erase_hold,menu_note,note_ticks,menu_launch;
-static unsigned left_held,right_held;
+static MenuNav menu_nav;
+static int was_b,erase_hold,menu_note,note_ticks,menu_launch;
 static void ink_page(unsigned pg){
  hd_menu_draw((uint8_t*)hd_shared_frame,(unsigned)level,(unsigned)mode,(unsigned)sel,
               scene_frame,(unsigned)menu_note,(unsigned)erase_hold,
@@ -50,8 +51,7 @@ void menu_enter(void){
  R_BG2X=0;R_BG2Y=0;REG_BGCNT(2)=0;
  state=M_IDLE;level=0;sel=0;mode=0;prev_main=0;transition=0;
  switched=0;scene_frame=0;clock_frames=0;page=0;pending=0;
- was_a=was_b=was_l=was_r=was_start=1;
- left_held=right_held=0;
+ menu_nav_reset(&menu_nav);was_b=1;
  erase_hold=0;menu_note=MENU_NOTE_NONE;note_ticks=0;menu_launch=0;
  ink_page(0);
  REG_DISPCNT=4|DCNT_BG2;
@@ -63,18 +63,15 @@ int menu_update(void){
  }
  int redraw=0;
  int k=(int)~REG_KEYINPUT;
- int a=(k&KEY_A)!=0,b=(k&KEY_B)!=0,l=(k&KEY_LEFT)!=0,r=(k&KEY_RIGHT)!=0;
+ int a=(k&KEY_A)!=0,b=(k&KEY_B)!=0;
+ /* Both D-pad axes can navigate the three menu choices. Opposing
+    directions cancel, even when entered on different axes. */
+ int l=(k&(KEY_LEFT|KEY_UP))!=0,r=(k&(KEY_RIGHT|KEY_DOWN))!=0;
  int start=(k&KEY_START)!=0;
- int ea=a&&!was_a,eb=b&&!was_b,el=l&&!was_l,er=r&&!was_r;
- int confirm=ea||(start&&!was_start);
- /* Repeat after 18 frames, then every 8 frames. Opposing directions
-    cancel, so an accidental two-button hold cannot drift the cursor. */
- if(l&&!r){left_held++;right_held=0;
-  if(left_held>18u&&((left_held-19u)%8u)==0u)el=1;
- }else if(r&&!l){right_held++;left_held=0;
-  if(right_held>18u&&((right_held-19u)%8u)==0u)er=1;
- }else{left_held=right_held=0;if(l&&r)el=er=0;}
- was_a=a;was_b=b;was_l=l;was_r=r;was_start=start;
+ MenuNavEvents nav=menu_nav_step(&menu_nav,a,start,l,r);
+ int ea=nav.a_press,eb=b&&!was_b,el=nav.left_press,er=nav.right_press;
+ int confirm=ea||nav.start_press;
+ was_b=b;
  if(clock_frames<FRAMES_IN)
   REG_BLDY=(u16)(16-clock_frames*16/FRAMES_IN);
  else if(state==M_IDLE)REG_BLDY=0;
