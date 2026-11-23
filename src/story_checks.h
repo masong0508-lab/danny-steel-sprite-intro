@@ -17,6 +17,10 @@ enum {
 #define STORY_CHECK_PAGE_COUNT 4u /* three checklists + live field guide */
 #define STORY_CHECKS_PER_PAGE 5u
 #define STORY_CHECK_PAGE_ACTIVE 0x80u
+/* Transient pause-only help overlay. These bits are cleared on resume and
+   do not change the Story struct or its two-slot SRAM save format. */
+#define STORY_FIELD_GUIDE_ACTIVE 0x40u
+#define STORY_FIELD_GUIDE_DETAIL 0x10u
 #define STORY_CHECK_PAGE_MASK 0x06u
 static inline unsigned story_check_page(const Story *s){
     return (unsigned)((s->choice>>1)&3u);
