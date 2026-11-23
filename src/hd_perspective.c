@@ -169,21 +169,46 @@ static HD_CANVAS_CODE __attribute__((noinline)) void floor_render(uint8_t *p,con
    write instead of performing one byte store + loop branch per column.
    Odd heads and tails remain byte-exact; no VRAM access or extra buffers. */
 typedef uint16_t WallHalf __attribute__((may_alias));
+typedef uint32_t WallWord __attribute__((may_alias));
+/* On ARM7TDMI an aligned EWRAM word writes four identical palette pixels
+   at once. Odd-pixel and halfword heads/tails remain byte-exact. */
 static HD_CANVAS_CODE inline void wall_store_span(volatile uint8_t *row,
-               unsigned head,unsigned pairs,unsigned tail,uint8_t ink){
- if(head)*row++=ink;
- volatile WallHalf *half=(volatile WallHalf *)(void *)row;
- uint16_t fill=(uint16_t)((unsigned)ink*257u);
- for(unsigned k=0;k<pairs;k++)half[k]=fill;
- if(tail)((volatile uint8_t *)(void *)half)[pairs*2u]=ink;
+ unsigned head_byte,unsigned head_half,unsigned words,
+ unsigned tail_half,unsigned tail_byte,uint8_t ink){
+ uint16_t color2=(uint16_t)((unsigned)ink*257u);
+ uint32_t color4=(uint32_t)ink*0x01010101u;
+ if(head_byte)*row++=ink;
+ if(head_half){
+  *(volatile WallHalf *)(void *)row=color2;row+=2;
+ }
+ volatile WallWord *out=(volatile WallWord *)(void *)row;
+ for(unsigned k=0;k<words;k++)out[k]=color4;
+ row+=words*4u;
+ if(tail_half){
+  *(volatile WallHalf *)(void *)row=color2;row+=2;
+ }
+ if(tail_byte)*row=ink;
+}
+static HD_CANVAS_CODE inline void wall_plan(uintptr_t address,unsigned width,
+ unsigned *head_byte,unsigned *head_half,unsigned *words,
+ unsigned *tail_half,unsigned *tail_byte){
+ unsigned remaining=width;
+ *head_byte=(address&1u)!=0u&&remaining!=0u;
+ remaining-=*head_byte;
+ address+=*head_byte;
+ *head_half=(address&2u)!=0u&&remaining>=2u;
+ remaining-=*head_half*2u;
+ *words=remaining>>2u;
+ remaining-=*words*4u;
+ *tail_half=remaining>=2u;
+ *tail_byte=(remaining&1u)!=0u;
 }
 #if !defined(__arm__)
 void hd_debug_wall_store_span(uint8_t *canvas,int x,int y,int width,uint8_t ink){
  volatile uint8_t *row=canvas+y*HD_W+x;
- unsigned head=(unsigned)((uintptr_t)row&1u);
- unsigned pairs=((unsigned)width-head)>>1u;
- unsigned tail=((unsigned)width-head)&1u;
- wall_store_span(row,head,pairs,tail,ink);
+ unsigned hb,hh,words,th,tb;
+ wall_plan((uintptr_t)row,(unsigned)width,&hb,&hh,&words,&th,&tb);
+ wall_store_span(row,hb,hh,words,th,tb,ink);
 }
 #endif
 static HD_CANVAS_CODE void wall_column(uint8_t *p,int x,int width,int top,int bottom,char type,
@@ -202,9 +227,9 @@ static HD_CANVAS_CODE void wall_column(uint8_t *p,int x,int width,int top,int bo
  int v=0,major=256/height,minor=256%height,error=0;
  /* HD_W is even, so these alignment and span counts are constant
     across every screen row in this wall ray. */
- unsigned head=(unsigned)((uintptr_t)(p+x)&1u);
- unsigned pairs=((unsigned)width-head)>>1u;
- unsigned tail=((unsigned)width-head)&1u;
+ unsigned head_byte,head_half,words,tail_half,tail_byte;
+ wall_plan((uintptr_t)(p+x),(unsigned)width,
+           &head_byte,&head_half,&words,&tail_half,&tail_byte);
  for(int y=top;y<bottom;y++){
   if((unsigned)y>=140u)break;
   unsigned c=base;
@@ -249,7 +274,7 @@ static HD_CANVAS_CODE void wall_column(uint8_t *p,int x,int width,int top,int bo
   /* These native spans are at most 11 bytes. Keep the short stores
      here: GCC otherwise replaces them with a ROM memset per scanline. */
   volatile uint8_t *out=p+y*HD_W+x;
-  wall_store_span(out,head,pairs,tail,(uint8_t)c);
+  wall_store_span(out,head_byte,head_half,words,tail_half,tail_byte,(uint8_t)c);
   v+=major;
   error+=minor;
   if(error>=height){v++;error-=height;}
