@@ -12,7 +12,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-enum { KEY_START=8u,KEY_A=1u,KEY_B=2u,KEY_L=512u,WINDOW_FRAMES=600u,STAGES=7u };
+enum { KEY_START=8u,KEY_A=1u,KEY_B=2u,KEY_UP=64u,KEY_DOWN=128u,
+       KEY_L=512u,WINDOW_FRAMES=600u,STAGES=7u };
 static const char *const names[STAGES+1u]={
  "gba_profile_frames",
  "gba_profile_sky_cycles",
@@ -96,7 +97,14 @@ static void press(struct mCore *core,unsigned key){
  core->setKeys(core,0u);advance(core,32u);
 }
 int main(int argc,char **argv){
- if(argc!=3){fprintf(stderr,"Usage: %s profiled.gba matching.elf\n",argv[0]);return 2;}
+ if(argc!=3 && argc!=4){
+  fprintf(stderr,"Usage: %s profiled.gba matching.elf [walking]\n",argv[0]);
+  return 2;
+ }
+ int walking=argc==4;
+ if(walking && strcmp(argv[3],"walking")){
+  fputs("The only optional mode is walking\n",stderr);return 2;
+ }
  uint32_t symbol[STAGES+1u]={0};
  if(!locate_symbols(argv[2],symbol))return 2;
  struct mCore *core=mCoreFind(argv[1]);if(!core)return 2;
@@ -128,6 +136,11 @@ int main(int argc,char **argv){
  for(unsigned i=0;i<STAGES;i++){lo[i]=UINT32_MAX;hi[i]=0;}
  unsigned samples=0u,missed=0u;
  for(unsigned frame=0;frame<WINDOW_FRAMES;frame++){
+  /* Match tools/frame_cadence.c: hold reverse/forward for 48 frames
+     each on the physically walkable Potheads pavement. This changes
+     controller inputs only, never emulator time or game memory. */
+  if(walking)
+   core->setKeys(core,(frame%96u)<48u?KEY_DOWN:KEY_UP);
   advance(core,1u);
   uint32_t current=core->busRead32(core,symbol[0]);
   if(current==last)continue;
@@ -140,8 +153,9 @@ int main(int argc,char **argv){
    if(elapsed>hi[i])hi[i]=elapsed;
   }
  }
+ if(walking)core->setKeys(core,0u);
  unsigned hz=(unsigned)core->frequency(core);
- printf("Native ARM renderer stage profiler: %u sample(s) in %u video frames; "
+ printf("Native ARM renderer stage profiler (%s): %u sample(s) in %u video frames; ",walking?"held walking":"stationary"
         "%u skipped sampled generations; CPU=%u Hz\n",samples,WINDOW_FRAMES,missed,hz);
  if(samples>=20u){
   for(unsigned i=0;i<STAGES;i++){
