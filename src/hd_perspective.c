@@ -109,6 +109,46 @@ static void set_sky(uint8_t *p,unsigned tick,int facing,int cx,int cy){
  /* A flat-toned, quiet horizon instead of procedural neon sky. */
  hd_line(p,0,79,239,79,HD_STONE);
 }
+/* x+y is always in 80..378 in the visible native floor painter.
+   A 400-byte ROM mask replaces a constant-divisor test per paved pixel. */
+static const uint8_t floor_dither17[HD_W+HD_H] = {
+ 1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0
+};
+static HD_CANVAS_CODE inline unsigned road_floor_ink(int wx,int wy,int x,int y,
+                                                     unsigned noise){
+ int fx=wx&255,fy=wy&255;
+ if((fx<5||fy<5)&&(wx+wy)%3==0)return HD_ROAD_COOL;
+ if((noise&31u)==0u)return HD_REFLECT;
+ if((noise&7u)==1u)return HD_ROAD_LIGHT;
+ return floor_dither17[x+y]?HD_ROAD_COOL:HD_ROAD;
+}
+#if !defined(__arm__)
+unsigned hd_debug_floor_dither17(int x,int y){return floor_dither17[x+y];}
+#endif
 static HD_CANVAS_CODE inline unsigned floor_ink(char t,int wx,int wy,int x,int y,unsigned tick){
  int fx=wx&255,fy=wy&255;
  if(t=='~'){
@@ -126,11 +166,8 @@ static HD_CANVAS_CODE inline unsigned floor_ink(char t,int wx,int wy,int x,int y
   return HD_LEAF_DARK;
  }
  if(t=='#'||t=='A')return HD_BRICK_DARK;
- unsigned n=texel((unsigned)(wx>>4),(unsigned)(wy>>4));
- if((fx<5||fy<5)&&(wx+wy)%3==0)return HD_ROAD_COOL;
- if((n&31u)==0u)return HD_REFLECT;
- if((n&7u)==1u)return HD_ROAD_LIGHT;
- return (x+y)%17==0?HD_ROAD_COOL:HD_ROAD;
+ return road_floor_ink(wx,wy,x,y,texel((unsigned)(wx>>4),
+                                        (unsigned)(wy>>4)));
 }
 /* Keep the measured pixel loops in ARM/IWRAM. noinline prevents the
    Thumb entry point from absorbing them back into cartridge code. */
@@ -149,6 +186,10 @@ static HD_CANVAS_CODE __attribute__((noinline)) void floor_render(uint8_t *p,con
      that test. Reuse the depth strip instead of an extra coverage buffer. */
   int wall_limit=10400/(y-78)-60;
   int last_tx=-99,last_ty=-99;
+  /* Sample successive road pixels often share the exact same 16-unit
+     world-material cell. Remember one hash per scanline (stack only). */
+  int last_hx=-2147483647,last_hy=-2147483647;
+  unsigned road_noise=0u;
   char tile='.';
   int begin=0;
   for(unsigned ray=0;ray<sizeof ray_end;ray++){
@@ -163,7 +204,15 @@ static HD_CANVAS_CODE __attribute__((noinline)) void floor_render(uint8_t *p,con
      if(tx!=last_tx||ty!=last_ty){
       last_tx=tx;last_ty=ty;tile=story_tile(tx,ty);
      }
-     unsigned ink=floor_ink(tile,wx,wy,x,y,tick);
+     unsigned ink;
+     if(tile=='.'){
+      int hx=wx>>4,hy=wy>>4;
+      if(hx!=last_hx||hy!=last_hy){
+       last_hx=hx;last_hy=hy;
+       road_noise=texel((unsigned)hx,(unsigned)hy);
+      }
+      ink=road_floor_ink(wx,wy,x,y,road_noise);
+     }else ink=floor_ink(tile,wx,wy,x,y,tick);
      /* An odd run edge may split a far sample. Keep its original
         even sample x, then paint only this run's visible member(s). */
      if(x>=begin)p[y*HD_W+x]=(uint8_t)ink;
