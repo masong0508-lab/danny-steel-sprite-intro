@@ -142,8 +142,7 @@ static HD_CANVAS_CODE inline unsigned packed_road_floor(
  if((fx<5||fy<5)&&(wx+wy)%3==0)return HD_ROAD_COOL;
  unsigned cellx=((unsigned)wx>>4)&15u;
  unsigned celly=((unsigned)wy>>4)&15u;
- unsigned offset=road_tile*64u+celly*4u+(cellx>>2);
- unsigned category=(hd_road_material_2bits[offset]>>((cellx&3u)*2u))&3u;
+ unsigned category=hd_road_material_bytes[road_tile*256u+celly*16u+cellx];
  if(category==0u)return HD_REFLECT;
  if(category==1u)return HD_ROAD_LIGHT;
  return hd_floor_dither17[x+y]?HD_ROAD_COOL:HD_ROAD;
@@ -153,8 +152,7 @@ unsigned hd_debug_road_rom_category(int tx,int ty,unsigned cx,unsigned cy){
  if((unsigned)tx>=24u||(unsigned)ty>=18u||cx>=16u||cy>=16u)return 255u;
  unsigned id=hd_road_tile_index[ty*24+tx];
  if(id==255u)return 255u;
- unsigned byte=hd_road_material_2bits[id*64u+cy*4u+(cx>>2)];
- return (byte>>((cx&3u)*2u))&3u;
+ return hd_road_material_bytes[id*256u+cy*16u+cx];
 }
 #endif
 static HD_CANVAS_CODE inline unsigned floor_ink(char t,int wx,int wy,int x,int y,unsigned tick){
