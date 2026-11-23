@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - "perf/**"
+      - "test/arm-moving-render-profile-20261122"
     paths:
       - ".github/workflows/renderer-profile.yml"
       - "src/hd_perspective.c"
@@ -41,3 +42,4 @@ jobs:
           set -euo pipefail
           gcc -std=c11 -O2 -Wall -Wextra -Werror tools/renderer_cycles.c -lmgba -o /tmp/danny-render-profile
           /tmp/danny-render-profile danny_steel_title.gba danny_steel_title.elf
+          /tmp/danny-render-profile danny_steel_title.gba danny_steel_title.elf walking
