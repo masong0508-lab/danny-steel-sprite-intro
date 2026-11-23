@@ -1,6 +1,7 @@
 #include "hd_canvas.h"
 #include "hd_world_atlas.h"
 #include "hd_facade_art.h"
+#include "hd_road_material_rom.inc"
 #if defined(GBA_PROFILE_RENDER) && defined(__arm__)
 #include "gba.h"
 /* Debug-build-only counters. Normal release builds allocate NONE of these.
@@ -109,6 +110,53 @@ static void set_sky(uint8_t *p,unsigned tick,int facing,int cx,int cy){
  /* A flat-toned, quiet horizon instead of procedural neon sky. */
  hd_line(p,0,79,239,79,HD_STONE);
 }
+/* 400 ROM bytes replace the repeating 17-column road dither modulo. */
+static const uint8_t hd_floor_dither17[HD_W+HD_H] = {
+ 1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ 1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,
+ 0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0
+};
+/* One checked road tile id is retained as the original painter advances
+   through map cells. Each 16-world-unit texel is an exact two-bit
+   category from the original procedural hash, without a per-pixel hash. */
+static HD_CANVAS_CODE inline unsigned packed_road_floor(
+ int wx,int wy,int x,int y,unsigned road_tile){
+ int fx=wx&255,fy=wy&255;
+ if((fx<5||fy<5)&&(wx+wy)%3==0)return HD_ROAD_COOL;
+ unsigned cellx=((unsigned)wx>>4)&15u;
+ unsigned celly=((unsigned)wy>>4)&15u;
+ unsigned offset=road_tile*64u+celly*4u+(cellx>>2);
+ unsigned category=(hd_road_material_2bits[offset]>>((cellx&3u)*2u))&3u;
+ if(category==0u)return HD_REFLECT;
+ if(category==1u)return HD_ROAD_LIGHT;
+ return hd_floor_dither17[x+y]?HD_ROAD_COOL:HD_ROAD;
+}
+#if !defined(__arm__)
+unsigned hd_debug_road_rom_category(int tx,int ty,unsigned cx,unsigned cy){
+ if((unsigned)tx>=24u||(unsigned)ty>=18u||cx>=16u||cy>=16u)return 255u;
+ unsigned id=hd_road_tile_index[ty*24+tx];
+ if(id==255u)return 255u;
+ unsigned byte=hd_road_material_2bits[id*64u+cy*4u+(cx>>2)];
+ return (byte>>((cx&3u)*2u))&3u;
+}
+#endif
 static HD_CANVAS_CODE inline unsigned floor_ink(char t,int wx,int wy,int x,int y,unsigned tick){
  int fx=wx&255,fy=wy&255;
  if(t=='~'){
@@ -150,6 +198,7 @@ static HD_CANVAS_CODE __attribute__((noinline)) void floor_render(uint8_t *p,con
   int wall_limit=10400/(y-78)-60;
   int last_tx=-99,last_ty=-99;
   char tile='.';
+  unsigned road_tile=0u;
   int begin=0;
   for(unsigned ray=0;ray<sizeof ray_end;ray++){
    int end=ray_end[ray];
@@ -162,8 +211,12 @@ static HD_CANVAS_CODE __attribute__((noinline)) void floor_render(uint8_t *p,con
      int tx=wx>>8,ty=wy>>8;
      if(tx!=last_tx||ty!=last_ty){
       last_tx=tx;last_ty=ty;tile=story_tile(tx,ty);
+      if(tile=='.')
+       road_tile=hd_road_tile_index[(unsigned)ty*24u+(unsigned)tx];
      }
-     unsigned ink=floor_ink(tile,wx,wy,x,y,tick);
+     unsigned ink=tile=='.'
+       ?packed_road_floor(wx,wy,x,y,road_tile)
+       :floor_ink(tile,wx,wy,x,y,tick);
      /* An odd run edge may split a far sample. Keep its original
         even sample x, then paint only this run's visible member(s). */
      if(x>=begin)p[y*HD_W+x]=(uint8_t)ink;
