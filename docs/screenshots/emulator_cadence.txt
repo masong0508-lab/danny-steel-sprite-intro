@@ -1,4 +1,4 @@
-Source commit: d820dc5639696ec25a0a634ea4bb9c5e2b6759c0
+Source commit: 4f422a679b645de6bb3d85ca450c1d3997831bfc
 mGBA 0.10.2; emulated video 59.727500570 Hz (280896 cycles/frame, 16777216 Hz CPU)
 Cadence counts presented Mode4 page changes, including identical content. It does not measure host speed or certify all-scene 30 FPS.
 Stage names describe the scripted route; verify the accompanying cadence pictures before treating them as scene measurements.
