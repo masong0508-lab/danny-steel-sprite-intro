@@ -192,11 +192,33 @@ static HD_CANVAS_CODE inline unsigned floor_ink(char t,int wx,int wy,int x,int y
  if((n&7u)==1u)return HD_ROAD_LIGHT;
  return (x+y)%17==0?HD_ROAD_COOL:HD_ROAD;
 }
+/* Two adjacent palette-index pixels share one aligned 16-bit EWRAM
+   write. For host/external canvas callers an odd base safely falls back
+   to the original two bytes. Floor-row stride is an even 240 pixels. */
+typedef uint16_t FloorHalf __attribute__((may_alias));
+static HD_CANVAS_CODE inline void floor_store_two(uint8_t *row,int x,
+                                           unsigned low,unsigned high,
+                                           unsigned can_halfword){
+ if(can_halfword)
+  *(volatile FloorHalf *)(void *)(row+x)=(FloorHalf)(low|(high<<8u));
+ else{
+  row[x]=(uint8_t)low;
+  row[x+1]=(uint8_t)high;
+ }
+}
+#if !defined(__arm__)
+void hd_debug_floor_store_two(uint8_t *row,int x,unsigned low,unsigned high){
+ floor_store_two(row,x,low,high,(((uintptr_t)(row+x))&1u)==0u);
+}
+#endif
 /* Keep the measured pixel loops in ARM/IWRAM. noinline prevents the
    Thumb entry point from absorbing them back into cartridge code. */
 static HD_CANVAS_CODE __attribute__((noinline)) void floor_render(uint8_t *p,const Story *s,int cx,int cy,
                          int fx,int fy,int rx,int ry,unsigned tick){
  (void)s;
+ /* A GBA Mode-4 scanline has an even pitch. Hoist the EWRAM pair-store
+    alignment test out of the hot per-pixel loop. */
+ unsigned can_halfword=(((uintptr_t)p)&1u)==0u;
  /* One projection calculation per scanline, and half-rate horizontal
     sampling in the far distance only. Near pavement uses each GBA pixel. */
  for(int y=80;y<140;y++){
@@ -218,6 +240,8 @@ static HD_CANVAS_CODE __attribute__((noinline)) void floor_render(uint8_t *p,con
    /* cast_walls gives every column in this original direction run
       the same hit and depth. Test coverage once, not per hidden pixel. */
    if(!wall_type[begin]||wall_depth[begin]>wall_limit){
+    unsigned pending_ink=0u;
+    uint8_t *row=p+y*HD_W;
     for(int x=begin&~(step-1);x<end;x+=step){
      int side=((x-120)*side_unit)>>8;
      int wx=cx+fx*dist+rx*side,wy=cy+fy*dist+ry*side;
@@ -240,10 +264,20 @@ static HD_CANVAS_CODE __attribute__((noinline)) void floor_render(uint8_t *p,con
       unsigned category=(packed_row>>(cx*2u))&3u;
       ink=road_shade_color(wx,wy,x,y,category);
      }else ink=floor_ink(tile,wx,wy,x,y,tick);
-     /* An odd run edge may split a far sample. Keep its original
-        even sample x, then paint only this run's visible member(s). */
-     if(x>=begin)p[y*HD_W+x]=(uint8_t)ink;
-     if(step==2&&x+1<end)p[y*HD_W+x+1]=(uint8_t)ink;
+     /* A whole paired sample is one aligned 16-bit GBA EWRAM store.
+        Near-floor adjacent native samples are paired only within this
+        same ray run; odd ray heads and tails retain their byte stores.
+        Far samples still share their original even-x sample color. */
+     if(step==2){
+      if(x>=begin){
+       if(x+1<end)floor_store_two(row,x,ink,ink,can_halfword);
+       else row[x]=(uint8_t)ink;
+      }else if(x+1<end)row[x+1]=(uint8_t)ink;
+     }else if(!(x&1)&&x+1<end){
+      pending_ink=ink;
+     }else if((x&1)&&x>begin){
+      floor_store_two(row,x-1,pending_ink,ink,can_halfword);
+     }else row[x]=(uint8_t)ink;
     }
    }
    begin=end;
