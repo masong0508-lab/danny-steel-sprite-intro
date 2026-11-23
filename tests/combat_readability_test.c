@@ -18,7 +18,53 @@ static uint32_t render(Story *s,unsigned ticks){
  for(int i=0;i<24;i++)assert(frame.before[i]==0xA1&&frame.after[i]==0xA1);
  return hash;
 }
+/* FACTS and CARE now offer different, fully VBlank-timed tactics.
+   These checks use normal story_tick input, not a fake combat clock. */
+static void verify_tactics(void){
+ assert(STORY_FACTS_PARRY_TICKS==15u);
+ assert(STORY_CARE_PARRY_TICKS==12u);
+ assert(STORY_FACTS_PARRY_COOLDOWN==24u);
+ assert(STORY_CARE_PARRY_COOLDOWN==30u);
+ for(unsigned mode=0;mode<2u;mode++){
+  Story s;story_new(&s,0);s.dialogue=0;s.cinema=CINE_NONE;
+  s.battle=BATTLE_DODGE;s.battle_choice=(uint8_t)mode;
+  s.battle_focus=4;s.battle_lane=1;s.battle_timer=0;
+  s.battle_parry=s.battle_parry_cd=0;s.battle_guard=(uint8_t)(mode==1u);
+  s.old_keys=0;
+  unsigned window=mode?STORY_CARE_PARRY_TICKS:STORY_FACTS_PARRY_TICKS;
+  unsigned cooldown=mode?STORY_CARE_PARRY_COOLDOWN:STORY_FACTS_PARRY_COOLDOWN;
+  story_tick(&s,1u); /* true one-frame A button press */
+  assert(s.battle_parry==window && s.battle_parry_cd==cooldown);
+  uint32_t active=render(&s,72u);
+  for(unsigned n=0;n<window;n++)story_tick(&s,0u);
+  assert(s.battle_parry==0u);
+  assert(s.battle_parry_cd==cooldown-window);
+  uint32_t waiting=render(&s,72u);
+  assert(waiting!=active);
+  for(unsigned n=window;n<cooldown;n++)story_tick(&s,0u);
+  assert(!s.battle_parry_cd);
+  s.battle_timer=0;s.old_keys=0;
+  uint32_t ready=render(&s,72u);
+  assert(ready!=waiting);
+  story_tick(&s,1u);
+  assert(s.battle_parry==window && s.battle_parry_cd==cooldown);
+ }
+ /* FACTS counters restore one focus, but never exceed the normal cap.
+    CARE shield remains independent and is spent on the first missed hit. */
+ Story s;story_new(&s,0);s.dialogue=0;s.cinema=CINE_NONE;
+ s.battle=BATTLE_DODGE;s.battle_choice=0;s.battle_focus=3;
+ s.battle_timer=STORY_BATTLE_BEAT-1u;
+ s.battle_lane=(uint8_t)story_attack_lane(&s,0);s.battle_parry=2u;
+ story_tick(&s,0u);assert(s.battle_focus==4u);
+ s.battle_choice=1u;s.battle_guard=1u;s.battle_focus=3u;
+ s.battle_parry=0u;s.battle_timer=STORY_BATTLE_BEAT-1u;
+ s.battle_lane=(uint8_t)story_attack_lane(&s,0);
+ story_tick(&s,0u);
+ assert(!s.battle_guard&&s.battle_focus==3u);
+ assert(sizeof(Story)<64u);
+}
 int main(void){
+ verify_tactics();
  Story s;story_new(&s,0);s.dialogue=0;s.x=2;s.y=7;s.facing=0;
  press(&s,1);assert(s.battle==BATTLE_MENU&&s.battle_focus==4);
  assert(STORY_BATTLE_BEAT==30u&&STORY_BATTLE_PARRY>=10u);
@@ -62,6 +108,6 @@ int main(void){
  /* Nonviolent exit stays an explicit, nonpunishing option. */
  press(&s,2);
  assert(s.battle==BATTLE_NONE && s.dialogue);
- puts("combat: 30-tick readable attack windows, 15-tick parry, guard, focus, 2-wave pacing, native HUD and safe exit OK");
+ puts("combat: FACTS 15/24 quick counter, CARE 12/30 guarded parry, 30-tick warnings, dynamic native HUD, focus cap, two waves and safe exit OK");
  return 0;
 }
