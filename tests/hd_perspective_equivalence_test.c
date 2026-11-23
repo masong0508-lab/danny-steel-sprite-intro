@@ -5,6 +5,7 @@
 
 /* Host-only validator is deliberately excluded from the cartridge. */
 int hd_first_person_anchor_map_valid(void);
+unsigned hd_debug_next_tile_sample(int position,int velocity);
 
 /* Captured from the original shipped PR14 painter before changing its
    ray reuse, floor ordering or instruction placement. Each value covers
@@ -20,7 +21,54 @@ static struct {
  uint8_t before[32],pixels[HD_BYTES],after[32];
 } canvas;
 
+/* The production raycaster jumps to a tile crossing using reciprocal
+   multiplication. For every relevant velocity and signed sub-tile phase,
+   verify that the answer is the FIRST original 32-unit sample in another
+   tile, not a geometric intersection between the original samples. */
+static void verify_exact_tile_jumps(void){
+ unsigned cases=0u;
+ for(int position=-257;position<=511;position++){
+  int original_tile=position>>8;
+  for(int velocity=-32;velocity<=32;velocity++){
+   unsigned actual=hd_debug_next_tile_sample(position,velocity);
+   if(!velocity){assert(actual==76u);continue;}
+   unsigned expected=1u;
+   while(((position+(int)expected*velocity)>>8)==original_tile)
+    expected++;
+   assert(actual==expected);
+   cases++;
+  }
+ }
+ assert(cases==769u*64u);
+ printf("exact ray jumps: %u signed sub-tile phases and velocities verified\\n",cases);
+}
+/* Verify exact signed 24.8 floor stepping at EVERY possible run start,
+   both half-rate and native-rate spans, and all 60 sampled scanlines.
+   This compares independent multiplications with recurrence, including
+   negative side offsets around the center of the 240-column camera. */
+static void verify_fixedpoint_floor_steps(void){
+ unsigned comparisons=0u;
+ for(int y=80;y<140;y++){
+  int dist=13500/(y-75);
+  if(dist>2304)dist=2304;
+  int side_unit=dist*3*256/480;
+  int step=y<98?2:1;
+  for(int begin=0;begin<HD_W;begin++){
+   int start=begin&~(step-1);
+   int side_acc=(start-120)*side_unit;
+   for(int x=start;x<HD_W;x+=step,side_acc+=step*side_unit){
+    int reference=((x-120)*side_unit)>>8;
+    assert((side_acc>>8)==reference);
+    comparisons++;
+   }
+  }
+ }
+ assert(comparisons>1000000u);
+ printf("fixed-point floor steps: %u exact comparisons across all row starts and signed camera sides\n",comparisons);
+}
 int main(void){
+ verify_fixedpoint_floor_steps();
+ verify_exact_tile_jumps();
  assert(hd_first_person_anchor_map_valid());
  Story s;story_new(&s,0);
  const unsigned ticks[3]={0,71,433};
