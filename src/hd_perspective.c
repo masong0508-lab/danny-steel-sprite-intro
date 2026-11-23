@@ -39,6 +39,16 @@ static uint32_t gba_profile_clock(void){
 static uint16_t wall_depth[HD_W];
 /* Sparse native-column depth/texture cache, not another framebuffer. */
 static uint8_t wall_type[HD_W],wall_u[HD_W],wall_tx[HD_W],wall_ty[HD_W];
+/* Fixed cartridge-town wall shade memo: only 45 sampled ray directions,
+   at most 150 vertical palette entries per ray (6,750 EWRAM bytes).
+   This is NOT another framebuffer and never caches moving sky or rain. */
+enum { WALL_RAYS=45, WALL_SHADE_ROWS=150 };
+static uint8_t wall_shade_cache[WALL_RAYS][WALL_SHADE_ROWS]
+ __attribute__((section(".ewram"),aligned(4)));
+static int wall_cache_valid,wall_cam_x,wall_cam_y,wall_cam_fx,wall_cam_fy;
+#if !defined(__arm__)
+void hd_debug_invalidate_wall_cache(void){wall_cache_valid=0;}
+#endif
 /* Ends of the exact original ((x-120)*3)/16 ray-direction runs. */
 static const uint8_t ray_end[45]={
  3,9,14,19,25,30,35,41,46,51,57,62,67,73,78,83,89,94,99,105,110,115,
@@ -187,7 +197,7 @@ void hd_debug_wall_store_span(uint8_t *canvas,int x,int y,int width,uint8_t ink)
 }
 #endif
 static HD_CANVAS_CODE void wall_column(uint8_t *p,int x,int width,int top,int bottom,char type,
-                        int u,int forward,int tx,int ty){
+                        int u,int forward,int tx,int ty,uint8_t *save_ink){
 #if defined(GBA_PROFILE_RENDER) && defined(__arm__)
  uint32_t wallshade_start=gba_profile_clock();
 #endif
@@ -250,6 +260,7 @@ static HD_CANVAS_CODE void wall_column(uint8_t *p,int x,int width,int top,int bo
      here: GCC otherwise replaces them with a ROM memset per scanline. */
   volatile uint8_t *out=p+y*HD_W+x;
   wall_store_span(out,head,pairs,tail,(uint8_t)c);
+  if(save_ink)save_ink[y-top]=(uint8_t)c;
   v+=major;
   error+=minor;
   if(error>=height){v++;error-=height;}
@@ -259,7 +270,31 @@ static HD_CANVAS_CODE void wall_column(uint8_t *p,int x,int width,int top,int bo
  gba_profile_wallshade_cycles+=gba_profile_clock()-wallshade_start;
 #endif
 }
+/* Warm-camera path reads only the exact indexed shades computed by the
+   original wall shader on the first draw at this pose. The same row-span
+   writer and cap-edge rule keep all 240 native columns pixel-identical. */
+static HD_CANVAS_CODE void wall_cached_column(uint8_t *p,int x,int width,
+                              int top,int bottom,char type,const uint8_t *shades){
+#if defined(GBA_PROFILE_RENDER) && defined(__arm__)
+ uint32_t wallshade_start=gba_profile_clock();
+#endif
+ unsigned head=(unsigned)((uintptr_t)(p+x)&1u);
+ unsigned pairs=((unsigned)width-head)>>1u;
+ unsigned tail=((unsigned)width-head)&1u;
+ for(int y=top;y<bottom;y++){
+  if((unsigned)y>=140u)break;
+  wall_store_span(p+y*HD_W+x,head,pairs,tail,shades[y-top]);
+ }
+ if(top>18 && top<140)
+  hd_rect(p,x,top,width,1,type=='T'?HD_LEAF_LIT:HD_STONE_LIT);
+#if defined(GBA_PROFILE_RENDER) && defined(__arm__)
+ gba_profile_wallshade_cycles+=gba_profile_clock()-wallshade_start;
+#endif
+}
 static HD_CANVAS_CODE __attribute__((noinline)) void cast_walls(uint8_t *p,int cx,int cy,int fx,int fy,int rx,int ry){
+ int warm=wall_cache_valid&&wall_cam_x==cx&&wall_cam_y==cy&&
+          wall_cam_fx==fx&&wall_cam_fy==fy;
+ unsigned slot=0;
  for(int x=0;x<HD_W;){
   int side=((x-120)*3)/16; /* 0.75 FOV at each edge, fixed-point */
   /* The original integer projection gives adjacent columns identical
@@ -286,7 +321,7 @@ static HD_CANVAS_CODE __attribute__((noinline)) void cast_walls(uint8_t *p,int c
    wall_depth[col]=(uint16_t)hit_dist;
    wall_type[col]=(uint8_t)hit;
   }
-  if(!hit){x=end;continue;}
+  if(!hit){x=end;slot++;continue;}
   int height=20800/(hit_dist+60);
   if(height>150)height=150;
   if(height<3)height=3;
@@ -297,9 +332,15 @@ static HD_CANVAS_CODE __attribute__((noinline)) void cast_walls(uint8_t *p,int c
    wall_tx[col]=(uint8_t)tx;
    wall_ty[col]=(uint8_t)ty;
   }
-  wall_column(p,x,end-x,top,bottom,hit,u,hit_dist,tx,ty);
-  x=end;
+  if(warm&&slot<WALL_RAYS)
+   wall_cached_column(p,x,end-x,top,bottom,hit,wall_shade_cache[slot]);
+  else
+   wall_column(p,x,end-x,top,bottom,hit,u,hit_dist,tx,ty,
+               slot<WALL_RAYS?wall_shade_cache[slot]:0);
+  x=end;slot++;
  }
+ wall_cache_valid=slot==WALL_RAYS;
+ wall_cam_x=cx;wall_cam_y=cy;wall_cam_fx=fx;wall_cam_fy=fy;
 }
 static void actor(uint8_t *p,int sx,int ground,int h,char kind,unsigned tick){
  if(h<8)return;
@@ -405,7 +446,7 @@ static void restore_occluding_wall(uint8_t *p,int sx,int h,int depth){
   if(wh>150)wh=150;
   if(wh<3)wh=3;
   wall_column(p,x,1,79-wh/2,79+wh/2,(char)wall_type[x],wall_u[x],
-              wall_depth[x],wall_tx[x],wall_ty[x]);
+              wall_depth[x],wall_tx[x],wall_ty[x],0);
  }
 }
 static void render_billboards(uint8_t *p,int cx,int cy,

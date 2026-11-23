@@ -6,6 +6,7 @@
 /* Host-only validator is deliberately excluded from the cartridge. */
 int hd_first_person_anchor_map_valid(void);
 void hd_debug_wall_store_span(uint8_t *canvas,int x,int y,int width,uint8_t ink);
+void hd_debug_invalidate_wall_cache(void);
 
 /* Captured from the original shipped PR14 painter before changing its
    ray reuse, floor ordering or instruction placement. Each value covers
@@ -52,8 +53,52 @@ static void verify_halfword_wall_spans(void){
  assert(cases>6000u);
  printf("aligned wall spans: %u exact guarded pixel/alignment cases\\n",cases);
 }
+/* Every warm ray cache must reproduce the original uncached image,
+   including when rain, clouds, animation and facing change after a draw.
+   Source graphics and actor overlays remain the authority. */
+static void verify_camera_shade_cache(void){
+ static uint8_t cold[HD_BYTES];
+ const int places[][2]={{20,11},{12,13},{11,8},{18,13},{7,7}};
+ const unsigned moments[]={0u,71u,433u};
+ Story s;story_new(&s,0);
+ s.dialogue=0;s.cinema=CINE_NONE;s.battle=0;s.scene=STORY_SCENE_NONE;
+ s.anim=0;s.activity=0;s.ended=0;
+ unsigned cases=0;
+ for(unsigned place=0;place<sizeof places/sizeof places[0];place++){
+  s.x=(uint8_t)places[place][0];s.y=(uint8_t)places[place][1];
+  assert(!story_solid(s.x,s.y));
+  s.prev_x=s.x;s.prev_y=s.y;
+  for(unsigned facing=0;facing<4u;facing++){
+   s.facing=(uint8_t)facing;
+   for(unsigned k=0;k<sizeof moments/sizeof moments[0];k++){
+    unsigned tick=moments[k];
+    hd_debug_invalidate_wall_cache();
+    memset(&canvas,0xA6,sizeof canvas);
+    hd_first_person_draw(canvas.pixels,&s,tick);
+    memcpy(cold,canvas.pixels,HD_BYTES);
+    memset(&canvas,0xA6,sizeof canvas);
+    hd_first_person_draw(canvas.pixels,&s,tick); /* warm, same clock */
+    assert(!memcmp(cold,canvas.pixels,HD_BYTES));
+    cases++;
+    memset(&canvas,0xA6,sizeof canvas);
+    hd_first_person_draw(canvas.pixels,&s,tick+13u); /* warm, animated */
+    memcpy(cold,canvas.pixels,HD_BYTES);
+    hd_debug_invalidate_wall_cache();
+    memset(&canvas,0xA6,sizeof canvas);
+    hd_first_person_draw(canvas.pixels,&s,tick+13u); /* cold, animated */
+    assert(!memcmp(cold,canvas.pixels,HD_BYTES));
+    cases++;
+    for(unsigned sentinel=0;sentinel<32u;sentinel++)
+     assert(canvas.before[sentinel]==0xA6u&&canvas.after[sentinel]==0xA6u);
+   }
+  }
+ }
+ assert(cases==120u);
+ printf("camera wall-shade cache: %u cold/warm native full-frame matches\\n",cases);
+}
 int main(void){
  verify_halfword_wall_spans();
+ verify_camera_shade_cache();
  assert(hd_first_person_anchor_map_valid());
  Story s;story_new(&s,0);
  const unsigned ticks[3]={0,71,433};
