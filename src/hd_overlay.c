@@ -24,21 +24,21 @@ static void field_guide(uint8_t *p,const Story *s){
  if(s->choice&STORY_FIELD_GUIDE_DETAIL){
   hd_text(p,27,31,"FIELD GUIDE / HOW TO PLAY",HD_LAMP,1,0);
   hd_line(p,21,44,217,44,HD_STONE_DARK);
-  hd_text(p,22,52,"CORE / LETTER THEN BORE THEN MARA",HD_PAPER,1,0);
-  hd_text(p,22,63,"MUSIC + ART COMPLETE THE STORY",HD_PAPER,1,0);
-  hd_text(p,22,74,"BUS CAN START ANOTHER DAY",HD_STONE_LIT,1,0);
+  hd_text(p,22,52,"CORE: LETTER > BORE > MARA",HD_PAPER,1,0);
+  hd_text(p,22,63,"AFTER CORE THE BUS IS OPEN",HD_PAPER,1,0);
+  hd_text(p,22,74,"EXTRAS: TAPE + ROOF CHANGE END",HD_STONE_LIT,1,0);
   hd_line(p,21,85,217,85,HD_STONE_DARK);
-  hd_text(p,22,91,"A TALK / WORK / INTERACT",HD_PAPER,1,0);
-  hd_text(p,22,102,"L SWITCH CAMERA WHILE PLAYING",HD_PAPER,1,0);
-  hd_text(p,22,113,"B RISK ONLY NEAR MARKED SITES",HD_STONE_LIT,1,0);
-  hd_text(p,22,124,"REST GIVES ENERGY / BOND IS TRUST",HD_PAPER,1,0);
-  hd_text(p,22,135,"SPARK HELPS ART / DAYS ARE OPEN",HD_STONE_LIT,1,0);
+  hd_text(p,22,91,"TRY TO LEAVE: CLINIC STOPS TRIP",HD_PAPER,1,0);
+  hd_text(p,22,102,"A INTERACT / L CAMERA / R NOTES",HD_PAPER,1,0);
+  hd_text(p,22,113,"B RISK IS OPTIONAL + CONFIRMED",HD_STONE_LIT,1,0);
+  hd_text(p,22,124,"REST = ENERGY / BOND = TRUST",HD_PAPER,1,0);
+  hd_text(p,22,135,"SPARK = ART / NO DEADLINE",HD_STONE_LIT,1,0);
  }else{
   hd_text(p,27,31,"FIELD GUIDE / OLD QUARTER",HD_LAMP,1,0);
   hd_line(p,21,44,217,44,HD_STONE_DARK);
   int gx=0,gy=0;const char *goal=0;
   int has=story_goal(s,&gx,&gy,&goal);
-  hd_text(p,22,51,has?"NEXT DESTINATION":"NO URGENT ERRAND",
+  hd_text(p,22,51,has?story_goal_kind(s):"NO URGENT ERRAND",
           HD_STONE_LIT,1,0);
   if(has){
    hd_text(p,22,63,goal,HD_PAPER,1,0);
@@ -182,8 +182,12 @@ void hd_game_overlay(uint8_t *p,const Story *s){
  if(s->choosing){
   framebox(p,13,79,214,77);
   hd_text(p,23,90,"THE LAST BUS",HD_LAMP,1,1);
-  hd_text(p,23,103,"LEAVE OR STAY A LITTLE LONGER",HD_PAPER,1,0);
-  selectable(p,23,118,92,"GO",!s->choice);
+  hd_text(p,23,103,(s->flags&STORY_FULL)==STORY_FULL?
+     "FINISHED WORK: BOARD THE BUS":
+     s->life_stage?"YOU ARE ALREADY STAYING":
+     "CLINIC CALL WILL STOP THE TRIP",HD_PAPER,1,0);
+  selectable(p,23,118,92,(s->flags&STORY_FULL)==STORY_FULL?
+     "BOARD":"TRY TO GO",!s->choice);
   selectable(p,123,118,91,"STAY",s->choice);
   hd_text(p,23,145,"LEFT/RIGHT   A CHOOSE   B BACK",HD_STONE_LIT,1,0);
   return;
@@ -202,7 +206,8 @@ void hd_game_overlay(uint8_t *p,const Story *s){
   hd_rect(p,0,0,240,18,HD_INK);
   hd_rect(p,0,17,240,1,HD_COPPER);
   hd_text(p,8,5,"OLD QUARTER",HD_PAPER,1,1);
-  hd_text(p,106,5,has?goal:"LOOK AROUND",HD_LAMP,1,0);
+  hd_text(p,85,5,has?story_goal_kind(s):"",HD_STONE_LIT,1,0);
+   hd_text(p,121,5,has?goal:"LOOK AROUND",HD_LAMP,1,0);
   hd_text(p,186,5,has?relative:"",HD_STONE_LIT,1,0);
   hd_rect(p,0,140,240,20,HD_INK);
   hd_rect(p,0,140,240,1,HD_COPPER);
@@ -211,7 +216,7 @@ void hd_game_overlay(uint8_t *p,const Story *s){
   hd_rect(p,8,143,3,7,HD_GOLD);
   hd_text(p,16,143,story_action_hint(s),HD_PAPER,1,0);
   hd_rect(p,92,143,1,14,HD_STONE_DARK);
-  hd_text(p,100,143,"L MAP  R GUIDE",HD_STONE_LIT,1,0);
+  hd_text(p,100,143,"L MAP  R NOTES",HD_STONE_LIT,1,0);
   int risk=story_risk_available(s);
   hd_text(p,16,152,risk?
           "B RISK  CONFIRM FIRST":"B NO RISK AT THIS LOCATION",
