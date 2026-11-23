@@ -52,6 +52,7 @@ static struct {
 } screen_a,screen_b;
 static void paint(uint8_t *p,const Story *s,int overlay){
  memset(&screen_a,0xA8,sizeof screen_a);
+ memset(screen_a.pixels,HD_ROAD,HD_BYTES);
  if(overlay)hd_game_overlay(screen_a.pixels,s);
  else hd_isometric_draw(screen_a.pixels,s,93u);
  for(int i=0;i<32;i++)assert(screen_a.before[i]==0xA8&&screen_a.after[i]==0xA8);
