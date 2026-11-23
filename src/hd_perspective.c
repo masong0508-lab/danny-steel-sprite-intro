@@ -1,6 +1,7 @@
 #include "hd_canvas.h"
 #include "hd_world_atlas.h"
 #include "hd_facade_art.h"
+#include "hd_wall_noise_rom.inc"
 #if defined(GBA_PROFILE_RENDER) && defined(__arm__)
 #include "gba.h"
 /* Debug-build-only counters. Normal release builds allocate NONE of these.
@@ -60,6 +61,16 @@ static HD_CANVAS_CODE inline unsigned texel(unsigned x,unsigned y){
  uint32_t v=(x+31u)*1664525u+(y+79u)*1013904223u;
  v^=v>>13;v*=2246822519u;return (unsigned)(v^(v>>11));
 }
+/* For town wall/tree materials, texel() coordinates are almost always
+   0..79. The ROM table is precisely its low three bits, preserving the
+   authored procedural texture with no runtime multiply or added RAM. */
+static HD_CANVAS_CODE inline unsigned wall_noise(unsigned x,unsigned y){
+ if(x<80u&&y<80u)return hd_wall_noise_3bits[y*80u+x];
+ return texel(x,y)&7u;
+}
+#if !defined(__arm__)
+unsigned hd_debug_wall_noise(unsigned x,unsigned y){return wall_noise(x,y);}
+#endif
 static void dirs(const Story *s,int *fx,int *fy,int *rx,int *ry){
  switch(s->facing&3u){
   case 0:*fx=1;*fy=0;*rx=0;*ry=1;break;
@@ -220,7 +231,7 @@ static HD_CANVAS_CODE void wall_column(uint8_t *p,int x,int width,int top,int bo
   unsigned c=base;
   if(tree){
    if(v>178 && u>91 && u<162)c=HD_BARK;
-   else if((texel((unsigned)(u>>3),(unsigned)(v>>3))&3u)==0u)
+   else if((wall_noise((unsigned)(u>>3),(unsigned)(v>>3))&3u)==0u)
     c=HD_LEAF_LIT;
    else c=HD_LEAF;
   }else{
@@ -245,8 +256,8 @@ static HD_CANVAS_CODE void wall_column(uint8_t *p,int x,int width,int top,int bo
     else if(v<92&&u>140&&u<153)c=HD_LAMP;
     else if((u&31)<2)c=HD_COPPER;
     else c=((tx+ty)&1)?HD_GLASS_LIT:HD_GLASS;
-   }else if((texel((unsigned)(u>>4)+(unsigned)(tx+40),
-                         (unsigned)(v>>4)+(unsigned)(ty+40))&7u)==0u)
+   }else if(wall_noise((unsigned)(u>>4)+(unsigned)(tx+40),
+                    (unsigned)(v>>4)+(unsigned)(ty+40))==0u)
     c=HD_BRICK_LIT;
   }
   if(v>225&&(u&15)==1)c=HD_STONE;
