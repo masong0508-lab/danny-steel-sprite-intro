@@ -35,8 +35,9 @@ static void heading(uint8_t *p,const Story *s){
  hd_rect(p,0,17,HD_W,1,HD_COPPER);
  hd_text(p,8,5,"OLD QUARTER",HD_PAPER,1,1);
  hd_rect(p,84,3,1,11,HD_COPPER);
- hd_text(p,91,5,has?"NEXT":"FREE TIME",HD_LAMP,1,0);
- if(has)hd_text(p,116,5,goal,HD_PAPER,1,0);
+ /* Distinguish necessary story beats from optional legacy work. */
+ hd_text(p,91,5,has?story_goal_kind(s):"FREE",HD_LAMP,1,0);
+ if(has)hd_text(p,126,5,goal,HD_PAPER,1,0);
  hd_rect(p,189,3,1,11,HD_COPPER);
  hd_text(p,197,5,heading,HD_STONE_LIT,1,0);
  /* Physical control cues, not a debug-style description of the
@@ -48,7 +49,7 @@ static void heading(uint8_t *p,const Story *s){
  hd_rect(p,94,144,1,12,HD_STONE_DARK);
  hd_text(p,103,147,"L CAMERA",HD_STONE_LIT,1,0);
  hd_rect(p,166,144,1,12,HD_STONE_DARK);
- hd_text(p,174,147,"R GUIDE",HD_STONE_LIT,1,0);
+ hd_text(p,174,147,"R NOTES",HD_STONE_LIT,1,0);
 }
 void hd_world_draw(uint8_t *p,const Story *s,unsigned frame){
  hd_isometric_draw(p,s,frame);
