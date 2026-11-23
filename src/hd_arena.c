@@ -38,8 +38,8 @@ static void telegraph(uint8_t *p,const Story *s,unsigned frame){
 
  hd_ellipse(p,target,129,21,4,HD_RED_SHADE);
  hd_ellipse(p,target,129,16,2,HD_COPPER);
- /* A crumpled paper warning travels down the appropriate attack
-    corridor. On the fifteenth story frame the game checks this lane. */
+ /* A crumpled paper warning travels through the actual attack
+    corridor; after the full 30-VBlank tell the strike hits this lane. */
  int x=120+(target-120)*(int)phase/(int)(STORY_BATTLE_BEAT-1u);
  int y=82+(int)phase*44/(int)(STORY_BATTLE_BEAT-1u);
  int size=5+(int)phase*9/(int)(STORY_BATTLE_BEAT-1u);
@@ -69,8 +69,8 @@ static void huddle(uint8_t *p,const Story *s,unsigned tick){
  hd_rect(p,x-16,131,32,1,HD_STONE_LIT);
  hd_actor_stage(p,x,134,1,tick,s->battle_parry?3:move?2:0);
  if(s->battle_parry){
-  /* Parry is six simulation ticks: only draw when story has actually
-     armed it; no false permanent shield or misleading dodge invulnerability. */
+  /* Parry is a real 12- or 15-VBlank window depending on tactic.
+     Draw its stance only while active, never as permanent invulnerability. */
   hd_line(p,x-26,86,x-20,79,HD_GOLD);
   hd_line(p,x-20,79,x-10,75,HD_COPPER);
   hd_line(p,x+26,86,x+20,79,HD_GOLD);
@@ -104,8 +104,10 @@ static void hud(uint8_t *p,const Story *s){
      a full-width banner cropping the rival's hair, hat or costume ears. */
   hd_rect(p,4,34,72,12,HD_INK);
   hd_rect(p,4,34,72,1,HD_COPPER);
-  hd_text(p,8,37,s->battle_choice==1?"CARE SHIELD":
-          s->battle_choice==2?"EXIT SAFELY":"FACTS COUNTER",
+  /* These timing numbers are the real VBlank mechanics, not arbitrary
+     badge labels: FACTS is quicker, CARE has a one-hit guard. */
+  hd_text(p,8,37,s->battle_choice==1?"CARE 12/30":
+          s->battle_choice==2?"EXIT SAFELY":"FACTS 15/24",
           HD_STONE_LIT,1,0);
   hd_rect(p,164,34,72,12,HD_INK);
   hd_rect(p,164,34,72,1,HD_COPPER);
@@ -120,6 +122,24 @@ static void hud(uint8_t *p,const Story *s){
   hd_rect(p,5,28,83,12,HD_INK);
   hd_rect(p,5,28,83,1,HD_COPPER);
   hd_text(p,9,31,lanes[story_attack_lane(s,(int)next)],HD_LAMP,1,0);
+  /* The selected tactic and its live cooldown stay visible outside the
+     opponent portrait. The actual parry/safe guard come from Story state. */
+  hd_rect(p,164,28,72,26,HD_INK);
+  hd_rect(p,164,28,72,1,HD_COPPER);
+  hd_text(p,168,32,s->battle_choice==0?"FACTS FAST":"CARE GUARD",
+          HD_PAPER,1,0);
+  const char *timing;
+  char remaining[]="WAIT 00";
+  if(s->battle_parry)timing="PARRY ON";
+  else if(s->battle_parry_cd){
+   unsigned n=s->battle_parry_cd>99u?99u:s->battle_parry_cd;
+   remaining[5]=(char)('0'+n/10u);
+   remaining[6]=(char)('0'+n%10u);
+   timing=remaining;
+  }else if(s->battle_guard)timing="GUARD READY";
+  else timing="PARRY READY";
+  hd_text(p,168,44,timing,s->battle_parry?HD_LAMP:
+          s->battle_parry_cd?HD_STONE_LIT:HD_GOLD,1,0);
   char wave[]="ROUND 1/2";
   wave[6]=(char)('1'+(s->battle_progress&1u));
   hd_text(p,8,143,"LEFT RIGHT / MOVE",HD_PAPER,1,0);
