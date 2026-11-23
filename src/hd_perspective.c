@@ -198,6 +198,28 @@ static HD_CANVAS_CODE void wall_column(uint8_t *p,int x,int width,int top,int bo
  }
  if(top>18 && top<140)hd_rect(p,x,top,width,1,tree?HD_LEAF_LIT:HD_STONE_LIT);
 }
+
+/* Exact reciprocal quotients for 1..32-pixel ray velocities. Because a
+   next-tile gap is at most 256, ceil(65536/d) reproduces floor(n/d)
+   for n<=255 exactly. No software integer divisions in this hot loop. */
+static const uint16_t ray_reciprocal_q16[33]={
+ 0u, 0u, 32768u, 21846u, 16384u, 13108u, 10923u, 9363u, 8192u, 7282u, 6554u, 5958u, 5462u, 5042u, 4682u, 4370u, 4096u, 3856u, 3641u, 3450u, 3277u, 3121u, 2979u, 2850u, 2731u, 2622u, 2521u, 2428u, 2341u, 2260u, 2185u, 2115u, 2048u
+};
+static HD_CANVAS_CODE inline unsigned next_tile_sample(int position,int velocity){
+ if(velocity==0)return 76u;
+ int origin=(position>>8)*256;
+ unsigned gap=(unsigned)(velocity>0?
+                        origin+256-position:position-origin+1);
+ unsigned speed=(unsigned)(velocity>0?velocity:-velocity);
+ if(speed==1u)return gap;
+ return 1u+(((gap-1u)*ray_reciprocal_q16[speed])>>16);
+}
+#if !defined(__arm__)
+/* Exposed only to the host regression test. No extra GBA entry points. */
+unsigned hd_debug_next_tile_sample(int position,int velocity){
+ return next_tile_sample(position,velocity);
+}
+#endif
 static HD_CANVAS_CODE __attribute__((noinline)) void cast_walls(uint8_t *p,int cx,int cy,int fx,int fy,int rx,int ry){
  for(int x=0;x<HD_W;){
   int side=((x-120)*3)/16; /* 0.75 FOV at each edge, fixed-point */
@@ -207,18 +229,25 @@ static HD_CANVAS_CODE __attribute__((noinline)) void cast_walls(uint8_t *p,int c
   while(end<HD_W && ((end-120)*3)/16==side)end++;
   int dx=fx*32+rx*side,dy=fy*32+ry*side;
   int wx=cx,wy=cy,hit_dist=2400,tx=0,ty=0;
-  int previous_tx=cx>>8,previous_ty=cy>>8;
   char hit=0;
-  for(int step=1;step<76;step++){
-   wx+=dx;wy+=dy;
+  /* A ray can take many 32-unit samples before leaving its present tile.
+     Jump directly to the first ORIGINAL sample in the next X or Y tile.
+     Both axes are sampled together, preserving diagonal corner behavior
+     and the exact hit distance/texture U of the old 75-step traversal. */
+  unsigned step=0u;
+  while(step<75u){
+   unsigned skipx=next_tile_sample(wx,dx);
+   unsigned skipy=next_tile_sample(wy,dy);
+   unsigned advance=skipx<skipy?skipx:skipy;
+   if(advance>75u-step)break;
+   step+=advance;
+   wx+=dx*(int)advance;
+   wy+=dy*(int)advance;
    tx=wx>>8;ty=wy>>8;
-   /* 32-step ray samples often sit in the SAME town tile.
-      Only touch the story grid on cell crossings. Same collision set,
-      depth and view, but many fewer tile queries and branch chains. */
-   if(tx==previous_tx && ty==previous_ty)continue;
-   previous_tx=tx;previous_ty=ty;
    char t=story_tile(tx,ty);
-   if(t=='#'||t=='A'||t=='T'){hit=t;hit_dist=step*32;break;}
+   if(t=='#'||t=='A'||t=='T'){
+    hit=t;hit_dist=(int)step*32;break;
+   }
   }
   if(hit_dist>2300)hit_dist=2300;
   for(int col=x;col<end;col++){
