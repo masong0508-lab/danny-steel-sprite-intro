@@ -17,7 +17,8 @@
 enum { M_IDLE, M_TRANS };
 static unsigned page,pending,clock_frames,scene_frame;
 static int state,level,sel,mode,prev_main,dir,transition,switched;
-static int was_a,was_b,was_l,was_r,erase_hold,menu_note,note_ticks,menu_launch;
+static int was_a,was_b,was_l,was_r,was_start,erase_hold,menu_note,note_ticks,menu_launch;
+static unsigned left_held,right_held;
 static void ink_page(unsigned pg){
  hd_menu_draw((uint8_t*)hd_shared_frame,(unsigned)level,(unsigned)mode,(unsigned)sel,
               scene_frame,(unsigned)menu_note,(unsigned)erase_hold,
@@ -49,7 +50,8 @@ void menu_enter(void){
  R_BG2X=0;R_BG2Y=0;REG_BGCNT(2)=0;
  state=M_IDLE;level=0;sel=0;mode=0;prev_main=0;transition=0;
  switched=0;scene_frame=0;clock_frames=0;page=0;pending=0;
- was_a=was_b=was_l=was_r=1;
+ was_a=was_b=was_l=was_r=was_start=1;
+ left_held=right_held=0;
  erase_hold=0;menu_note=MENU_NOTE_NONE;note_ticks=0;menu_launch=0;
  ink_page(0);
  REG_DISPCNT=4|DCNT_BG2;
@@ -62,8 +64,17 @@ int menu_update(void){
  int redraw=0;
  int k=(int)~REG_KEYINPUT;
  int a=(k&KEY_A)!=0,b=(k&KEY_B)!=0,l=(k&KEY_LEFT)!=0,r=(k&KEY_RIGHT)!=0;
+ int start=(k&KEY_START)!=0;
  int ea=a&&!was_a,eb=b&&!was_b,el=l&&!was_l,er=r&&!was_r;
- was_a=a;was_b=b;was_l=l;was_r=r;
+ int confirm=ea||(start&&!was_start);
+ /* Repeat after 18 frames, then every 8 frames. Opposing directions
+    cancel, so an accidental two-button hold cannot drift the cursor. */
+ if(l&&!r){left_held++;right_held=0;
+  if(left_held>18u&&((left_held-19u)%8u)==0u)el=1;
+ }else if(r&&!l){right_held++;left_held=0;
+  if(right_held>18u&&((right_held-19u)%8u)==0u)er=1;
+ }else{left_held=right_held=0;if(l&&r)el=er=0;}
+ was_a=a;was_b=b;was_l=l;was_r=r;was_start=start;
  if(clock_frames<FRAMES_IN)
   REG_BLDY=(u16)(16-clock_frames*16/FRAMES_IN);
  else if(state==M_IDLE)REG_BLDY=0;
@@ -85,7 +96,7 @@ int menu_update(void){
  }else{
   if(er&&sel<2){goto_sel(sel+1);redraw=1;}
   else if(el&&sel>0){goto_sel(sel-1);redraw=1;}
-  else if(ea){
+  else if(confirm){
    if(level==0){prev_main=mode=sel;start_transition(1);}
    else if(sel==2){start_transition(-1);}
    else if(mode!=2){enter_slot(sel);redraw=1;}
