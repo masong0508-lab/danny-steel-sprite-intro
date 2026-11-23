@@ -133,21 +133,33 @@ static const uint8_t hd_floor_dither17[HD_W+HD_H] = {
  0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,
  0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0
 };
-/* One checked road tile id is retained as the original painter advances
-   through map cells. Each 16-world-unit texel is an exact two-bit
-   category from the original procedural hash, without a per-pixel hash. */
-static HD_CANVAS_CODE inline unsigned packed_road_floor(
- int wx,int wy,int x,int y,unsigned road_tile){
+/* One aligned cartridge-ROM word holds all 16 two-bit shades for
+   one material Y row. Load once when the projected row changes, then
+   extract a category directly from the scalar without unpacking a
+   16-byte array or reading separate ROM bytes per floor pixel. */
+typedef uint32_t RoadShadeWord __attribute__((may_alias));
+static HD_CANVAS_CODE inline unsigned read_packed_road_row(
+ unsigned road_tile,unsigned material_y){
+ const uint8_t *data=hd_road_material_2bits+road_tile*64u+material_y*4u;
+ return *(const RoadShadeWord *)(const void *)data;
+}
+static HD_CANVAS_CODE inline unsigned road_shade_color(
+ int wx,int wy,int x,int y,unsigned category){
  int fx=wx&255,fy=wy&255;
  if((fx<5||fy<5)&&(wx+wy)%3==0)return HD_ROAD_COOL;
- unsigned cellx=((unsigned)wx>>4)&15u;
- unsigned celly=((unsigned)wy>>4)&15u;
- unsigned offset=road_tile*64u+celly*4u+(cellx>>2);
- unsigned category=(hd_road_material_2bits[offset]>>((cellx&3u)*2u))&3u;
  if(category==0u)return HD_REFLECT;
  if(category==1u)return HD_ROAD_LIGHT;
  return hd_floor_dither17[x+y]?HD_ROAD_COOL:HD_ROAD;
 }
+#if !defined(__arm__)
+unsigned hd_debug_packed_road_row_category(int tx,int ty,unsigned cx,unsigned cy){
+ if((unsigned)tx>=24u||(unsigned)ty>=18u||cx>=16u||cy>=16u)return 255u;
+ unsigned id=hd_road_tile_index[(unsigned)ty*24u+(unsigned)tx];
+ if(id==255u)return 255u;
+ unsigned word=read_packed_road_row(id,cy);
+ return (word>>(cx*2u))&3u;
+}
+#endif
 #if !defined(__arm__)
 unsigned hd_debug_road_rom_category(int tx,int ty,unsigned cx,unsigned cy){
  if((unsigned)tx>=24u||(unsigned)ty>=18u||cx>=16u||cy>=16u)return 255u;
@@ -198,7 +210,8 @@ static HD_CANVAS_CODE __attribute__((noinline)) void floor_render(uint8_t *p,con
   int wall_limit=10400/(y-78)-60;
   int last_tx=-99,last_ty=-99;
   char tile='.';
-  unsigned road_tile=0u;
+  unsigned road_tile=0u,packed_row=0u;
+  unsigned material_row=16u; /* Sentinel invalidates the packed word. */
   int begin=0;
   for(unsigned ray=0;ray<sizeof ray_end;ray++){
    int end=ray_end[ray];
@@ -211,12 +224,22 @@ static HD_CANVAS_CODE __attribute__((noinline)) void floor_render(uint8_t *p,con
      int tx=wx>>8,ty=wy>>8;
      if(tx!=last_tx||ty!=last_ty){
       last_tx=tx;last_ty=ty;tile=story_tile(tx,ty);
-      if(tile=='.')
+      if(tile=='.'){
        road_tile=hd_road_tile_index[(unsigned)ty*24u+(unsigned)tx];
+       material_row=16u;
+      }
      }
-     unsigned ink=tile=='.'
-       ?packed_road_floor(wx,wy,x,y,road_tile)
-       :floor_ink(tile,wx,wy,x,y,tick);
+     unsigned ink;
+     if(tile=='.'){
+      unsigned cy=((unsigned)wy>>4)&15u;
+      if(cy!=material_row){
+       packed_row=read_packed_road_row(road_tile,cy);
+       material_row=cy;
+      }
+      unsigned cx=((unsigned)wx>>4)&15u;
+      unsigned category=(packed_row>>(cx*2u))&3u;
+      ink=road_shade_color(wx,wy,x,y,category);
+     }else ink=floor_ink(tile,wx,wy,x,y,tick);
      /* An odd run edge may split a far sample. Keep its original
         even sample x, then paint only this run's visible member(s). */
      if(x>=begin)p[y*HD_W+x]=(uint8_t)ink;
