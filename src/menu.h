@@ -1,6 +1,6 @@
 #pragma once
 /* Old Quarter illustration at the GBA's native 240x160.
-   LEFT/RIGHT chooses, A opens; B backs out.
+   D-pad LEFT/RIGHT or UP/DOWN chooses; A/START opens; B backs out.
    The destructive ERASE option still requires a fresh, continuous hold. */
 #include "gba.h"
 void menu_enter(void);
