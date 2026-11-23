@@ -39,7 +39,7 @@ See [the opening direction and engine notes](docs/POTHEADS_OPENING.md),
 ## Controls
 
 * **Title:** START for main menu.
-* **Menu:** LEFT/RIGHT, A select, B back; NEW GAME, CONTINUE and ERASE SAVE support two persistent slots. Erasing requires holding A on the chosen slot for 40 frames.
+* **Menu:** D-pad LEFT/RIGHT or UP/DOWN to move (hold for controlled key repeat), A or START to select, B back; NEW GAME, CONTINUE and ERASE SAVE support two persistent slots. START cannot confirm an erase: erasing still requires holding A on the selected slot. Erasing requires holding A on the chosen slot for 40 frames.
 * **Exploration, map:** D-pad walk, A talk/read/interact with adjacent objects, L or SELECT toggle first-person, R context notes. The top compass now shows a **walkable route** toward the current goal (direction plus number of steps to a valid interaction square), not a straight line through buildings. The lower A-button prompt names the nearby action.
 * **Exploration, first-person:** UP/DOWN move forward/backward, LEFT/RIGHT turn 90 degrees, A interact, L or SELECT return to map, R context notes. The compass turns with you (AHEAD/RIGHT/BACK/LEFT) so the indicated route stays usable in this view.
 * **Dialogue:** A next, B dismiss. At the bus choose GO or STAY with LEFT/RIGHT and A; B cancels. GO with 100% main-story completion produces the good epilogue; GO with enough but incomplete progress starts the numbered-day neutral route. STAY continues exploration.
