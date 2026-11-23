@@ -106,7 +106,32 @@ static void verify_camera_shade_cache(void){
  assert(cases==120u);
  printf("camera wall-shade cache: %u cold/warm native full-frame matches\\n",cases);
 }
+/* Verify exact signed 24.8 floor stepping at EVERY possible run start,
+   both half-rate and native-rate spans, and all 60 sampled scanlines.
+   This compares independent multiplications with recurrence, including
+   negative side offsets around the center of the 240-column camera. */
+static void verify_fixedpoint_floor_steps(void){
+ unsigned comparisons=0u;
+ for(int y=80;y<140;y++){
+  int dist=13500/(y-75);
+  if(dist>2304)dist=2304;
+  int side_unit=dist*3*256/480;
+  int step=y<98?2:1;
+  for(int begin=0;begin<HD_W;begin++){
+   int start=begin&~(step-1);
+   int side_acc=(start-120)*side_unit;
+   for(int x=start;x<HD_W;x+=step,side_acc+=step*side_unit){
+    int reference=((x-120)*side_unit)>>8;
+    assert((side_acc>>8)==reference);
+    comparisons++;
+   }
+  }
+ }
+ assert(comparisons>1000000u);
+ printf("fixed-point floor steps: %u exact comparisons across all row starts and signed camera sides\n",comparisons);
+}
 int main(void){
+ verify_fixedpoint_floor_steps();
  verify_floor_dither();
  verify_halfword_wall_spans();
  verify_camera_shade_cache();
