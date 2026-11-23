@@ -12,7 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-enum { KEY_START=8u,KEY_A=1u,KEY_B=2u,KEY_L=512u,WINDOW_FRAMES=600u,STAGES=6u };
+enum { KEY_START=8u,KEY_A=1u,KEY_B=2u,KEY_L=512u,WINDOW_FRAMES=600u,STAGES=7u };
 static const char *const names[STAGES+1u]={
  "gba_profile_frames",
  "gba_profile_sky_cycles",
@@ -20,11 +20,13 @@ static const char *const names[STAGES+1u]={
  "gba_profile_floor_cycles",
  "gba_profile_billboard_cycles",
  "gba_profile_weather_cycles",
- "gba_profile_total_cycles"
+ "gba_profile_total_cycles",
+ "gba_profile_wallshade_cycles"
 };
 static const char *const labels[STAGES]={
  "sky and skyline","walls and depth","floor and materials",
- "billboards/occlusion","weather/rain","total renderer"
+ "billboards/occlusion","weather/rain","total renderer",
+ "wall texture paint (part of walls)"
 };
 static int range_ok(size_t size,uint64_t offset,uint64_t length){
  return offset<=size&&length<=size-offset;
@@ -147,6 +149,10 @@ int main(int argc,char **argv){
    printf("%-22s mean %.0f cycles (%.3f ms), min %u, max %u\n",
           labels[i],mean,mean*1000.0/hz,lo[i],hi[i]);
   }
+  double paint=(double)sum[6]/samples;
+  double allwalls=(double)sum[1]/samples;
+  printf("ray traversal plus other wall overhead: %.0f cycles (%.3f ms)\n",
+         allwalls-paint,(allwalls-paint)*1000.0/hz);
   printf("Profiled GBA source: complete first-person renderer, "
          "not host execution time or physical hardware timing.\n");
  }
