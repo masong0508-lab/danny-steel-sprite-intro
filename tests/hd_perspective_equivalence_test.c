@@ -5,6 +5,28 @@
 
 /* Host-only validator is deliberately excluded from the cartridge. */
 int hd_first_person_anchor_map_valid(void);
+unsigned hd_debug_wall_noise(unsigned x,unsigned y);
+static unsigned original_wall_texel(unsigned x,unsigned y){
+ uint32_t v=(x+31u)*1664525u+(y+79u)*1013904223u;
+ v^=v>>13;v*=2246822519u;return (unsigned)((v^(v>>11))&7u);
+}
+/* Independent hash calculation checks every authored ROM shade, its
+   upper-right boundary and the old-hash fallback beyond the table. */
+static void verify_wall_noise_rom(void){
+ unsigned n=0u;
+ for(unsigned y=0;y<96u;y++)for(unsigned x=0;x<96u;x++){
+  assert(hd_debug_wall_noise(x,y)==original_wall_texel(x,y));n++;
+ }
+ const unsigned outside[]={80u,95u,255u,0xfffffff0u,0xffffffffu};
+ for(unsigned i=0;i<sizeof outside/sizeof outside[0];i++)
+  for(unsigned j=0;j<sizeof outside/sizeof outside[0];j++){
+   assert(hd_debug_wall_noise(outside[i],outside[j])==
+          original_wall_texel(outside[i],outside[j]));
+   n++;
+  }
+ assert(n==9241u);
+ printf("wall procedural ROM bits: %u exact independent hash checks\n",n);
+}
 void hd_debug_wall_store_span(uint8_t *canvas,int x,int y,int width,uint8_t ink);
 void hd_debug_invalidate_wall_cache(void);
 
@@ -97,6 +119,7 @@ static void verify_camera_shade_cache(void){
  printf("camera wall-shade cache: %u cold/warm native full-frame matches\\n",cases);
 }
 int main(void){
+ verify_wall_noise_rom();
  verify_halfword_wall_spans();
  verify_camera_shade_cache();
  assert(hd_first_person_anchor_map_valid());
