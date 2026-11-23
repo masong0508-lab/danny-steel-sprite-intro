@@ -2,6 +2,7 @@
 #include "hd_world_atlas.h"
 #include "hd_facade_art.h"
 #include "hd_road_material_rom.inc"
+#include "hd_green_floor_rom.inc"
 #if defined(GBA_PROFILE_RENDER) && defined(__arm__)
 #include "gba.h"
 /* Debug-build-only counters. Normal release builds allocate NONE of these.
@@ -157,6 +158,23 @@ unsigned hd_debug_road_rom_category(int tx,int ty,unsigned cx,unsigned cy){
  return (byte>>((cx&3u)*2u))&3u;
 }
 #endif
+/* Grass and tree-ground use the exact existing 8x8 world texel
+   categories, now read as one bit from ROM rather than recomputed hashes.
+   Dynamic water remains on its original clock-sensitive shader. */
+static HD_CANVAS_CODE inline unsigned packed_green_floor(
+ int wx,int wy,unsigned green_tile){
+ unsigned cx=((unsigned)wx>>5)&7u,cy=((unsigned)wy>>5)&7u;
+ unsigned mask=hd_green_floor_bits[green_tile*8u+cy];
+ return (mask&(1u<<cx))?HD_LEAF:HD_LEAF_DARK;
+}
+#if !defined(__arm__)
+unsigned hd_debug_green_floor_category(int tx,int ty,unsigned cx,unsigned cy){
+ if((unsigned)tx>=24u||(unsigned)ty>=18u||cx>=8u||cy>=8u)return 255u;
+ unsigned tile=hd_green_tile_index[ty*24+tx];
+ if(tile==255u)return 255u;
+ return (hd_green_floor_bits[tile*8u+cy]>>cx)&1u;
+}
+#endif
 static HD_CANVAS_CODE inline unsigned floor_ink(char t,int wx,int wy,int x,int y,unsigned tick){
  int fx=wx&255,fy=wy&255;
  if(t=='~'){
@@ -198,7 +216,7 @@ static HD_CANVAS_CODE __attribute__((noinline)) void floor_render(uint8_t *p,con
   int wall_limit=10400/(y-78)-60;
   int last_tx=-99,last_ty=-99;
   char tile='.';
-  unsigned road_tile=0u;
+  unsigned road_tile=0u,green_tile=0u;
   int begin=0;
   for(unsigned ray=0;ray<sizeof ray_end;ray++){
    int end=ray_end[ray];
@@ -213,10 +231,14 @@ static HD_CANVAS_CODE __attribute__((noinline)) void floor_render(uint8_t *p,con
       last_tx=tx;last_ty=ty;tile=story_tile(tx,ty);
       if(tile=='.')
        road_tile=hd_road_tile_index[(unsigned)ty*24u+(unsigned)tx];
+      else if(tile=='g'||tile=='T')
+       green_tile=hd_green_tile_index[(unsigned)ty*24u+(unsigned)tx];
      }
      unsigned ink=tile=='.'
        ?packed_road_floor(wx,wy,x,y,road_tile)
-       :floor_ink(tile,wx,wy,x,y,tick);
+       :(tile=='g'||tile=='T')
+        ?packed_green_floor(wx,wy,green_tile)
+        :floor_ink(tile,wx,wy,x,y,tick);
      /* An odd run edge may split a far sample. Keep its original
         even sample x, then paint only this run's visible member(s). */
      if(x>=begin)p[y*HD_W+x]=(uint8_t)ink;
