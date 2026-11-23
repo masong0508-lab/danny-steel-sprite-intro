@@ -159,10 +159,14 @@ static HD_CANVAS_CODE inline unsigned road_shade_from_category(
 #if !defined(__arm__)
 void hd_debug_decode_road_shade_row(int tx,int ty,unsigned cy,uint8_t out[16]){
  if((unsigned)tx>=24u||(unsigned)ty>=18u||cy>=16u){
-  for(unsigned i=0;i<16u;i++)out[i]=255u;return;
+  for(unsigned i=0;i<16u;i++)out[i]=255u;
+  return;
  }
  unsigned id=hd_road_tile_index[(unsigned)ty*24u+(unsigned)tx];
- if(id==255u){for(unsigned i=0;i<16u;i++)out[i]=255u;return;}
+ if(id==255u){
+  for(unsigned i=0;i<16u;i++)out[i]=255u;
+  return;
+ }
  decode_road_shade_row(id,cy,out);
 }
 #endif
