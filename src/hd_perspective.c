@@ -105,6 +105,10 @@ static HD_CANVAS_CODE __attribute__((noinline)) void floor_render(uint8_t *p,con
   int dist=13500/(y-75); if(dist>2304)dist=2304;
   int side_unit=dist*3*256/480;
   int step=y<98?2:1;
+  int side_delta=step*side_unit;
+  /* Rotate once per scanline, not once per floor texel. All 4 headings
+     share the same original fixed-point projection and exact pixels. */
+  int forward_x=cx+fx*dist,forward_y=cy+fy*dist;
   /* Existing wall bottom is 79 + floor(10400/(depth+60)).
      Thus y is covered exactly when depth <= 10400/(y-78)-60.
      At these floor rows the original 3..150 height clamp cannot alter
@@ -118,9 +122,14 @@ static HD_CANVAS_CODE __attribute__((noinline)) void floor_render(uint8_t *p,con
    /* cast_walls gives every column in this original direction run
       the same hit and depth. Test coverage once, not per hidden pixel. */
    if(!wall_type[begin]||wall_depth[begin]>wall_limit){
-    for(int x=begin&~(step-1);x<end;x+=step){
-     int side=((x-120)*side_unit)>>8;
-     int wx=cx+fx*dist+rx*side,wy=cy+fy*dist+ry*side;
+    /* Carry the same 24.8 signed side coordinate through this visible
+       run. One initialization replaces a multiply at every pixel, while
+       preserving the original arithmetic right shift for negative X. */
+    int start=begin&~(step-1);
+    int side_acc=(start-120)*side_unit;
+    for(int x=start;x<end;x+=step,side_acc+=side_delta){
+     int side=side_acc>>8;
+     int wx=forward_x+rx*side,wy=forward_y+ry*side;
      int tx=wx>>8,ty=wy>>8;
      if(tx!=last_tx||ty!=last_ty){
       last_tx=tx;last_ty=ty;tile=story_tile(tx,ty);
