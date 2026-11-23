@@ -164,6 +164,28 @@ static HD_CANVAS_CODE __attribute__((noinline)) void floor_render(uint8_t *p,con
   }
  }
 }
+/* Width is constant for a ray, while each row has a palette shade. EWRAM
+   supports aligned halfword stores: pack two identical pixels into one
+   write instead of performing one byte store + loop branch per column.
+   Odd heads and tails remain byte-exact; no VRAM access or extra buffers. */
+typedef uint16_t WallHalf __attribute__((may_alias));
+static HD_CANVAS_CODE inline void wall_store_span(volatile uint8_t *row,
+               unsigned head,unsigned pairs,unsigned tail,uint8_t ink){
+ if(head)*row++=ink;
+ volatile WallHalf *half=(volatile WallHalf *)(void *)row;
+ uint16_t fill=(uint16_t)((unsigned)ink*257u);
+ for(unsigned k=0;k<pairs;k++)half[k]=fill;
+ if(tail)((volatile uint8_t *)(void *)half)[pairs*2u]=ink;
+}
+#if !defined(__arm__)
+void hd_debug_wall_store_span(uint8_t *canvas,int x,int y,int width,uint8_t ink){
+ volatile uint8_t *row=canvas+y*HD_W+x;
+ unsigned head=(unsigned)((uintptr_t)row&1u);
+ unsigned pairs=((unsigned)width-head)>>1u;
+ unsigned tail=((unsigned)width-head)&1u;
+ wall_store_span(row,head,pairs,tail,ink);
+}
+#endif
 static HD_CANVAS_CODE void wall_column(uint8_t *p,int x,int width,int top,int bottom,char type,
                         int u,int forward,int tx,int ty){
 #if defined(GBA_PROFILE_RENDER) && defined(__arm__)
@@ -178,6 +200,11 @@ static HD_CANVAS_CODE void wall_column(uint8_t *p,int x,int width,int top,int bo
     DDA produces precisely floor((y-top)*256/height) per scanline, but
     pays for the division only twice per wall column. */
  int v=0,major=256/height,minor=256%height,error=0;
+ /* HD_W is even, so these alignment and span counts are constant
+    across every screen row in this wall ray. */
+ unsigned head=(unsigned)((uintptr_t)(p+x)&1u);
+ unsigned pairs=((unsigned)width-head)>>1u;
+ unsigned tail=((unsigned)width-head)&1u;
  for(int y=top;y<bottom;y++){
   if((unsigned)y>=140u)break;
   unsigned c=base;
@@ -222,7 +249,7 @@ static HD_CANVAS_CODE void wall_column(uint8_t *p,int x,int width,int top,int bo
   /* These native spans are at most 11 bytes. Keep the short stores
      here: GCC otherwise replaces them with a ROM memset per scanline. */
   volatile uint8_t *out=p+y*HD_W+x;
-  for(int col=0;col<width;col++)out[col]=(uint8_t)c;
+  wall_store_span(out,head,pairs,tail,(uint8_t)c);
   v+=major;
   error+=minor;
   if(error>=height){v++;error-=height;}

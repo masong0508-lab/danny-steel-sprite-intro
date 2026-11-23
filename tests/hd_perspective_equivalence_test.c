@@ -5,6 +5,7 @@
 
 /* Host-only validator is deliberately excluded from the cartridge. */
 int hd_first_person_anchor_map_valid(void);
+void hd_debug_wall_store_span(uint8_t *canvas,int x,int y,int width,uint8_t ink);
 
 /* Captured from the original shipped PR14 painter before changing its
    ray reuse, floor ordering or instruction placement. Each value covers
@@ -20,7 +21,39 @@ static struct {
  uint8_t before[32],pixels[HD_BYTES],after[32];
 } canvas;
 
+/* The production wall-row writer packs matching pixels into aligned
+   16-bit EWRAM stores. Compare the entire guarded canvas, including
+   other rows and the head/tail bytes, against an independent byte loop. */
+static void verify_halfword_wall_spans(void){
+ static uint8_t expected[HD_BYTES+132u],actual[HD_BYTES+132u];
+ const int xs[]={0,1,2,3,22,119,120,231,237,238,239};
+ const int ys[]={0,1,79,139,159};
+ const unsigned inks[]={0u,29u,32u,43u,63u};
+ unsigned cases=0u;
+ for(unsigned align=0;align<4u;align++)
+  for(unsigned xi=0;xi<sizeof xs/sizeof xs[0];xi++)
+   for(unsigned yi=0;yi<sizeof ys/sizeof ys[0];yi++)
+    for(int width=1;width<=11;width++){
+     int x=xs[xi],y=ys[yi];
+     if(x+width>HD_W)continue;
+     for(unsigned k=0;k<sizeof inks/sizeof inks[0];k++){
+      memset(expected,0xA7,sizeof expected);
+      memset(actual,0xA7,sizeof actual);
+      uint8_t *want=expected+64u+align,*got=actual+64u+align;
+      memset(want,HD_ROAD,HD_BYTES);
+      memset(got,HD_ROAD,HD_BYTES);
+      for(int col=0;col<width;col++)
+       want[y*HD_W+x+col]=(uint8_t)inks[k];
+      hd_debug_wall_store_span(got,x,y,width,(uint8_t)inks[k]);
+      assert(memcmp(expected,actual,sizeof expected)==0);
+      cases++;
+     }
+    }
+ assert(cases>6000u);
+ printf("aligned wall spans: %u exact guarded pixel/alignment cases\\n",cases);
+}
 int main(void){
+ verify_halfword_wall_spans();
  assert(hd_first_person_anchor_map_valid());
  Story s;story_new(&s,0);
  const unsigned ticks[3]={0,71,433};
