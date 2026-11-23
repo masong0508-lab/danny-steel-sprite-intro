@@ -6,9 +6,29 @@
 /* Host-only validator is deliberately excluded from the cartridge. */
 int hd_first_person_anchor_map_valid(void);
 unsigned hd_debug_road_rom_category(int tx,int ty,unsigned cx,unsigned cy);
+unsigned hd_debug_green_floor_category(int tx,int ty,unsigned cx,unsigned cy);
 static unsigned original_road_texel(unsigned x,unsigned y){
  uint32_t n=(x+31u)*1664525u+(y+79u)*1013904223u;
  n^=n>>13;n*=2246822519u;return (unsigned)(n^(n>>11));
+}
+static void verify_green_floor_rom(void){
+ unsigned green=0u,other=0u;
+ for(int ty=0;ty<STORY_H;ty++)for(int tx=0;tx<STORY_W;tx++){
+  char tile=story_tile(tx,ty);
+  for(unsigned cy=0;cy<8u;cy++)for(unsigned cx=0;cx<8u;cx++){
+   unsigned got=hd_debug_green_floor_category(tx,ty,cx,cy);
+   if(tile!='g'&&tile!='T'){
+    assert(got==255u);other++;continue;
+   }
+   unsigned hash=original_road_texel((unsigned)tx*8u+cx,
+                                     (unsigned)ty*8u+cy);
+   assert(got==(unsigned)((hash&3u)==0u));green++;
+  }
+ }
+ assert(green==1792u&&other==25856u);
+ assert(hd_debug_green_floor_category(-1,0,0,0)==255u);
+ assert(hd_debug_green_floor_category(24,0,0,0)==255u);
+ puts("grass/trees: 1792 exact original noise bits, 25856 non-green guards");
 }
 static void verify_original_road_material_rom(void){
  unsigned checks=0u,nonroad=0u;
@@ -120,6 +140,7 @@ static void verify_camera_shade_cache(void){
  printf("camera wall-shade cache: %u cold/warm native full-frame matches\\n",cases);
 }
 int main(void){
+ verify_green_floor_rom();
  verify_original_road_material_rom();
  verify_halfword_wall_spans();
  verify_camera_shade_cache();
