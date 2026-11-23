@@ -8,6 +8,7 @@
 volatile uint32_t gba_profile_frames;
 volatile uint32_t gba_profile_sky_cycles;
 volatile uint32_t gba_profile_wall_cycles;
+volatile uint32_t gba_profile_wallshade_cycles;
 volatile uint32_t gba_profile_floor_cycles;
 volatile uint32_t gba_profile_billboard_cycles;
 volatile uint32_t gba_profile_weather_cycles;
@@ -165,6 +166,9 @@ static HD_CANVAS_CODE __attribute__((noinline)) void floor_render(uint8_t *p,con
 }
 static HD_CANVAS_CODE void wall_column(uint8_t *p,int x,int width,int top,int bottom,char type,
                         int u,int forward,int tx,int ty){
+#if defined(GBA_PROFILE_RENDER) && defined(__arm__)
+ uint32_t wallshade_start=gba_profile_clock();
+#endif
  int height=bottom-top;
  int tree=type=='T';
  unsigned base=tree?HD_LEAF_DARK:type=='A'?HD_BRICK:HD_BRICK_DARK;
@@ -224,6 +228,9 @@ static HD_CANVAS_CODE void wall_column(uint8_t *p,int x,int width,int top,int bo
   if(error>=height){v++;error-=height;}
  }
  if(top>18 && top<140)hd_rect(p,x,top,width,1,tree?HD_LEAF_LIT:HD_STONE_LIT);
+#if defined(GBA_PROFILE_RENDER) && defined(__arm__)
+ gba_profile_wallshade_cycles+=gba_profile_clock()-wallshade_start;
+#endif
 }
 static HD_CANVAS_CODE __attribute__((noinline)) void cast_walls(uint8_t *p,int cx,int cy,int fx,int fy,int rx,int ry){
  for(int x=0;x<HD_W;){
@@ -407,6 +414,7 @@ static void render_billboards(uint8_t *p,int cx,int cy,
 void hd_first_person_draw(uint8_t *p,const Story *s,unsigned tick){
 #if defined(GBA_PROFILE_RENDER) && defined(__arm__)
  gba_profile_begin();
+ gba_profile_wallshade_cycles=0u;
  uint32_t profile_last=0u,profile_now=0u;
 #endif
  int fx,fy,rx,ry;
