@@ -281,11 +281,26 @@ static void ground_detail(uint8_t *p,int sx,int sy,unsigned n,
    the objective's pavement is decorated at its natural depth. */
 static void ground_goal(uint8_t *p,int sx,int sy,unsigned tick){
  unsigned ink=((tick/24u)&1u)?HD_COPPER:HD_GOLD;
+ /* Distinct objective diamond with an arrow notch, grounded under props. */
  hd_line(p,sx+5,sy+10,sx+11,sy+13,ink);
  hd_line(p,sx+11,sy+13,sx+16,sy+11,ink);
  hd_line(p,sx+27,sy+10,sx+21,sy+13,ink);
  hd_line(p,sx+21,sy+13,sx+16,sy+11,ink);
+ hd_line(p,sx+12,sy+7,sx+16,sy+4,HD_INK);
+ hd_line(p,sx+16,sy+4,sx+20,sy+7,HD_INK);
+ hd_line(p,sx+13,sy+7,sx+16,sy+5,ink);
+ hd_line(p,sx+16,sy+5,sx+19,sy+7,ink);
  hd_pixel(p,sx+16,sy+8,HD_LAMP);
+}
+/* The next walkable step gets a small painted chevron at natural depth,
+   not a floating HUD marker glowing through rooftops. */
+static void ground_route(uint8_t *p,int sx,int sy,unsigned tick){
+ unsigned ink=((tick/30u)&1u)?HD_GLASS_LIT:HD_GOLD;
+ hd_line(p,sx+10,sy+8,sx+16,sy+5,HD_INK);
+ hd_line(p,sx+16,sy+5,sx+22,sy+8,HD_INK);
+ hd_line(p,sx+11,sy+9,sx+16,sy+6,ink);
+ hd_line(p,sx+16,sy+6,sx+21,sy+9,ink);
+ hd_pixel(p,sx+16,sy+10,HD_GOLD);
 }
 static void rain(uint8_t *p,unsigned tick){
  /* Fourteen subdued strokes behind the depth-sorted architecture and
@@ -323,6 +338,13 @@ void hd_isometric_draw(uint8_t *p,const Story *s,unsigned tick){
  const char *goal=0;
  int has_goal=story_goal(s,&gx,&gy,&goal);
  (void)goal;
+ int route_dir=-1,route_steps=-1;
+ int has_route=story_route(s,&route_dir,&route_steps);
+ static const int8_t dx[4]={1,0,-1,0},dy[4]={0,1,0,-1};
+ int next_x=(int)s->x,next_y=(int)s->y;
+ if(has_route && route_steps>0 && route_dir>=0 && route_dir<4){
+  next_x+=dx[route_dir];next_y+=dy[route_dir];
+ }else has_route=0;
  int ox=0,oy=0;
  if(s->anim){
   ox=((int)s->prev_x-(int)s->x -
@@ -355,6 +377,8 @@ void hd_isometric_draw(uint8_t *p,const Story *s,unsigned tick){
    if(sx>=256)break;
    int wy=depth-wx;
    char c=story_tile(wx,wy);
+   if(has_route&&wx==next_x&&wy==next_y)
+    ground_route(p,sx,sy,tick);
    if(has_goal&&wx==gx&&wy==gy)
     ground_goal(p,sx,sy,tick);
    if(c=='#'||c=='A')building(p,sx,sy,wx,wy,tick,c,
