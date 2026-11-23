@@ -185,12 +185,29 @@ const char *story_goal_reason(const Story *s){
         return "MAKE MEMORIES AT YOUR PACE";
     default:break;
     }
-    if(!(s->flags&STORY_HOME))return "START WITH THE OLD LETTER";
-    if(!(s->flags&STORY_STAMP))return "THE CLERK NEEDS YOUR LETTER";
-    if(!(s->flags&STORY_MARA))return "SPEAK HONESTLY WITH MARA";
-    if(!(s->flags&STORY_MUSIC))return "THE BORE ARCHIVE HAS A TAPE";
-    if(!(s->flags&STORY_ART))return "PUT SOME COLOR ON THE ROOF";
-    return "THE LAST BUS IS WAITING";
+    if(!(s->flags&STORY_HOME))return "LETTER / WEST OLD QUARTER";
+    if(!(s->flags&STORY_STAMP))return "PROVE ADDRESS AT BORE";
+    if(!(s->flags&STORY_MARA))return "TELL MARA ABOUT THE CALL";
+    if(!(s->flags&STORY_MUSIC))return "OPTIONAL TAPE / BUS OPEN";
+    if(!(s->flags&STORY_ART))return "OPTIONAL ROOF / BUS OPEN";
+    return "BOARD THE BUS OR STAY";
+}
+/* Pure, short chapter tag shared by both GBA HUD modes. The first three
+   tasks unlock the bus; creating art and music changes the legacy ending
+   but never falsely appears to be a mandatory gate. */
+const char *story_goal_kind(const Story *s){
+    if(s->ended || s->life_stage==STORY_LIFE_FINALE)return "";
+    if(s->rescue_stage==STORY_RESCUE_LOST)return "HOPE";
+    if(s->rescue_stage>=STORY_RESCUE_MISSING &&
+       s->rescue_stage<=STORY_RESCUE_TRACE)return "SAVE";
+    if(s->life_stage==STORY_LIFE_CLINIC ||
+       s->life_stage==STORY_LIFE_FINAL_CLINIC)return "CARE";
+    if(s->life_stage==STORY_LIFE_LAST_WORK)return "LAST";
+    if(s->life_stage==STORY_LIFE_WAIT ||
+       s->life_stage==STORY_LIFE_FOLLOWUP_WAIT)return "DAY";
+    if((s->flags&STORY_ALL)!=STORY_ALL)return "CORE";
+    if((s->flags&STORY_FULL)!=STORY_FULL)return "EXTRA";
+    return "BUS";
 }
 
 enum { D_NONE, D_OPEN, D_LETTER, D_LETTER_AGAIN, D_CLERK_LOCKED, D_CLERK, D_CLERK_AGAIN,
@@ -242,37 +259,37 @@ SCRIPT(d_open,
  {"DANNY", "I don't love this gig.", "But it pays the rent."},
  {"DANNY", "That counts for a lot.", "I'm grateful it does."},
  {"DANNY", "After hours, I get", "to make my own art."},
- {"DANNY", "Last bus tonight.", "Doctor called again."},
- {"DANNY", "I can face a letter", "before test results."},
- {"DANNY", "Then Mara. Music.", "One thing at a time."});
+ {"DANNY", "Last bus tonight.", "Clinic called again."},
+ {"DANNY", "I missed their calls.", "I'm scared of the news."},
+ {"DANNY", "First, the letter.", "Then clerk. Then Mara."});
 SCRIPT(d_letter,
  {"OLD LETTER", "I left the porch", "light on for you."},
  {"OLD LETTER", "The bill went up.", "I left it on anyway."},
- {"DANNY", "Somebody made room", "for me. I left."},
- {"DANNY", "I can at least", "write back."});
+ {"DANNY", "I left without a", "proper goodbye."},
+ {"DANNY", "I'll take this proof", "to BORE. Then reply."});
 SCRIPT(d_letter_again,
  {"DANNY", "That little letter", "weighs a whole ton."});
 SCRIPT(d_clerk_locked,
- {"BORE CLERK", "Form B-2 requires", "proof you existed."},
- {"BORE CLERK", "Try looking for", "a letter from home."});
+ {"BORE CLERK", "To verify your name", "I need an old address."},
+ {"BORE CLERK", "A letter from home", "will do. West street."});
 SCRIPT(d_clerk,
- {"BORE CLERK", "We keep records", "when people forget."},
- {"DANNY", "You saved a blank", "file for me?"},
- {"BORE CLERK", "One existence,", "provisionally okay."},
- {"DANNY", "What about the old", "BORE music reels?"},
- {"BORE CLERK", "In the archive.", "Names still attached."});
+ {"BORE CLERK", "Your letter proves", "your old address."},
+ {"DANNY", "So I exist?", "That's a relief."},
+ {"BORE CLERK", "STAMPED. Your name", "is on the record."},
+ {"DANNY", "And the game music", "I left in storage?"},
+ {"BORE CLERK", "Archive. East plaza.", "Make a copy tonight."});
 SCRIPT(d_clerk_again,
  {"BORE CLERK", "Do not fold the", "universe in half."},
  {"BORE CLERK", "The warranty is", "very specific."});
 SCRIPT(d_mara_locked,
- {"MARA", "You're leaving?", "You always do that."},
- {"MARA", "Talk to the clerk.", "Make it official."});
+ {"MARA", "You're leaving?", "Without saying why?"},
+ {"MARA", "Settle your records", "at BORE. Then talk."});
 SCRIPT(d_mara,
  {"MARA", "You only joke like", "that when scared."},
- {"DANNY", "Then I'm a very", "funny man tonight."},
+ {"DANNY", "The clinic called.", "I didn't answer."},
  {"MARA", "You can leave. Just", "don't vanish on me."},
- {"DANNY", "I'll tell you first.", "You have my word."},
- {"MARA", "And keep the song.", "The silly one."});
+ {"DANNY", "I'll call before", "I take the bus."},
+ {"MARA", "And save that song.", "You still owe me one."});
 SCRIPT(d_mara_again,
  {"MARA", "Do you still have", "time for a walk?"},
  {"DANNY", "I do now.", "No rush today."});
@@ -290,11 +307,11 @@ SCRIPT(d_mara_warning,
  {"DANNY", "You're right.","No more shortcuts."});
 SCRIPT(d_bus_locked,
  {"DRIVER", "Last bus tonight.", "Seats still open."},
- {"DRIVER", "Your ticket is fine.", "Your goodbyes aren't."});
+ {"DRIVER", "Your letter, stamp", "and Mara come first."});
 SCRIPT(d_bus_ready,
  {"DRIVER", "Your stamp checks out.", "One seat. One choice."},
- {"DRIVER", "Leaving won't erase", "what happened here."},
- {"DANNY", "No. But I'll take", "the truth with me."});
+ {"DRIVER", "Can you leave the", "unfinished work here?"},
+ {"DANNY", "And the clinic call", "I keep avoiding?"});
 SCRIPT(d_end_go,
  {"DANNY", "The city got small", "behind the window."},
  {"DANNY", "I didn't lose it.", "I brought it with me."},
@@ -306,14 +323,15 @@ SCRIPT(d_end_stay,
  {"DANNY", "I call it THE END.", "We're open Tuesday."},
  {"THE END", "Tomorrow came on", "foot after all."});
 SCRIPT(d_journal_0,
- {"POCKET NOTEBOOK", "First: the old letter.", "Then the BORE clerk."},
- {"DANNY", "One street at a time.", "I can take my time."});
+ {"POCKET NOTEBOOK", "1 LETTER / WEST", "2 BORE CLERK / CENTER"},
+ {"DANNY", "Then tell Mara why", "I am afraid to go."});
 SCRIPT(d_journal_1,
- {"POCKET NOTEBOOK", "The letter is safe.", "BORE needs proof."});
+ {"POCKET NOTEBOOK", "LETTER FOUND. NEXT:", "BORE CLERK / CENTER"});
 SCRIPT(d_journal_2,
- {"POCKET NOTEBOOK", "The clerk stamped it.", "Mara deserves the truth."});
+ {"POCKET NOTEBOOK", "STAMPED. NEXT:", "MARA / WEST CAFE"});
 SCRIPT(d_journal_3,
- {"POCKET NOTEBOOK", "I made the promise.", "One last bus to decide."});
+ {"POCKET NOTEBOOK", "BUS IS OPEN. EXTRAS:", "MUSIC / ROOF PAINT"},
+ {"DANNY", "Finishing both may", "change what I leave."});
 SCRIPT(d_nothing,
  {"DANNY", "Nothing here for me.", "Where was I headed?"},
  {"POCKET NOTEBOOK", "Follow NEXT up top.", "R holds my notes."});
@@ -392,17 +410,17 @@ SCRIPT(d_cult_notes_4,
  {"POCKET NOTEBOOK", "People helped. Logs", "saved. Server lives."});
 SCRIPT(d_music,
  {"ARCHIVE TAPE", "BORE REEL 07", "ROUGH TRACK INTACT."},
- {"DANNY", "My old song still", "sounds like me."},
- {"DANNY", "I'll leave a copy", "with my name on it."},
- {"ARCHIVE TAPE", "COPY REGISTERED.", "KEEP THE ORIGINAL."},
- {"ARCHIVE TAPE", "FOUR SESSIONS MAKE", "ONE FINISHED MASTER."});
+ {"DANNY", "I wrote this when", "I still called home."},
+ {"DANNY", "Mara said to keep", "the silly song."},
+ {"ARCHIVE TAPE", "COPY REGISTERED.", "YOUR NAME IS ON IT."},
+ {"ARCHIVE TAPE", "FOUR MORE SESSIONS", "MAKE A FULL MASTER."});
 SCRIPT(d_music_again,
  {"DANNY", "The tape survived.", "Not the cassette case."});
 SCRIPT(d_art,
- {"DANNY", "The rooftop canvas", "still needs a sky."},
- {"DANNY", "Maybe it can hold", "a little sunlight."});
+ {"DANNY", "This is the view", "from Mara's cafe."},
+ {"DANNY", "If I go, I want", "to leave it in color."});
 SCRIPT(d_art_again,
- {"DANNY", "The roof painting", "is almost finished."});
+ {"DANNY", "First colors are down.", "It needs more time."});
 SCRIPT(d_art_day,
  {"DANNY", "One more layer of", "paint. One more day."},
  {"DANNY", "The city keeps on", "being a city."});
@@ -410,19 +428,19 @@ SCRIPT(d_art_last_locked,
  {"DANNY", "The doctors haven't", "finished talking."},
  {"DANNY", "My canvas can wait", "a little longer."});
 SCRIPT(d_neutral_start,
- {"DAY ONE", "Danny missed the bus", "and stayed in town."},
- {"DANNY", "The clinic called.", "I kept not calling."},
- {"DANNY", "I can't stop time.", "I can spend it."},
- {"POCKET NOTEBOOK", "Familiar places", "offer two choices."},
- {"POCKET NOTEBOOK", "E energy S spark", "B bond W work."});
+ {"DAY ONE", "I reached the bus.", "My phone rang."},
+ {"CLINIC", "We need to discuss", "your earlier scans."},
+ {"DANNY", "I let the bus go.", "I have to face this."},
+ {"DANNY", "Mara was right.", "I can't vanish now."},
+ {"POCKET NOTEBOOK", "A choose / B cancel.", "START+L for help."});
 SCRIPT(d_medical_notice,
  {"DAY TWO", "The clinic left", "another message."},
- {"DANNY", "I still haven't", "returned the first."},
+ {"DANNY", "I heard them this", "time. I'll go in."},
  {"CLINIC", "Please come in.", "We need to talk."});
 SCRIPT(d_doctor_first,
- {"DOCTOR", "The tests show", "a serious illness."},
- {"DOCTOR", "We need more scans.", "I can't guess time."},
- {"DANNY", "I've been dodging", "these calls all week."},
+ {"DOCTOR", "Earlier scans raise", "real concerns."},
+ {"DOCTOR", "We need more tests.", "No fixed timetable."},
+ {"DANNY", "I've been dodging", "your calls all week."},
  {"DOCTOR", "Bring someone you", "trust next time."});
 SCRIPT(d_doctor_return,
  {"DAY THREE", "Your follow-up", "is scheduled today."},
@@ -436,23 +454,23 @@ SCRIPT(d_doctor_return_alone,
  {"DANNY", "No confirmed word", "about Mara. Not yet."},
  {"DANNY", "I'll see the doctor", "and keep looking."});
 SCRIPT(d_doctor_last,
- {"DOCTOR", "The cancer has", "spread. I'm sorry."},
- {"DOCTOR", "We can help you", "through the pain."},
- {"MARA", "Want me to stay?", "I have nowhere else."},
- {"DANNY", "For a while. Then", "I want the roof."});
+ {"DOCTOR", "These tests confirm", "advanced cancer."},
+ {"DOCTOR", "We can plan care", "and ease the pain."},
+ {"MARA", "I'll stay with you.", "If you want."},
+ {"DANNY", "For now. Later,", "I want to paint."});
 SCRIPT(d_neutral_paint,
- {"ROOFTOP", "Danny returned to", "the unfinished sky."},
- {"DANNY", "The clinic didn't", "promise tomorrow."},
- {"DANNY", "I can give this", "corner some light."});
+ {"ROOFTOP", "Danny came back", "to the cafe skyline."},
+ {"DANNY", "I told Mara where", "I'd be this time."},
+ {"DANNY", "Let the last line", "be a little light."});
 SCRIPT(d_neutral_end,
  {"NARRATOR", "The last brush fell", "on the quiet roof."},
  {"NARRATOR", "Danny never stood", "up again."},
- {"MARA", "I found his letter", "beside the paints."},
+ {"MARA", "He finally called.", "I wish we'd had more."},
  {"NEUTRAL END", "He left us a sky", "we could recognize."});
 SCRIPT(d_good_end,
  {"YEARS LATER", "The bus was only", "the beginning."},
- {"MARA", "He lived beyond", "that last night."},
- {"BORE CLERK", "We kept the demos.", "He asked us to."},
+ {"MARA", "He called. He faced", "the clinic too."},
+ {"BORE CLERK", "His tape and canvas", "were kept safe."},
  {"RECORD STORE", "Mara released them", "after he was gone."},
  {"RECORD STORE", "The songs reached", "millions of people."},
  {"GOOD END", "He never heard", "their final chorus."});
