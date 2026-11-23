@@ -6,6 +6,7 @@
 /* Host-only validator is deliberately excluded from the cartridge. */
 int hd_first_person_anchor_map_valid(void);
 unsigned hd_debug_road_rom_category(int tx,int ty,unsigned cx,unsigned cy);
+unsigned hd_debug_packed_road_row_category(int tx,int ty,unsigned cx,unsigned cy);
 static unsigned original_road_texel(unsigned x,unsigned y){
  uint32_t n=(x+31u)*1664525u+(y+79u)*1013904223u;
  n^=n>>13;n*=2246822519u;return (unsigned)(n^(n>>11));
@@ -16,11 +17,12 @@ static void verify_original_road_material_rom(void){
   int road=story_tile(tx,ty)=='.';
   for(unsigned cy=0;cy<16u;cy++)for(unsigned cx=0;cx<16u;cx++){
    unsigned got=hd_debug_road_rom_category(tx,ty,cx,cy);
-   if(!road){assert(got==255u);nonroad++;continue;}
+   unsigned word=hd_debug_packed_road_row_category(tx,ty,cx,cy);
+   if(!road){assert(got==255u&&word==255u);nonroad++;continue;}
    unsigned n=original_road_texel((unsigned)tx*16u+cx,
                                   (unsigned)ty*16u+cy);
    unsigned want=(n&31u)==0u?0u:(n&7u)==1u?1u:2u;
-   assert(got==want);checks++;
+   assert(got==want&&word==want);checks++;
   }
  }
  assert(checks==240u*256u&&nonroad==192u*256u);
