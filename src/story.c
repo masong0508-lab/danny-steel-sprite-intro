@@ -948,8 +948,9 @@ void story_resume(Story *s, int slot, int x, int y, int facing, int view, int fl
         s->life_stage=STORY_LIFE_FINALE;
     } else talk(s,D_RETURN);
 }
-/* Two attack waves with four clearly telegraphed speech-bubble hazards each.
-   Players dodge LEFT/RIGHT in three projected lanes; A parries for six frames. */
+/* Two waves of four telegraphed hazards each, delivered in 30 VBlanks.
+   A parries for 15 ticks in FACTS or 12 in CARE; CARE also absorbs one
+   missed attack. The real simulation clock, not draw FPS, sets timing. */
 int story_attack_lane(const Story *s, int beat) {
     return (beat * 2 + s->cult_enemy + (s->cult_stage >= CULT_RESOLVED ? 1 : 0)) % 3;
 }
@@ -999,8 +1000,10 @@ static void cult_tick(Story *s, uint16_t pressed) {
     if (s->battle_parry) --s->battle_parry;
     if (s->battle_parry_cd) --s->battle_parry_cd;
     if ((pressed & A) && !s->battle_parry_cd) {
-        s->battle_parry = STORY_BATTLE_PARRY;
-        s->battle_parry_cd = STORY_BATTLE_PARRY_CD;
+        s->battle_parry = (uint8_t)(s->battle_choice==0u?
+                         STORY_FACTS_PARRY_TICKS:STORY_CARE_PARRY_TICKS);
+        s->battle_parry_cd = (uint8_t)(s->battle_choice==0u?
+                         STORY_FACTS_PARRY_COOLDOWN:STORY_CARE_PARRY_COOLDOWN);
     }
     ++s->battle_timer;
     if (s->battle_timer % STORY_BATTLE_BEAT == 0) {
