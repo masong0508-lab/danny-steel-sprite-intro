@@ -200,6 +200,25 @@ static HD_CANVAS_CODE void wall_column(uint8_t *p,int x,int width,int top,int bo
     DDA produces precisely floor((y-top)*256/height) per scanline, but
     pays for the division only twice per wall column. */
  int v=0,major=256/height,minor=256%height,error=0;
+ /* Classify this immutable facade column once, not in every raster row. */
+ const int has_window_u=u>=53&&u<=202;
+ const int has_door_u=u>=101&&u<=160;
+ const int mortar_u=(u&31)<3;
+ const int highlight_u=(u&31)<2;
+ const int bevel_u=(u&15)==1;
+ const int door_edge_u=u<106||u>155;
+ const int door_seam_u=u>129&&u<133;
+ const int door_knob_u=u>=143&&u<=147;
+ const int window_edge_u=u<60||u>196;
+ const int window_seam_u=u>=124&&u<=132;
+ const int window_glint_u=u>140&&u<153;
+ const int district_odd=(tx+ty)&1;
+ const int potheads=!tree&&tx==21&&ty==11;
+ const unsigned brick_hash_x=(unsigned)(u>>4)+(unsigned)(tx+40);
+ const unsigned brick_hash_y=(unsigned)(ty+40);
+ const unsigned leaf_hash_x=(unsigned)(u>>3);
+ int last_hash_bucket=-1;
+ unsigned hash_value=0u;
  /* HD_W is even, so these alignment and span counts are constant
     across every screen row in this wall ray. */
  unsigned head=(unsigned)((uintptr_t)(p+x)&1u);
@@ -210,39 +229,49 @@ static HD_CANVAS_CODE void wall_column(uint8_t *p,int x,int width,int top,int bo
   unsigned c=base;
   if(tree){
    if(v>178 && u>91 && u<162)c=HD_BARK;
-   else if((texel((unsigned)(u>>3),(unsigned)(v>>3))&3u)==0u)
-    c=HD_LEAF_LIT;
-   else c=HD_LEAF;
+   else{
+    int bucket=v>>3;
+    if(bucket!=last_hash_bucket){
+     last_hash_bucket=bucket;
+     hash_value=texel(leaf_hash_x,(unsigned)bucket);
+    }
+    c=(hash_value&3u)==0u?HD_LEAF_LIT:HD_LEAF;
+   }
   }else{
-   /* Facade windows fixed to wall texture coordinates, not screen x.
-      Floor breaks, mortar and stone relief persist as camera moves. */
-   int window=u>=53&&u<=202&&v>=57&&v<=163;
-   int door=u>=101&&u<=160&&v>=165;
+   /* Door/window priority, mortar breaks and ROM palette unchanged.
+      All U-only conditions and material hashes are now reused by rows. */
+   int window=has_window_u&&v>=57&&v<=163;
+   int door=has_door_u&&v>=165;
    if(v<15)c=HD_PLASTER_LIT;
    else if(v<22 || v>238)c=HD_STONE_DARK;
    else if((v&31)<3)c=HD_BRICK_DARK;
-   else if((u&31)<3)c=HD_BRICK_LIT;
+   else if(mortar_u)c=HD_BRICK_LIT;
    else if(door){
-    if(u<106||u>155)c=HD_COPPER;
+    if(door_edge_u)c=HD_COPPER;
     else if(v<170)c=HD_STONE_DARK;
-    else if(u>129&&u<133)c=HD_BRICK_DARK;
-    else c=((tx+ty)&1)?HD_BARK:HD_BRICK_DARK;
-    if(u>=143&&u<=147&&v>=204&&v<=208)c=HD_LAMP;
+    else if(door_seam_u)c=HD_BRICK_DARK;
+    else c=district_odd?HD_BARK:HD_BRICK_DARK;
+    if(door_knob_u&&v>=204&&v<=208)c=HD_LAMP;
    }else if(window){
-    if(u<60||u>196||v<65||v>154)c=HD_COPPER;
-    else if(u>=124&&u<=132)c=HD_BRICK_DARK;
+    if(window_edge_u||v<65||v>154)c=HD_COPPER;
+    else if(window_seam_u)c=HD_BRICK_DARK;
     else if(v>=102&&v<=109)c=HD_BRICK_DARK;
-    else if(v<92&&u>140&&u<153)c=HD_LAMP;
-    else if((u&31)<2)c=HD_COPPER;
-    else c=((tx+ty)&1)?HD_GLASS_LIT:HD_GLASS;
-   }else if((texel((unsigned)(u>>4)+(unsigned)(tx+40),
-                         (unsigned)(v>>4)+(unsigned)(ty+40))&7u)==0u)
-    c=HD_BRICK_LIT;
+    else if(v<92&&window_glint_u)c=HD_LAMP;
+    else if(highlight_u)c=HD_COPPER;
+    else c=district_odd?HD_GLASS_LIT:HD_GLASS;
+   }else{
+    int bucket=v>>4;
+    if(bucket!=last_hash_bucket){
+     last_hash_bucket=bucket;
+     hash_value=texel(brick_hash_x,(unsigned)bucket+brick_hash_y);
+    }
+    if((hash_value&7u)==0u)c=HD_BRICK_LIT;
+   }
   }
-  if(v>225&&(u&15)==1)c=HD_STONE;
+  if(v>225&&bevel_u)c=HD_STONE;
   /* Same Potheads shop, same town coordinate in both cameras. This is
      environmental branding, not the future handheld/dancing sign. */
-  if(!tree && tx==21 && ty==11){
+  if(potheads){
    int signage=hd_potheads_wall_ink(u,v);
    if(signage>=0)c=(unsigned)signage;
   }
