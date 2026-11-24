@@ -1,4 +1,5 @@
 #include "hd_canvas.h"
+#include "hd_world_atlas.h"
 #include "menu_ink.h"
 #include <assert.h>
 #include <stdio.h>
@@ -25,6 +26,22 @@ int main(void){
    assert(view.pixels[0]!=0xA5);
    assert(view.pixels[24*HD_W+15]==HD_PAPER);
   }
+ /* The illustration is the real in-game Danny, not a second set of
+    generic rectangular character art. Weather may not erase his cels. */
+ static uint8_t reference[HD_BYTES];
+ memset(reference,64,sizeof reference);
+ hd_world_person_art(reference,164,139,0u,1u,0u);
+ unsigned actor_pixels=0;
+ for(unsigned frame=0;frame<240u;frame+=19u){
+  prepare();hd_menu_draw(view.pixels,0,0,0,frame,0,0,0,1);check();
+  unsigned visible=0;
+  for(unsigned i=0;i<HD_BYTES;i++)if(reference[i]<64u){
+   assert(view.pixels[i]==reference[i]);visible++;
+  }
+  assert(visible>140u);
+  actor_pixels=visible;
+ }
+ printf("menu: %u exact gameplay-sprite pixels retained across weather frames\n",actor_pixels);
  for(int x=0;x<STORY_W;x++)for(int y=0;y<STORY_H;y++){
   s.x=(uint8_t)x;s.y=(uint8_t)y;
   if(story_solid(x,y))continue;

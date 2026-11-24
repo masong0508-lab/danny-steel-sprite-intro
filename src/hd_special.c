@@ -146,6 +146,12 @@ void hd_cafe_facade(uint8_t *p,int x,int y,unsigned t){
  hd_rect(p,x-2,y-4,122,3,HD_BARK);
  hd_line(p,x,y-4,x+117,y-4,HD_COPPER);
  hd_rect(p,x+2,y,114,16,HD_BRICK_DARK);
+ /* Cast-shadow cornice and recessed pilasters: a physical elevation. */
+ hd_rect(p,x+3,y-1,112,2,HD_SHADOW);
+ hd_rect(p,x+2,y+2,3,12,HD_BARK);
+ hd_rect(p,x+112,y+2,3,12,HD_BARK);
+ hd_line(p,x+3,y+2,x+3,y+13,HD_BRICK_LIT);
+ hd_line(p,x+4,y+14,x+113,y+14,HD_BRICK);
  /* Selective masonry chips and recessed upper vents. */
  for(int i=0;i<8;i++){
   int bx=x+5+(i*31)%105,by=y+3+(i%3)*5;
@@ -176,6 +182,15 @@ void hd_cafe_facade(uint8_t *p,int x,int y,unsigned t){
  hd_rect(p,x+20,y+38,81,17,HD_BRICK_DARK);
  hd_rect(p,x+22,y+41,32,13,HD_BRICK);
  hd_rect(p,x+60,y+41,39,13,HD_BRICK);
+ /* Deep glazing, crockery on a ledge and restrained rain reflections. */
+ hd_rect(p,x+30,y+42,22,2,HD_BARK);
+ hd_rect(p,x+77,y+42,20,2,HD_BARK);
+ hd_rect(p,x+32,y+39,6,3,HD_PLASTER);
+ hd_rect(p,x+40,y+40,4,2,HD_COPPER);
+ hd_rect(p,x+79,y+39,5,3,HD_PLASTER);
+ hd_line(p,x+23,y+37,x+33,y+37,HD_ROAD_LIGHT);
+ hd_line(p,x+20,y+40,x+26,y+36,HD_PLASTER);
+ hd_line(p,x+62,y+37,x+67,y+36,HD_ROAD_LIGHT);
  /* Amber practical light and utensils are seen through dark glazing. */
  hd_rect(p,x+25,y+39,3,10,HD_COPPER);
  hd_rect(p,x+71,y+39,3,10,HD_COPPER);
@@ -201,11 +216,18 @@ void hd_cafe_facade(uint8_t *p,int x,int y,unsigned t){
  hd_rect(p,x+10,y+72,102,3,HD_SHADOW);
  /* Cloth scallops shade the top of the sash. */
  hd_rect(p,x+7,y+27,107,5,HD_SHADOW);
+ hd_rect(p,x+8,y+27,104,1,HD_BARK);
  for(int i=0;i<11;i++){
   int ax=x+9+i*9;
-  hd_rect(p,ax,y+28,8,3,i&1?HD_BRICK:HD_BARK);
+  unsigned fabric=i&1?HD_BRICK:HD_BARK;
+  hd_rect(p,ax,y+28,8,3,fabric);
+  hd_line(p,ax,y+28,ax+7,y+28,i&1?HD_BRICK_LIT:HD_COPPER);
   hd_rect(p,ax+1,y+31,6,2,i&1?HD_COPPER:HD_RED_SHADE);
+  hd_pixel(p,ax+1,y+32,HD_SHADOW);
  }
+ hd_rect(p,x+11,y+32,2,35,HD_BARK);
+ hd_line(p,x+11,y+33,x+11,y+66,HD_COPPER);
+ hd_rect(p,x+107,y+33,2,35,HD_BARK);
  /* Rain pipe and a grounded planter finish the silhouette. */
  hd_rect(p,x+114,y+1,3,68,HD_SHADOW);
  hd_line(p,x+115,y+2,x+115,y+64,HD_STONE_DARK);

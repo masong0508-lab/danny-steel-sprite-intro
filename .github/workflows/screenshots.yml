@@ -196,7 +196,7 @@ jobs:
             # A concurrent ROM/image publication has no effect on these tests.
             git fetch origin "${GITHUB_REF_NAME}"
             current_branch="$(git rev-parse "origin/${GITHUB_REF_NAME}")"
-            unsafe="$(git diff --name-only "$GITHUB_SHA" "$current_branch" | grep -Ev '^(docs/screenshots/|dist/danny_steel_title[.]gba$)' || true)"
+            unsafe="$(git diff --name-only "$GITHUB_SHA" "$current_branch" | grep -Ev '^(docs/screenshots/|dist/danny_steel_title[.]gba$|dist/Danny-Steel-GBA-Playable[.]zip$)' || true)"
             if [ -n "$unsafe" ]; then
               echo "Skipping captures; a newer source revision needs its own run:"
               printf '%s\n' "$unsafe"
