@@ -227,6 +227,10 @@ static void archive(uint8_t *p,unsigned t,unsigned page){
  hd_text(p,143,14,"BORE / THE ARCHIVE",HD_PAPER,1,0);
 }
 static void record_room(uint8_t *p,const Story *s,unsigned t){
+ unsigned phase=s->song_steps;
+ if(phase>STORY_PROJECT_DONE)phase=STORY_PROJECT_DONE;
+ unsigned take_ink=(s->project_style&STORY_STYLE_SONG_SOFT)?
+                  HD_COPPER:HD_GLASS_LIT;
  interior(p,t,1);
  hd_rect(p,127,29,102,71,HD_INK);
  hd_rect(p,130,32,95,64,HD_STONE_DARK);
@@ -261,10 +265,6 @@ static void record_room(uint8_t *p,const Story *s,unsigned t){
  hd_rect(p,130,28,94,2,HD_STONE_LIT);
  /* The console keeps an actual four-channel session ledger. Each notch
     follows the saved take count; the soft arrangement uses a warm ink. */
- unsigned phase=s->song_steps;
- if(phase>STORY_PROJECT_DONE)phase=STORY_PROJECT_DONE;
- unsigned take_ink=(s->project_style&STORY_STYLE_SONG_SOFT)?
-                  HD_COPPER:HD_GLASS_LIT;
  hd_rect(p,134,35,86,13,HD_SHADOW);
  hd_text(p,138,38,"TAKES",HD_PAPER,1,0);
  for(unsigned j=0;j<4u;j++){
