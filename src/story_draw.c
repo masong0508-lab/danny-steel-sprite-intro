@@ -522,6 +522,8 @@ static void activity_menu(uint8_t *p,const Story *s){
     const char *effect="";
     unsigned selected=s->activity_choice;
     switch(s->activity){
+    case 'f':where="MARA / FIRST EVENING";left="WALK";right="TALK";
+        effect=selected?"BOND +1 ENERGY +1":"BOND +2 ENERGY -1";break;
     case 'F':where="MARA / AFTERNOON";left="WALK";right="TALK";
         effect=selected?"BOND +1 ENERGY +1":"BOND +2 ENERGY -1";break;
     case 'L':where="LETTER / MEMORIES";left="WRITE";right="KEEP";
@@ -532,6 +534,8 @@ static void activity_menu(uint8_t *p,const Story *s){
         effect=selected?"SPARK +1 ENERGY +1":"MUSIC STAGE +1";break;
     case 'E':where="MASTER / COMPLETE";left="LISTEN";right="STUDIO";
         effect=selected?"ADVANCED / SIX TABS":"EASY / PLAY THE MASTER";break;
+    case 'J':where="POTHEADS / SHIFT";left="WORK";right="LEAVE";
+        effect=selected?"NO ENERGY SPENT":"WORK +2 ENERGY -1";break;
     case 'm':where="BORE TAPE";left="BUILD";right="SOFTEN";
         effect=selected?"STAGE +1 ENERGY +1":"STAGE +1 / MORE WORK";break;
     case 'r':where="ROOFTOP ART";left="LAYER";right="LIGHT";
@@ -542,9 +546,9 @@ static void activity_menu(uint8_t *p,const Story *s){
     panel(p,42,80);
     box(p,3,43,2,34,18);
     text(p,8,45,where,20,25);
-    if(s->activity=='M'||s->activity=='m'||s->activity=='r'||s->activity=='E'){
+    if(s->activity=='M'||s->activity=='m'||s->activity=='r'||s->activity=='R'||s->activity=='E'){
         char progress[]="0 / 4";
-        unsigned phase=s->activity=='r'?s->art_steps:s->song_steps;
+        unsigned phase=(s->activity=='r'||s->activity=='R')?s->art_steps:s->song_steps;
         progress[0]=(char)('0'+(phase>4u?4u:phase));
         text(p,91,45,progress,18,5);
     }
@@ -880,7 +884,7 @@ void story_draw(const Story *s,int frame,uint8_t *p) {
         activity_menu(p,s);
     } else if(s->choosing){
         panel(p,49,80);text(p,4,53,
-            (s->flags&STORY_FULL)==STORY_FULL?"ALL WORK DONE: BOARD":
+            (s->flags&STORY_FULL)==STORY_FULL?"TAPE + CANVAS: BOARD":
             "CLINIC CALL STOPS TRIP",20,28);
         text(p,4,62,s->choice?"GO    > STAY":" > GO    STAY",18,28);
         text(p,4,72,"LEFT/RIGHT   A CHOOSE",20,29);
