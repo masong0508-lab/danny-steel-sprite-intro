@@ -247,7 +247,7 @@ int main(void){
   assert(sample.before[g]==0xA5&&sample.after[g]==0xA5);
  /* Every role's distinct portrait must stay bounded in the exact same
     guarded 240x160 buffer, with no new RAM backing. */
- uint32_t portraits[5];
+ uint32_t portraits[5],faces[5];
  for(int role=1;role<=5;role++){
   memset(&sample,0xA5,sizeof sample);
   hd_rect(sample.pixels,0,0,HD_W,HD_H,HD_STONE_DARK);
@@ -260,8 +260,15 @@ int main(void){
   for(unsigned g=0;g<32u;g++)
    assert(sample.before[g]==0xA5&&sample.after[g]==0xA5);
   portraits[role-1]=h;
+  /* Compare only the central face, not hair or costume, to prove
+     distinct facial construction rather than wardrobe color swaps. */
+  uint32_t face=2166136261u;
+  for(int yy=64;yy<=94;yy++)for(int xx=107;xx<=133;xx++)
+   face=(face^color(xx,yy))*16777619u;
+  faces[role-1]=face;
   for(int prior=1;prior<role;prior++)
    assert(portraits[role-1]!=portraits[prior-1]);
+  if(role==2)assert(faces[0]!=faces[1]);
  }
  /* Reunion opening and exit are physically distinct framings. */
  uint32_t door_early=film(&s,CINE_RESCUE_SAVED,80u,1u);
@@ -285,6 +292,7 @@ int main(void){
  assert(contact!=door_early);
  assert(color(130,118)==HD_SKIN_LIT ||
         color(130,118)==HD_SKIN);
+ puts("art direction: distinct Danny/Mara facial planes and grounded shared cafe");
  puts("cinematic staging: letter, ink stamp, Mara cafe, bus, easel and");
  puts("rescue-aware clinic, 240x160 palette, frame bounds and reunion OK");
  return 0;

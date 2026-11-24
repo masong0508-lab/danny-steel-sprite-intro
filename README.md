@@ -39,6 +39,16 @@ The save loader now retains paid-shift completion and the new one-time
 friendship scene without changing the SRAM format.
 [Implementation and tests](docs/FIRST_EVENING_CAMPAIGN.md).
 
+## Inked Old Quarter graphics pass (November 24)
+
+The native artwork now uses richer layered city silhouettes, warmer café
+joinery and furniture, recessed interior glazing, converging floor joints,
+more distinctive close-up faces and a consistent cream-roofed red bus.
+The title menu uses the actual walking-game sprite. The existing sky fill
+is drawn as five large bands rather than one rectangle per scanline.
+See the [updated capture gallery](docs/SCREENSHOT_GALLERY.md) and
+[art direction notes](docs/INKED_OLD_QUARTER.md).
+
 ## Playable chapter: Old Quarter
 
 The city is closing, the last bus is leaving, and Danny is trying to determine which pieces of yesterday are worth carrying into tomorrow. Read a letter from home, have the BORE Continuity Office validate your existence, and speak to Mara before deciding whether to board the bus or remain behind. Finishing the optional music and art objectives raises *primary-story* completion to 100%, while the Mirror Orchard investigation remains independent. The prose is intentionally a little sad beneath the bureaucracy and bad jokes; the BORE reference is a light crossover and does not attempt to rewrite the larger game's canon.

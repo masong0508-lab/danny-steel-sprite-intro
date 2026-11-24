@@ -98,12 +98,12 @@ static void sky(uint8_t *p,unsigned t){
  hd_line(p,178,136,190,136,HD_COPPER);
  hd_line(p,173,140,189,140,HD_REFLECT);
  if((t/23u)&1u)hd_line(p,181,136,185,136,HD_GOLD);
- hd_world_person_art(p,164,139,0u,1u,0u);
  for(unsigned i=0;i<6u;i++){
   unsigned seed=hash(i,7u);
   int x=152+(int)((seed+t*2u)%86u),y=43+(int)((seed/19u+t*3u)%98u);
   hd_line(p,x,y,x-1,y+3,HD_ROAD_COOL);
  }
+ hd_world_person_art(p,164,139,0u,1u,0u);
 }
 static void paper_panel(uint8_t *p){
  /* A quiet, slightly offset sleeve of dark paper, not a framed GUI. */

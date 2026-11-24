@@ -167,6 +167,19 @@ int main(int argc,char **argv){
  s.rescue_stage=STORY_RESCUE_LOST;s.page=1;
  write_frame("05zc_followup_alone",&s,113);
  s.rescue_stage=STORY_RESCUE_NONE;
+ /* Explicit native art samples: same production camera and no changes
+    to actual progression. The four session stages remain player-driven. */
+ {
+  Story art=s;
+  art.cinema=CINE_ART;art.dialogue=0;art.page=0;
+  art.art_steps=0;write_frame("05zd_canvas_underdrawing",&art,80);
+  art.art_steps=2;write_frame("05ze_canvas_silhouette",&art,80);
+  art.art_steps=4;art.project_style=STORY_STYLE_ART_WARM;
+  write_frame("05zf_canvas_finished",&art,80);
+  art.cinema=CINE_MUSIC;art.song_steps=4;
+  art.project_style=STORY_STYLE_SONG_SOFT;
+  write_frame("05zg_recording_finished",&art,80);
+ }
  s.cinema=CINE_NONE;s.scene=STORY_SCENE_NONE;s.view=0;
  /* The first controllable view is now the same storefront as the film. */
  stand(&s,20,11,0);

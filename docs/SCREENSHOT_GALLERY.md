@@ -46,6 +46,28 @@ with printed narrative choices and no rotating-square or gray-video overlay.
 | Mara's café | ![Mara conversation](screenshots/09_story_mara_cafe.png) |
 | Last bus | ![Bus scene](screenshots/10_story_last_bus.png) |
 
+## Inked Old Quarter: native art direction pass (November 24)
+
+The cinematic art uses stronger warm practical lights against subdued slate
+shadows, layered building silhouettes, recessed windows, perspective floor
+joints, recognizable bistro furniture and a consistent red/cream bus livery.
+Danny and Mara's close-ups have distinct eye spacing, cheek and nose planes;
+Mara's folded teal scarf is integrated with her costume. The menu uses
+Danny's existing gameplay sprite rather than a separate block-shaped figure.
+
+| New renderer evidence | Capture |
+| --- | --- |
+| Cafe staging and ceramic cups | ![Cafe scene](screenshots/05i_mara_table.png) |
+| Mara reaction | ![Mara close-up](screenshots/05p_mara_reaction.png) |
+| Clinic interior | ![Clinic](screenshots/05v_clinic_danny_reaction.png) |
+| Canvas underdrawing | ![First stage](screenshots/05zd_canvas_underdrawing.png) |
+| Canvas silhouettes | ![Second stage](screenshots/05ze_canvas_silhouette.png) |
+| Completed warm painting | ![Finished canvas](screenshots/05zf_canvas_finished.png) |
+| Completed recording | ![Studio master](screenshots/05zg_recording_finished.png) |
+
+All are the existing native 240x160 painters. No new image atlas or
+framebuffer is required, and story flags and collision are unchanged.
+
 ## Old Quarter's new cartridge-authored artwork
 
 The overhead camera now uses its own native 16×16 pavement, masonry,
