@@ -75,6 +75,10 @@ void hd_actor_stage(uint8_t *p,int x,int feet,int role,unsigned frame,int emotio
  hd_pixel(p,x+1,fy-32,HD_COPPER);
  hd_pixel(p,x+1,fy-28,HD_COPPER);
  hd_rect(p,x-7,fy-30,4,1,dark);
+ /* A fold on the lit side and role-specific lapels, never extra black
+    silhouette outlines through the sleeves. */
+ hd_line(p,x-7,fy-35,x-4,fy-31,light);
+ hd_line(p,x+5,fy-31,x+7,fy-26,dark);
  /* Articulated sleeves maintain the existing prop-contact endpoints. */
  int wx=x+16,wy=fy-28,elx=x+14,ely=fy-34;
  if(emotion==3){wx=x+23;wy=fy-49;elx=x+20;ely=fy-38;}
@@ -122,7 +126,9 @@ void hd_actor_stage(uint8_t *p,int x,int feet,int role,unsigned frame,int emotio
   hd_line(p,x-7,fy-64,x+1,fy-64,HD_HAIR);
   hd_rect(p,x-9,fy-58,2,9,hair);
   hd_rect(p,x+8,fy-60,2,12,hair);
-  hd_rect(p,x-1,fy-45,3,3,HD_GOLD);
+  hd_rect(p,x-4,fy-46,8,3,HD_GLASS_LIT);
+  hd_rect(p,x-2,fy-43,5,4,HD_GLASS);
+  hd_pixel(p,x,fy-43,HD_GOLD);
  }else if(role==3){
   plane(p,x,fy-65,-5,5,-9,8,4,hair);
   hd_rect(p,x-9,fy-61,3,7,hair);
@@ -213,8 +219,12 @@ void hd_actor_closeup(uint8_t *p,int x,int base,int role,
  plane(p,x,y-5,-27,27,-23,25,43,shadow);
  plane(p,x,y-48,-12,7,-28,10,12,jacket);
  plane(p,x,y-36,-29,10,-24,6,74,jacket);
- plane(p,x,y-43,-23,-17,-21,-17,23,light);
+ plane(p,x,y-43,-23,-19,-22,-18,15,light);
+ /* Break the rigid vertical highlight into a shoulder plane and a
+    crease at the waist. Preserve the uninterrupted garment silhouette. */
+ hd_line(p,x-22,y-24,x-16,y-19,light);
  hd_line(p,x-21,y-16,x-17,y-4,shadow);
+ hd_line(p,x-14,y-8,x-9,y-3,shadow);
  hd_line(p,x+13,y-25,x+20,y-20,HD_INK);
  hd_rect(p,x+11,y-18,11,2,shadow);
  /* Full sleeves keep their old wrist contact zones. The outer contour
@@ -264,8 +274,12 @@ void hd_actor_closeup(uint8_t *p,int x,int base,int role,
   hd_rect(p,x+12,y+6,14,3,HD_COPPER);
   hd_rect(p,x+17,y+9,4,3,HD_GOLD);
  }else if(role==2){
-  hd_line(p,x-6,y-41,x+1,y-29,HD_COPPER);
-  hd_line(p,x+8,y-41,x+1,y-29,HD_COPPER);
+  /* Mara's scarf has its own folded teal silhouette, with the pendant
+     sitting in front of the cloth instead of floating at the neckline. */
+  plane(p,x,y-43,-9,9,-5,8,6,HD_GLASS_LIT);
+  plane(p,x,y-37,-5,8,-1,4,8,HD_GLASS);
+  hd_line(p,x-7,y-41,x-2,y-35,HD_PAPER);
+  hd_line(p,x+5,y-39,x+2,y-31,HD_ROAD_COOL);
   hd_rect(p,x,y-29,3,4,HD_GOLD);
   hd_rect(p,x+13,y-27,3,3,HD_GOLD);
  }else if(role==3){
@@ -273,6 +287,7 @@ void hd_actor_closeup(uint8_t *p,int x,int base,int role,
   plane(p,x,y-36,-1,1,-3,2,19,HD_BARK);
   hd_rect(p,x+12,y-25,8,10,HD_PAPER);
   hd_rect(p,x+14,y-22,4,2,HD_COPPER);
+  hd_line(p,x-19,y-31,x-8,y-29,shadow);
  }else if(role==5){
   plane(p,x,y-42,-5,5,-4,4,29,HD_GLASS);
   hd_line(p,x-16,y-42,x-4,y-25,HD_PAPER);
@@ -322,6 +337,8 @@ void hd_actor_closeup(uint8_t *p,int x,int base,int role,
   plane(p,x,y-91,13,19,17,21,23,hair);
   hd_line(p,x-13,y-96,x-2,y-99,HD_HAIR);
   hd_line(p,x-16,y-91,x-8,y-94,HD_HAIR);
+  hd_line(p,x-10,y-92,x-3,y-95,HD_COPPER);
+  hd_line(p,x+14,y-87,x+17,y-77,HD_HAIR);
   hd_line(p,x+19,y-71,x+22,y-53,HD_HAIR);
   hd_rect(p,x-17,y-65,2,3,HD_GOLD);
  }else if(role==3){
@@ -351,6 +368,7 @@ void hd_actor_closeup(uint8_t *p,int x,int base,int role,
   unsigned glint=HD_ROAD_COOL;
   hd_line(p,x-9,y-99,x+1,y-101,glint);
   hd_line(p,x-15,y-94,x-4,y-98,glint);
+  hd_line(p,x+2,y-98,x+10,y-94,HD_ROAD_COOL);
  }
  /* Narrow lids and displaced pupils provide a gaze without giant white
     square eyes. Highlights occupy one pixel, never an entire eyeball. */
@@ -360,15 +378,21 @@ void hd_actor_closeup(uint8_t *p,int x,int base,int role,
   hd_line(p,x-12,y-74,x-5,y-73,HD_BARK);
   hd_line(p,x+5,y-73,x+12,y-74,HD_BARK);
  }else{
-  hd_rect(p,x-12,y-75,8,3,HD_PAPER);
-  hd_rect(p,x+5,y-75,8,3,HD_SKIN_LIT);
-  hd_rect(p,x-9+gaze,y-75,3,3,HD_INK);
-  hd_rect(p,x+8+gaze,y-75,3,3,HD_INK);
-  hd_line(p,x-13,y-76,x-5,y-76,HD_INK);
-  hd_line(p,x+5,y-76,x+13,y-75,HD_INK);
-  hd_pixel(p,x-8+gaze,y-74,HD_GLASS);
-  hd_pixel(p,x+9+gaze,y-74,HD_GLASS);
-  hd_line(p,x-12,y-71,x-6,y-71,HD_BRICK_LIT);
+  /* Almond lids and role-specific spacing, rather than the same large
+     white rectangles on every face. Each gaze retains its animation. */
+  int eye_gap=role==2?1:0;
+  int right=x+5+eye_gap;
+  hd_rect(p,x-12,y-75,7,2,HD_PAPER);
+  hd_rect(p,right,y-75,7,2,HD_SKIN_LIT);
+  hd_rect(p,x-9+gaze,y-75,2,2,HD_INK);
+  hd_rect(p,right+3+gaze,y-75,2,2,HD_INK);
+  hd_line(p,x-13,y-74,x-12,y-76,HD_BARK);
+  hd_line(p,x-12,y-76,x-6,y-76,HD_INK);
+  hd_line(p,right,y-76,right+6,y-76,HD_INK);
+  hd_pixel(p,x-9+gaze,y-75,HD_GLASS);
+  hd_pixel(p,right+3+gaze,y-75,HD_GLASS);
+  hd_line(p,x-12,y-72,x-7,y-72,HD_BRICK_LIT);
+  hd_line(p,right+1,y-72,right+5,y-72,HD_BRICK_LIT);
  }
  if(emotion==7){
   hd_line(p,x-13,y-81,x-5,y-79,HD_BARK);
@@ -388,10 +412,22 @@ void hd_actor_closeup(uint8_t *p,int x,int base,int role,
   hd_rect(p,x+4,y-69,10,1,HD_INK);
   hd_line(p,x-3,y-75,x+3,y-75,HD_INK);
  }
- hd_line(p,x+2,y-73,x+4,y-63,HD_BRICK_LIT);
- hd_line(p,x+3,y-63,x-1,y-62,HD_BARK);
+ /* Separate bridge, tip and cheek planes. Mara has a softer nose;
+    Danny's is angular, and the doctor/clerk keep stronger nose shadows. */
+ int tip=role==2?2:role==1?4:3;
+ hd_line(p,x+1,y-73,x+tip,y-64,HD_BRICK_LIT);
+ hd_line(p,x+tip,y-64,x-1,y-62,HD_BARK);
  hd_rect(p,x,y-65,2,2,HD_SKIN_LIT);
- hd_pixel(p,x+5,y-63,HD_BARK);
+ hd_pixel(p,x+tip+1,y-63,HD_BARK);
+ if(role==2){
+  hd_line(p,x-14,y-67,x-10,y-68,HD_SKIN_LIT);
+  hd_line(p,x+9,y-67,x+12,y-66,HD_SKIN);
+ }else if(role==1){
+  hd_line(p,x-12,y-67,x-9,y-64,HD_SKIN_LIT);
+  hd_line(p,x+8,y-67,x+12,y-65,HD_BRICK_LIT);
+ }else{
+  hd_line(p,x-13,y-70,x-8,y-69,HD_SKIN);
+ }
  if(emotion==1&&((frame/10u)&1u)){
   hd_line(p,x-5,y-56,x+6,y-56,HD_BARK);
   hd_rect(p,x-3,y-55,8,3,HD_BRICK_DARK);
@@ -400,8 +436,12 @@ void hd_actor_closeup(uint8_t *p,int x,int base,int role,
   hd_line(p,x-5,y-55,x+6,y-54,HD_BARK);
   hd_pixel(p,x+7,y-55,HD_BRICK_LIT);
   hd_rect(p,x-2,y-52,5,1,HD_SKIN_LIT);
+ }else if(role==2){
+  hd_line(p,x-4,y-55,x+4,y-55,HD_BARK);
+  hd_pixel(p,x+5,y-54,HD_BRICK_LIT);
+  hd_rect(p,x-2,y-53,5,1,HD_SKIN_LIT);
  }else{
-  hd_line(p,x-5,y-55,x+6,y-55,HD_BARK);
+  hd_line(p,x-5,y-55,x+5,y-55,HD_BARK);
   hd_rect(p,x-2,y-52,5,1,HD_SKIN_LIT);
  }
  if(role==1){
