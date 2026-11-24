@@ -80,6 +80,11 @@ than separate backdrop mockups.
 | --- | --- |
 | Archive plaza and townspeople | ![Archive square](screenshots/33_quarter_archive_plaza.png) |
 | Mara's street and adjacent residents | ![Mara's neighbourhood](screenshots/34_quarter_mara_street.png) |
+| Same cafe when Mara is missing | ![Empty café](screenshots/34a_quarter_empty_cafe.png) |
+| Empty cafe in first person | ![First-person empty cafe](screenshots/34b_first_person_empty_cafe.png) |
+| Initial easel in town | ![Underdrawing](screenshots/34c_quarter_easel_start.png) |
+| Completed warm painting | ![Finished easel](screenshots/34d_quarter_easel_complete.png) |
+| Completed recording | ![Recording console](screenshots/34e_quarter_recording_master.png) |
 | Bus stop, architecture and street props | ![Bus street](screenshots/35_quarter_bus_and_facades.png) |
 | Riversides and residents | ![Riverside residents](screenshots/36_quarter_riverside_residents.png) |
 | Potheads' real storefront, isometric camera | ![Potheads storefront](screenshots/37_potheads_storefront.png) |

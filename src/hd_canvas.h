@@ -39,6 +39,12 @@ void hd_menu_draw(uint8_t *p,unsigned page,unsigned mode,unsigned selection,
                   unsigned slot0_valid,unsigned slot1_valid);
 void hd_world_draw(uint8_t *p,const Story *s,unsigned frame);
 void hd_isometric_draw(uint8_t *p,const Story *s,unsigned frame);
+/* A missing or unlocated person must not silently reappear in the town. */
+static inline int hd_mara_absent(const Story *s){
+ return (s->rescue_stage>=STORY_RESCUE_MISSING &&
+         s->rescue_stage<=STORY_RESCUE_TRACE) ||
+         s->rescue_stage==STORY_RESCUE_LOST;
+}
 void hd_first_person_draw(uint8_t *p,const Story *s,unsigned frame);
 void hd_studio_draw(uint8_t *p,const Story *s,unsigned frame);
 int hd_cinema_supports(unsigned scene);

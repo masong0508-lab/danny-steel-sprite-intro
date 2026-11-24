@@ -1,0 +1,5 @@
+# Lived-in Old Quarter landmarks
+
+This pass focuses on the playable town. Compact café and BORE architectural backdrops and counters use the real interaction squares. Upper structures are suppressed when they would obscure Danny. The letter now rests on a mailbox and post; building cutaways use shallow sections and interior flooring. The easel and recording desk depict the actual saved project stages and the warm/soft styles, matching the cinematic sets. Both cameras show an empty cafe and telephone instead of drawing Mara when she is missing. The last clinic shot follows the speaker if Mara is absent; the cafe commuter stays behind the foreground characters with grounded feet and a walking stride.
+
+No map, collision, save, palette, framebuffer, actor atlas or wall-cache changes. Normal first-person golden pictures remain unchanged. New guarded native scene tests cover both cameras, absence and return, and five creative stages. The gallery adds paired renders of the same production art. Full GBA build and actual emulator capture remain the release gates.

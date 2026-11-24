@@ -197,6 +197,23 @@ int main(int argc,char **argv){
  write_frame("33_quarter_archive_plaza",&s,145);
  stand(&s,8,12,3);
  write_frame("34_quarter_mara_street",&s,155);
+ {
+  Story missing=s;missing.rescue_stage=STORY_RESCUE_MISSING;
+  write_frame("34a_quarter_empty_cafe",&missing,155);
+  missing.view=1;
+  write_frame("34b_first_person_empty_cafe",&missing,155);
+ }
+ {
+  Story creative=s;
+  stand(&creative,14,7,3);
+  creative.art_steps=0;
+  write_frame("34c_quarter_easel_start",&creative,155);
+  creative.art_steps=4;creative.project_style=STORY_STYLE_ART_WARM;
+  write_frame("34d_quarter_easel_complete",&creative,155);
+  stand(&creative,19,8,3);
+  creative.song_steps=4;
+  write_frame("34e_quarter_recording_master",&creative,155);
+ }
  stand(&s,19,4,1);
  write_frame("35_quarter_bus_and_facades",&s,162);
  stand(&s,3,8,3);

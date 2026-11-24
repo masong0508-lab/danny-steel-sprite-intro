@@ -39,6 +39,13 @@ jobs:
             tests/hd_world_atlas_test.c \
             -o /tmp/danny_world_atlas_test
           /tmp/danny_world_atlas_test
+      - name: Verify state-driven town landmarks, Mara casting and creative work art
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
+            src/story.c src/studio.c src/hd_canvas.c src/hd_world_atlas.c \
+            src/hd_isometric.c src/hd_isometric_atlas.c src/hd_facade_art.c \
+            src/hd_perspective.c tests/hd_landmarks_test.c -o /tmp/danny_landmarks
+          /tmp/danny_landmarks
       - name: Validate native isometric walkability, occlusion, pixels, weather and town locations
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \

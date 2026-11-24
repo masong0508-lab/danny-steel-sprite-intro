@@ -67,21 +67,26 @@ static void potheads_fascia(uint8_t *p,int sx,int sy,int h){
    storefront spawn. Reveal only the architectural mass intersecting his
    actual moving silhouette. This is a low wall cross-section, never a
    second actor painted on top of a roof. All world footprints stay put. */
-static void cutaway(uint8_t *p,int sx,int sy,int front,int side){
- const int h=6;
+static void cutaway(uint8_t *p,int sx,int sy,int front,int side,int shop){
+ /* Exposed floor rather than another roof resembling the road. */
+ const int h=3;
+ unsigned floor=shop?HD_BARK:HD_STONE_DARK;
  for(int col=0;col<16;col++){
   if(front)hd_rect(p,sx+col,sy+8+col/2-h,1,h,HD_BRICK_DARK);
   if(side)hd_rect(p,sx+16+col,sy+16-col/2-h,1,h,HD_SHADOW);
  }
  for(int row=1;row<15;row++){
   int lo=row<8?16-row*2:(row-7)*2;
-  hd_rect(p,sx+lo,sy-h+row,32-lo*2,1,HD_WET);
+  hd_rect(p,sx+lo,sy-h+row,32-lo*2,1,floor);
  }
- /* A thick dark section and broken stone lip explain the removed roof. */
- hd_line(p,sx+2,sy+8-h,sx+16,sy+15-h,HD_STONE_DARK);
- hd_line(p,sx+17,sy+15-h,sx+29,sy+9-h,HD_STONE_DARK);
- hd_line(p,sx+3,sy+8-h,sx+12,sy+12-h,HD_BARK);
- hd_line(p,sx+20,sy+13-h,sx+27,sy+10-h,HD_MORTAR);
+ for(int k=-1;k<=1;k++){
+  int x=sx+16+k*6;
+  hd_line(p,x-3,sy+6-h,x+3,sy+9-h,shop?HD_BRICK_DARK:HD_ROAD_COOL);
+ }
+ hd_line(p,sx+2,sy+8-h,sx+16,sy+15-h,HD_INK);
+ hd_line(p,sx+17,sy+15-h,sx+29,sy+9-h,HD_INK);
+ hd_line(p,sx+3,sy+8-h,sx+12,sy+12-h,HD_MORTAR);
+ hd_line(p,sx+20,sy+13-h,sx+27,sy+10-h,HD_STONE);
 }
 static void building(uint8_t *p,int sx,int sy,int wx,int wy,
                      unsigned tick,char type,int actor_x,int actor_foot,
@@ -100,7 +105,7 @@ static void building(uint8_t *p,int sx,int sy,int wx,int wy,
     fixed-point depth uses the same gait interpolation as the actor. */
  if((wx+wy)*8>actor_depth && sx<actor_x+12 && sx+32>actor_x-12 &&
     sy-(int)h-5<actor_foot+2 && sy+16>actor_foot-32){
-  cutaway(p,sx,sy,front,side);
+  cutaway(p,sx,sy,front,side,potheads);
   if(potheads&&side){
    /* Retain the far sign pier, outside the walking silhouette, so the
       existing bracket has a real attachment even with the roof cut. */
@@ -187,22 +192,83 @@ static void bus(uint8_t *p,int sx,int sy,unsigned tick){
  hd_pixel(p,sx+30,y,(tick/60u)&1u?HD_LAMP:HD_PAPER);
  hd_pixel(p,sx+4,y,HD_RED);
 }
-static void object(uint8_t *p,int sx,int sy,char kind,unsigned tick,int wx,int wy){
+/* Miniature architectural landmarks use the existing encounter squares.
+   Omit upper architecture when it would cover Danny in the foreground. */
+static void cafe_corner(uint8_t *p,int x,int foot,int tall,int absent){
+ hd_ellipse(p,x,foot+1,14,3,HD_SHADOW);
+ if(tall){
+  hd_rect(p,x-15,foot-32,30,29,HD_BRICK_DARK);
+  hd_rect(p,x-14,foot-35,28,9,HD_BARK);
+  hd_text(p,x-12,foot-34,"CAFE",HD_PAPER,1,0);
+  hd_rect(p,x-14,foot-25,28,4,HD_SHADOW);
+  for(int j=0;j<5;j++)hd_rect(p,x-13+j*5,foot-25,4,3,j&1?HD_COPPER:HD_BRICK);
+  hd_rect(p,x-13,foot-20,26,12,HD_INK);
+  hd_rect(p,x-11,foot-19,22,10,absent?HD_ROAD_COOL:HD_BRICK);
+  hd_rect(p,x-1,foot-19,2,10,HD_BARK);
+  if(!absent){hd_pixel(p,x-8,foot-16,HD_LAMP);hd_pixel(p,x+7,foot-16,HD_GOLD);}
+ }
+ hd_rect(p,x-14,foot-7,28,3,HD_BARK);
+ hd_line(p,x-12,foot-7,x+12,foot-7,HD_COPPER);
+ hd_rect(p,x-12,foot-4,3,4,HD_BARK);
+ hd_rect(p,x+9,foot-4,3,4,HD_BARK);
+ if(absent){
+  /* Empty chair and telephone remain in the same physical cafe. */
+  hd_rect(p,x-11,foot-12,7,5,HD_BARK);
+  hd_rect(p,x-11,foot-7,8,2,HD_COPPER);
+  hd_rect(p,x-10,foot-5,2,5,HD_SHADOW);
+  hd_rect(p,x-5,foot-5,2,5,HD_SHADOW);
+  hd_rect(p,x+4,foot-11,7,4,HD_INK);
+  hd_pixel(p,x+9,foot-10,HD_GOLD);
+ }
+}
+static void bore_corner(uint8_t *p,int x,int foot,int tall){
+ hd_ellipse(p,x,foot+1,14,3,HD_SHADOW);
+ if(tall){
+  hd_rect(p,x-14,foot-34,28,28,HD_STONE_DARK);
+  hd_rect(p,x-13,foot-35,26,9,HD_BARK);
+  hd_text(p,x-11,foot-34,"BORE",HD_PAPER,1,0);
+  hd_rect(p,x-12,foot-25,24,14,HD_INK);
+  hd_rect(p,x-10,foot-23,20,12,HD_BRICK_DARK);
+  for(int j=0;j<5;j++){hd_rect(p,x-9+j*4,foot-22,3,9,HD_BRICK);hd_pixel(p,x-8+j*4,foot-20,HD_GOLD);}
+ }
+ hd_rect(p,x-13,foot-8,26,4,HD_BARK);
+ hd_line(p,x-12,foot-8,x+12,foot-8,HD_COPPER);
+ hd_rect(p,x-11,foot-4,3,4,HD_BARK);
+ hd_rect(p,x+8,foot-4,3,4,HD_BARK);
+ hd_rect(p,x+3,foot-11,7,3,HD_PAPER);
+ hd_pixel(p,x+7,foot-10,HD_RED_SHADE);
+}
+static void object(uint8_t *p,int sx,int sy,char kind,unsigned tick,
+                   int wx,int wy,const Story *s,int tall){
  int cx=sx+16,foot=sy+16;
  if(kind=='T'){hd_world_tree_art(p,cx,foot,
                          grain(wx,wy)%3u,(tick/49u)&1u);return;}
- if(kind=='F'||kind=='C'||kind=='P'||kind=='V'||
-    kind=='Q'||kind=='W'){
-  unsigned role=kind=='F'?1u:kind=='C'?2u:kind=='P'?3u:
-                kind=='V'?4u:kind=='Q'?5u:6u;
+ if(kind=='F'){
+  int absent=hd_mara_absent(s);
+  cafe_corner(p,cx,foot,tall,absent);
+  if(!absent)hd_world_person_art(p,cx,foot,1u,1u,0u);
+  return;
+ }
+ if(kind=='C'){
+  bore_corner(p,cx,foot,tall);
+  hd_world_person_art(p,cx,foot,2u,1u,0u);
+  return;
+ }
+ if(kind=='P'||kind=='V'||kind=='Q'||kind=='W'){
+  unsigned role=kind=='P'?3u:kind=='V'?4u:kind=='Q'?5u:6u;
   hd_world_person_art(p,cx,foot,role,1u,0u);
   return;
  }
  if(kind=='B'){bus(p,sx,sy,tick);return;}
  if(kind=='L'){
-  hd_rect(p,cx-7,foot-9,14,9,HD_PAPER);
-  hd_line(p,cx-7,foot-9,cx,foot-3,HD_COPPER);
-  hd_line(p,cx+6,foot-9,cx,foot-3,HD_COPPER);
+  /* A grounded mailbox: the family letter no longer floats. */
+  hd_ellipse(p,cx,foot+1,9,2,HD_SHADOW);
+  hd_rect(p,cx-2,foot-11,4,11,HD_BARK);
+  hd_rect(p,cx-8,foot-18,16,9,HD_BRICK_DARK);
+  hd_rect(p,cx-7,foot-19,14,8,HD_PAPER);
+  hd_line(p,cx-7,foot-19,cx,foot-14,HD_COPPER);
+  hd_line(p,cx+6,foot-19,cx,foot-14,HD_COPPER);
+  hd_rect(p,cx-8,foot-11,16,2,HD_BARK);
   return;
  }
  if(kind=='M'){
@@ -217,7 +283,9 @@ static void object(uint8_t *p,int sx,int sy,char kind,unsigned tick,int wx,int w
   hd_line(p,cx+6,foot-7,cx+1,foot-6,HD_PAPER);
   hd_rect(p,cx-14,foot-16,3,10,HD_SHADOW);
   hd_rect(p,cx+11,foot-16,3,10,HD_SHADOW);
-  hd_pixel(p,cx+9,foot-5,HD_LAMP);
+  unsigned phase=s->song_steps>4u?4u:s->song_steps;
+  for(unsigned j=0;j<4u;j++)hd_pixel(p,cx+1+(int)j*2,foot-5,j<phase?
+       (s->project_style&STORY_STYLE_SONG_SOFT?HD_COPPER:HD_LAMP):HD_SHADOW);
   return;
  }
  if(kind=='R'){
@@ -230,12 +298,23 @@ static void object(uint8_t *p,int sx,int sy,char kind,unsigned tick,int wx,int w
   hd_rect(p,cx-6,foot-17,12,10,HD_PAPER);
   /* Small but recognizable framed evening skyline, with a canvas edge
      and easel legs rather than an abstract zig-zag symbol. */
-  hd_rect(p,cx-5,foot-16,10,4,HD_GLASS);
-  hd_rect(p,cx-5,foot-12,10,3,HD_ROAD_COOL);
-  hd_pixel(p,cx+3,foot-15,HD_LAMP);
-  hd_rect(p,cx-4,foot-12,3,3,HD_STONE_DARK);
-  hd_rect(p,cx,foot-13,3,4,HD_BRICK_DARK);
-  hd_pixel(p,cx+1,foot-11,HD_GOLD);
+  unsigned phase=s->art_steps,warm=s->project_style&STORY_STYLE_ART_WARM;
+  if(!phase){
+   hd_rect(p,cx-5,foot-16,10,7,HD_PLASTER);
+   hd_line(p,cx-5,foot-10,cx+4,foot-10,HD_STONE);
+   hd_line(p,cx-4,foot-12,cx,foot-14,HD_STONE);
+   hd_line(p,cx,foot-14,cx+4,foot-12,HD_STONE);
+  }else{
+   hd_rect(p,cx-5,foot-16,10,4,warm?HD_COPPER:HD_GLASS);
+   hd_rect(p,cx-5,foot-12,10,3,warm?HD_BRICK_LIT:HD_ROAD_COOL);
+   hd_pixel(p,cx+3,foot-15,HD_LAMP);
+   if(phase>=2u){
+    hd_rect(p,cx-4,foot-12,3,3,HD_STONE_DARK);
+    hd_rect(p,cx,foot-13,3,4,HD_BRICK_DARK);
+   }
+   if(phase>=3u)hd_pixel(p,cx+1,foot-11,HD_GOLD);
+   if(phase>=4u)hd_line(p,cx-5,foot-8,cx+4,foot-8,HD_GOLD);
+  }
   hd_rect(p,cx-10,foot-5,20,2,HD_COPPER);
   return;
  }
@@ -409,7 +488,9 @@ void hd_isometric_draw(uint8_t *p,const Story *s,unsigned tick){
    else if(c=='T'||c=='F'||c=='C'||c=='P'||c=='V'||
            c=='Q'||c=='W'||c=='B'||c=='L'||c=='K'||
            c=='M'||c=='S'||c=='H'||c=='R'||c=='D')
-    object(p,sx,sy,c,tick,wx,wy);
+    object(p,sx,sy,c,tick,wx,wy,s,
+       !(depth*8>=player_depth && sx<actor_x+12 && sx+32>actor_x-12 &&
+         sy+16>actor_foot-32 && sy-22<actor_foot+2));
    if(wx==17&&wy==13)lamp(p,sx,sy,tick);
   }
  }
