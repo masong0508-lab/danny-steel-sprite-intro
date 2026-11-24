@@ -37,22 +37,40 @@ static void dusk(uint8_t *p,unsigned frame,int night){
  hd_rect(p,0,135,HD_W,25,HD_ROAD);
  /* Warm layered cloud banks turn the dead-flat night sky into a location.
     Bands use the existing palette and drift only on coarse frame ticks. */
- for(int i=0;i<5;i++){
-  int xx=8+i*53+(int)((frame/(i&1?109u:171u))%6u);
-  int yy=19+(i*11)%30;
-  hd_rect(p,xx-11,yy,34,3,night?HD_ROAD_COOL:HD_BRICK_LIT);
-  hd_rect(p,xx-4,yy-3,21,3,night?HD_BRICK_DARK:HD_PAPER);
-  hd_rect(p,xx+3,yy-5,12,2,night?HD_ROAD_LIGHT:HD_LAMP);
- }
+ /* Layered cloud silhouettes, moon/sun halo, and two roof depths.
+    Individual windows belong to fixed walls, never random strobing. */
+ hd_ellipse(p,186,34,12,12,night?HD_ROAD_COOL:HD_BRICK_LIT);
  hd_ellipse(p,186,34,9,9,night?HD_ROAD_LIGHT:HD_LAMP);
- for(int i=0;i<18;i++){
-  int x=i*20-12;
-  int h=18+(int)(hash(i,11)%31u);
-  hd_rect(p,x,112-h,20,h,HD_STONE_DARK);
-  hd_rect(p,x,112-h,20,2,HD_SHADOW);
-  for(int j=4;j<19;j+=7)for(int yy=112-h+8;yy<107;yy+=9)
-   if((hash(i+j,yy)&3u)!=0)
-    hd_rect(p,x+j,yy,3,3,(i+j+yy+(int)(frame/120u))%11==0?HD_LAMP:HD_GLASS);
+ hd_ellipse(p,184,32,6,6,night?HD_ROAD_LIGHT:HD_PAPER);
+ for(int i=0;i<4;i++){
+  int xx=24+i*57+(int)((frame/(i&1?109u:171u))%6u);
+  int yy=18+(i*11)%28;
+  unsigned low=night?HD_STONE_DARK:HD_BRICK_LIT;
+  unsigned mid=night?HD_ROAD_COOL:HD_COPPER;
+  unsigned high=night?HD_ROAD_LIGHT:HD_GOLD;
+  hd_rect(p,xx-15,yy,33,2,low);
+  hd_rect(p,xx-11,yy-3,26,3,mid);
+  hd_rect(p,xx-5,yy-6,15,3,mid);
+  hd_rect(p,xx+1,yy-8,6,2,high);
+  hd_line(p,xx-8,yy-3,xx+11,yy-3,high);
+ }
+ for(int i=0;i<8;i++){
+  int x=i*33-12,h=24+(int)(hash(i,23)%24u);
+  hd_rect(p,x,106-h,32,h,HD_ROAD_COOL);
+  hd_rect(p,x+4,103-h,17,3,HD_ROAD_COOL);
+  hd_line(p,x+4,103-h,x+20,103-h,HD_ROAD_LIGHT);
+ }
+ for(int i=0;i<12;i++){
+  int x=i*22-10,h=18+(int)(hash(i,11)%29u);
+  hd_rect(p,x,112-h,21,h,i%3==0?HD_BRICK_DARK:HD_STONE_DARK);
+  hd_rect(p,x,111-h,21,2,HD_SHADOW);
+  hd_rect(p,x+2,112-h,2,h,HD_ROAD_COOL);
+  if(i%3==1)hd_rect(p,x+12,108-h,4,4,HD_SHADOW);
+  for(int j=5;j<19;j+=7)for(int yy=112-h+7;yy<106;yy+=11){
+   unsigned lit=hash(i+j,yy)%7u;
+   hd_rect(p,x+j,yy,3,4,lit<2u?HD_COPPER:HD_ROAD_COOL);
+   if(lit==0u)hd_pixel(p,x+j+1,yy+1,HD_GOLD);
+  }
  }
  /* Atmospheric power lines and a few real rooftops, not decorative HUD. */
  hd_line(p,0,84,239,84,HD_BRICK_DARK);
@@ -79,11 +97,19 @@ static void sidewalk(uint8_t *p,unsigned frame){
  hd_rect(p,209,42,12,3,HD_COPPER);
  hd_rect(p,210,45,10,4,HD_LAMP);
  hd_rect(p,211,116,9,2,HD_SHADOW);
- for(int i=0;i<3;i++){
-  int x=202+i*7;
-  hd_line(p,x,122,x-4,137,i==1?HD_REFLECT:HD_ROAD_COOL);
+ /* Broken wet reflections are anchored beneath the lamp. */
+ hd_ellipse(p,214,130,18,6,HD_WET);
+ hd_line(p,207,124,221,124,HD_ROAD_LIGHT);
+ hd_line(p,210,128,218,128,HD_COPPER);
+ hd_line(p,204,131,217,131,HD_REFLECT);
+ hd_line(p,212,134,224,134,HD_ROAD_LIGHT);
+ hd_line(p,208,139,215,139,HD_COPPER);
+ if((frame/22u)&1u)hd_line(p,212,128,216,128,HD_GOLD);
+ for(unsigned i=0;i<9u;i++){
+  unsigned seed=hash((int)i,37);
+  int x=(int)((seed+frame*2u)%236u),y=94+(int)((seed/13u+frame*3u)%49u);
+  hd_line(p,x,y,x-1,y+3,HD_ROAD_COOL);
  }
- (void)frame;
 }
 static void street(uint8_t *p,unsigned frame,int night){
  dusk(p,frame,night);
@@ -106,14 +132,19 @@ static void street(uint8_t *p,unsigned frame,int night){
 static void bus(uint8_t *p,int x,int y,unsigned t){
  /* Larger authored bus with window muntins, reflectors and shadows. */
  hd_ellipse(p,x+56,y+40,62,5,HD_SHADOW);
- hd_rect(p,x,y,112,39,HD_RED_SHADE);
- hd_rect(p,x+3,y+2,106,29,HD_RED);
+ hd_rect(p,x,y+3,112,36,HD_RED_SHADE);
+ hd_rect(p,x+3,y,106,5,HD_PLASTER);
+ hd_line(p,x+6,y+1,x+103,y+1,HD_PAPER);
+ hd_rect(p,x+3,y+5,106,26,HD_RED);
  hd_rect(p,x+6,y+7,97,17,HD_GLASS);
+ hd_rect(p,x+6,y+7,97,3,HD_ROAD_COOL);
+ hd_line(p,x+7,y+22,x+102,y+22,HD_BRICK_DARK);
  for(int k=0;k<4;k++){
   int xx=x+7+k*25;
   hd_rect(p,xx,y+7,1,18,HD_COPPER);
   hd_rect(p,xx+3,y+9,15,2,HD_GLASS_LIT);
  }
+ hd_rect(p,x+7,y+26,96,2,HD_PLASTER_LIT);
  hd_rect(p,x+63,y+25,2,13,HD_BRICK_LIT);
  hd_rect(p,x+1,y+31,108,5,HD_BRICK_DARK);
  hd_rect(p,x+6,y+33,102,1,HD_COPPER);
@@ -123,6 +154,9 @@ static void bus(uint8_t *p,int x,int y,unsigned t){
  hd_ellipse(p,x+85,y+40,4,4,HD_STONE);
  hd_rect(p,x+104,y+23,6,5,(t/32u)&1u?HD_LAMP:HD_PLASTER_LIT);
  hd_rect(p,x+9,y+29,18,2,HD_LAMP);
+ hd_rect(p,x+91,y+7,12,8,HD_INK);
+ hd_text(p,x+92,y+7,"01",HD_GOLD,1,0);
+ hd_pixel(p,x+104,y+30,HD_PAPER);
 }
 /* All narrative characters share one connected skeletal renderer. */
 static void actor(uint8_t *p,int x,int feet,int who,unsigned t,int emotion){
@@ -147,47 +181,97 @@ static void cafe(uint8_t *p,unsigned t){
  hd_cafe_facade(p,4,38,t);
 }
 static void table(uint8_t *p,int x,int y,unsigned t){
+ /* Two bistro chairs, bevelled wood, a pedestal and two ceramic cups.
+    Rim positions retain Danny and Mara's scripted contact anchors. */
  hd_ellipse(p,x,y+21,36,6,HD_SHADOW);
- hd_rect(p,x-31,y,62,6,HD_BARK);
- hd_rect(p,x-28,y+1,56,3,HD_COPPER);
- hd_rect(p,x-25,y+6,5,19,HD_BARK);
- hd_rect(p,x+19,y+6,5,19,HD_BARK);
- for(int i=-1;i<=1;i++){
-  int xx=x+i*19;
-  hd_rect(p,xx-6,y-10,12,10,HD_PAPER);
-  hd_rect(p,xx-6,y-10,12,2,HD_GOLD);
-  hd_rect(p,xx-6,y-11,12,1,HD_COPPER);
-  if((t/80u+(unsigned)(i+2))%3u==0u)
-   hd_pixel(p,xx,y-13,HD_PLASTER_LIT);
+ for(int side=-1;side<=1;side+=2){
+  int q=x+side*43;
+  hd_ellipse(p,q,y+25,10,3,HD_SHADOW);
+  hd_rect(p,q-6,y-9,12,2,HD_BARK);
+  hd_rect(p,q-7,y-8,2,18,HD_INK);
+  hd_rect(p,q+5,y-8,2,18,HD_INK);
+  hd_rect(p,q-6,y-4,12,2,HD_COPPER);
+  hd_rect(p,q-8,y+8,16,3,HD_BARK);
+  hd_line(p,q-6,y+11,q-8,y+23,HD_BARK);
+  hd_line(p,q+6,y+11,q+8,y+23,HD_BARK);
  }
- hd_ellipse(p,x-43,y+25,11,3,HD_SHADOW);
- hd_ellipse(p,x+43,y+25,11,3,HD_SHADOW);
- hd_rect(p,x-47,y+8,9,2,HD_BARK);
- hd_rect(p,x+39,y+8,9,2,HD_BARK);
- hd_rect(p,x+9,y-3,16,8,HD_PAPER); /* receipt */
- hd_line(p,x+11,y,x+22,y,HD_STONE_DARK);
- hd_pixel(p,x+20,y+2,HD_RED_SHADE);
+ hd_rect(p,x-29,y-4,58,5,HD_BARK);
+ hd_rect(p,x-32,y-2,64,5,HD_COPPER);
+ hd_rect(p,x-30,y+3,60,3,HD_BARK);
+ hd_line(p,x-27,y-3,x+26,y-3,HD_GOLD);
+ hd_line(p,x-26,y+1,x-8,y+1,HD_BRICK_LIT);
+ hd_rect(p,x-3,y+6,6,18,HD_BARK);
+ hd_line(p,x-1,y+23,x-19,y+26,HD_INK);
+ hd_line(p,x+1,y+23,x+19,y+26,HD_INK);
+ for(int i=0;i<2;i++){
+  int xx=x+(i?20:-7);
+  hd_ellipse(p,xx,y-3,7,2,HD_STONE_LIT);
+  hd_rect(p,xx-4,y-10,9,6,HD_PAPER);
+  hd_rect(p,xx-3,y-5,7,2,HD_PLASTER);
+  hd_ellipse(p,xx,y-11,5,2,HD_COPPER);
+  hd_line(p,xx-3,y-11,xx+3,y-11,HD_BARK);
+  hd_rect(p,xx+5,y-9,3,3,HD_PLASTER_LIT);
+  hd_pixel(p,xx+5,y-8,HD_BARK);
+  if((t/80u+(unsigned)i)%3u==0u)
+   hd_line(p,xx,y-14,xx+1,y-17,HD_ROAD_LIGHT);
+ }
+ hd_rect(p,x+3,y-3,10,5,HD_PAPER);
+ hd_line(p,x+5,y-2,x+10,y-2,HD_STONE);
+ hd_pixel(p,x+11,y,HD_RED_SHADE);
 }
 static void interior(uint8_t *p,unsigned t,int variant){
- unsigned wall=variant==1?HD_STONE_DARK:variant==2?HD_BRICK_DARK:HD_ROAD_COOL;
+ /* Warm archive, deep blue studio and cooler clinic share a physically
+    recessed window and converging floor joints, not a bright flat grid. */
+ unsigned wall=variant==1?HD_STONE_DARK:variant==2?HD_ROAD_COOL:HD_BRICK_DARK;
+ unsigned panel=variant==2?HD_STONE:variant==1?HD_ROAD:HD_BARK;
+ unsigned trim=variant==2?HD_STONE_LIT:HD_COPPER;
  hd_rect(p,0,0,HD_W,112,wall);
- for(int x=0;x<HD_W;x+=38)hd_rect(p,x,0,2,111,HD_BRICK);
- hd_rect(p,0,110,HD_W,50,HD_STONE_DARK);
- for(int y=111;y<160;y+=10)
-  hd_line(p,0,y,239,y,(y&1)?HD_STONE:HD_BRICK_DARK);
- hd_rect(p,15,17,90,73,HD_SHADOW);
+ hd_rect(p,0,0,240,7,HD_SHADOW);
+ hd_rect(p,0,7,240,2,panel);
+ hd_rect(p,0,9,240,1,trim);
+ for(int x=0;x<HD_W;x+=48){
+  hd_rect(p,x,11,2,78,variant==2?HD_WET:HD_SHADOW);
+  hd_rect(p,x+2,11,1,78,panel);
+ }
+ hd_rect(p,0,88,240,21,panel);
+ hd_rect(p,0,88,240,2,trim);
+ for(int x=3;x<240;x+=48){
+  hd_rect(p,x,94,43,11,wall);
+  hd_line(p,x+2,94,x+40,94,HD_SHADOW);
+  hd_line(p,x+2,104,x+40,104,panel);
+ }
+ hd_rect(p,0,108,240,3,HD_SHADOW);
+ hd_rect(p,0,111,HD_W,49,variant==2?HD_STONE_DARK:HD_WET);
+ hd_line(p,0,116,239,116,HD_ROAD_COOL);
+ hd_line(p,0,125,239,125,HD_ROAD_COOL);
+ hd_line(p,0,139,239,139,HD_ROAD_COOL);
+ hd_line(p,0,157,239,157,HD_ROAD_COOL);
+ for(int i=-2;i<=2;i++)
+  hd_line(p,120+i*17,111,120+i*54,159,HD_ROAD_COOL);
+ hd_rect(p,13,15,95,77,HD_SHADOW);
+ hd_rect(p,15,17,90,73,HD_BARK);
  hd_rect(p,18,20,84,67,HD_GLASS);
+ hd_rect(p,18,20,84,19,HD_ROAD_COOL);
  for(int i=0;i<7;i++){
   int xx=19+i*12,h=20+(int)(hash(i,39)%19u);
   hd_rect(p,xx,86-h,12,h,HD_STONE_DARK);
-  hd_rect(p,xx+2,86-h+6,3,3,HD_LAMP);
+  hd_rect(p,xx+2,86-h+6,3,3,HD_COPPER);
+  if((i&1)==0)hd_pixel(p,xx+3,86-h+7,HD_LAMP);
  }
- hd_rect(p,59,20,3,69,HD_COPPER);
- hd_rect(p,18,64,85,2,HD_COPPER);
- hd_rect(p,14,87,93,4,HD_BRICK_DARK);
+ for(int i=0;i<5;i++){
+  int xx=22+i*16,yy=27+(i*11+(int)(t/12u)%13)%22;
+  hd_line(p,xx,yy,xx-1,yy+5,HD_ROAD_LIGHT);
+ }
+ hd_rect(p,59,20,3,69,HD_BARK);
+ hd_line(p,60,21,60,86,HD_COPPER);
+ hd_rect(p,18,64,85,3,HD_BARK);
+ hd_line(p,19,64,101,64,trim);
+ hd_rect(p,14,87,93,4,HD_SHADOW);
+ hd_rect(p,13,87,95,2,trim);
+ hd_line(p,26,119,93,119,HD_ROAD_COOL);
+ hd_line(p,36,124,76,124,HD_ROAD_LIGHT);
  hd_rect(p,140,25,85,6,HD_SHADOW);
  hd_rect(p,141,25,83,2,HD_GOLD);
- (void)t;
 }
 static void archive(uint8_t *p,unsigned t,unsigned page){
  interior(p,t,0);
