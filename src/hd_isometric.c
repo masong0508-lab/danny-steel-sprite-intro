@@ -283,9 +283,13 @@ static void object(uint8_t *p,int sx,int sy,char kind,unsigned tick,
   hd_line(p,cx+6,foot-7,cx+1,foot-6,HD_PAPER);
   hd_rect(p,cx-14,foot-16,3,10,HD_SHADOW);
   hd_rect(p,cx+11,foot-16,3,10,HD_SHADOW);
+  /* A raised meter bridge leaves the stages legible even where
+     another street object hides the desk's front edge. */
   unsigned phase=s->song_steps>4u?4u:s->song_steps;
-  for(unsigned j=0;j<4u;j++)hd_pixel(p,cx+1+(int)j*2,foot-5,j<phase?
-       (s->project_style&STORY_STYLE_SONG_SOFT?HD_COPPER:HD_LAMP):HD_SHADOW);
+  hd_rect(p,cx-8,foot-20,16,6,HD_INK);
+  hd_line(p,cx-8,foot-20,cx+7,foot-20,HD_COPPER);
+  for(unsigned j=0;j<4u;j++)hd_rect(p,cx-6+(int)j*4,foot-18,2,3,j<phase?
+       (s->project_style&STORY_STYLE_SONG_SOFT?HD_COPPER:HD_LAMP):HD_STONE_DARK);
   return;
  }
  if(kind=='R'){
