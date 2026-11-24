@@ -149,6 +149,7 @@ void hd_game_overlay(uint8_t *p,const Story *s){
   const char *where="OLD QUARTER",*left="CONTINUE",*right="REST",*benefit="";
   const char *effect="";
   switch(s->activity){
+  case 'f':where="MARA / FIRST EVENING";left="WALK";right="TALK";benefit="BEFORE THE LAST BUS";break;
   case 'F':where="MARA / AFTERNOON";left="WALK";right="TALK";benefit="TIME TOGETHER";break;
   case 'L':where="LETTER / MEMORY";left="WRITE";right="KEEP";benefit="A MEMORY OF HOME";break;
   case 'C':where="BORE / ARCHIVE";left="FILE";right="JOKE";benefit="ANOTHER SMALL FORM";break;
@@ -160,7 +161,7 @@ void hd_game_overlay(uint8_t *p,const Story *s){
   default:where="ROOFTOP / THE SKY";left="PAINT";right="REST";benefit="A QUIET AFTERNOON";break;
   }
   switch(s->activity){
-   case 'F':effect=s->activity_choice?"BOND +1  ENERGY +1":"BOND +2  ENERGY -1";break;
+   case 'f':case 'F':effect=s->activity_choice?"BOND +1  ENERGY +1":"BOND +2  ENERGY -1";break;
    case 'L':effect=s->activity_choice?"SPARK +1 ENERGY +1":"SPARK +2 ENERGY -1";break;
    case 'C':effect=s->activity_choice?"BOND +1 ENERGY +1":"SPARK +1 ENERGY -1";break;
    case 'M':effect=s->activity_choice?"SPARK +1 ENERGY +1":"MUSIC STAGE +1";break;
@@ -172,6 +173,22 @@ void hd_game_overlay(uint8_t *p,const Story *s){
   }
   framebox(p,12,72,216,84);
   hd_text(p,22,79,where,HD_LAMP,1,1);
+  /* A four-notch progress strip mirrors the actual persisted work.
+     The music and painting menus now show the same visual language. */
+  if(s->activity=='m'||s->activity=='M'||s->activity=='E'||
+     s->activity=='r'||s->activity=='R'){
+   unsigned art=s->activity=='r'||s->activity=='R';
+   unsigned phase=art?s->art_steps:s->song_steps;
+   if(phase>STORY_PROJECT_DONE)phase=STORY_PROJECT_DONE;
+   char count[]="0/4";count[0]=(char)('0'+phase);
+   hd_text(p,157,79,count,HD_PAPER,1,0);
+   for(unsigned i=0;i<4u;i++){
+    int x=179+(int)i*9;
+    hd_rect(p,x,79,7,7,HD_STONE_DARK);
+    hd_rect(p,x+1,80,5,5,i<phase?HD_GOLD:HD_INK);
+    if(i==phase)hd_rect(p,x,87,7,1,HD_LAMP);
+   }
+  }
   hd_text(p,22,91,benefit,HD_PAPER,1,0);
   hd_text(p,22,103,effect,HD_STONE_LIT,1,0);
   selectable(p,22,115,92,left,!s->activity_choice);
@@ -183,7 +200,7 @@ void hd_game_overlay(uint8_t *p,const Story *s){
   framebox(p,13,79,214,77);
   hd_text(p,23,90,"THE LAST BUS",HD_LAMP,1,1);
   hd_text(p,23,103,(s->flags&STORY_FULL)==STORY_FULL?
-     "FINISHED WORK: BOARD THE BUS":
+     "TAPE + CANVAS: BOARD THE BUS":
      s->life_stage?"YOU ARE ALREADY STAYING":
      "CLINIC CALL WILL STOP THE TRIP",HD_PAPER,1,0);
   selectable(p,23,118,92,(s->flags&STORY_FULL)==STORY_FULL?
