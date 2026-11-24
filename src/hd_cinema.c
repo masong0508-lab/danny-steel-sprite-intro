@@ -226,7 +226,11 @@ static void archive(uint8_t *p,unsigned t,unsigned page){
  hd_line(p,126,32,237,32,HD_STONE_DARK);
  hd_text(p,143,14,"BORE / THE ARCHIVE",HD_PAPER,1,0);
 }
-static void record_room(uint8_t *p,unsigned t){
+static void record_room(uint8_t *p,const Story *s,unsigned t){
+ unsigned phase=s->song_steps;
+ if(phase>STORY_PROJECT_DONE)phase=STORY_PROJECT_DONE;
+ unsigned take_ink=(s->project_style&STORY_STYLE_SONG_SOFT)?
+                  HD_COPPER:HD_GLASS_LIT;
  interior(p,t,1);
  hd_rect(p,127,29,102,71,HD_INK);
  hd_rect(p,130,32,95,64,HD_STONE_DARK);
@@ -252,13 +256,28 @@ static void record_room(uint8_t *p,unsigned t){
  hd_rect(p,155,87,13,5,HD_GOLD);
  hd_line(p,171,88,190,88,HD_STONE_DARK);
  hd_line(p,171,90,187,90,HD_STONE);
+ if(phase>=STORY_PROJECT_DONE){
+  hd_rect(p,153,85,40,1,HD_GOLD);
+  hd_rect(p,155,87,13,5,take_ink);
+  hd_line(p,169,93,191,93,HD_GOLD);
+ }
  hd_rect(p,122,31,3,68,HD_COPPER);
  hd_rect(p,130,28,94,2,HD_STONE_LIT);
+ /* The console keeps an actual four-channel session ledger. Each notch
+    follows the saved take count; the soft arrangement uses a warm ink. */
+ hd_rect(p,134,35,86,13,HD_SHADOW);
+ hd_text(p,138,38,"TAKES",HD_PAPER,1,0);
+ for(unsigned j=0;j<4u;j++){
+  int x=167+(int)j*12;
+  hd_rect(p,x,38,10,7,HD_STONE_DARK);
+  hd_rect(p,x+1,39,8,5,j<phase?take_ink:HD_INK);
+  if(j==phase)hd_pixel(p,x+4,36,HD_LAMP);
+ }
  for(int j=0;j<5;j++)
   hd_rect(p,136+j*17,76,11,2,HD_RED_SHADE);
  actor(p,38,136,1,t,t<80?2:3);
 }
-static void rooftop(uint8_t *p,unsigned t,unsigned page){
+static void rooftop(uint8_t *p,const Story *s,unsigned t,unsigned page){
  dusk(p,t,0);
  hd_rect(p,0,103,HD_W,57,HD_ROAD);
  hd_rect(p,0,102,HD_W,4,HD_STONE);
@@ -284,17 +303,48 @@ static void rooftop(uint8_t *p,unsigned t,unsigned page){
  }
  for(int x=12;x<240;x+=27)hd_rect(p,x,77,2,37,HD_COPPER);
  hd_line(p,0,105,239,105,HD_STONE_DARK);
- /* Painting depicts the same city rather than anonymous colored squares. */
+ /* A real stage-dependent painting on the same easel, never a generic
+    full-color thumbnail at stage zero. Progress and alternate pigment
+    are read directly from the existing saved project fields. */
+ unsigned phase=s->art_steps;
+ if(phase>STORY_PROJECT_DONE)phase=STORY_PROJECT_DONE;
+ unsigned warm=s->project_style&STORY_STYLE_ART_WARM;
  hd_rect(p,151,52,67,51,HD_BARK);
  hd_rect(p,155,56,59,43,HD_PAPER);
- hd_rect(p,158,59,53,32,HD_GLASS);
- hd_ellipse(p,195,67,7,7,HD_LAMP);
- for(int i=0;i<9;i++){
-  int x=158+i*6,h=(i*13)%17+7;
-  hd_rect(p,x,91-h,6,h,HD_STONE_DARK);
-  hd_rect(p,x+2,87-h,2,2,HD_LAMP);
+ if(phase==0u){
+  hd_rect(p,158,59,53,32,HD_PLASTER);
+  hd_line(p,158,89,210,89,HD_STONE);
+  hd_line(p,160,85,177,78,HD_STONE_LIT);
+  hd_line(p,177,78,190,83,HD_STONE_LIT);
+  hd_line(p,190,83,207,76,HD_STONE_LIT);
+  hd_line(p,160,95,208,95,HD_MORTAR);
+ }else{
+  /* First layer: atmosphere. Second: masonry silhouettes. Third:
+     individual windows. Fourth: illuminated streets and final frame. */
+  hd_rect(p,158,59,53,32,warm?HD_COPPER:HD_GLASS);
+  hd_rect(p,158,59,53,5,warm?HD_GOLD:HD_GLASS_LIT);
+  hd_rect(p,158,82,53,9,warm?HD_BRICK_LIT:HD_REFLECT);
+  hd_ellipse(p,195,67,7,7,HD_LAMP);
+  if(phase>=2u){
+   for(int i=0;i<9;i++){
+    int x=158+i*6,h=(i*13)%17+7;
+    hd_rect(p,x,91-h,6,h,HD_STONE_DARK);
+    hd_rect(p,x,91-h,5,1,warm?HD_COPPER:HD_STONE_LIT);
+    if(phase>=3u){
+     hd_rect(p,x+2,87-h,2,2,HD_LAMP);
+     if(i&1)hd_pixel(p,x+2,89-h,HD_GOLD);
+    }
+   }
+  }
+  hd_rect(p,157,90,55,7,phase>=3u?HD_LEAF:HD_STONE);
+  if(phase>=STORY_PROJECT_DONE){
+   hd_line(p,159,94,209,94,HD_GOLD);
+   hd_line(p,162,93,174,92,HD_PAPER);
+   hd_line(p,190,96,205,95,HD_COPPER);
+   hd_rect(p,152,53,65,1,HD_GOLD);
+   hd_rect(p,152,101,65,1,HD_COPPER);
+  }
  }
- hd_rect(p,157,90,55,7,HD_LEAF);
  hd_rect(p,169,105,7,35,HD_BARK);
  hd_line(p,171,113,156,147,HD_BARK);
  hd_line(p,175,113,189,147,HD_BARK);
@@ -478,8 +528,8 @@ void hd_cinema_draw(uint8_t *p,const Story *s,unsigned t){
    else actor(p,danny,142,1,t,t<100u?2:page>=2?7:0);
    break;
   }
-  case CINE_MUSIC:record_room(p,t);break;
-  case CINE_ART:rooftop(p,t,page);break;
+  case CINE_MUSIC:record_room(p,s,t);break;
+  case CINE_ART:rooftop(p,s,t,page);break;
   case CINE_NOTICE:{
    street(p,t,1);
    int x=ease(68,91,t,13,71);

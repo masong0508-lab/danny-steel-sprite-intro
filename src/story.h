@@ -22,6 +22,9 @@
 /* Independent optional Potheads shift: bit 5 was unused in the persisted
    daily_mask byte. It never changes the five existing memory requirements. */
 #define STORY_DAY_SHIFT 32u
+/* Optional one-time pre-bus friendship scene, using the formerly unused
+   bit of the existing persisted daily_mask. Not a numbered-day memory. */
+#define STORY_PREBUS_MARA 64u
 #define STORY_DAY_ALL 31u
 #define STORY_DAY_RECAP 128u
 #define STORY_STAT_MAX 5u
@@ -65,6 +68,13 @@
 #define STORY_LIFE_FINAL_CLINIC 4
 #define STORY_LIFE_LAST_WORK 5
 #define STORY_LIFE_FINALE 6
+/* Preserve paid-shift completion on reload. The first-evening marker is
+   meaningful only before numbered days start. No save layout changes. */
+static inline uint8_t story_restore_daily_mask(uint8_t raw,unsigned life_stage){
+    unsigned valid=STORY_DAY_ALL|STORY_DAY_SHIFT|STORY_DAY_RECAP;
+    if(life_stage==STORY_LIFE_NONE)valid|=STORY_PREBUS_MARA;
+    return (uint8_t)(raw&valid);
+}
 #define STORY_SCENE_NONE 0
 #define STORY_SCENE_CLINIC 1
 #define STORY_SCENE_NOTICE 2

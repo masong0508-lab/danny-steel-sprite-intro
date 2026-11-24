@@ -22,6 +22,23 @@ This is a coherence and readability pass on the **first playable chapter**,
 not a claim that the entire long-form campaign has been completed. See
 [the exact fixes, tests and remaining campaign priorities](docs/CAMPAIGN_CLARITY_AND_ART_20261123.md).
 
+## First-evening creative campaign (November 24)
+
+After the letter, clerk and promise, return to Mara for an optional
+**WALK / TALK** choice. Each has distinct dialogue and a different
+bond/energy effect. Before boarding, return to the music desk or rooftop
+for four creative sessions and open the existing advanced music studio
+without first entering the clinic route. The native recording display and
+canvas now depict each saved stage, and their menus show four progress
+notches. Completing a work also changes Mara's and the clerk's reactions.
+
+These sessions remain optional for the bus. The original tape and canvas
+flags are preserved; no four-session grind is forced. The STAY choice
+remains at the bus stop, and pressing A and B together cancels the choice.
+The save loader now retains paid-shift completion and the new one-time
+friendship scene without changing the SRAM format.
+[Implementation and tests](docs/FIRST_EVENING_CAMPAIGN.md).
+
 ## Playable chapter: Old Quarter
 
 The city is closing, the last bus is leaving, and Danny is trying to determine which pieces of yesterday are worth carrying into tomorrow. Read a letter from home, have the BORE Continuity Office validate your existence, and speak to Mara before deciding whether to board the bus or remain behind. Finishing the optional music and art objectives raises *primary-story* completion to 100%, while the Mirror Orchard investigation remains independent. The prose is intentionally a little sad beneath the bureaucracy and bad jokes; the BORE reference is a light crossover and does not attempt to rewrite the larger game's canon.
