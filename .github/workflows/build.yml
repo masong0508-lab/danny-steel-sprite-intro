@@ -163,6 +163,14 @@ jobs:
             src/hd_facade_art.c src/hd_world_atlas.c src/hd_overlay.c \
             tests/story_campaign_clarity_test.c -o /tmp/danny_campaign_clarity
           /tmp/danny_campaign_clarity
+      - name: Verify first-evening creative campaign, friendship, saves and native progressive art
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
+            src/story.c src/studio.c src/story_save.c src/story_draw.c src/cinema.c \
+            src/hd_canvas.c src/hd_cinema.c src/hd_actor.c src/hd_special.c \
+            src/hd_ending.c src/hd_overlay.c tests/first_evening_campaign_test.c \
+            -o /tmp/danny_first_evening
+          /tmp/danny_first_evening
       - name: Test story progression and map accessibility
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c tests/story_test.c -o /tmp/danny_story_test
