@@ -158,16 +158,34 @@ static void lamp(uint8_t *p,int sx,int sy,unsigned tick){
  if(((tick/45u)&1u)==0u)hd_rect(p,x-1,y+3,3,1,HD_GOLD);
 }
 static void bus(uint8_t *p,int sx,int sy,unsigned tick){
+ /* Compact three-quarter view of the same cream-roofed last bus seen
+    in the film. Wheels and shadow remain inside the established tile
+    footprint. Four stepped side sections sell depth at 1x resolution. */
  int y=sy+5;
  hd_ellipse(p,sx+16,y+11,17,4,HD_SHADOW);
- hd_rect(p,sx+3,y-12,29,16,HD_RED_SHADE);
- hd_rect(p,sx+4,y-13,28,12,HD_RED);
- hd_rect(p,sx+7,y-11,21,7,HD_GLASS);
- for(int i=0;i<3;i++)hd_rect(p,sx+11+i*7,y-11,1,7,HD_BRICK_DARK);
- hd_rect(p,sx+8,y-3,24,3,HD_BRICK_DARK);
+ hd_rect(p,sx+3,y-10,28,15,HD_RED_SHADE);
+ hd_rect(p,sx+4,y-13,25,4,HD_PLASTER);
+ hd_rect(p,sx+6,y-14,21,2,HD_PLASTER_LIT);
+ hd_rect(p,sx+28,y-11,4,4,HD_STONE);
+ hd_rect(p,sx+4,y-9,26,10,HD_RED);
+ hd_rect(p,sx+5,y-9,23,6,HD_GLASS);
+ hd_rect(p,sx+5,y-9,23,1,HD_ROAD_COOL);
+ for(int i=0;i<3;i++){
+  int wx=sx+10+i*6;
+  hd_rect(p,wx,y-9,1,6,HD_BRICK_DARK);
+  hd_pixel(p,wx-2,y-7,HD_GLASS_LIT);
+ }
+ hd_rect(p,sx+27,y-8,4,7,HD_ROAD_COOL);
+ hd_pixel(p,sx+29,y-7,HD_GLASS_LIT);
+ hd_rect(p,sx+5,y-2,23,2,HD_PLASTER_LIT);
+ hd_rect(p,sx+21,y-8,1,9,HD_RED_SHADE);
+ hd_rect(p,sx+5,y+2,26,2,HD_BRICK_DARK);
  hd_ellipse(p,sx+9,y+4,4,4,HD_INK);
- hd_ellipse(p,sx+27,y+4,4,4,HD_INK);
- hd_pixel(p,sx+31,y-6,(tick/60u)&1u?HD_LAMP:HD_PAPER);
+ hd_ellipse(p,sx+25,y+4,4,4,HD_INK);
+ hd_ellipse(p,sx+9,y+4,2,2,HD_STONE_DARK);
+ hd_ellipse(p,sx+25,y+4,2,2,HD_STONE_DARK);
+ hd_pixel(p,sx+30,y,(tick/60u)&1u?HD_LAMP:HD_PAPER);
+ hd_pixel(p,sx+4,y,HD_RED);
 }
 static void object(uint8_t *p,int sx,int sy,char kind,unsigned tick,int wx,int wy){
  int cx=sx+16,foot=sy+16;
@@ -210,9 +228,14 @@ static void object(uint8_t *p,int sx,int sy,char kind,unsigned tick,int wx,int w
   hd_line(p,cx,foot,cx,foot-17,HD_COPPER);
   hd_rect(p,cx-8,foot-19,16,14,HD_BARK);
   hd_rect(p,cx-6,foot-17,12,10,HD_PAPER);
+  /* Small but recognizable framed evening skyline, with a canvas edge
+     and easel legs rather than an abstract zig-zag symbol. */
   hd_rect(p,cx-5,foot-16,10,4,HD_GLASS);
-  hd_line(p,cx-4,foot-9,cx,foot-13,HD_RED_SHADE);
-  hd_line(p,cx,foot-13,cx+5,foot-9,HD_GOLD);
+  hd_rect(p,cx-5,foot-12,10,3,HD_ROAD_COOL);
+  hd_pixel(p,cx+3,foot-15,HD_LAMP);
+  hd_rect(p,cx-4,foot-12,3,3,HD_STONE_DARK);
+  hd_rect(p,cx,foot-13,3,4,HD_BRICK_DARK);
+  hd_pixel(p,cx+1,foot-11,HD_GOLD);
   hd_rect(p,cx-10,foot-5,20,2,HD_COPPER);
   return;
  }
