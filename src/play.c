@@ -154,7 +154,7 @@ void play_enter(int want_load,int slot){
         game.day_frame=(u16)(b[17]|((unsigned)b[18]<<8));
         if(game.day_frame>=STORY_DAY_FRAMES)game.day_frame=0;
         game.finale_frame=(u16)(b[19]|((unsigned)b[20]<<8));
-        game.daily_mask=b[21]&(STORY_DAY_ALL|STORY_DAY_RECAP);
+        game.daily_mask=story_restore_daily_mask(b[21],game.life_stage);
         game.daily_memories=b[22]>99?99:b[22];
         game.energy=b[23]>STORY_STAT_MAX?STORY_STAT_MAX:b[23];
         game.spark=b[24]>STORY_STAT_MAX?STORY_STAT_MAX:b[24];
