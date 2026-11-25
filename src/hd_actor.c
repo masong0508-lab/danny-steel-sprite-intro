@@ -38,9 +38,14 @@ static void limb(uint8_t *p,int sx,int sy,int ex,int ey,int wx,int wy,
    worried 7. The foot and hand positions remain shared with the scenes. */
 void hd_actor_stage(uint8_t *p,int x,int feet,int role,unsigned frame,int emotion){
  int walk=emotion==2;
- unsigned phase=(frame/8u)&3u;
- int stride=walk?(phase==0u?-4:phase==2u?4:0):0;
- int lift=walk?(phase&1u?1:0):0;
+ unsigned phase=(frame/4u)&7u;
+ static const int8_t strides[8]={-5,-3,0,3,5,3,0,-3};
+ static const uint8_t lifts[8]={0,0,0,1,1,2,1,0};
+ int stride=walk?strides[phase]:0;
+ int lift=walk?lifts[phase]:0;
+ int other_lift=walk?lifts[(phase+4u)&7u]:0;
+ /* Contact and passing beats alternate; at least one foot stays planted. */
+ if(lift&&other_lift){if(phase&4u)other_lift=0;else lift=0;}
  int fy=feet+(walk?0:(int)((frame/38u)&1u));
  unsigned coat=role==1?HD_RED:role==2?HD_GLASS:
                role==3?HD_STONE_LIT:role==4?HD_LEAF_DARK:HD_PLASTER_LIT;
@@ -55,11 +60,11 @@ void hd_actor_stage(uint8_t *p,int x,int feet,int role,unsigned frame,int emotio
  limb(p,x-5,fy-24,x-6+stride/2,fy-13,x-6+stride,fy-4-lift,
       5,HD_INK,HD_BRICK_DARK,HD_ROAD_COOL);
  limb(p,x+5,fy-24,x+6-stride/2,fy-13,x+6-stride,
-      fy-4-(walk?1-lift:0),5,HD_INK,HD_STONE_DARK,HD_ROAD);
+      fy-4-other_lift,5,HD_INK,HD_STONE_DARK,HD_ROAD);
  hd_rect(p,x-10+stride,fy-4-lift,10,4,HD_INK);
- hd_rect(p,x+2-stride,fy-4-(walk?1-lift:0),11,4,HD_INK);
+ hd_rect(p,x+2-stride,fy-4-other_lift,11,4,HD_INK);
  hd_rect(p,x-9+stride,fy-2-lift,6,1,HD_STONE_DARK);
- hd_rect(p,x+4-stride,fy-2-(walk?1-lift:0),7,1,HD_STONE_DARK);
+ hd_rect(p,x+4-stride,fy-2-other_lift,7,1,HD_STONE_DARK);
  /* Sloping shoulders, a narrow waist and uneven hem define the garment. */
  plane(p,x,fy-47,-5,5,-13,12,6,HD_INK);
  plane(p,x,fy-42,-13,12,-10,10,21,HD_INK);

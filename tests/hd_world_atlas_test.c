@@ -79,6 +79,31 @@ int main(void){
   for(unsigned prev=0;prev<role;prev++)
    assert(role_hashes[role]!=role_hashes[prev]);
  }
+ /* Sixteen new production walking cels. Real animation state, distinct
+    contact poses, same shadow/foot anchor, and clipped screen edges. */
+ Story gait_state;story_new(&gait_state,0);
+ for(unsigned face=0;face<4u;face++){
+  unsigned walk_hash[4];
+  gait_state.facing=(uint8_t)face;gait_state.x=12;gait_state.y=12;
+  for(unsigned phase=0;phase<4u;phase++){
+   gait_state.anim=(uint8_t)(4u-phase);
+   unsigned gait=hd_world_danny_gait(&gait_state);
+   assert(gait==phase+2u);
+   reset();hd_world_person_art(guarded.image,120,97,0u,face,gait);
+   walk_hash[phase]=inspect();
+   assert(guarded.image[97*HD_W+120]!=HD_ROAD);
+   for(unsigned prior=0;prior<phase;prior++)assert(walk_hash[prior]!=walk_hash[phase]);
+   unsigned soles=0;
+   for(int x=109;x<131;x++)soles+=guarded.image[95*HD_W+x]==HD_INK;
+   assert(soles>=5u);
+   reset();hd_world_person_art(guarded.image,0,12,0u,face,gait);
+   for(unsigned k=0;k<48;k++)assert(guarded.before[k]==0xAB&&guarded.after[k]==0xAB);
+   poses++;
+  }
+  gait_state.x=13;gait_state.anim=4;
+  assert(hd_world_danny_gait(&gait_state)==4u);
+  gait_state.anim=0;assert(hd_world_danny_gait(&gait_state)==0u);
+ }
  for(int height=5;height<=116;height+=9)for(unsigned role=0;role<7;role++){
   reset();
   hd_world_person_projected(guarded.image,120,129,height,role,1u,0u);

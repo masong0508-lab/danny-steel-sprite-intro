@@ -21,10 +21,10 @@ static int exposed(int x,int y){
 static unsigned material(char t,unsigned n){
  if(t=='~')return 8u+(n&1u);
  if(t=='g'||t=='T')return 6u+(n&1u);
- if(t==','||t=='=')return 4u+(n&1u);
- if(t=='#'||t=='A')return 10u+(n&1u);
+ if(t==','||t=='=')return 18u+((n>>8)&1u);
+ if(t=='#'||t=='A')return 24u+((n>>8)&1u);
  if(t=='D'||t=='L')return 12u+(n&1u);
- return n&3u;
+ return 14u+((n>>8)&3u);
 }
 static void night(uint8_t *p){
  hd_rect(p,0,0,240,34,HD_ROAD_COOL);
@@ -92,14 +92,19 @@ static void building(uint8_t *p,int sx,int sy,int wx,int wy,
                      unsigned tick,char type,int actor_x,int actor_foot,
                      int actor_depth){
  unsigned n=grain(wx,wy);
- /* Shared roof heights are deliberately keyed to 3x3 districts;
-    visually contiguous blocks never extrude like shuffled cubes. */
- unsigned h=27u+(unsigned)(((wx/3+wy/3)&1)*9);
- if(type=='A')h=36u;
+ /* District-level masses and architecture: the central archive is one
+    coherent masonry block; the east shop row uses one low roof line.
+    Border neighborhoods vary at block boundaries, not tile by tile. */
+ int civic=wx>=10&&wx<=13&&wy>=3&&wy<=6;
+ int shops=wx>=21&&wy>=10&&wy<=12;
+ int waterfront=wy>=14;
+ unsigned h=civic?36u:shops?30u:waterfront?27u:
+            ((wx/6+wy/6)&1)?32u:27u;
+ unsigned variant=civic?6u:shops?4u:waterfront?2u:
+                  ((wx/6+wy/6)&1)?0u:1u;
+ if(!civic&&!shops&&!waterfront&&wx<5&&wy>=7)variant=3u;
+ if(!civic&&!shops&&!waterfront&&wx>=17&&wy<=4)variant=5u;
  int front=exposed(wx,wy+1),side=exposed(wx+1,wy);
- /* Neighboring wall units share an architectural style. Source
-    selection is per district, NOT independent random shop wallpaper. */
- unsigned variant=(unsigned)(((wx/3)*5+(wy/3)*3)&7);
  int potheads=(wx==21&&wy==11);
  /* Projected bounds include the small chimney above the roof. The
     fixed-point depth uses the same gait interpolation as the actor. */
@@ -116,12 +121,11 @@ static void building(uint8_t *p,int sx,int sy,int wx,int wy,
   return;
  }
  if(potheads)variant=7u;
- else if(wx>=21&&wy>=10&&wy<=12)variant=4u;
- else if(type=='A')variant=6u;
- else if(wx>=10&&wx<=13&&wy>=3&&wy<=6)variant=3u;
+ if(type=='A')variant=6u;
  if(front)hd_facade_wall(p,sx,sy,(int)h,variant,0u);
  if(side)hd_facade_wall(p,sx+16,sy,(int)h,variant,1u);
- hd_iso_tile(p,sx,sy-(int)h,10u+(n&1u));
+ unsigned roof=civic?24u:shops?25u:waterfront?22u:20u+((n>>9)&1u);
+ hd_iso_tile_detail(p,sx,sy-(int)h,roof);
  /* Only an exposed eave gets a coping edge. Outlining every internal
     roof tile in copper made contiguous blocks look like a glowing grid.
     A dark underside and a short, cool worn edge give the roof thickness. */
@@ -137,11 +141,11 @@ static void building(uint8_t *p,int sx,int sy,int wx,int wy,
  }
  if(front){
   hd_line(p,sx+1,sy+8,sx+15,sy+15,HD_STONE_DARK);
-  hd_rect(p,sx+11,sy+11-(int)h/3,3,5,HD_GLASS);
-  hd_pixel(p,sx+12,sy+14-(int)h/3,HD_LAMP);
+  /* The authored wall already contains its windows. Do not paste the
+     same floating lit pane across every shop and tenement. */
  }
  if(side)hd_line(p,sx+17,sy+15,sx+31,sy+8,HD_STONE_DARK);
- if((n&3u)==0u){
+ if((front||side)&&(n&7u)==0u&&!civic){
   hd_rect(p,sx+16,sy-3-(int)h,3,5,HD_STONE_DARK);
   hd_rect(p,sx+16,sy-4-(int)h,5,1,HD_MORTAR);
  }
@@ -434,7 +438,7 @@ void hd_isometric_draw(uint8_t *p,const Story *s,unsigned tick){
    if(sx>=240||sy>=154)break;
    char c=story_tile(wx,wy);
    unsigned n=grain(wx,wy);
-   hd_iso_tile(p,sx,sy,material(c,n));
+   hd_iso_tile_detail(p,sx,sy,material(c,n));
    if(c=='~'||c==','||c=='='||c=='.')
     ground_detail(p,sx,sy,n,c,tick);
   }
@@ -466,7 +470,7 @@ void hd_isometric_draw(uint8_t *p,const Story *s,unsigned tick){
      drawing at the destination cell early would put him through walls. */
   if(!drew_player&&depth*8>player_depth){
    hd_world_person_art(p,actor_x,actor_foot,0u,s->facing,
-                       s->anim?((tick/7u)&1u):0u);
+                       hd_world_danny_gait(s));
    drew_player=1;
   }
   /* Depth slices share a screen Y. Clamp the world span first; each

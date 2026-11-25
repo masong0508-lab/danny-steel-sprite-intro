@@ -223,6 +223,14 @@ int main(int argc,char **argv){
  write_frame("37_potheads_storefront",&s,184);
  stand(&s,10,7,0);
  write_frame("38_civic_facades",&s,191);
+ /* Actual four movement phases at one real walkable step. */
+ {
+  Story walk=s;stand(&walk,12,13,0);walk.prev_x=11;walk.prev_y=13;
+  walk.anim=4;write_frame("38a_walk_contact",&walk,191);
+  walk.anim=3;write_frame("38b_walk_passing",&walk,191);
+  walk.anim=2;write_frame("38c_walk_contact_other",&walk,191);
+  walk.anim=1;write_frame("38d_walk_passing_other",&walk,191);
+ }
  s.view=1;
  stand(&s,20,11,0);
  write_frame("39_potheads_first_person",&s,205);

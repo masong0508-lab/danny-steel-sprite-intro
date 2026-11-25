@@ -32,7 +32,7 @@ static void readable_player(const Story *s,unsigned frame,int cx,int foot){
  uint8_t reference[22u*34u];
  clear();memset(guarded.pixel,64,HD_BYTES);
  hd_world_person_art(guarded.pixel,cx,foot,0u,s->facing,
-                     s->anim?((frame/7u)&1u):0u);
+                     hd_world_danny_gait(s));
  for(int y=0;y<34;y++)for(int x=0;x<22;x++)
   reference[y*22+x]=guarded.pixel[(foot-32+y)*HD_W+cx-11+x];
  clear();hd_world_draw(guarded.pixel,s,frame);checksum_with(1000u);
@@ -62,11 +62,12 @@ static void readable_player(const Story *s,unsigned frame,int cx,int foot){
    transparent pixels set to64. These independent complete-tile hashes
    prevent a broken full-tile copy becoming its own clipping reference. */
 static void verify_iso_copies(void){
- static const uint32_t original_hash[14]={
+ static const uint32_t original_hash[26]={
   0x2d8388fau,0x6bc59cb7u,0x159b230bu,0x046cc262u,
   0xa474720au,0x4f55d4d2u,0x9d73d9aau,0x7efe7777u,
   0xc92c28f1u,0xcfe281d5u,0xfc984ed3u,0xef48ddf8u,
-  0xd9da39a5u,0x5bf7b2f1u
+  0xd9da39a5u,0x5bf7b2f1u,
+  0x939482a8u,0x5a957fcbu,0xbe555732u,0x0a3cf2bdu,0x6261ef85u,0xf1c49994u,0x721f85c3u,0xb3fd033bu,0x7a0e796au,0x8bbf038eu,0x5ce81fc5u,0x39996b86u
  };
  static uint8_t expected[HD_BYTES+132] __attribute__((aligned(4)));
  static uint8_t actual[HD_BYTES+132] __attribute__((aligned(4)));
@@ -76,9 +77,10 @@ static void verify_iso_copies(void){
                  238,239,240,241};
  const int ys[]={-16,-15,-14,-13,-1,0,1,70,145,146,157,158,159,160};
  unsigned cases=0;
- for(unsigned material=0;material<14u;material++){
+ for(unsigned material=0;material<26u;material++){
   clear();memset(guarded.pixel,64,HD_BYTES);
-  hd_iso_tile(guarded.pixel,104,70,material);
+  if(material<14u)hd_iso_tile(guarded.pixel,104,70,material);
+  else hd_iso_tile_detail(guarded.pixel,104,70,material);
   uint32_t hash=2166136261u;
   for(int y=0;y<16;y++)for(int x=0;x<32;x++){
    unsigned ink=guarded.pixel[(70+y)*HD_W+104+x];
@@ -102,7 +104,8 @@ static void verify_iso_copies(void){
       if(ink<64u&&(unsigned)xx<HD_W&&(unsigned)yy<HD_H)
        want[yy*HD_W+xx]=(uint8_t)ink;
      }
-     hd_iso_tile(got,px,py,material+((cases&1u)?14u:0u));
+     if(material<14u)hd_iso_tile(got,px,py,material+((cases&1u)?14u:0u));
+     else hd_iso_tile_detail(got,px,py,material);
      assert(memcmp(expected,actual,sizeof expected)==0);
      cases++;
     }
@@ -272,6 +275,7 @@ int main(void){
  uint32_t canal_b=checksum_with(1000u);
  assert(canal_a!=canal_b);
  puts("route markers remain grounded; wet-town animation remains bounded");
+ puts("Twelve new authored road, flagstone and roof materials retain exact clipping and original diamond coverage");
  printf("isometric atlas: 14 distinct ROM diamonds and clipped sprite art OK\n");
  printf("isometric projection: %u compass/position frames, deterministic and guarded\n",checks);
  puts("player visibility: 40 static views and 24 interpolated walking frames retain coat/skin");
