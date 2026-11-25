@@ -20,10 +20,11 @@ CFLAGS  := $(ARCH) -O2 -Wall -std=gnu11 -fomit-frame-pointer -Isrc
 LDFLAGS := $(ARCH) -specs=gba.specs -Wl,-Map=$(TARGET).map
 SRC     := $(wildcard src/*.c)
 HDR     := $(wildcard src/*.h)
+ART     := $(wildcard assets/neighborhood/*.bin)
 
 all: $(TARGET).gba
 
-$(TARGET).elf: $(SRC) $(HDR)
+$(TARGET).elf: $(SRC) $(HDR) $(ART)
 	$(CC) $(CFLAGS) $(SRC) $(LDFLAGS) -o $@
 
 $(TARGET).gba: $(TARGET).elf

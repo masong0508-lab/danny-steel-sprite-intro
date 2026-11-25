@@ -522,6 +522,13 @@ static void activity_menu(uint8_t *p,const Story *s){
     const char *effect="";
     unsigned selected=s->activity_choice;
     switch(s->activity){
+    case STORY_ACT_NEIGHBORHOOD:{
+        int id=story_neighborhood_at(s);
+        where=id>=0?story_neighborhood_name((unsigned)id):"SIDE STORY";
+        left=id>=0?story_neighborhood_option((unsigned)id,0):"BACK";
+        right=id>=0?story_neighborhood_option((unsigned)id,1):"BACK";
+        effect="YOUR CHOICE";break;
+    }
     case 'f':where="MARA / FIRST EVENING";left="WALK";right="TALK";
         effect=selected?"BOND +1 ENERGY +1":"BOND +2 ENERGY -1";break;
     case 'F':where="MARA / AFTERNOON";left="WALK";right="TALK";
