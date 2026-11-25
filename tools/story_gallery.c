@@ -350,6 +350,25 @@ int main(int argc,char **argv){
  stand(&s,20,11,1);press(&s,1u);
  write_frame("40_potheads_street_observation",&s,210);
  done(&s);
+ /* Drive every new episode through the actual interaction and choice flow.
+    The three distinct captures per episode are not gallery-only states. */
+ story_new(&s,0);s.dialogue=0;s.cinema=CINE_NONE;s.flags=STORY_ALL;
+ for(unsigned i=0;i<STORY_NEIGHBORHOOD_COUNT;i++){
+  int x,y;char name[64];
+  assert(story_neighborhood_position(i,&x,&y));
+  for(unsigned b=0;b<2;b++){
+   stand(&s,x,y,0);press(&s,1u);
+   assert(story_neighborhood_panel(&s)==(int)i*3);
+   if(!b){snprintf(name,sizeof name,"41_%02u_side_intro",i+1u);write_frame(name,&s,90);}
+   done(&s);assert(s.activity==STORY_ACT_NEIGHBORHOOD);
+   if(b)press(&s,16u);
+   press(&s,1u);assert(story_neighborhood_panel(&s)==(int)(i*3u+1u+b));
+   snprintf(name,sizeof name,"41_%02u_side_%s",i+1u,b?"right":"left");
+   write_frame(name,&s,90);done(&s);
+  }
+ }
+ s.paused=1;s.choice=STORY_NEIGHBORHOOD_JOURNAL;
+ write_frame("42_neighborhood_journal",&s,90);
  puts("Actual Danny Steel story renderer gallery generated");
  return 0;
 }

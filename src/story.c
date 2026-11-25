@@ -2011,7 +2011,7 @@ void story_tick(Story *s, uint16_t keys) {
         }
         if (pressed & (A|B)) {
             int count; story_pages(s, &count);
-            if ((pressed & A) && s->page + 1 < count) {
+            if ((pressed & A) && !(pressed & B) && s->page + 1 < count) {
                 ++s->page;
                 /* The opening is editorially cut to seven spoken beats.
                    Fast readers may advance, but each line then gets its
@@ -2027,7 +2027,7 @@ void story_tick(Story *s, uint16_t keys) {
                             (pressed&A) && !(pressed&B);
                 /* B skips an unfinished conversation; no promise check.
                    Only A on Danny's final spoken answer earns it. */
-                if(s->dialogue==D_MARA && (pressed&A) &&
+                if(s->dialogue==D_MARA && (pressed&A) && !(pressed&B) &&
                    !(s->flags&STORY_MARA)){
                     s->flags|=STORY_MARA;s->dirty=1;
                 }
