@@ -500,14 +500,12 @@ static void clinic(uint8_t *p,const Story *s,unsigned t,int last){
  hd_line(p,169,69,178,76,HD_RED_SHADE);
  hd_line(p,178,76,189,61,HD_RED_SHADE);
  /* No unverified living-person appearance while Mara is missing. */
- int missing=(s->rescue_stage>=STORY_RESCUE_MISSING&&
-              s->rescue_stage<=STORY_RESCUE_TRACE)||
-              s->rescue_stage==STORY_RESCUE_LOST;
+ int missing=hd_mara_absent(s);
  /* Shot/reverse-shot follows the person who is ACTUALLY speaking:
     first visit: doctor / Danny / doctor.
     last visit: doctor / Mara / Danny, but never invent a rescued Mara. */
  int doctor_close=(s->page==1u || (!last&&s->page==3u))&&t>=120u;
- int danny_close=(last?s->page==3u:s->page==2u)&&t>=150u;
+ int danny_close=(last?(s->page==3u||(missing&&s->page==2u)):s->page==2u)&&t>=150u;
  int mara_close=last&&!missing&&s->page==2u&&t>=150u;
  if(danny_close)hd_actor_closeup(p,78,145,1,t,last?5:7);
  else actor(p,68,135,1,t,last?7:1);
@@ -565,6 +563,18 @@ void hd_cinema_draw(uint8_t *p,const Story *s,unsigned t){
   case CINE_MARA:
   case CINE_STAY:{
    cafe(p,t);
+   /* Background commuter: connected legs and depth BEFORE the actors. */
+   int passer=235-(int)((t/5u)%80u);
+   int stride=((t/8u)&1u)?2:-2;
+   hd_ellipse(p,passer,113,7,2,HD_SHADOW);
+   hd_line(p,passer-1,104,passer-3+stride,112,HD_INK);
+   hd_line(p,passer+1,104,passer+3-stride,112,HD_INK);
+   hd_rect(p,passer-3+stride,112,4,1,HD_SHADOW);
+   hd_rect(p,passer+2-stride,112,4,1,HD_SHADOW);
+   hd_rect(p,passer-3,95,7,10,HD_STONE_DARK);
+   hd_line(p,passer-2,96,passer-5-stride,103,HD_ROAD_COOL);
+   hd_rect(p,passer-2,89,5,6,HD_SKIN);
+   hd_rect(p,passer-2,89,5,2,HD_HAIR);
    table(p,121,110,t);
    int danny=ease(78,91,t,11,60);
    int mara=ease(178,164,t,18,63);
@@ -581,11 +591,6 @@ void hd_cinema_draw(uint8_t *p,const Story *s,unsigned t){
     hd_line(p,mara-18,108,141,99,HD_SKIN);
     hd_pixel(p,141,99,HD_SKIN_LIT);
    }
-   /* Noninteractive pedestrians keep the cafe block lived-in. */
-   int passer=235-(int)((t/5u)%80u);
-   hd_ellipse(p,passer,113,7,2,HD_SHADOW);
-   hd_rect(p,passer-3,93,7,15,HD_STONE_DARK);
-   hd_rect(p,passer-2,89,5,6,HD_SKIN);
    break;
   }
   case CINE_BUS:{
@@ -685,9 +690,7 @@ void hd_cinema_draw(uint8_t *p,const Story *s,unsigned t){
    /* Shot/reverse-shot is tied to spoken meaning. Page 0 establishes
       the appointment, then Mara's offer, then Danny asking for company.
       Background actors remain grounded when the foreground reacts. */
-   int absent=(s->rescue_stage>=STORY_RESCUE_MISSING&&
-               s->rescue_stage<=STORY_RESCUE_TRACE)||
-               s->rescue_stage==STORY_RESCUE_LOST;
+   int absent=hd_mara_absent(s);
    int mara_close=!absent&&page==1u&&t>=91u;
    int danny_close=page>=2u&&t>=172u;
    if(absent){

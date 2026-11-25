@@ -526,7 +526,7 @@ static void restore_occluding_wall(uint8_t *p,int sx,int h,int depth){
  }
 }
 static void render_billboards(uint8_t *p,int cx,int cy,
-                              int fx,int fy,int rx,int ry,unsigned tick){
+                              int fx,int fy,int rx,int ry,unsigned tick,const Story *s){
  unsigned count=0;
  for(unsigned i=0;i<sizeof scene_anchors/sizeof scene_anchors[0];i++){
   const SceneAnchor *a=&scene_anchors[i];
@@ -551,7 +551,18 @@ static void render_billboards(uint8_t *p,int cx,int cy,
  }
  for(unsigned i=0;i<count;i++){
   const SceneBillboard *item=&visible[i];
-  actor(p,item->sx,item->ground,item->height,(char)item->kind,tick);
+  if(item->kind=='F' && hd_mara_absent(s)){
+   int x=item->sx,y=item->ground,h=item->height;
+   int w=h*4/11;if(w<5)w=5;
+   int top=y-h/3;
+   hd_ellipse(p,x,y+1,w/2+2,2,HD_SHADOW);
+   hd_rect(p,x-w/2,top,w,h/7+2,HD_BARK);
+   hd_rect(p,x-w/2,top,w,1,HD_COPPER);
+   hd_rect(p,x-w/2+1,top+2,2,y-top-2,HD_BARK);
+   hd_rect(p,x+w/2-2,top+2,2,y-top-2,HD_BARK);
+   hd_rect(p,x,top-h/10,w/3+1,h/10+1,HD_INK);
+   hd_pixel(p,x+1,top-h/10,HD_GOLD);
+  }else actor(p,item->sx,item->ground,item->height,(char)item->kind,tick);
   restore_occluding_wall(p,item->sx,item->height,item->depth);
  }
 }
@@ -585,7 +596,7 @@ void hd_first_person_draw(uint8_t *p,const Story *s,unsigned tick){
  profile_now=gba_profile_clock();
  gba_profile_floor_cycles=profile_now-profile_last;profile_last=profile_now;
 #endif
- render_billboards(p,camx,camy,fx,fy,rx,ry,tick);
+ render_billboards(p,camx,camy,fx,fy,rx,ry,tick,s);
 #if defined(GBA_PROFILE_RENDER) && defined(__arm__)
  profile_now=gba_profile_clock();
  gba_profile_billboard_cycles=profile_now-profile_last;profile_last=profile_now;
