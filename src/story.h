@@ -33,6 +33,7 @@
    Its two tiny UI bytes remain transient; notes/order live in studio.c. */
 #define STORY_ACT_STUDIO 'Z'
 #define STORY_ACT_NEIGHBORHOOD 'N'
+#define STORY_ACT_INTERIOR 'I'
 #define STORY_NEIGHBORHOOD_COUNT 14u
 #define STORY_NEIGHBORHOOD_MASK 0x3fffu
 #define STORY_NEIGHBORHOOD_JOURNAL 0x20u
@@ -120,18 +121,21 @@ typedef struct {
     uint8_t daily_mask, daily_memories; /* optional, persisted; never gates an ending */
     uint8_t energy, spark, bond, work; /* saved resources */
     uint8_t song_steps, art_steps, project_style; /* SRAM v5; stages 0..4 */
-    uint8_t activity, activity_choice; /* transient daily choice menu */
-    uint8_t studio_tab, studio_cursor; /* only valid in STUDIO mode */
+    uint8_t activity, activity_choice; /* indoor task step or activity choice */
+    /* Studio and indoor tasks are mutually exclusive. The common bytes
+       have explicit names in each mode, not additional permanent RAM. */
+    union {uint8_t studio_tab; uint8_t interior_room;};
+    union {uint8_t studio_cursor; uint8_t interior_pos;};
     uint8_t bad_mask, rescue_stage; /* companion SRAM record */
     uint8_t risk_menu, risk_choice; /* confirmed ethical choices */
-    uint16_t day_frame, finale_frame;
-    /* Cinematic shots are transient; saves retain story flags, not camera frames. */
     uint8_t cinema;
-    uint16_t cinema_frame;
-    uint16_t old_keys;
-    /* Independent companion save; selection and tracking are transient. */
+    /* 0..13 selection, 0..14 tracked target. Place all 16-bit fields
+       together to remove padding while retaining the sub-64-byte budget. */
+    uint8_t neighborhood_cursor:4, neighborhood_target:4;
+    uint16_t day_frame, finale_frame;
+    uint16_t cinema_frame, old_keys;
     uint16_t neighborhood_seen, neighborhood_right;
-    uint8_t neighborhood_cursor, neighborhood_target;
+    uint16_t interior_done;
 } Story;
 
 typedef struct { const char *speaker, *line1, *line2; } StoryPage;
@@ -161,6 +165,10 @@ const char *story_neighborhood_name(unsigned id);
 const char *story_neighborhood_option(unsigned id,unsigned right);
 int story_neighborhood_position(unsigned id,int *x,int *y);
 unsigned story_neighborhood_count(const Story *s);
+unsigned story_interior_count(const Story *s);
+int story_interior_id(const Story *s);
+char story_interior_tile(unsigned id,unsigned room,int x,int y);
+char story_interior_action(const Story *s);
 
 /* Deterministic enemy tells and waves: shared by logic, renderer and host tests. */
 int story_attack_lane(const Story *s, int beat);

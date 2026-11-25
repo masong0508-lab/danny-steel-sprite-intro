@@ -46,9 +46,14 @@ static uint8_t wall_type[HD_W],wall_u[HD_W],wall_tx[HD_W],wall_ty[HD_W];
 enum { WALL_RAYS=45, WALL_SHADE_ROWS=150 };
 static uint8_t wall_shade_cache[WALL_RAYS][WALL_SHADE_ROWS]
  __attribute__((section(".ewram"),aligned(4)));
+/* Cache the immutable projection height with the existing shade/depth
+   strips. Only 45 extra bytes, not a framebuffer. */
+static uint8_t wall_ray_height[WALL_RAYS];
 static int wall_cache_valid,wall_cam_x,wall_cam_y,wall_cam_fx,wall_cam_fy;
 #if !defined(__arm__)
+static unsigned debug_ray_steps;
 void hd_debug_invalidate_wall_cache(void){wall_cache_valid=0;}
+unsigned hd_debug_last_ray_steps(void){return debug_ray_steps;}
 #endif
 /* Ends of the exact original ((x-120)*3)/16 ray-direction runs. */
 static const uint8_t ray_end[45]={
@@ -192,6 +197,70 @@ static HD_CANVAS_CODE inline unsigned floor_ink(char t,int wx,int wy,int x,int y
  if((n&7u)==1u)return HD_ROAD_LIGHT;
  return (x+y)%17==0?HD_ROAD_COOL:HD_ROAD;
 }
+/* Exact per-row projection constants: 360 ROM bytes replace repeated
+   software divides, with the same integer rounding and occlusion. */
+static const uint16_t floor_params[60][3]={
+ {2304,3686,5140},
+ {2250,3600,3406},
+ {1928,3084,2540},
+ {1687,2699,2020},
+ {1500,2400,1673},
+ {1350,2160,1425},
+ {1227,1963,1240},
+ {1125,1800,1095},
+ {1038,1660,980},
+ {964,1542,885},
+ {900,1440,806},
+ {843,1348,740},
+ {794,1270,682},
+ {750,1200,633},
+ {710,1136,590},
+ {675,1080,551},
+ {642,1027,517},
+ {613,980,487},
+ {586,937,460},
+ {562,899,435},
+ {540,864,412},
+ {519,830,392},
+ {500,800,373},
+ {482,771,356},
+ {465,744,340},
+ {450,720,325},
+ {435,696,311},
+ {421,673,298},
+ {409,654,286},
+ {397,635,275},
+ {385,616,265},
+ {375,600,255},
+ {364,582,245},
+ {355,568,237},
+ {346,553,228},
+ {337,539,221},
+ {329,526,213},
+ {321,513,206},
+ {313,500,200},
+ {306,489,193},
+ {300,480,187},
+ {293,468,181},
+ {287,459,176},
+ {281,449,171},
+ {275,440,166},
+ {270,432,161},
+ {264,422,156},
+ {259,414,152},
+ {254,406,148},
+ {250,400,143},
+ {245,392,140},
+ {241,385,136},
+ {236,377,132},
+ {232,371,129},
+ {228,364,125},
+ {225,360,122},
+ {221,353,119},
+ {217,347,116},
+ {214,342,113},
+ {210,336,110},
+};
 /* Keep the measured pixel loops in ARM/IWRAM. noinline prevents the
    Thumb entry point from absorbing them back into cartridge code. */
 static HD_CANVAS_CODE __attribute__((noinline)) void floor_render(uint8_t *p,const Story *s,int cx,int cy,
@@ -200,14 +269,16 @@ static HD_CANVAS_CODE __attribute__((noinline)) void floor_render(uint8_t *p,con
  /* One projection calculation per scanline, and half-rate horizontal
     sampling in the far distance only. Near pavement uses each GBA pixel. */
  for(int y=80;y<140;y++){
-  int dist=13500/(y-75); if(dist>2304)dist=2304;
-  int side_unit=dist*3*256/480;
+  const uint16_t *params=floor_params[y-80];
+  int dist=params[0],side_unit=params[1],wall_limit=params[2];
   int step=y<98?2:1;
+  int base_x=cx+fx*dist,base_y=cy+fy*dist;
+  int side_increment=side_unit*step;
+  uint8_t *out=p+y*HD_W;
   /* Existing wall bottom is 79 + floor(10400/(depth+60)).
      Thus y is covered exactly when depth <= 10400/(y-78)-60.
      At these floor rows the original 3..150 height clamp cannot alter
      that test. Reuse the depth strip instead of an extra coverage buffer. */
-  int wall_limit=10400/(y-78)-60;
   int last_tx=-99,last_ty=-99;
   char tile='.';
   unsigned road_tile=0u,packed_row=0u;
@@ -218,9 +289,11 @@ static HD_CANVAS_CODE __attribute__((noinline)) void floor_render(uint8_t *p,con
    /* cast_walls gives every column in this original direction run
       the same hit and depth. Test coverage once, not per hidden pixel. */
    if(!wall_type[begin]||wall_depth[begin]>wall_limit){
-    for(int x=begin&~(step-1);x<end;x+=step){
-     int side=((x-120)*side_unit)>>8;
-     int wx=cx+fx*dist+rx*side,wy=cy+fy*dist+ry*side;
+    int x0=begin&~(step-1);
+    int side_fixed=(x0-120)*side_unit;
+    for(int x=x0;x<end;x+=step,side_fixed+=side_increment){
+     int side=side_fixed>>8;
+     int wx=base_x+rx*side,wy=base_y+ry*side;
      int tx=wx>>8,ty=wy>>8;
      if(tx!=last_tx||ty!=last_ty){
       last_tx=tx;last_ty=ty;tile=story_tile(tx,ty);
@@ -242,8 +315,8 @@ static HD_CANVAS_CODE __attribute__((noinline)) void floor_render(uint8_t *p,con
      }else ink=floor_ink(tile,wx,wy,x,y,tick);
      /* An odd run edge may split a far sample. Keep its original
         even sample x, then paint only this run's visible member(s). */
-     if(x>=begin)p[y*HD_W+x]=(uint8_t)ink;
-     if(step==2&&x+1<end)p[y*HD_W+x+1]=(uint8_t)ink;
+     if(x>=begin)out[x]=(uint8_t)ink;
+     if(step==2&&x+1<end)out[x+1]=(uint8_t)ink;
     }
    }
    begin=end;
@@ -370,37 +443,51 @@ static HD_CANVAS_CODE void wall_cached_column(uint8_t *p,int x,int width,
 static HD_CANVAS_CODE __attribute__((noinline)) void cast_walls(uint8_t *p,int cx,int cy,int fx,int fy,int rx,int ry){
  int warm=wall_cache_valid&&wall_cam_x==cx&&wall_cam_y==cy&&
           wall_cam_fx==fx&&wall_cam_fy==fy;
- unsigned slot=0;
- for(int x=0;x<HD_W;){
-  int side=((x-120)*3)/16; /* 0.75 FOV at each edge, fixed-point */
-  /* The original integer projection gives adjacent columns identical
-     directions. Reuse that exact result, without reducing sampling. */
-  int end=x+1;
-  while(end<HD_W && ((end-120)*3)/16==side)end++;
+#if !defined(__arm__)
+ debug_ray_steps=0u;
+#endif
+ if(warm){
+  /* Same fixed geometry: no ray steps, tile queries or height divisions.
+     Billboards, rain and other animation remain live. */
+  int x=0;
+  for(unsigned slot=0;slot<WALL_RAYS;slot++){
+   int end=ray_end[slot],height=wall_ray_height[slot];
+   char hit=(char)wall_type[x];
+   if(hit&&height)
+    wall_cached_column(p,x,end-x,79-height/2,79+height/2,hit,wall_shade_cache[slot]);
+   x=end;
+  }
+  return;
+ }
+ int x=0;
+ for(unsigned slot=0;slot<WALL_RAYS;slot++){
+  int end=ray_end[slot];
+  int side=((x-120)*3)/16;
   int dx=fx*32+rx*side,dy=fy*32+ry*side;
   int wx=cx,wy=cy,hit_dist=2400,tx=0,ty=0;
   int previous_tx=cx>>8,previous_ty=cy>>8;
   char hit=0;
   for(int step=1;step<76;step++){
+#if !defined(__arm__)
+   ++debug_ray_steps;
+#endif
    wx+=dx;wy+=dy;
    tx=wx>>8;ty=wy>>8;
-   /* 32-step ray samples often sit in the SAME town tile.
-      Only touch the story grid on cell crossings. Same collision set,
-      depth and view, but many fewer tile queries and branch chains. */
    if(tx==previous_tx && ty==previous_ty)continue;
    previous_tx=tx;previous_ty=ty;
-   char t=story_tile(tx,ty);
-   if(t=='#'||t=='A'||t=='T'){hit=t;hit_dist=step*32;break;}
+   char type=story_tile(tx,ty);
+   if(type=='#'||type=='A'||type=='T'){hit=type;hit_dist=step*32;break;}
   }
   if(hit_dist>2300)hit_dist=2300;
   for(int col=x;col<end;col++){
    wall_depth[col]=(uint16_t)hit_dist;
    wall_type[col]=(uint8_t)hit;
   }
-  if(!hit){x=end;slot++;continue;}
+  if(!hit){wall_ray_height[slot]=0;x=end;continue;}
   int height=20800/(hit_dist+60);
   if(height>150)height=150;
   if(height<3)height=3;
+  wall_ray_height[slot]=(uint8_t)height;
   int top=79-height/2,bottom=79+height/2;
   int u=abs_i(dx)>abs_i(dy)?wy&255:wx&255;
   for(int col=x;col<end;col++){
@@ -408,14 +495,10 @@ static HD_CANVAS_CODE __attribute__((noinline)) void cast_walls(uint8_t *p,int c
    wall_tx[col]=(uint8_t)tx;
    wall_ty[col]=(uint8_t)ty;
   }
-  if(warm&&slot<WALL_RAYS)
-   wall_cached_column(p,x,end-x,top,bottom,hit,wall_shade_cache[slot]);
-  else
-   wall_column(p,x,end-x,top,bottom,hit,u,hit_dist,tx,ty,
-               slot<WALL_RAYS?wall_shade_cache[slot]:0);
-  x=end;slot++;
+  wall_column(p,x,end-x,top,bottom,hit,u,hit_dist,tx,ty,wall_shade_cache[slot]);
+  x=end;
  }
- wall_cache_valid=slot==WALL_RAYS;
+ wall_cache_valid=1;
  wall_cam_x=cx;wall_cam_y=cy;wall_cam_fx=fx;wall_cam_fy=fy;
 }
 static void actor(uint8_t *p,int sx,int ground,int h,char kind,unsigned tick){

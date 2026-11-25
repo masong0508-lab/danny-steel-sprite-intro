@@ -6,6 +6,7 @@
 #include "story_save.h"
 #include "rescue_save.h"
 #include "neighborhood_save.h"
+#include "interior_save.h"
 #include "studio.h"
 #include "hd_canvas.h"
 #include "frame_runtime.h"
@@ -29,6 +30,10 @@ static int save_cooldown;
 /* Shared musical language for Danny and BORE. The same cue is heard in the
    associated 2D/3D location and during its corresponding cinematic. */
 static unsigned scene_music_cue(void){
+    int room=story_interior_id(&game);
+    if(room>=0)return room==8?MUSIC_CUE_CLINIC:
+        (room==2||room==12)?MUSIC_CUE_ROOFTOP:
+        (room==7||room==9)?MUSIC_CUE_FARCE:MUSIC_CUE_STREETS;
     int panel=story_neighborhood_panel(&game);
     if(panel>=0){
         unsigned id=(unsigned)panel/3u;
@@ -83,6 +88,8 @@ void play_erase_slot(int slot){
         save_ram[STUDIO_EXT_OFFSET+slot*STUDIO_EXT_LEN+i]=0xFF;
     for(unsigned i=0;i<NEIGHBORHOOD_EXT_LEN;i++)
         save_ram[NEIGHBORHOOD_EXT_OFFSET+slot*NEIGHBORHOOD_EXT_LEN+i]=0xFF;
+    for(unsigned i=0;i<INTERIOR_EXT_LEN;i++)
+        save_ram[INTERIOR_EXT_OFFSET+slot*INTERIOR_EXT_LEN+i]=0xFF;
 }
 static void write_save(void){
     u8 b[SAVE_LEN];
@@ -101,6 +108,10 @@ static void write_save(void){
     neighborhood_save_encode(&game,neighborhood_bytes);
     for(unsigned i=0;i<NEIGHBORHOOD_EXT_LEN;i++)
         save_ram[NEIGHBORHOOD_EXT_OFFSET+game.slot*NEIGHBORHOOD_EXT_LEN+i]=neighborhood_bytes[i];
+    uint8_t interior_bytes[INTERIOR_EXT_LEN];
+    interior_save_encode(&game,interior_bytes);
+    for(unsigned i=0;i<INTERIOR_EXT_LEN;i++)
+        save_ram[INTERIOR_EXT_OFFSET+game.slot*INTERIOR_EXT_LEN+i]=interior_bytes[i];
     game.dirty=0;
 }
 static void draw_hidden(int page){
@@ -120,6 +131,8 @@ static void draw_hidden(int page){
         /* Full native-resolution Mirror Orchard arena, with physical
            240x160 ROM scenes and original three-lane game mechanics. */
         hd_arena_draw((u8*)hd_shared_frame,&game,(unsigned)clock_ticks);
+    }else if(game.activity==STORY_ACT_INTERIOR){
+        hd_interior_draw((u8*)hd_shared_frame,&game,(unsigned)clock_ticks);
     }else if(game.activity==STORY_ACT_STUDIO){
         hd_studio_draw((u8*)hd_shared_frame,&game,(unsigned)clock_ticks);
     }else if(native_map){
@@ -198,6 +211,11 @@ void play_enter(int want_load,int slot){
             neighborhood_bytes[i]=save_ram[NEIGHBORHOOD_EXT_OFFSET+
                 game.slot*NEIGHBORHOOD_EXT_LEN+i];
          (void)neighborhood_save_decode(&game,neighborhood_bytes);
+        }
+        {uint8_t interior_bytes[INTERIOR_EXT_LEN];
+         for(unsigned i=0;i<INTERIOR_EXT_LEN;i++)
+            interior_bytes[i]=save_ram[INTERIOR_EXT_OFFSET+game.slot*INTERIOR_EXT_LEN+i];
+         (void)interior_save_decode(&game,interior_bytes);
         }
         if(game.rescue_stage==STORY_RESCUE_LOST){
             /* LOST repurposes these already-persisted day bytes to count

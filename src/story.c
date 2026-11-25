@@ -1,6 +1,8 @@
 #include "story.h"
 #include "story_checks.h"
 #include "studio.h"
+#include "interior_layout.h"
+#include "interior_tasks.h"
 
 /* A quiet neighborhood, not a random maze. Every story anchor is reachable on foot. */
 static const char *const town[STORY_H] = {
@@ -83,6 +85,35 @@ unsigned story_neighborhood_count(const Story *s){
 static int neighborhood_tracking(const Story *s){
  return story_neighborhood_enabled(s)&&s->neighborhood_target>0u&&
         s->neighborhood_target<=STORY_NEIGHBORHOOD_COUNT;
+}
+unsigned story_interior_count(const Story *s){
+ unsigned n=0;
+ for(unsigned i=0;i<STORY_NEIGHBORHOOD_COUNT;i++)n+=(s->interior_done>>i)&1u;
+ return n;
+}
+int story_interior_id(const Story *s){
+ if(s->activity!=STORY_ACT_INTERIOR)return -1;
+ return story_neighborhood_at(s);
+}
+char story_interior_tile(unsigned id,unsigned room,int x,int y){
+ if(id>=14u||room>=2u||(unsigned)x>=10u||(unsigned)y>=6u)return '#';
+ return interior_layouts[id][room][y*10+x];
+}
+static int interior_walkable(char c){return c=='.'||c=='D'||c=='>'||c=='<';}
+char story_interior_action(const Story *s){
+ int id=story_interior_id(s);
+ if(id<0||s->interior_pos>=60u||s->interior_room>=2u)return ' ';
+ int x=s->interior_pos%10u,y=s->interior_pos/10u;
+ unsigned room=s->interior_room;
+ char c=story_interior_tile((unsigned)id,room,x,y);
+ if(c=='D'||c=='>'||c=='<')return c;
+ static const int8_t dx[4]={1,0,-1,0},dy[4]={0,1,0,-1};
+ for(unsigned i=0;i<4;i++){
+  unsigned f=(s->facing+i)&3u;
+  c=story_interior_tile((unsigned)id,room,x+dx[f],y+dy[f]);
+  if(c=='C'||(c>='1'&&c<='3'))return c;
+ }
+ return ' ';
 }
 int story_goal(const Story *s, int *x, int *y, const char **label) {
     if (s->ended || s->life_stage==STORY_LIFE_FINALE) return 0;
@@ -354,7 +385,8 @@ enum { D_NONE, D_OPEN, D_LETTER, D_LETTER_AGAIN, D_CLERK_LOCKED, D_CLERK, D_CLER
        D_NB_12_RIGHT,
        D_NB_13_INTRO,
        D_NB_13_LEFT,
-       D_NB_13_RIGHT };
+       D_NB_13_RIGHT, D_MARA_NEIGHBORS, D_CLERK_ANNEX_DONE };
+_Static_assert(D_CLERK_ANNEX_DONE<256,"script ID");
 _Static_assert(D_NB_13_RIGHT<256,"dialogue ID width");
 #define SCRIPT(name, ...) static const StoryPage name[] = { __VA_ARGS__ }
 /* The banana-sign shift is practical income, not Danny's calling. He is
@@ -1044,6 +1076,14 @@ SCRIPT(d_nb_13_left,
 SCRIPT(d_nb_13_right,
  {"DANNY", "Leave the seat clear.", "I'll stand a while."},
  {"DRIVER", "You don't have to go", "before you're ready."});
+SCRIPT(d_mara_neighbors,
+ {"MARA","People say you helped.","The town remembers you."},
+ {"DANNY","I thought leaving meant","nothing here mattered."},
+ {"MARA","No. Call when you go.","You still have a place."});
+SCRIPT(d_clerk_annex_done,
+ {"BORE CLERK","The annex is sorted.","Your old reels are safe."},
+ {"DANNY","Good. Keep the names.","Don't lose the people."},
+ {"BORE CLERK","We'll keep the record.","You made it possible."});
 #undef SCRIPT
 #define SEQ(name) {name, (uint8_t)(sizeof(name) / sizeof((name)[0]))}
 static const struct { const StoryPage *pages; uint8_t count; } scripts[] = {
@@ -1139,9 +1179,11 @@ static const struct { const StoryPage *pages; uint8_t count; } scripts[] = {
   SEQ(d_nb_12_right),
   SEQ(d_nb_13_intro),
   SEQ(d_nb_13_left),
-  SEQ(d_nb_13_right)
+  SEQ(d_nb_13_right),
+  SEQ(d_mara_neighbors),
+  SEQ(d_clerk_annex_done)
 };
-_Static_assert(sizeof(scripts)/sizeof(scripts[0])==D_NB_13_RIGHT+1u,"script table order");
+_Static_assert(sizeof(scripts)/sizeof(scripts[0])==D_CLERK_ANNEX_DONE+1u,"script table order");
 static int neighborhood_dialogue(unsigned id){
  return id>=D_NB_0_INTRO&&id<=D_NB_13_RIGHT?(int)(id-D_NB_0_INTRO):-1;
 }
@@ -1247,7 +1289,8 @@ static uint8_t cinematics_for_dialogue(uint8_t d){
     case D_MARA_MORNING: case D_MARA_CLOSING:
     case D_MARA_GALLERY: case D_MARA_PREBUS_WALK: case D_MARA_PREBUS_TALK:
     case D_MARA_MASTER: case D_MARA_CREATIONS: return CINE_MARA;
-    case D_CLERK_CLOSING: return CINE_BORE;
+    case D_CLERK_CLOSING: case D_CLERK_ANNEX_DONE: return CINE_BORE;
+    case D_MARA_NEIGHBORS: return CINE_MARA;
     case D_BAD_LETTER: return CINE_LETTER;
     case D_BAD_CLERK: return CINE_BORE;
     case D_BAD_MUSIC: case D_BAD_MUSIC_MASTER: return CINE_MUSIC;
@@ -1410,6 +1453,113 @@ static void stat_gain(uint8_t *v,unsigned gain){
 static void work_gain(Story *s,unsigned gain){
     unsigned sum=(unsigned)s->work+gain;
     s->work=(uint8_t)(sum>99u?99u:sum);
+}
+/* Indoor state uses the studio's transient room/position bytes and the
+   ordinary activity choice and page fields. Outdoor coordinates stay
+   untouched: exit and reload always return to the real entry tile. */
+static void interior_exit(Story *s){
+ s->activity=0;s->activity_choice=0;s->interior_room=0;s->interior_pos=0;
+ s->page=0;s->choice=0;s->cinema=CINE_NONE;s->cinema_frame=0;
+ s->cooldown=0;s->anim=0;s->prev_x=s->x;s->prev_y=s->y;
+}
+static void interior_enter(Story *s){
+ s->activity=STORY_ACT_INTERIOR;s->activity_choice=0;
+ s->interior_room=0;s->interior_pos=54u;s->page=IN_WALK;s->choice=0;
+ s->cinema=CINE_NONE;s->cinema_frame=0;s->cooldown=0;s->anim=0;
+}
+static void interior_pass(Story *s,unsigned id){
+ if(s->activity_choice<3u)++s->activity_choice;
+ s->page=IN_RESULT;s->choice=0;s->cinema_frame=0;
+ if(s->activity_choice==3u){
+  unsigned bit=1u<<id;
+  /* Replays remain playable without farming rewards or gating endings. */
+  if(!(s->interior_done&bit)){
+   s->interior_done=(uint16_t)(s->interior_done|bit);
+   switch(interior_tasks[id].reward){
+    case IN_REWARD_BOND:stat_gain(&s->bond,1u);break;
+    case IN_REWARD_SPARK:stat_gain(&s->spark,1u);break;
+    default:work_gain(s,2u);break;
+   }
+   s->dirty=1;
+  }
+ }
+}
+static void interior_tick(Story *s,uint16_t keys,uint16_t pressed){
+ enum {A=1,B=2,SELECT=4,START=8,RIGHT=16,LEFT=32,UP=64,DOWN=128,L=512,R=256};
+ int found=story_interior_id(s);
+ /* A clinic appointment may become due while Danny is in the workshop.
+    End the optional activity on its entry tile before normal plot logic. */
+ if(found<0 || (s->life_stage==STORY_LIFE_WAIT&&s->day_number>=2u) ||
+    (s->life_stage==STORY_LIFE_FOLLOWUP_WAIT&&s->day_number>=3u)){
+  interior_exit(s);return;
+ }
+ unsigned id=(unsigned)found,step=interior_step(s);
+ if(s->page==IN_GAME){
+  unsigned mode=interior_mode(id,step);
+  if(pressed&B){s->page=IN_WALK;s->choice=0;s->cinema_frame=0;return;}
+  if(mode==IN_DIAL){
+   if(pressed&(LEFT|UP))s->choice=(uint8_t)((s->choice+7u)&7u);
+   else if(pressed&(RIGHT|DOWN))s->choice=(uint8_t)((s->choice+1u)&7u);
+   else if(pressed&A){
+    if(s->choice==interior_dial_target(id,step))interior_pass(s,id);
+    else s->page=IN_RETRY;
+   }
+  }else if(mode==IN_TIMING){
+   if(pressed&A){
+    int v=(int)interior_timing_position(s)-(int)interior_timing_target(id,step);
+    if(v>=-1&&v<=1)interior_pass(s,id);
+    else s->page=IN_RETRY;
+   }else ++s->cinema_frame;
+  }else{
+   static const uint16_t dir_keys[4]={RIGHT,DOWN,LEFT,UP};
+   unsigned d=4u;
+   for(unsigned i=0;i<4u;i++)if(pressed&dir_keys[i]){d=i;break;}
+   if(d<4u){
+    if((pressed&(RIGHT|DOWN|LEFT|UP))!=dir_keys[d]||
+       d!=interior_pattern(id,step,s->choice))s->page=IN_RETRY;
+    else if(++s->choice>=3u)interior_pass(s,id);
+   }
+  }
+  return;
+ }
+ if(s->page!=IN_WALK){
+  if(pressed&B){s->page=IN_WALK;s->choice=0;s->cinema_frame=0;}
+  else if(pressed&A){
+   s->page=s->page==IN_RETRY?IN_GAME:IN_WALK;
+   s->choice=0;s->cinema_frame=0;
+  }
+  return;
+ }
+ if(pressed&B){interior_exit(s);return;}
+ if(pressed&START){interior_exit(s);s->paused=1;return;}
+ if(pressed&(L|SELECT|R)){s->page=IN_BRIEF;return;}
+ if(pressed&A){
+  char c=story_interior_action(s);
+  if(c=='D'){interior_exit(s);return;}
+  if(c=='>'){s->interior_room=1;s->interior_pos=54u;s->anim=0;s->cooldown=0;return;}
+  if(c=='<'){s->interior_room=0;s->interior_pos=4u;s->anim=0;s->cooldown=0;return;}
+  if(c>='1'&&c<='3'){
+   if(s->activity_choice>=3u)s->page=IN_RESULT;
+   else if((unsigned)(c-'1')==s->activity_choice)s->page=IN_GAME;
+   else s->page=IN_WRONG;
+   s->choice=0;s->cinema_frame=0;return;
+  }
+  s->page=IN_BRIEF;return;
+ }
+ if(s->cooldown)--s->cooldown;
+ if(!s->cooldown){
+  int d=-1;
+  if(keys&UP)d=3;else if(keys&DOWN)d=1;else if(keys&LEFT)d=2;else if(keys&RIGHT)d=0;
+  if(d>=0){
+   static const int8_t dx[4]={1,0,-1,0},dy[4]={0,1,0,-1};
+   int x=(int)(s->interior_pos%10u)+dx[d],y=(int)(s->interior_pos/10u)+dy[d];
+   s->facing=(uint8_t)d;
+   if(interior_walkable(story_interior_tile(id,s->interior_room,x,y))){
+    s->interior_pos=(uint8_t)(y*10+x);s->anim=4;
+   }
+   s->cooldown=5;
+  }
+ }
 }
 static int exert(Story *s){
     if(!s->energy)return 0;
@@ -1709,6 +1859,8 @@ static void interact(Story *s) {
             else if((!s->life_stage||can_make_memory(s)) &&
                     s->song_steps>=STORY_PROJECT_DONE)
                 talk(s,D_CLERK_SONG);
+            else if((s->interior_done&(1u<<7))&&(s->flags&STORY_STAMP))
+                talk(s,D_CLERK_ANNEX_DONE);
             else if(can_make_memory(s) && day_period(s)==2u)
                 talk(s,D_CLERK_CLOSING);
             else talk(s,(s->flags & STORY_STAMP) ? D_CLERK_AGAIN : D_CLERK);
@@ -1745,6 +1897,7 @@ static void interact(Story *s) {
                     s->art_steps>=STORY_PROJECT_DONE)talk(s,D_MARA_GALLERY);
             else if(!s->life_stage && s->song_steps>=STORY_PROJECT_DONE)
                 talk(s,D_MARA_MASTER);
+            else if(story_interior_count(s)>=3u)talk(s,D_MARA_NEIGHBORS);
             else if(can_make_memory(s) && s->bond>=4)talk(s,D_ACT_MARA_CLOSE);
             else if(can_make_memory(s) && day_period(s)==0u)talk(s,D_MARA_MORNING);
             else if(can_make_memory(s) && day_period(s)==2u)talk(s,D_MARA_CLOSING);
@@ -2087,6 +2240,7 @@ void story_tick(Story *s, uint16_t keys) {
         if(pressed&SELECT)s->activity_choice^=1u;
         return;
     }
+    if(s->activity==STORY_ACT_INTERIOR){interior_tick(s,keys,pressed);return;}
     if(s->activity){
         if(pressed&(LEFT|RIGHT|UP|DOWN))s->activity_choice^=1u;
         if(pressed&B){
@@ -2177,6 +2331,9 @@ void story_tick(Story *s, uint16_t keys) {
     }
     if (pressed & (L|SELECT)) { s->view ^= 1; s->dirty = 1; }
     if (pressed & R) {
+        if(story_neighborhood_at(s)>=0 && !(pressed&(L|SELECT))){
+            interior_enter(s);return;
+        }
         if(s->rescue_stage==STORY_RESCUE_LOST){
             talk(s,s->day_number>=STORY_HOPE_REALIZE_DAY?
                  D_HOPE_NOTE_LATE:D_HOPE_NOTE_WAIT);return;

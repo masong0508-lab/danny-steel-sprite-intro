@@ -32,6 +32,7 @@ static void verify_original_road_material_rom(void){
 }
 void hd_debug_wall_store_span(uint8_t *canvas,int x,int y,int width,uint8_t ink);
 void hd_debug_invalidate_wall_cache(void);
+unsigned hd_debug_last_ray_steps(void);
 
 /* Captured from the original shipped PR14 painter before changing its
    ray reuse, floor ordering or instruction placement. Each value covers
@@ -100,17 +101,21 @@ static void verify_camera_shade_cache(void){
     hd_debug_invalidate_wall_cache();
     memset(&canvas,0xA6,sizeof canvas);
     hd_first_person_draw(canvas.pixels,&s,tick);
+    assert(hd_debug_last_ray_steps()>0u);
     memcpy(cold,canvas.pixels,HD_BYTES);
     memset(&canvas,0xA6,sizeof canvas);
     hd_first_person_draw(canvas.pixels,&s,tick); /* warm, same clock */
+    assert(hd_debug_last_ray_steps()==0u);
     assert(!memcmp(cold,canvas.pixels,HD_BYTES));
     cases++;
     memset(&canvas,0xA6,sizeof canvas);
     hd_first_person_draw(canvas.pixels,&s,tick+13u); /* warm, animated */
+    assert(hd_debug_last_ray_steps()==0u);
     memcpy(cold,canvas.pixels,HD_BYTES);
     hd_debug_invalidate_wall_cache();
     memset(&canvas,0xA6,sizeof canvas);
     hd_first_person_draw(canvas.pixels,&s,tick+13u); /* cold, animated */
+    assert(hd_debug_last_ray_steps()>0u);
     assert(!memcmp(cold,canvas.pixels,HD_BYTES));
     cases++;
     for(unsigned sentinel=0;sentinel<32u;sentinel++)
