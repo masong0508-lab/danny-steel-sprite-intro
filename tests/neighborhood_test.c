@@ -31,7 +31,7 @@ static void walk_to(Story *s,unsigned id){
   int dir=-1,steps=-1;assert(story_route(s,&dir,&steps));
   if(steps==0)break;
   assert(dir>=0&&dir<4);s->cooldown=0;s->old_keys=0;
-  unsigned before=s->x+STORY_W*s->y;
+  int before=s->x+STORY_W*s->y;
   story_tick(s,(uint16_t)key[dir]);story_tick(s,0);
   assert(before!=s->x+STORY_W*s->y&&!story_solid(s->x,s->y));
  }
