@@ -12,6 +12,9 @@ on:
       - "Makefile"
       - "src/**"
       - "assets/neighborhood/**"
+      - "assets/interiors/**"
+      - "tools/build_interiors.js"
+      - "tests/interior_driver.h"
       - "tools/build_neighborhood_panels.js"
       - "tests/potheads_open_test.c"
   workflow_dispatch:
@@ -48,7 +51,7 @@ jobs:
             src/hd_perspective.c src/hd_studio.c src/hd_cinema.c \
             src/hd_actor.c src/hd_special.c src/hd_ending.c \
             src/hd_arena.c src/hd_arena_art.c \
-            tools/story_gallery.c -o /tmp/danny_story_gallery
+            src/hd_interior.c tools/story_gallery.c -Itests -o /tmp/danny_story_gallery
           /tmp/danny_story_gallery docs/screenshots
           for f in docs/screenshots/*.ppm; do
             convert "$f" -filter point -resize 200% "${f%.ppm}.png"

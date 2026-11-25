@@ -186,3 +186,10 @@ interactions, including both alternatives at each of fourteen map sites.
 | PHONE | ![Opening](screenshots/41_12_side_intro.png) | ![CALL](screenshots/41_12_side_left.png) | ![MESSAGE](screenshots/41_12_side_right.png) |
 | CANAL | ![Opening](screenshots/41_13_side_intro.png) | ![SKETCH](screenshots/41_13_side_left.png) | ![CLEAN](screenshots/41_13_side_right.png) |
 | SHELTER | ![Opening](screenshots/41_14_side_intro.png) | ![MARK](screenshots/41_14_side_left.png) | ![WAIT](screenshots/41_14_side_right.png) |
+
+## Playable building interiors
+
+The production engine now captures the 14 entry rooms, 14 workrooms and
+42 mini-game screens by walking through actual doors and using A on the
+workstations. See the `43_*` screenshots. The earlier `41_*` illustrated
+side stories remain available separately.

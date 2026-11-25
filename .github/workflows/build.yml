@@ -36,6 +36,15 @@ jobs:
             src/hd_actor.c src/hd_special.c src/hd_overlay.c \
             tests/neighborhood_test.c -o /tmp/danny_neighborhood
           /tmp/danny_neighborhood
+      - name: Verify all playable rooms, workshop games, art, rewards and saves
+        run: |
+          node tools/build_interiors.js /tmp/danny-interiors
+          for f in assets/interiors/*.bin; do cmp "$f" "/tmp/danny-interiors/$(basename "$f")"; done
+          cmp src/interior_layout.h /tmp/danny-interiors/interior_layout.h
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc -Itests \
+            src/story.c src/studio.c src/hd_canvas.c src/hd_world_atlas.c \
+            src/hd_interior.c tests/interior_test.c -o /tmp/danny_interior_test
+          /tmp/danny_interior_test
       - name: Validate native 240x160 title, city, dialogue and double-buffer-compatible upscale
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c src/hd_canvas.c src/hd_menu.c src/hd_world.c src/hd_isometric.c src/hd_isometric_atlas.c src/hd_facade_art.c src/hd_world_atlas.c src/hd_overlay.c src/menu_ink.c tests/hd_graphics_test.c -o /tmp/danny_native_graphics_test
@@ -354,7 +363,8 @@ jobs:
           sha256sum danny_steel_title.gba > SHA256SUMS.txt
           printf '%s\n' \
             'THE LAST DAYS OF DANNY STEEL - Game Boy Advance' \
-            'Includes the playable Old Quarter chapter and fourteen optional illustrated neighborhood stories.' \
+            'Includes fourteen two-room workshops, 42 playable workbench rounds and fourteen illustrated side stories.' \
+            'At a side story tile, R enters the building; A interacts, D-pad moves, R shows instructions, B returns.' \
             'Side stories: finish letter, BORE and Mara; START then SELECT; A tracks a site. A STORY on arrival.' \
             'ROM: danny_steel_title.gba' \
             'Run in mGBA or Pizza Boy GBA, with SRAM saves enabled (32 KB/Auto).' \

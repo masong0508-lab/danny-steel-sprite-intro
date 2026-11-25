@@ -8,6 +8,7 @@
 #include "story_draw.h"
 #include "studio.h"
 #include "hd_canvas.h"
+#include "interior_driver.h"
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -28,6 +29,8 @@ static void write_frame(const char *name,const Story *s,unsigned t){
                   s->ending==STORY_END_NEUTRAL ||
                   s->ending==STORY_END_BAD))){
   hd_ending_draw(canvas,s,s->finale_frame);
+ }else if(s->activity==STORY_ACT_INTERIOR){
+  hd_interior_draw(canvas,s,t);
  }else if(s->activity==STORY_ACT_STUDIO){
   hd_studio_draw(canvas,s,t);
  }else if(!s->ended && !s->battle && s->life_stage!=STORY_LIFE_FINALE &&
@@ -369,6 +372,20 @@ int main(int argc,char **argv){
  }
  s.paused=1;s.choice=STORY_NEIGHBORHOOD_JOURNAL;
  write_frame("42_neighborhood_journal",&s,90);
+ /* Actual entrances, physical room movement, and puzzle screens. */
+ story_new(&s,0);s.dialogue=0;s.cinema=CINE_NONE;s.flags=STORY_ALL;
+ for(unsigned id=0;id<14u;id++){
+  char name[64];in_open(&s,id);
+  snprintf(name,sizeof name,"43_%02u_entry",id+1u);write_frame(name,&s,90);
+  in_seek(&s,'>');in_press(&s,IN_A);
+  snprintf(name,sizeof name,"43_%02u_workroom",id+1u);write_frame(name,&s,90);
+  for(unsigned step=0;step<3u;step++){
+   in_seek(&s,(char)('1'+step));in_press(&s,IN_A);
+   snprintf(name,sizeof name,"43_%02u_game_%u",id+1u,step+1u);write_frame(name,&s,90);
+   in_solve(&s,id,step);in_press(&s,IN_A);
+  }
+  in_press(&s,IN_B);assert(!s.activity);
+ }
  puts("Actual Danny Steel story renderer gallery generated");
  return 0;
 }

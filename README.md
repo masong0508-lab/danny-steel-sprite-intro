@@ -62,6 +62,24 @@ cartridge pixels. 84 new dialogue pages and the route, journal, and save
 logic bring the expansion beyond one MiB of new authored data and code.
 No extra framebuffer or image RAM. See [expansion details](docs/NEIGHBORHOOD_STORIES.md).
 
+## Walk inside the Old Quarter
+
+The 14 illustrated side-story locations now also have **two traversable rooms**
+each. At a location, press **R ENTER** (A still opens the original side story).
+D-pad moves Danny around the actual furniture and counters; A interacts with
+the current object or marked door. R shows the work order. B cancels a puzzle
+or leaves the building. START returns to the street and pauses.
+
+The workshop has three ordered stations with dial, timing and direction
+pattern minigames. Each building awards a small, one-time bond, spark, or
+work bonus. The completion record appears in START → SELECT's journal;
+replays do not award additional points. Mara and the BORE clerk react to
+completed work. Appointments take priority over optional workshops.
+
+The additional 28 room backgrounds and 14 workbench strips contain
+1,048,320 new ROM bytes, plus code and task writing. The same native
+framebuffer is reused. Read [the workshop details](docs/INTERACTIVE_INTERIORS.md).
+
 ## Playable chapter: Old Quarter
 
 The city is closing, the last bus is leaving, and Danny is trying to determine which pieces of yesterday are worth carrying into tomorrow. Read a letter from home, have the BORE Continuity Office validate your existence, and speak to Mara before deciding whether to board the bus or remain behind. Finishing the optional music and art objectives raises *primary-story* completion to 100%, while the Mirror Orchard investigation remains independent. The prose is intentionally a little sad beneath the bureaucracy and bad jokes; the BORE reference is a light crossover and does not attempt to rewrite the larger game's canon.
