@@ -49,6 +49,19 @@ is drawn as five large bands rather than one rectangle per scanline.
 See the [updated capture gallery](docs/SCREENSHOT_GALLERY.md) and
 [art direction notes](docs/INKED_OLD_QUARTER.md).
 
+## Fourteen illustrated Old Quarter stories
+
+After the letter, BORE stamp and Mara promise, press START then SELECT.
+Choose a side story with the D-pad and A to track its real walkable tile.
+Press A when the HUD says A STORY. Choose one of two alternatives; finish
+the dialogue to record that choice in the journal. B cancels without
+recording completion. Rescue and medical appointments take priority.
+
+42 unique 240x104 native story illustrations contain 1,048,320 bytes of
+cartridge pixels. 84 new dialogue pages and the route, journal, and save
+logic bring the expansion beyond one MiB of new authored data and code.
+No extra framebuffer or image RAM. See [expansion details](docs/NEIGHBORHOOD_STORIES.md).
+
 ## Playable chapter: Old Quarter
 
 The city is closing, the last bus is leaving, and Danny is trying to determine which pieces of yesterday are worth carrying into tomorrow. Read a letter from home, have the BORE Continuity Office validate your existence, and speak to Mara before deciding whether to board the bus or remain behind. Finishing the optional music and art objectives raises *primary-story* completion to 100%, while the Mirror Orchard investigation remains independent. The prose is intentionally a little sad beneath the bureaucracy and bad jokes; the BORE reference is a light crossover and does not attempt to rewrite the larger game's canon.

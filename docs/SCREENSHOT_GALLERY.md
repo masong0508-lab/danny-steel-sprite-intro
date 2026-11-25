@@ -163,3 +163,26 @@ montages now render at native 240x160. The optional Mirror Orchard
 combat arena also uses native 240x160 ROM-backed environments and portraits
 while retaining the original game logic. All final pictures are displayed at
 2x their GBA size using nearest-neighbour scaling. No images are mockups.
+
+## Illustrated neighborhood anthology
+
+The 42 panels in `41_*_side_*.png` are captures of actual A-button
+interactions, including both alternatives at each of fourteen map sites.
+`42_neighborhood_journal.png` displays completion and choices.
+
+| Location | Opening | Left choice | Right choice |
+| --- | --- | --- | --- |
+| LAUNDRY | ![Opening](screenshots/41_01_side_intro.png) | ![MEND](screenshots/41_01_side_left.png) | ![RETURN](screenshots/41_01_side_right.png) |
+| PHOTO | ![Opening](screenshots/41_02_side_intro.png) | ![SIGN](screenshots/41_02_side_left.png) | ![NO NAME](screenshots/41_02_side_right.png) |
+| STAIR | ![Opening](screenshots/41_03_side_intro.png) | ![SKETCH](screenshots/41_03_side_left.png) | ![LISTEN](screenshots/41_03_side_right.png) |
+| REPAIR | ![Opening](screenshots/41_04_side_intro.png) | ![REPAIR](screenshots/41_04_side_left.png) | ![DONATE](screenshots/41_04_side_right.png) |
+| POST | ![Opening](screenshots/41_05_side_intro.png) | ![WRITE](screenshots/41_05_side_left.png) | ![KEEP](screenshots/41_05_side_right.png) |
+| STOOP | ![Opening](screenshots/41_06_side_intro.png) | ![KNOCK](screenshots/41_06_side_left.png) | ![NOTE](screenshots/41_06_side_right.png) |
+| MARKET | ![Opening](screenshots/41_07_side_intro.png) | ![HELP](screenshots/41_07_side_left.png) | ![BUY](screenshots/41_07_side_right.png) |
+| ANNEX | ![Opening](screenshots/41_08_side_intro.png) | ![LABEL](screenshots/41_08_side_left.png) | ![RESTORE](screenshots/41_08_side_right.png) |
+| GARDEN | ![Opening](screenshots/41_09_side_intro.png) | ![PLAN](screenshots/41_09_side_left.png) | ![REST](screenshots/41_09_side_right.png) |
+| SHIFT | ![Opening](screenshots/41_10_side_intro.png) | ![FOLD](screenshots/41_10_side_left.png) | ![THANK](screenshots/41_10_side_right.png) |
+| PARK | ![Opening](screenshots/41_11_side_intro.png) | ![SHARE](screenshots/41_11_side_left.png) | ![SIT](screenshots/41_11_side_right.png) |
+| PHONE | ![Opening](screenshots/41_12_side_intro.png) | ![CALL](screenshots/41_12_side_left.png) | ![MESSAGE](screenshots/41_12_side_right.png) |
+| CANAL | ![Opening](screenshots/41_13_side_intro.png) | ![SKETCH](screenshots/41_13_side_left.png) | ![CLEAN](screenshots/41_13_side_right.png) |
+| SHELTER | ![Opening](screenshots/41_14_side_intro.png) | ![MARK](screenshots/41_14_side_left.png) | ![WAIT](screenshots/41_14_side_right.png) |

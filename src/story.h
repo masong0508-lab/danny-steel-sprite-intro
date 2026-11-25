@@ -32,6 +32,10 @@
 /* The new advanced editor uses the existing activity menu routing.
    Its two tiny UI bytes remain transient; notes/order live in studio.c. */
 #define STORY_ACT_STUDIO 'Z'
+#define STORY_ACT_NEIGHBORHOOD 'N'
+#define STORY_NEIGHBORHOOD_COUNT 14u
+#define STORY_NEIGHBORHOOD_MASK 0x3fffu
+#define STORY_NEIGHBORHOOD_JOURNAL 0x20u
 /* Four authored stages per creative project. No project gates an ending. */
 #define STORY_PROJECT_DONE 4u
 #define STORY_STYLE_SONG_SOFT 1u
@@ -99,8 +103,12 @@ static inline uint8_t story_restore_daily_mask(uint8_t raw,unsigned life_stage){
 #define STORY_BATTLE_PARRY_CD STORY_CARE_PARRY_COOLDOWN
 
 typedef struct {
-    uint8_t x, y, facing, view, flags, ended, ending, slot;
-    uint8_t dialogue, page, choice, choosing, paused, quit;
+    uint8_t x, y, flags, ending;
+    /* These values are bounded to 0..3 or 0..1 in gameplay. Pack them
+       together to retain the existing sub-64-byte state budget. The SRAM
+       codec serializes fields explicitly, never the struct layout. */
+    uint8_t facing:2, view:1, ended:1, slot:1, choosing:1, paused:1, quit:1;
+    uint8_t dialogue, page, choice;
     uint8_t cooldown, prev_x, prev_y, anim, dirty;
     /* A separate, OPTIONAL quest: persisted independently of Danny's main story. */
     uint8_t cult_stage, cult_pre_wins, cult_post_wins;
@@ -121,6 +129,9 @@ typedef struct {
     uint8_t cinema;
     uint16_t cinema_frame;
     uint16_t old_keys;
+    /* Independent companion save; selection and tracking are transient. */
+    uint16_t neighborhood_seen, neighborhood_right;
+    uint8_t neighborhood_cursor, neighborhood_target;
 } Story;
 
 typedef struct { const char *speaker, *line1, *line2; } StoryPage;
@@ -143,6 +154,13 @@ const char *story_goal_kind(const Story *s);
 const char *story_action_hint(const Story *s);
 int story_risk_available(const Story *s); /* only at confirmed optional risk sites */
 const StoryPage *story_pages(const Story *s, int *count);
+int story_neighborhood_enabled(const Story *s);
+int story_neighborhood_at(const Story *s);
+int story_neighborhood_panel(const Story *s);
+const char *story_neighborhood_name(unsigned id);
+const char *story_neighborhood_option(unsigned id,unsigned right);
+int story_neighborhood_position(unsigned id,int *x,int *y);
+unsigned story_neighborhood_count(const Story *s);
 
 /* Deterministic enemy tells and waves: shared by logic, renderer and host tests. */
 int story_attack_lane(const Story *s, int beat);

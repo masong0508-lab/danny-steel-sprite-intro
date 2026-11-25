@@ -27,6 +27,15 @@ jobs:
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/menu_ink.c tests/menu_nav_test.c -o /tmp/danny_menu_nav
           /tmp/danny_menu_nav
+      - name: Verify megabyte expansion, branching stories, journal and saves
+        run: |
+          node tools/build_neighborhood_panels.js /tmp/danny-neighborhood
+          for f in assets/neighborhood/*.bin; do cmp "$f" "/tmp/danny-neighborhood/$(basename "$f")"; done
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
+            src/story.c src/studio.c src/hd_canvas.c src/hd_cinema.c \
+            src/hd_actor.c src/hd_special.c src/hd_overlay.c \
+            tests/neighborhood_test.c -o /tmp/danny_neighborhood
+          /tmp/danny_neighborhood
       - name: Validate native 240x160 title, city, dialogue and double-buffer-compatible upscale
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c src/hd_canvas.c src/hd_menu.c src/hd_world.c src/hd_isometric.c src/hd_isometric_atlas.c src/hd_facade_art.c src/hd_world_atlas.c src/hd_overlay.c src/menu_ink.c tests/hd_graphics_test.c -o /tmp/danny_native_graphics_test
@@ -345,7 +354,8 @@ jobs:
           sha256sum danny_steel_title.gba > SHA256SUMS.txt
           printf '%s\n' \
             'THE LAST DAYS OF DANNY STEEL - Game Boy Advance' \
-            'Includes the current playable Old Quarter chapter, not the unfinished full campaign.' \
+            'Includes the playable Old Quarter chapter and fourteen optional illustrated neighborhood stories.' \
+            'Side stories: finish letter, BORE and Mara; START then SELECT; A tracks a site. A STORY on arrival.' \
             'ROM: danny_steel_title.gba' \
             'Run in mGBA or Pizza Boy GBA, with SRAM saves enabled (32 KB/Auto).' \
             'Title: START. Menu: D-pad (both axes), A or START select, B back.' \

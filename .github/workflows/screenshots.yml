@@ -11,6 +11,8 @@ on:
       - "tools/encode_opening_film.py"
       - "Makefile"
       - "src/**"
+      - "assets/neighborhood/**"
+      - "tools/build_neighborhood_panels.js"
       - "tests/potheads_open_test.c"
   workflow_dispatch:
 

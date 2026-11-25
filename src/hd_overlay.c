@@ -75,6 +75,27 @@ static void selectable(uint8_t *p,int x,int y,int w,const char *label,int select
  hd_rect(p,x,y,selected?3:1,21,selected?HD_LAMP:HD_STONE_DARK);
  hd_text(p,x+9,y+7,label,selected?HD_PAPER:HD_STONE_LIT,1,1);
 }
+static void neighborhood_journal(uint8_t *p,const Story *s){
+ framebox(p,8,8,224,147);
+ hd_text(p,18,16,"OLD QUARTER / SIDE STORIES",HD_LAMP,1,0);
+ char total[]="00/14";unsigned count=story_neighborhood_count(s);
+ total[0]=(char)('0'+count/10u);total[1]=(char)('0'+count%10u);
+ hd_text(p,192,16,total,HD_PAPER,1,0);
+ unsigned cursor=s->neighborhood_cursor%14u,first=(cursor/7u)*7u;
+ for(unsigned i=0;i<7u;i++){
+  unsigned id=first+i,seen=(s->neighborhood_seen>>id)&1u;
+  int y=29+(int)i*14;
+  if(id==cursor)hd_rect(p,14,y-2,212,13,HD_ROAD_COOL);
+  hd_rect(p,17,y,4,7,seen?HD_GOLD:HD_STONE_DARK);
+  hd_text(p,25,y,story_neighborhood_name(id),id==cursor?HD_PAPER:HD_STONE_LIT,1,0);
+  hd_text(p,104,y,seen?story_neighborhood_option(id,(s->neighborhood_right>>id)&1u):
+      "UNREAD",HD_STONE_LIT,1,0);
+  if(s->neighborhood_target==id+1u)hd_text(p,184,y,"TRACK",HD_LAMP,1,0);
+ }
+ hd_text(p,18,130,story_neighborhood_enabled(s)?"A TRACK / UNTRACK AND WALK":
+     "FINISH CORE / URGENT TASK FIRST",HD_PAPER,1,0);
+ hd_text(p,18,142,"D-PAD SELECT   B BACK",HD_STONE_LIT,1,0);
+}
 void hd_game_overlay(uint8_t *p,const Story *s){
  if(s->activity==STORY_ACT_STUDIO||s->battle||
     s->life_stage==STORY_LIFE_FINALE||s->ended)return;
@@ -104,10 +125,14 @@ void hd_game_overlay(uint8_t *p,const Story *s){
    hd_text(p,18,124,d->line1,HD_PAPER,1,1);
    hd_text(p,18,136,d->line2,HD_PAPER,1,1);
    hd_text(p,174,147,"A NEXT",HD_STONE_LIT,1,0);
+   if(story_neighborhood_panel(s)>=0)hd_text(p,18,147,"B BACK",HD_STONE_LIT,1,0);
    for(int i=0;i<count&&i<9;i++)
     hd_rect(p,205+i*3,112,2,3,i<=s->page?HD_LAMP:HD_STONE_DARK);
   }
   return;
+ }
+ if(s->paused && (s->choice&STORY_NEIGHBORHOOD_JOURNAL)){
+  neighborhood_journal(p,s);return;
  }
  if(s->paused && (s->choice&STORY_FIELD_GUIDE_ACTIVE)){
   field_guide(p,s);return;
@@ -119,7 +144,8 @@ void hd_game_overlay(uint8_t *p,const Story *s){
   hd_text(p,30,96,"START  RETURN TO STREET",HD_PAPER,1,0);
   hd_text(p,30,107,"L  FIELD GUIDE / WHERE NEXT",HD_LAMP,1,0);
   hd_text(p,30,119,"R  JOURNAL / CONSEQUENCES",HD_STONE_LIT,1,0);
-  hd_text(p,30,137,"B  SAVE AND LEAVE",HD_PAPER,1,0);
+  hd_text(p,30,128,"SELECT  SIDE STORIES",HD_LAMP,1,0);
+  hd_text(p,30,139,"B  SAVE AND LEAVE",HD_PAPER,1,0);
   return;
  }
  if(s->risk_menu){
@@ -143,6 +169,17 @@ void hd_game_overlay(uint8_t *p,const Story *s){
   selectable(p,23,121,91,s->risk_menu=='H'?"OPEN":"BACK",!s->risk_choice);
   selectable(p,122,121,92,s->risk_menu=='H'?"LEAVE":"DO IT",s->risk_choice);
   hd_text(p,28,146,"LEFT/RIGHT CHOOSE    B CANCEL",HD_PAPER,1,0);
+  return;
+ }
+ if(s->activity==STORY_ACT_NEIGHBORHOOD){
+  int id=story_neighborhood_at(s);
+  framebox(p,8,103,224,54);
+  hd_text(p,18,110,id>=0?story_neighborhood_name((unsigned)id):"SIDE STORY",HD_LAMP,1,0);
+  if(id>=0){
+   selectable(p,18,121,98,story_neighborhood_option((unsigned)id,0),!s->activity_choice);
+   selectable(p,124,121,98,story_neighborhood_option((unsigned)id,1),s->activity_choice);
+  }
+  hd_text(p,18,146,"D-PAD CHOOSE   A OK   B BACK",HD_PAPER,1,0);
   return;
  }
  if(s->activity){

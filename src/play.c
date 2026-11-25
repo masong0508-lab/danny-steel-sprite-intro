@@ -5,6 +5,7 @@
 #include "music.h"
 #include "story_save.h"
 #include "rescue_save.h"
+#include "neighborhood_save.h"
 #include "studio.h"
 #include "hd_canvas.h"
 #include "frame_runtime.h"
@@ -28,6 +29,13 @@ static int save_cooldown;
 /* Shared musical language for Danny and BORE. The same cue is heard in the
    associated 2D/3D location and during its corresponding cinematic. */
 static unsigned scene_music_cue(void){
+    int panel=story_neighborhood_panel(&game);
+    if(panel>=0){
+        unsigned id=(unsigned)panel/3u;
+        return id==8u?MUSIC_CUE_CLINIC:
+               (id==2u||id==12u)?MUSIC_CUE_ROOFTOP:
+               (id==7u||id==9u)?MUSIC_CUE_FARCE:MUSIC_CUE_STREETS;
+    }
     if(game.activity==STORY_ACT_STUDIO && game.activity_choice)
         return MUSIC_CUE_STUDIO; /* SELECT: hear actual edited pattern */
     if(game.ended && game.ending==STORY_END_GOOD)return MUSIC_CUE_LEGACY;
@@ -73,6 +81,8 @@ void play_erase_slot(int slot){
         save_ram[RESCUE_EXT_OFFSET+slot*RESCUE_EXT_LEN+i]=0xFF;
     for(unsigned i=0;i<STUDIO_EXT_LEN;i++)
         save_ram[STUDIO_EXT_OFFSET+slot*STUDIO_EXT_LEN+i]=0xFF;
+    for(unsigned i=0;i<NEIGHBORHOOD_EXT_LEN;i++)
+        save_ram[NEIGHBORHOOD_EXT_OFFSET+slot*NEIGHBORHOOD_EXT_LEN+i]=0xFF;
 }
 static void write_save(void){
     u8 b[SAVE_LEN];
@@ -87,6 +97,10 @@ static void write_save(void){
     studio_save_encode(game.slot,studio_bytes);
     for(unsigned i=0;i<STUDIO_EXT_LEN;i++)
         save_ram[STUDIO_EXT_OFFSET+game.slot*STUDIO_EXT_LEN+i]=studio_bytes[i];
+    uint8_t neighborhood_bytes[NEIGHBORHOOD_EXT_LEN];
+    neighborhood_save_encode(&game,neighborhood_bytes);
+    for(unsigned i=0;i<NEIGHBORHOOD_EXT_LEN;i++)
+        save_ram[NEIGHBORHOOD_EXT_OFFSET+game.slot*NEIGHBORHOOD_EXT_LEN+i]=neighborhood_bytes[i];
     game.dirty=0;
 }
 static void draw_hidden(int page){
@@ -178,6 +192,12 @@ void play_enter(int want_load,int slot){
            studio_bytes[i]=save_ram[STUDIO_EXT_OFFSET+
                game.slot*STUDIO_EXT_LEN+i];
          (void)studio_save_decode(game.slot,studio_bytes);
+        }
+        {uint8_t neighborhood_bytes[NEIGHBORHOOD_EXT_LEN];
+         for(unsigned i=0;i<NEIGHBORHOOD_EXT_LEN;i++)
+            neighborhood_bytes[i]=save_ram[NEIGHBORHOOD_EXT_OFFSET+
+                game.slot*NEIGHBORHOOD_EXT_LEN+i];
+         (void)neighborhood_save_decode(&game,neighborhood_bytes);
         }
         if(game.rescue_stage==STORY_RESCUE_LOST){
             /* LOST repurposes these already-persisted day bytes to count

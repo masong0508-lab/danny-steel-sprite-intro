@@ -32,6 +32,58 @@ char story_tile(int x, int y) {
        while preserving the existing interaction and collision positions. */
     return town[y][x];
 }
+/* Fourteen optional, existing walkable sites; ordering matches ROM panels. */
+static const struct {uint8_t x,y;const char *name,*left,*right;}
+neighborhood[STORY_NEIGHBORHOOD_COUNT]={
+ {2,2,"LAUNDRY","MEND","RETURN"},
+ {9,2,"PHOTO","SIGN","NO NAME"},
+ {14,2,"STAIR","SKETCH","LISTEN"},
+ {21,3,"REPAIR","REPAIR","DONATE"},
+ {2,5,"POST","WRITE","KEEP"},
+ {6,5,"STOOP","KNOCK","NOTE"},
+ {8,8,"MARKET","HELP","BUY"},
+ {13,8,"ANNEX","LABEL","RESTORE"},
+ {15,9,"GARDEN","PLAN","REST"},
+ {20,9,"SHIFT","FOLD","THANK"},
+ {2,12,"PARK","SHARE","SIT"},
+ {10,13,"PHONE","CALL","MESSAGE"},
+ {14,14,"CANAL","SKETCH","CLEAN"},
+ {22,15,"SHELTER","MARK","WAIT"}
+};
+int story_neighborhood_enabled(const Story *s){
+ return !s->ended&&(s->flags&STORY_ALL)==STORY_ALL&&
+ (s->life_stage==STORY_LIFE_NONE||s->life_stage==STORY_LIFE_WAIT||
+  s->life_stage==STORY_LIFE_FOLLOWUP_WAIT)&&
+ (s->rescue_stage==STORY_RESCUE_NONE||s->rescue_stage==STORY_RESCUE_SAVED);
+}
+int story_neighborhood_position(unsigned id,int *x,int *y){
+ if(id>=STORY_NEIGHBORHOOD_COUNT)return 0;
+ if(x)*x=neighborhood[id].x;
+ if(y)*y=neighborhood[id].y;
+ return 1;
+}
+int story_neighborhood_at(const Story *s){
+ if(!story_neighborhood_enabled(s))return -1;
+ for(unsigned i=0;i<STORY_NEIGHBORHOOD_COUNT;i++)
+  if(s->x==neighborhood[i].x&&s->y==neighborhood[i].y)return (int)i;
+ return -1;
+}
+const char *story_neighborhood_name(unsigned id){
+ return id<STORY_NEIGHBORHOOD_COUNT?neighborhood[id].name:"STORIES";
+}
+const char *story_neighborhood_option(unsigned id,unsigned right){
+ if(id>=STORY_NEIGHBORHOOD_COUNT)return "";
+ return right?neighborhood[id].right:neighborhood[id].left;
+}
+unsigned story_neighborhood_count(const Story *s){
+ unsigned n=0;
+ for(unsigned i=0;i<STORY_NEIGHBORHOOD_COUNT;i++)n+=(s->neighborhood_seen>>i)&1u;
+ return n;
+}
+static int neighborhood_tracking(const Story *s){
+ return story_neighborhood_enabled(s)&&s->neighborhood_target>0u&&
+        s->neighborhood_target<=STORY_NEIGHBORHOOD_COUNT;
+}
 int story_goal(const Story *s, int *x, int *y, const char **label) {
     if (s->ended || s->life_stage==STORY_LIFE_FINALE) return 0;
     if(s->rescue_stage==STORY_RESCUE_MISSING){
@@ -47,6 +99,11 @@ int story_goal(const Story *s, int *x, int *y, const char **label) {
         /* No rescue deadline remains, but the still-reachable cafe phone
            is the explicit center of Danny's two-day hope subplot. */
         *x=8;*y=11;*label="PHONE";return 1;
+    }
+    if(neighborhood_tracking(s)){
+        unsigned id=s->neighborhood_target-1u;
+        *x=neighborhood[id].x;*y=neighborhood[id].y;
+        *label=neighborhood[id].name;return 1;
     }
     /* A medical appointment takes priority; there is deliberately no timer
        forcing a final rooftop interaction after the last visit. */
@@ -177,6 +234,7 @@ const char *story_goal_reason(const Story *s){
     case STORY_RESCUE_LOST:return "NO VERIFIED RECOVERY YET";
     default:break;
     }
+    if(neighborhood_tracking(s))return "OPTIONAL STORY / A ON ARRIVAL";
     switch(s->life_stage){
     case STORY_LIFE_CLINIC:case STORY_LIFE_FINAL_CLINIC:
         return "THE DOCTOR IS WAITING";
@@ -203,6 +261,7 @@ const char *story_goal_kind(const Story *s){
     if(s->life_stage==STORY_LIFE_CLINIC ||
        s->life_stage==STORY_LIFE_FINAL_CLINIC)return "CARE";
     if(s->life_stage==STORY_LIFE_LAST_WORK)return "LAST";
+    if(neighborhood_tracking(s))return "SIDE";
     if(s->life_stage==STORY_LIFE_WAIT ||
        s->life_stage==STORY_LIFE_FOLLOWUP_WAIT)return "DAY";
     if((s->flags&STORY_ALL)!=STORY_ALL)return "CORE";
@@ -253,7 +312,50 @@ enum { D_NONE, D_OPEN, D_LETTER, D_LETTER_AGAIN, D_CLERK_LOCKED, D_CLERK, D_CLER
        D_LOOK_NORTH, D_LOOK_STREET,
        D_PROJECT_SONG_START, D_PROJECT_ART_START, D_MARA_PREBUS_WALK,
        D_MARA_PREBUS_TALK, D_MARA_MASTER, D_MARA_CREATIONS,
-       D_BUS_READY_LEGACY, D_BUS_STAY_OPEN, D_DOCTOR_LAST_ALONE };
+       D_BUS_READY_LEGACY, D_BUS_STAY_OPEN, D_DOCTOR_LAST_ALONE,
+       D_NB_0_INTRO,
+       D_NB_0_LEFT,
+       D_NB_0_RIGHT,
+       D_NB_1_INTRO,
+       D_NB_1_LEFT,
+       D_NB_1_RIGHT,
+       D_NB_2_INTRO,
+       D_NB_2_LEFT,
+       D_NB_2_RIGHT,
+       D_NB_3_INTRO,
+       D_NB_3_LEFT,
+       D_NB_3_RIGHT,
+       D_NB_4_INTRO,
+       D_NB_4_LEFT,
+       D_NB_4_RIGHT,
+       D_NB_5_INTRO,
+       D_NB_5_LEFT,
+       D_NB_5_RIGHT,
+       D_NB_6_INTRO,
+       D_NB_6_LEFT,
+       D_NB_6_RIGHT,
+       D_NB_7_INTRO,
+       D_NB_7_LEFT,
+       D_NB_7_RIGHT,
+       D_NB_8_INTRO,
+       D_NB_8_LEFT,
+       D_NB_8_RIGHT,
+       D_NB_9_INTRO,
+       D_NB_9_LEFT,
+       D_NB_9_RIGHT,
+       D_NB_10_INTRO,
+       D_NB_10_LEFT,
+       D_NB_10_RIGHT,
+       D_NB_11_INTRO,
+       D_NB_11_LEFT,
+       D_NB_11_RIGHT,
+       D_NB_12_INTRO,
+       D_NB_12_LEFT,
+       D_NB_12_RIGHT,
+       D_NB_13_INTRO,
+       D_NB_13_LEFT,
+       D_NB_13_RIGHT };
+_Static_assert(D_NB_13_RIGHT<256,"dialogue ID width");
 #define SCRIPT(name, ...) static const StoryPage name[] = { __VA_ARGS__ }
 /* The banana-sign shift is practical income, not Danny's calling. He is
    grateful for the stability without pretending to enjoy mascot work. */
@@ -816,6 +918,132 @@ SCRIPT(d_doctor_last_alone,
  {"DOCTOR", "We can plan care", "and ease the pain."},
  {"DANNY", "I wish Mara were here.", "I still have no news."},
  {"DOCTOR", "We can talk more.", "You don't need to rush."});
+SCRIPT(d_nb_0_intro,
+ {"ELSIE", "That coat again?", "The seam is coming out."},
+ {"DANNY", "It used to be my best.", "I can spare a moment."});
+SCRIPT(d_nb_0_left,
+ {"ELSIE", "Hold the cloth taut.", "There. A proper stitch."},
+ {"DANNY", "I thought it was done.", "It still has some life."});
+SCRIPT(d_nb_0_right,
+ {"DANNY", "Here are your towels.", "You take care of us."},
+ {"ELSIE", "And you came back.", "That's what matters."});
+SCRIPT(d_nb_1_intro,
+ {"PHOTOGRAPHER", "Found an old negative.", "You stood by the cafe."},
+ {"DANNY", "I remember that day.", "What should it say?"});
+SCRIPT(d_nb_1_left,
+ {"DANNY", "Put my name under it.", "And the date, please."},
+ {"PHOTOGRAPHER", "A name and a place.", "Now it belongs here."});
+SCRIPT(d_nb_1_right,
+ {"DANNY", "Leave this one blank.", "Let the faces speak."},
+ {"PHOTOGRAPHER", "A picture can live", "without an explanation."});
+SCRIPT(d_nb_2_intro,
+ {"DANNY", "This stair used to go", "up to a water tower."},
+ {"DANNY", "The city's still here.", "One good view left."});
+SCRIPT(d_nb_2_left,
+ {"DANNY", "Keep the rooftops low.", "Let the sky do the work."},
+ {"DANNY", "A small study for", "the painting upstairs."});
+SCRIPT(d_nb_2_right,
+ {"DANNY", "Rain on the rail.", "A tram somewhere far."},
+ {"DANNY", "There's a rhythm here.", "I could use that."});
+SCRIPT(d_nb_3_intro,
+ {"REPAIRMAN", "Old radio. Dead switch.", "Still a good speaker."},
+ {"DANNY", "Used to take these", "apart for the noise."});
+SCRIPT(d_nb_3_left,
+ {"REPAIRMAN", "Try the contact now.", "That's the station!"},
+ {"DANNY", "Not everything broken", "has to be thrown out."});
+SCRIPT(d_nb_3_right,
+ {"DANNY", "Use it for spare parts.", "Someone needs a knob."},
+ {"REPAIRMAN", "I'll keep what works.", "Nothing wasted."});
+SCRIPT(d_nb_4_intro,
+ {"POST CLERK", "Last collection soon.", "Something to send?"},
+ {"DANNY", "A note for home.", "Nothing complicated."});
+SCRIPT(d_nb_4_left,
+ {"DANNY", "I'm still in town.", "I miss the old place."},
+ {"POST CLERK", "In the evening bag.", "It's on its way."});
+SCRIPT(d_nb_4_right,
+ {"DANNY", "Not ready to send it.", "I'll keep the words."},
+ {"POST CLERK", "Paper can wait.", "People can call."});
+SCRIPT(d_nb_5_intro,
+ {"DANNY", "I knew this doorway.", "Used to wait out rain."},
+ {"DANNY", "The light's on.", "Maybe someone remembers."});
+SCRIPT(d_nb_5_left,
+ {"NEIGHBOR", "Oh! You're the singer.", "You grew up fast."},
+ {"DANNY", "I didn't mean to lose", "touch. Thanks for this."});
+SCRIPT(d_nb_5_right,
+ {"DANNY", "I'll leave a note.", "No need to interrupt."},
+ {"DANNY", "Thank you for letting", "me wait in the rain."});
+SCRIPT(d_nb_6_intro,
+ {"VENDOR", "Rain got the crates.", "Closing in ten minutes."},
+ {"DANNY", "I have a little time.", "What do you need?"});
+SCRIPT(d_nb_6_left,
+ {"VENDOR", "These two to the dry.", "That saves my evening."},
+ {"DANNY", "Small enough to do.", "Big enough to matter."});
+SCRIPT(d_nb_6_right,
+ {"DANNY", "A bag of apples.", "Something for later."},
+ {"VENDOR", "Take the bruised one", "too. Still sweet."});
+SCRIPT(d_nb_7_intro,
+ {"ARCHIVIST", "Found the loose reels.", "No names on two boxes."},
+ {"DANNY", "I know that handwriting.", "Let me have a look."});
+SCRIPT(d_nb_7_left,
+ {"DANNY", "That one's rehearsals.", "Put it under BORE."},
+ {"ARCHIVIST", "Now we can find it.", "A name is a beginning."});
+SCRIPT(d_nb_7_right,
+ {"DANNY", "This reel's case is", "split down the side."},
+ {"ARCHIVIST", "A new sleeve, then.", "The recording stays."});
+SCRIPT(d_nb_8_intro,
+ {"DANNY", "The clinic garden.", "No one rushes here."},
+ {"DANNY", "I don't have answers.", "I can plan a question."});
+SCRIPT(d_nb_8_left,
+ {"DANNY", "What do the scans show?", "What can we do next?"},
+ {"DANNY", "Write it down now.", "Ask when I'm there."});
+SCRIPT(d_nb_8_right,
+ {"DANNY", "I'll sit for a while.", "Let the phone be quiet."},
+ {"DANNY", "Rest isn't giving up.", "It's part of the day."});
+SCRIPT(d_nb_9_intro,
+ {"ELSIE", "The suit needs drying.", "What a silly uniform."},
+ {"DANNY", "It paid my rent.", "It wasn't my whole life."});
+SCRIPT(d_nb_9_left,
+ {"DANNY", "Fold the sleeves in.", "Keep the badge on top."},
+ {"ELSIE", "Someone else will use", "it for their first day."});
+SCRIPT(d_nb_9_right,
+ {"DANNY", "Thanks for the hours.", "For the steady checks."},
+ {"ELSIE", "You're more than", "what you do for work."});
+SCRIPT(d_nb_10_intro,
+ {"OLD MAN", "Mind the wet bench.", "The dry end is yours."},
+ {"DANNY", "I have a little bread.", "Or we could just sit."});
+SCRIPT(d_nb_10_left,
+ {"DANNY", "Here, split it in two.", "Nothing fancy."},
+ {"OLD MAN", "Good bread and company.", "That's an afternoon."});
+SCRIPT(d_nb_10_right,
+ {"DANNY", "No need to fill", "every quiet moment."},
+ {"OLD MAN", "That's the trouble.", "We forget how to sit."});
+SCRIPT(d_nb_11_intro,
+ {"DANNY", "A public phone booth.", "Still takes a coin."},
+ {"DANNY", "Someone from home", "should hear from me."});
+SCRIPT(d_nb_11_left,
+ {"DANNY", "Hello. Yes, it's me.", "No, I'm still in town."},
+ {"DANNY", "We don't need to fix", "everything tonight."});
+SCRIPT(d_nb_11_right,
+ {"DANNY", "It's Danny. I'm here.", "Call when you can."},
+ {"DANNY", "A small message.", "Better than silence."});
+SCRIPT(d_nb_12_intro,
+ {"DANNY", "The canal carries", "the street lights."},
+ {"DANNY", "There's a good shape.", "And trash by the rail."});
+SCRIPT(d_nb_12_left,
+ {"DANNY", "The rail cuts across", "the water like a line."},
+ {"DANNY", "I'll save this view", "for the big canvas."});
+SCRIPT(d_nb_12_right,
+ {"DANNY", "Two bottles and paper.", "Into the bin they go."},
+ {"DANNY", "It's still a good view.", "A little better now."});
+SCRIPT(d_nb_13_intro,
+ {"DRIVER", "The old shelter's map", "has no late bus route."},
+ {"DANNY", "People still wait here.", "We could help them."});
+SCRIPT(d_nb_13_left,
+ {"DANNY", "Draw the late route.", "Put the stop name here."},
+ {"DRIVER", "Now nobody has to", "guess in the rain."});
+SCRIPT(d_nb_13_right,
+ {"DANNY", "Leave the seat clear.", "I'll stand a while."},
+ {"DRIVER", "You don't have to go", "before you're ready."});
 #undef SCRIPT
 #define SEQ(name) {name, (uint8_t)(sizeof(name) / sizeof((name)[0]))}
 static const struct { const StoryPage *pages; uint8_t count; } scripts[] = {
@@ -869,8 +1097,63 @@ static const struct { const StoryPage *pages; uint8_t count; } scripts[] = {
   SEQ(d_mara_prebus_walk), SEQ(d_mara_prebus_talk),
   SEQ(d_mara_master), SEQ(d_mara_creations),
   SEQ(d_bus_ready_legacy), SEQ(d_bus_stay_open),
-  SEQ(d_doctor_last_alone)
+  SEQ(d_doctor_last_alone),
+  SEQ(d_nb_0_intro),
+  SEQ(d_nb_0_left),
+  SEQ(d_nb_0_right),
+  SEQ(d_nb_1_intro),
+  SEQ(d_nb_1_left),
+  SEQ(d_nb_1_right),
+  SEQ(d_nb_2_intro),
+  SEQ(d_nb_2_left),
+  SEQ(d_nb_2_right),
+  SEQ(d_nb_3_intro),
+  SEQ(d_nb_3_left),
+  SEQ(d_nb_3_right),
+  SEQ(d_nb_4_intro),
+  SEQ(d_nb_4_left),
+  SEQ(d_nb_4_right),
+  SEQ(d_nb_5_intro),
+  SEQ(d_nb_5_left),
+  SEQ(d_nb_5_right),
+  SEQ(d_nb_6_intro),
+  SEQ(d_nb_6_left),
+  SEQ(d_nb_6_right),
+  SEQ(d_nb_7_intro),
+  SEQ(d_nb_7_left),
+  SEQ(d_nb_7_right),
+  SEQ(d_nb_8_intro),
+  SEQ(d_nb_8_left),
+  SEQ(d_nb_8_right),
+  SEQ(d_nb_9_intro),
+  SEQ(d_nb_9_left),
+  SEQ(d_nb_9_right),
+  SEQ(d_nb_10_intro),
+  SEQ(d_nb_10_left),
+  SEQ(d_nb_10_right),
+  SEQ(d_nb_11_intro),
+  SEQ(d_nb_11_left),
+  SEQ(d_nb_11_right),
+  SEQ(d_nb_12_intro),
+  SEQ(d_nb_12_left),
+  SEQ(d_nb_12_right),
+  SEQ(d_nb_13_intro),
+  SEQ(d_nb_13_left),
+  SEQ(d_nb_13_right)
 };
+_Static_assert(sizeof(scripts)/sizeof(scripts[0])==D_NB_13_RIGHT+1u,"script table order");
+static int neighborhood_dialogue(unsigned id){
+ return id>=D_NB_0_INTRO&&id<=D_NB_13_RIGHT?(int)(id-D_NB_0_INTRO):-1;
+}
+int story_neighborhood_panel(const Story *s){
+ int id=neighborhood_dialogue(s->dialogue);
+ if(id>=0)return id;
+ if(s->activity==STORY_ACT_NEIGHBORHOOD){
+  int at=story_neighborhood_at(s);
+  return at>=0?at*3:-1;
+ }
+ return -1;
+}
 const StoryPage *story_pages(const Story *s, int *count) {
     unsigned id = s->dialogue;
     if (id >= sizeof(scripts) / sizeof(scripts[0])) id = 0;
@@ -913,6 +1196,7 @@ static uint16_t dialogue_shot_beat(unsigned script,unsigned page){
  return beats&&page<length?beats[page]:0u;
 }
 static uint8_t cinematics_for_dialogue(uint8_t d){
+    if(neighborhood_dialogue(d)>=0)return CINE_DAY;
     switch(d){
     case D_OPEN: case D_SHIFT_EARLY: case D_SHIFT_DONE:
     case D_SHIFT_REPEAT: case D_SHIFT_TIRED: return CINE_OPEN;
@@ -1172,6 +1456,13 @@ static void step_project(Story *s,unsigned station,unsigned soft){
 }
 static void finish_moment(Story *s){
     unsigned station=s->activity,option=s->activity_choice;
+    if(station==STORY_ACT_NEIGHBORHOOD){
+        int at=story_neighborhood_at(s);
+        s->activity=0;s->activity_choice=0;
+        if(at<0){s->cinema=CINE_NONE;return;}
+        talk(s,(uint8_t)(D_NB_0_INTRO+at*3+1u+(option?1u:0u)));
+        return;
+    }
     if(station=='f'){
         s->activity=STORY_ACT_NONE;s->activity_choice=0;
         if(s->life_stage!=STORY_LIFE_NONE || !(s->flags&STORY_MARA) ||
@@ -1300,6 +1591,7 @@ static char nearby_actor(const Story *s){
 const char *story_action_hint(const Story *s){
     /* This special storefront interaction is checked BEFORE all actors. */
     if(s->x==20u&&s->y==11u&&s->facing==0u)return "A SHIFT";
+    if(story_neighborhood_at(s)>=0)return "A STORY";
     switch(nearby_actor(s)){
     case 'L':return "A READ";
     case 'C':return "A CLERK";
@@ -1401,6 +1693,8 @@ static void interact(Story *s) {
         s->cinema_frame=184u;
         return;
     }
+    int episode=story_neighborhood_at(s);
+    if(episode>=0){talk(s,(uint8_t)(D_NB_0_INTRO+episode*3));return;}
     char c=nearby_actor(s);
     switch (c) {
     case 'L':
@@ -1691,9 +1985,33 @@ void story_tick(Story *s, uint16_t keys) {
     /* Combat takes priority over exploration, so toggling 2D/3D cannot evade a hit. */
     if (s->battle) { cult_tick(s, pressed); return; }
     if (s->dialogue) {
+        int episode=neighborhood_dialogue(s->dialogue);
+        if(episode>=0&&(pressed&(A|B))){
+            int count;story_pages(s,&count);
+            if(pressed&B){s->dialogue=0;s->page=0;s->cinema=CINE_NONE;}
+            else if(s->page+1u<(unsigned)count)++s->page;
+            else{
+                s->dialogue=0;s->page=0;
+                if(episode%3==0 && story_neighborhood_at(s)==episode/3){
+                    s->activity=STORY_ACT_NEIGHBORHOOD;
+                    s->activity_choice=0;s->cinema=CINE_DAY;s->cinema_frame=0;
+                }else{
+                    if(episode%3!=0){
+                        unsigned bit=1u<<(unsigned)(episode/3);
+                        s->neighborhood_seen=(uint16_t)(s->neighborhood_seen|bit);
+                        if(episode%3==2)s->neighborhood_right=(uint16_t)(s->neighborhood_right|bit);
+                        else s->neighborhood_right=(uint16_t)(s->neighborhood_right&~bit);
+                        if(s->neighborhood_target==(unsigned)(episode/3)+1u)s->neighborhood_target=0;
+                        s->dirty=1;
+                    }
+                    s->cinema=CINE_NONE;
+                }
+            }
+            return;
+        }
         if (pressed & (A|B)) {
             int count; story_pages(s, &count);
-            if ((pressed & A) && s->page + 1 < count) {
+            if ((pressed & A) && !(pressed & B) && s->page + 1 < count) {
                 ++s->page;
                 /* The opening is editorially cut to seven spoken beats.
                    Fast readers may advance, but each line then gets its
@@ -1709,7 +2027,7 @@ void story_tick(Story *s, uint16_t keys) {
                             (pressed&A) && !(pressed&B);
                 /* B skips an unfinished conversation; no promise check.
                    Only A on Danny's final spoken answer earns it. */
-                if(s->dialogue==D_MARA && (pressed&A) &&
+                if(s->dialogue==D_MARA && (pressed&A) && !(pressed&B) &&
                    !(s->flags&STORY_MARA)){
                     s->flags|=STORY_MARA;s->dirty=1;
                 }
@@ -1818,6 +2136,24 @@ void story_tick(Story *s, uint16_t keys) {
         return;
     }
     if(s->paused){
+        if(pressed&SELECT){
+            s->choice=(uint8_t)((s->choice&STORY_NEIGHBORHOOD_JOURNAL)?
+                (s->choice&1u):((s->choice&1u)|STORY_NEIGHBORHOOD_JOURNAL));
+            return;
+        }
+        if(s->choice&STORY_NEIGHBORHOOD_JOURNAL){
+            if(pressed&B){s->choice&=1u;return;}
+            if(pressed&(UP|LEFT))
+                s->neighborhood_cursor=(uint8_t)((s->neighborhood_cursor+13u)%14u);
+            else if(pressed&(DOWN|RIGHT))
+                s->neighborhood_cursor=(uint8_t)((s->neighborhood_cursor+1u)%14u);
+            else if((pressed&A)&&story_neighborhood_enabled(s)){
+                unsigned target=s->neighborhood_cursor+1u;
+                s->neighborhood_target=(uint8_t)(s->neighborhood_target==target?0u:target);
+                s->paused=0;s->choice&=1u;
+            }
+            return;
+        }
         /* L is a direct two-page help guide. R remains the four-page
            consequences journal; both are transient and never save. */
         if(pressed&L){

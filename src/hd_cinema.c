@@ -1,4 +1,6 @@
 #include "hd_canvas.h"
+#include "hd_neighborhood_panels.h"
+#include <string.h>
 
 /* Carefully staged Old Quarter locations use the SAME narrative scene and
    page state as the original 120x80 director. They replace the most-seen
@@ -523,6 +525,13 @@ static void clinic(uint8_t *p,const Story *s,unsigned t,int last){
  }
 }
 void hd_cinema_draw(uint8_t *p,const Story *s,unsigned t){
+ int panel=story_neighborhood_panel(s);
+ if(panel>=0&&(unsigned)panel<STORY_NEIGHBORHOOD_COUNT*3u){
+  memcpy(p,hd_neighborhood_art+(unsigned)panel*HD_NEIGHBORHOOD_PANEL_BYTES,
+         HD_NEIGHBORHOOD_PANEL_BYTES);
+  hd_rect(p,0,104,HD_W,HD_H-104,HD_INK);
+  return;
+ }
  unsigned sc=s->cinema,page=s->page;
  switch(sc){
   case CINE_OPEN:
