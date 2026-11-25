@@ -30,3 +30,7 @@ planted soles and existing player visibility. Actual renderer captures
 show the district artwork and each movement phase. GBA hardware FPS
 still needs physical measurement; host and mGBA checks are not a claim
 of full-rate rendering everywhere.
+
+Foreground tree crowns and the extending Potheads sign now use the actual
+moving-character overlap check, rather than hiding the player behind their
+larger-than-tile silhouettes. They keep their physical anchors and collision.

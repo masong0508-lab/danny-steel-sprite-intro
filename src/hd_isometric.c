@@ -98,7 +98,7 @@ static void building(uint8_t *p,int sx,int sy,int wx,int wy,
  int civic=wx>=10&&wx<=13&&wy>=3&&wy<=6;
  int shops=wx>=21&&wy>=10&&wy<=12;
  int waterfront=wy>=14;
- unsigned h=civic?36u:shops?30u:waterfront?27u:
+ unsigned h=civic?36u:shops?27u:waterfront?27u:
             ((wx/6+wy/6)&1)?32u:27u;
  unsigned variant=civic?6u:shops?4u:waterfront?2u:
                   ((wx/6+wy/6)&1)?0u:1u;
@@ -106,12 +106,16 @@ static void building(uint8_t *p,int sx,int sy,int wx,int wy,
  if(!civic&&!shops&&!waterfront&&wx>=17&&wy<=4)variant=5u;
  int front=exposed(wx,wy+1),side=exposed(wx+1,wy);
  int potheads=(wx==21&&wy==11);
+ int sign_x=sx+31,sign_y=sy-(int)h-13;
+ int sign_visible=!(potheads&&(wx+wy)*8>actor_depth &&
+      sign_x<actor_x+12&&sign_x+53>actor_x-12&&
+      sign_y<actor_foot&&sign_y+17>actor_foot-32);
  /* Projected bounds include the small chimney above the roof. The
     fixed-point depth uses the same gait interpolation as the actor. */
  if((wx+wy)*8>actor_depth && sx<actor_x+12 && sx+32>actor_x-12 &&
     sy-(int)h-5<actor_foot+2 && sy+16>actor_foot-32){
   cutaway(p,sx,sy,front,side,potheads);
-  if(potheads&&side){
+  if(potheads&&side&&sign_visible){
    /* Retain the far sign pier, outside the walking silhouette, so the
       existing bracket has a real attachment even with the roof cut. */
    hd_rect(p,sx+30,sy-(int)h,3,(int)h+8,HD_SHADOW);
@@ -149,7 +153,7 @@ static void building(uint8_t *p,int sx,int sy,int wx,int wy,
   hd_rect(p,sx+16,sy-3-(int)h,3,5,HD_STONE_DARK);
   hd_rect(p,sx+16,sy-4-(int)h,5,1,HD_MORTAR);
  }
- if(potheads&&side)potheads_fascia(p,sx,sy,(int)h);
+ if(potheads&&side&&sign_visible)potheads_fascia(p,sx,sy,(int)h);
  (void)tick;
 }
 static void lamp(uint8_t *p,int sx,int sy,unsigned tick){
@@ -245,8 +249,18 @@ static void bore_corner(uint8_t *p,int x,int foot,int tall){
 static void object(uint8_t *p,int sx,int sy,char kind,unsigned tick,
                    int wx,int wy,const Story *s,int tall){
  int cx=sx+16,foot=sy+16;
- if(kind=='T'){hd_world_tree_art(p,cx,foot,
-                         grain(wx,wy)%3u,(tick/49u)&1u);return;}
+ if(kind=='T'){
+  if(tall)hd_world_tree_art(p,cx,foot,grain(wx,wy)%3u,(tick/49u)&1u);
+  else {
+   /* A low trunk/planter section, like a building cutaway. The tree's
+      original solid map square and foot remain unchanged. */
+   hd_ellipse(p,cx,foot,9,3,HD_SHADOW);
+   hd_rect(p,cx-2,foot-8,4,8,HD_BARK);
+   hd_line(p,cx-1,foot-8,cx-1,foot-2,HD_COPPER);
+   hd_ellipse(p,cx,foot-8,4,2,HD_LEAF_DARK);
+  }
+  return;
+ }
  if(kind=='F'){
   int absent=hd_mara_absent(s);
   cafe_corner(p,cx,foot,tall,absent);

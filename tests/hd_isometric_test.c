@@ -50,6 +50,10 @@ static void readable_player(const Story *s,unsigned frame,int cx,int foot){
  assert(coat_total>100u&&skin_total>0u);
  /* A tree, bus or small physical sign can still cover part of him;
     depth is retained. His actual coat and skin must remain readable. */
+ if(coat*4u<coat_total||skin*8u<skin_total)
+  fprintf(stderr,"occlusion at %u,%u prev %u,%u face %u anim %u t %u: coat %u/%u skin %u/%u\n",
+          s->x,s->y,s->prev_x,s->prev_y,s->facing,s->anim,frame,
+          coat,coat_total,skin,skin_total);
  assert(coat*4u>=coat_total);
  assert(skin*8u>=skin_total);
  if(s->x==20u&&s->y==11u&&!s->anim){
