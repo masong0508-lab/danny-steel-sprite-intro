@@ -27,15 +27,13 @@ static uint32_t inspect(unsigned minimum){
  assert(count>=minimum);
  return v;
 }
-/* Pre-change 16x40 source hashes protect the art itself. Expected scaled
+/* Authored 16x40 source hashes protect the new district art itself. Expected scaled
    frames then use an independent per-pixel mathematical crop, not the
    optimized pair copies or quotient/remainder recurrence. */
 static void verify_facade_copies(void){
  static const uint32_t original_hash[2][8]={
-  {0x66d0a358u,0xa9d7b1ffu,0x49c6e3b3u,0x39bef9deu,
-   0x79e1acf9u,0x8822894cu,0x83bc8b89u,0xec9ce590u},
-  {0xd319b16au,0x7f61342bu,0xfc0613b7u,0x9e01dcddu,
-   0xf73f3501u,0xd9b73fa4u,0x81857c4eu,0x6563b823u}
+  {0x16bad310u,0x1e899509u,0x3e39f621u,0xcb7228c6u,0xd31ccf01u,0xc620c4acu,0xf2aef0bcu,0x0bd3d335u},
+  {0xddbd39f9u,0x3d2b8a52u,0xde621c25u,0xb99c8fabu,0x751361feu,0xd121dc47u,0xf51c26deu,0xd72c374fu},
  };
  static uint8_t expected[HD_BYTES+132] __attribute__((aligned(4)));
  static uint8_t actual[HD_BYTES+132] __attribute__((aligned(4)));

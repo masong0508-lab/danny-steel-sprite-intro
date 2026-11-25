@@ -89,6 +89,10 @@ than separate backdrop mockups.
 | Riversides and residents | ![Riverside residents](screenshots/36_quarter_riverside_residents.png) |
 | Potheads' real storefront, isometric camera | ![Potheads storefront](screenshots/37_potheads_storefront.png) |
 | Differentiated civic shop fronts | ![Civic facade art](screenshots/38_civic_facades.png) |
+| Four-phase walk: contact | ![Walking contact](screenshots/38a_walk_contact.png) |
+| Passing pose | ![Passing](screenshots/38b_walk_passing.png) |
+| Other foot contact | ![Other foot](screenshots/38c_walk_contact_other.png) |
+| Other passing pose | ![Other passing](screenshots/38d_walk_passing_other.png) |
 | Potheads' matching first-person shop wall | ![Potheads in first person](screenshots/39_potheads_first_person.png) |
 
 The original 2D and 3D views now use **the same costume cels** for named
