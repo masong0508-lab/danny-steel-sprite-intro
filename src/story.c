@@ -1077,7 +1077,7 @@ SCRIPT(d_nb_13_right,
  {"DANNY", "Leave the seat clear.", "I'll stand a while."},
  {"DRIVER", "You don't have to go", "before you're ready."});
 SCRIPT(d_mara_neighbors,
- {"MARA","Elsie said you helped.","The town remembers you."},
+ {"MARA","People say you helped.","The town remembers you."},
  {"DANNY","I thought leaving meant","nothing here mattered."},
  {"MARA","No. Call when you go.","You still have a place."});
 SCRIPT(d_clerk_annex_done,
@@ -1552,7 +1552,7 @@ static void interior_tick(Story *s,uint16_t keys,uint16_t pressed){
   if(keys&UP)d=3;else if(keys&DOWN)d=1;else if(keys&LEFT)d=2;else if(keys&RIGHT)d=0;
   if(d>=0){
    static const int8_t dx[4]={1,0,-1,0},dy[4]={0,1,0,-1};
-   int x=s->interior_pos%10u+dx[d],y=s->interior_pos/10u+dy[d];
+   int x=(int)(s->interior_pos%10u)+dx[d],y=(int)(s->interior_pos/10u)+dy[d];
    s->facing=(uint8_t)d;
    if(interior_walkable(story_interior_tile(id,s->interior_room,x,y))){
     s->interior_pos=(uint8_t)(y*10+x);s->anim=4;

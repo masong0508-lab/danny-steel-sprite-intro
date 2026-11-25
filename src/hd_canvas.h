@@ -47,6 +47,7 @@ static inline int hd_mara_absent(const Story *s){
 }
 void hd_first_person_draw(uint8_t *p,const Story *s,unsigned frame);
 void hd_studio_draw(uint8_t *p,const Story *s,unsigned frame);
+void hd_interior_draw(uint8_t *p,const Story *s,unsigned frame);
 int hd_cinema_supports(unsigned scene);
 void hd_cinema_draw(uint8_t *p,const Story *s,unsigned frame);
 void hd_game_overlay(uint8_t *p,const Story *s);

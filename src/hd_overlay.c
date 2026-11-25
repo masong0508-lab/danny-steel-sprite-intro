@@ -77,9 +77,13 @@ static void selectable(uint8_t *p,int x,int y,int w,const char *label,int select
 }
 static void neighborhood_journal(uint8_t *p,const Story *s){
  framebox(p,8,8,224,147);
- hd_text(p,18,16,"OLD QUARTER / SIDE STORIES",HD_LAMP,1,0);
+ hd_text(p,18,16,"STORIES / WORKSHOPS",HD_LAMP,1,0);
  char total[]="00/14";unsigned count=story_neighborhood_count(s);
  total[0]=(char)('0'+count/10u);total[1]=(char)('0'+count%10u);
+ char jobs[]="JOB 00";
+ unsigned done=story_interior_count(s);
+ jobs[4]=(char)('0'+done/10u);jobs[5]=(char)('0'+done%10u);
+ hd_text(p,144,16,jobs,HD_GOLD,1,0);
  hd_text(p,192,16,total,HD_PAPER,1,0);
  unsigned cursor=s->neighborhood_cursor%14u,first=(cursor/7u)*7u;
  for(unsigned i=0;i<7u;i++){
@@ -90,14 +94,16 @@ static void neighborhood_journal(uint8_t *p,const Story *s){
   hd_text(p,25,y,story_neighborhood_name(id),id==cursor?HD_PAPER:HD_STONE_LIT,1,0);
   hd_text(p,104,y,seen?story_neighborhood_option(id,(s->neighborhood_right>>id)&1u):
       "UNREAD",HD_STONE_LIT,1,0);
+  hd_text(p,151,y,(s->interior_done&(1u<<id))?"DONE":"JOB",
+     (s->interior_done&(1u<<id))?HD_GOLD:HD_STONE_LIT,1,0);
   if(s->neighborhood_target==id+1u)hd_text(p,184,y,"TRACK",HD_LAMP,1,0);
  }
- hd_text(p,18,130,story_neighborhood_enabled(s)?"A TRACK / UNTRACK AND WALK":
+ hd_text(p,18,130,story_neighborhood_enabled(s)?"A TRACK / R ENTER AT SITE":
      "FINISH CORE / URGENT TASK FIRST",HD_PAPER,1,0);
  hd_text(p,18,142,"D-PAD SELECT   B BACK",HD_STONE_LIT,1,0);
 }
 void hd_game_overlay(uint8_t *p,const Story *s){
- if(s->activity==STORY_ACT_STUDIO||s->battle||
+ if(s->activity==STORY_ACT_INTERIOR||s->activity==STORY_ACT_STUDIO||s->battle||
     s->life_stage==STORY_LIFE_FINALE||s->ended)return;
  if(s->dialogue){
   int count=0;const StoryPage *pages=story_pages(s,&count);
@@ -270,7 +276,7 @@ void hd_game_overlay(uint8_t *p,const Story *s){
   hd_rect(p,8,143,3,7,HD_GOLD);
   hd_text(p,16,143,story_action_hint(s),HD_PAPER,1,0);
   hd_rect(p,92,143,1,14,HD_STONE_DARK);
-  hd_text(p,100,143,"L MAP  R NOTES",HD_STONE_LIT,1,0);
+  hd_text(p,100,143,story_neighborhood_at(s)>=0?"L MAP  R ENTER":"L MAP  R NOTES",HD_STONE_LIT,1,0);
   int risk=story_risk_available(s);
   hd_text(p,16,152,risk?
           "B RISK  CONFIRM FIRST":"B NO RISK AT THIS LOCATION",
