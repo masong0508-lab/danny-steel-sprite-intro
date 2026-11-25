@@ -103,8 +103,12 @@ static inline uint8_t story_restore_daily_mask(uint8_t raw,unsigned life_stage){
 #define STORY_BATTLE_PARRY_CD STORY_CARE_PARRY_COOLDOWN
 
 typedef struct {
-    uint8_t x, y, facing, view, flags, ended, ending, slot;
-    uint8_t dialogue, page, choice, choosing, paused, quit;
+    uint8_t x, y, flags, ending;
+    /* These values are bounded to 0..3 or 0..1 in gameplay. Pack them
+       together to retain the existing sub-64-byte state budget. The SRAM
+       codec serializes fields explicitly, never the struct layout. */
+    uint8_t facing:2, view:1, ended:1, slot:1, choosing:1, paused:1, quit:1;
+    uint8_t dialogue, page, choice;
     uint8_t cooldown, prev_x, prev_y, anim, dirty;
     /* A separate, OPTIONAL quest: persisted independently of Danny's main story. */
     uint8_t cult_stage, cult_pre_wins, cult_post_wins;
