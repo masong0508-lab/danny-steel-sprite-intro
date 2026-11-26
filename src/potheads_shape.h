@@ -18,7 +18,7 @@ static HD_CANVAS_CODE void pot_shape(uint8_t *p,const PotPoint *v,unsigned count
  if(low<0)low=0;
  if(high>134)high=134;
  for(unsigned i=0;i<count;i++){
-  PotPoint a=v[i],b=v[(i+1u)%count];
+  PotPoint a=v[i],b=v[i+1u==count?0u:i+1u];
   if(a.y>b.y){PotPoint swap=a;a=b;b=swap;}
   if(a.y==b.y||b.y<=low||a.y>high)continue;
   int first=a.y<low?low:a.y;

@@ -10,7 +10,8 @@
    The final projection maps the complete source camera to 240x135. */
 static int pot_abs(int value){return value<0?-value:value;}
 static unsigned pot_sqrt(unsigned value){
- unsigned root=0,bit=1u<<30;
+ unsigned root=0,bit=value<256u?1u<<6:value<65536u?1u<<14:
+                       value<16777216u?1u<<22:1u<<30;
  while(bit>value)bit>>=2;
  while(bit){
   if(value>=root+bit){value-=root+bit;root=(root>>1)+bit;}
@@ -23,8 +24,7 @@ static int pot_actor_size(const PotCamera *c,int value){
  int out=value*c->zoom*9/(256*8);return out<1?1:out;
 }
 static PotPoint pot_actor_point(const PotCamera *c,PotJoint point){
- return pot_project(c,113+pot_set_round(point.x*9,8),14,
-                       -pot_set_round(point.y*9,8));
+ return pot_actor_project(c,point.x,point.y);
 }
 static PotJoint pot_mid(PotJoint a,PotJoint b){
  return (PotJoint){(a.x+b.x)/2,(a.y+b.y)/2};
@@ -45,8 +45,10 @@ static int pot_has(const PotPose *pose,unsigned joint){
 }
 #include "potheads_shape.h"
 static void pot_shape_edge(uint8_t *p,const PotPoint *v,unsigned n,unsigned ink){
- for(unsigned i=0;i<n;i++)
-  hd_line(p,v[i].x,v[i].y,v[(i+1u)%n].x,v[(i+1u)%n].y,ink);
+ for(unsigned i=0;i<n;i++){
+  unsigned j=i+1u==n?0u:i+1u;
+  hd_line(p,v[i].x,v[i].y,v[j].x,v[j].y,ink);
+ }
 }
 static void pot_cloth(uint8_t *p,const PotCamera *c,const PotJoint *j,
                       unsigned count,unsigned ink,int outline){

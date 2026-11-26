@@ -272,6 +272,22 @@ static void verify_work_not_wishful_thinking(void){
  assert(s.cinema==CINE_NOTICE);
  assert(s.work==2u&&s.energy==2u); /* rescue takes precedence */
 }
+static void verify_exact_short_division(void){
+ /* Check the exact prior rounded signed expression at every int8
+    coordinate pair, every short duration and every intermediate tick. */
+ for(int a=-128;a<=127;a++)for(int b=-128;b<=127;b++)
+  for(unsigned d=1u;d<=16u;d++)for(unsigned n=0u;n<=d;n++){
+   int v=a*(int)d+(b-a)*(int)n;
+   int expected=(v+(v<0?-(int)(d/2u):(int)(d/2u)))/(int)d;
+   assert(pot_trace_lerp(a,b,n,d)==expected);
+  }
+ for(int a=-5000;a<=5000;a+=499)for(int b=-5000;b<=5000;b+=501)
+  for(unsigned d=17u;d<=63u;d+=7u)for(unsigned n=0u;n<=d;n++){
+   int v=a*(int)d+(b-a)*(int)n;
+   assert(pot_trace_lerp(a,b,n,d)==(v+(v<0?-(int)(d/2u):(int)(d/2u)))/(int)d);
+  }
+ puts("Exact signed reciprocal interpolation and long-interval fallback OK");
+}
 static void verify_pose_clock_and_rounding(void){
  assert(pot_trace_lerp(-10,-7,1,2)==pot_trace_lerp(-7,-10,1,2));
  assert(pot_trace_lerp(0,3,1,2)==2);
@@ -301,6 +317,7 @@ static void verify_pose_clock_and_rounding(void){
  }
 }
 int main(void){
+ verify_exact_short_division();
  verify_pose_clock_and_rounding();
  verify_full_source_track();
  verify_observed_floor_poses();

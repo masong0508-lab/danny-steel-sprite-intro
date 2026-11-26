@@ -95,7 +95,20 @@ static void verify_shapes(void){
  }
  puts("6000 articulated polygons match reference pixels, crop and guards");
 }
+static void verify_actor_projection(void){
+ for(unsigned t=0;t<=181u;t++){
+  PotCamera camera=pot_camera(t);
+  for(int x=-160;x<=160;x++)for(int y=-160;y<=160;y+=5){
+   PotPoint p=pot_actor_project(&camera,x,y);
+   PotPoint q=pot_project(&camera,113+pot_set_round(x*9,8),14,
+                          -pot_set_round(y*9,8));
+   assert(p.x==q.x&&p.y==q.y);
+  }
+ }
+ puts("Actor projection matches the original throughout descent and hold");
+}
 int main(void){
+ verify_actor_projection();
  verify_shapes();
  verify_words();
  static const unsigned settled[]={180u,181u,450u,790u,1274u,65535u};

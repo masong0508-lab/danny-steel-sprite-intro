@@ -23,6 +23,14 @@ static PotPoint pot_project(const PotCamera *c,int world_x,int depth,int height)
              c->ground_y+pot_set_round(depth*c->ground-height*c->rise,256)};
  return p;
 }
+/* The settled camera's actor plane simplifies exactly to these offsets.
+   Keep the general projection for the descent or any other camera. */
+static inline PotPoint pot_actor_project(const PotCamera *c,int x,int y){
+ int px=pot_set_round(x*9,8),py=pot_set_round(y*9,8);
+ if(c->zoom==256&&c->rise==256&&c->skew==0&&c->ground==48&&c->ground_y==128)
+  return (PotPoint){113+px,131+py};
+ return pot_project(c,113+px,14,-py);
+}
 static HD_CANVAS_CODE void pot_set_line(uint8_t *p,const PotCamera *c,
                           int x,int d,int h,int xx,int dd,int hh,unsigned ink){
  PotPoint a=pot_project(c,x,d,h),b=pot_project(c,xx,dd,hh);
