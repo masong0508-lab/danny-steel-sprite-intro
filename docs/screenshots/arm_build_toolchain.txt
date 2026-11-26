@@ -1,4 +1,4 @@
-Source commit: 5db36ae40804aecd8f69b981811711872b5cdff2
+Source commit: a56287679a369ab67772e9c1be02c37d63cae69b
 Docker image reference: devkitpro/devkitarm
 Image ID: sha256:5850ea3193e95244827a1e38cf464a0e730d1b9cc7c276888ceed984cbe38912
 RepoDigests: ["devkitpro/devkitarm@sha256:116afba8df8453961de2936ffab20dd441edf4d682856c1ec8b0e53d7ed0bbf5"]
