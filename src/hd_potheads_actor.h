@@ -322,19 +322,32 @@ static void pot_head(uint8_t *p,const PotCamera *c,const PotPose *pose){
   PotPoint b=pot_actor_point(c,pot_local(centre,across,down,1,-ry));
   hd_line(p,a.x,a.y,b.x,b.y,HD_BARK);
  }
+ int look=facing==1u?-1:facing==2u?1:0;
  for(int side=-1;side<=1;side+=2){
+  /* A profile exposes the earpiece behind the face, not both cups.
+     Its material highlight follows the head's measured orientation. */
+  if(look&&side==look)continue;
   PotPoint cup=pot_actor_point(c,pot_local(centre,across,down,side*(rx+1),0));
+  PotPoint glint=pot_actor_point(c,pot_local(centre,across,down,side*(rx+1),-1));
   hd_ellipse(p,cup.x,cup.y,pot_actor_size(c,2),pot_actor_size(c,3),HD_INK);
-  hd_pixel(p,cup.x,cup.y-1,HD_ROAD_COOL);
+  hd_pixel(p,glint.x,glint.y,HD_ROAD_COOL);
  }
- if(facing!=3u&&c->rise>140){
-  int look=facing==1u?-1:facing==2u?1:0;
+ if(facing!=3u&&c->rise>140&&rx>=3&&ry>=3){
+  int gap=rx>=6?3:2;
   for(int side=-1;side<=1;side+=2)if(!look||look==side){
-   PotPoint eye=pot_actor_point(c,pot_local(centre,across,down,side*2,0));
+   int eye_x=side*gap;
+   PotPoint eye=pot_actor_point(c,pot_local(centre,across,down,eye_x,0));
+   PotPoint brow=pot_actor_point(c,pot_local(centre,across,down,eye_x,-1));
+   hd_pixel(p,brow.x,brow.y,HD_BARK);
    hd_pixel(p,eye.x,eye.y,HD_INK);
   }
-  PotPoint a=pot_actor_point(c,pot_local(centre,across,down,-3,ry-2));
-  PotPoint b=pot_actor_point(c,pot_local(centre,across,down,3,ry-2));
+  /* Brow, nose and mouth stay in head-local coordinates on the upside-down
+     poses; the reference determines orientation, not a synthetic blink. */
+  PotPoint nose=pot_actor_point(c,pot_local(centre,across,down,look*(gap+1),2));
+  hd_pixel(p,nose.x,nose.y,HD_SKIN_LIT);
+  int m0=look?look:-(rx/3),m1=look?look*(rx/2):rx/3;
+  PotPoint a=pot_actor_point(c,pot_local(centre,across,down,m0,ry-2));
+  PotPoint b=pot_actor_point(c,pot_local(centre,across,down,m1,ry-2));
   hd_line(p,a.x,a.y,b.x,b.y,HD_BARK);
  }
 }

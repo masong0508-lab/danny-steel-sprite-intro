@@ -1,4 +1,5 @@
 #include "hd_canvas.h"
+#include "hd_actor_acting.h"
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -98,7 +99,36 @@ static void verify_reachable_editorial_cuts(void){
  lines=story_pages(&safe,&count);
  assert(count==3 && strcmp(lines[1].speaker,"MARA")==0);
 }
+static void verify_grounded_acting(void){
+ /* Real production rasters: breathing may move the torso but not the
+    shoe and floor pixels. The previous whole-body bob fails this test. */
+ static uint8_t ground[8*HD_W];
+ for(int role=1;role<=5;role++){
+  memset(&sample,0xA5,sizeof sample);
+  hd_rect(sample.pixels,0,0,HD_W,HD_H,HD_STONE_DARK);
+  hd_actor_stage(sample.pixels,120,143,role,37u,0);
+  memcpy(ground,sample.pixels+139u*HD_W,sizeof ground);
+  hd_rect(sample.pixels,0,0,HD_W,HD_H,HD_STONE_DARK);
+  hd_actor_stage(sample.pixels,120,143,role,38u,0);
+  assert(!memcmp(ground,sample.pixels+139u*HD_W,sizeof ground));
+  for(unsigned g=0;g<32u;g++)
+   assert(sample.before[g]==0xA5&&sample.after[g]==0xA5);
+  unsigned lids=0u,mouth=0u;
+  for(unsigned t=0;t<256u;t++){
+   int e=hd_acting_eye(t,(unsigned)role),m=hd_acting_mouth(t,(unsigned)role,1);
+   assert(e>=0&&e<=2&&m>=0&&m<=2);
+   lids|=1u<<e;mouth|=1u<<m;
+   assert(hd_acting_mouth(t,(unsigned)role,0)==0);
+   assert(hd_acting_mouth(t,(unsigned)role,5)==0);
+   assert(hd_acting_mouth(t,(unsigned)role,7)==0);
+  }
+  assert(lids==7u&&mouth==7u);
+ }
+ for(unsigned t=0;t<127u;t++)
+  assert(!(hd_acting_eye(t,1u)==2&&hd_acting_eye(t,2u)==2));
+}
 int main(void){
+ verify_grounded_acting();
  verify_reachable_editorial_cuts();
  Story s;story_new(&s,0);s.dialogue=0;
  /* The optimized sky stripes preserve the original dusk colors on real

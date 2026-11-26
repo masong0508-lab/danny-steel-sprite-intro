@@ -1,4 +1,5 @@
 #include "hd_canvas.h"
+#include "hd_actor_acting.h"
 
 /* Native character drawing uses a handful of filled planes, not a scaled
    bitmap. Endpoints are the same world-space acting anchors used by the
@@ -46,7 +47,9 @@ void hd_actor_stage(uint8_t *p,int x,int feet,int role,unsigned frame,int emotio
  int other_lift=walk?lifts[(phase+4u)&7u]:0;
  /* Contact and passing beats alternate; at least one foot stays planted. */
  if(lift&&other_lift){if(phase&4u)other_lift=0;else lift=0;}
- int fy=feet+(walk?0:(int)((frame/38u)&1u));
+ HdActingAnchor anchor=hd_acting_anchor(feet,frame,walk);
+ int fy=anchor.torso,ground=anchor.ground;
+ int mouth=hd_acting_mouth(frame,(unsigned)role,emotion);
  unsigned coat=role==1?HD_RED:role==2?HD_GLASS:
                role==3?HD_STONE_LIT:role==4?HD_LEAF_DARK:HD_PLASTER_LIT;
  unsigned dark=role==1?HD_RED_SHADE:role==2?HD_ROAD_COOL:
@@ -57,14 +60,14 @@ void hd_actor_stage(uint8_t *p,int x,int feet,int role,unsigned frame,int emotio
                role==4?HD_BARK:HD_INK;
  hd_ellipse(p,x+1,feet+1,15,2,HD_SHADOW);
  /* Full trouser legs, bent knees and planted soles replace stick ankles. */
- limb(p,x-5,fy-24,x-6+stride/2,fy-13,x-6+stride,fy-4-lift,
+ limb(p,x-5,fy-24,x-6+stride/2,ground-13,x-6+stride,ground-4-lift,
       5,HD_INK,HD_BRICK_DARK,HD_ROAD_COOL);
- limb(p,x+5,fy-24,x+6-stride/2,fy-13,x+6-stride,
-      fy-4-other_lift,5,HD_INK,HD_STONE_DARK,HD_ROAD);
- hd_rect(p,x-10+stride,fy-4-lift,10,4,HD_INK);
- hd_rect(p,x+2-stride,fy-4-other_lift,11,4,HD_INK);
- hd_rect(p,x-9+stride,fy-2-lift,6,1,HD_STONE_DARK);
- hd_rect(p,x+4-stride,fy-2-other_lift,7,1,HD_STONE_DARK);
+ limb(p,x+5,fy-24,x+6-stride/2,ground-13,x+6-stride,
+      ground-4-other_lift,5,HD_INK,HD_STONE_DARK,HD_ROAD);
+ hd_rect(p,x-10+stride,ground-4-lift,10,4,HD_INK);
+ hd_rect(p,x+2-stride,ground-4-other_lift,11,4,HD_INK);
+ hd_rect(p,x-9+stride,ground-2-lift,6,1,HD_STONE_DARK);
+ hd_rect(p,x+4-stride,ground-2-other_lift,7,1,HD_STONE_DARK);
  /* Sloping shoulders, a narrow waist and uneven hem define the garment. */
  plane(p,x,fy-47,-5,5,-13,12,6,HD_INK);
  plane(p,x,fy-42,-13,12,-10,10,21,HD_INK);
@@ -183,12 +186,17 @@ void hd_actor_stage(uint8_t *p,int x,int feet,int role,unsigned frame,int emotio
   hd_rect(p,x+4,fy-33,4,4,HD_PAPER);
   hd_pixel(p,x+5,fy-32,HD_RED);
  }
- int blink=(frame%111u)>=105u;
- if(!blink){
+ int blink=hd_acting_eye(frame,(unsigned)role);
+ if(blink==0){
   hd_rect(p,x-5,fy-57,3,1,HD_INK);
   hd_rect(p,x+3,fy-57,3,1,HD_INK);
   hd_pixel(p,x-4,fy-56,HD_PAPER);
   hd_pixel(p,x+4,fy-56,HD_SKIN_LIT);
+ }else if(blink==1){
+  hd_rect(p,x-5,fy-57,3,1,HD_BARK);
+  hd_rect(p,x+3,fy-57,3,1,HD_BARK);
+  hd_pixel(p,x-4,fy-56,HD_INK);
+  hd_pixel(p,x+4,fy-56,HD_INK);
  }else{
   hd_line(p,x-5,fy-56,x-2,fy-56,HD_BARK);
   hd_line(p,x+3,fy-56,x+5,fy-56,HD_BARK);
@@ -215,10 +223,12 @@ void hd_actor_stage(uint8_t *p,int x,int feet,int role,unsigned frame,int emotio
   hd_line(p,x-3,fy-48,x+2,fy-47,HD_COPPER);
   hd_rect(p,x-3,fy-51,7,1,HD_HAIR);
   hd_rect(p,x-2,fy-50,5,1,HD_BRICK_DARK);
-  if(emotion==1&&((frame/11u)&1u))hd_rect(p,x-1,fy-50,3,2,HD_INK);
+  if(mouth==2)hd_rect(p,x-1,fy-50,3,2,HD_INK);
+  else if(mouth==1)hd_rect(p,x-1,fy-50,3,1,HD_INK);
  }else{
   hd_rect(p,x-2,fy-50,5,1,HD_BARK);
-  if(emotion==1&&((frame/11u)&1u))hd_rect(p,x-1,fy-50,3,2,HD_BRICK_DARK);
+  if(mouth==2)hd_rect(p,x-1,fy-50,3,2,HD_BRICK_DARK);
+  else if(mouth==1)hd_rect(p,x-1,fy-50,3,1,HD_INK);
   else hd_rect(p,x-1,fy-49,3,1,HD_SKIN_LIT);
  }
  if(emotion==5){
@@ -241,6 +251,7 @@ void hd_actor_closeup(uint8_t *p,int x,int base,int role,
  unsigned hair=role==2?HD_BARK:role==3?HD_STONE_DARK:
                role==4?HD_BARK:HD_INK;
  int y=base-(int)((frame/27u)&1u);
+ int mouth=hd_acting_mouth(frame,(unsigned)role,emotion);
  /* The torso reaches the lower matte. Broad shadow shapes describe the
     shoulder and chest; a few seams are kept off the lit fabric planes. */
  plane(p,x,y-51,-12,12,-32,31,13,HD_INK);
@@ -446,8 +457,8 @@ void hd_actor_closeup(uint8_t *p,int x,int base,int role,
  /* Narrow lids and displaced pupils provide a gaze without giant white
     square eyes. Highlights occupy one pixel, never an entire eyeball. */
  int gaze=emotion==7?-1:emotion==5?1:0;
- int blink=((frame+(unsigned)role*17u)%127u)>=122u;
- if(blink){
+ int blink=hd_acting_eye(frame,(unsigned)role);
+ if(blink==2){
   hd_line(p,x-12,y-74,x-5,y-73,HD_BARK);
   hd_line(p,x+5,y-73,x+12,y-74,HD_BARK);
  }else{
@@ -455,15 +466,21 @@ void hd_actor_closeup(uint8_t *p,int x,int base,int role,
      white rectangles on every face. Each gaze retains its animation. */
   int eye_gap=role==2?1:0;
   int right=x+5+eye_gap;
-  hd_rect(p,x-12,y-75,7,2,HD_PAPER);
-  hd_rect(p,right,y-75,7,2,HD_SKIN_LIT);
-  hd_rect(p,x-9+gaze,y-75,2,2,HD_INK);
-  hd_rect(p,right+3+gaze,y-75,2,2,HD_INK);
+  int eye_y=y-75+(blink==1),eye_h=blink==1?1:2;
+  hd_rect(p,x-12,eye_y,7,eye_h,HD_PAPER);
+  hd_rect(p,right,eye_y,7,eye_h,HD_SKIN_LIT);
+  hd_rect(p,x-9+gaze,eye_y,2,eye_h,HD_INK);
+  hd_rect(p,right+3+gaze,eye_y,2,eye_h,HD_INK);
   hd_line(p,x-13,y-74,x-12,y-76,HD_BARK);
   hd_line(p,x-12,y-76,x-6,y-76,HD_INK);
   hd_line(p,right,y-76,right+6,y-76,HD_INK);
-  hd_pixel(p,x-9+gaze,y-75,HD_GLASS);
-  hd_pixel(p,right+3+gaze,y-75,HD_GLASS);
+  if(blink==0){
+   hd_pixel(p,x-9+gaze,eye_y,HD_GLASS);
+   hd_pixel(p,right+3+gaze,eye_y,HD_GLASS);
+  }else{
+   hd_line(p,x-12,y-75,x-6,y-75,HD_BARK);
+   hd_line(p,right,y-75,right+6,y-75,HD_BARK);
+  }
   hd_line(p,x-12,y-72,x-7,y-72,HD_BRICK_LIT);
   hd_line(p,right+1,y-72,right+5,y-72,HD_BRICK_LIT);
  }
@@ -524,11 +541,14 @@ void hd_actor_closeup(uint8_t *p,int x,int base,int role,
   hd_line(p,x-2,y-61,x+1,y-60,HD_HAIR);
   hd_line(p,x+1,y-60,x+6,y-59,HD_HAIR);
   hd_rect(p,x-5,y-57,11,3,HD_BRICK_LIT);
-  if(emotion==1&&((frame/10u)&1u))hd_rect(p,x-3,y-56,7,2,HD_INK);
+  if(mouth==2){
+   hd_rect(p,x-3,y-56,7,2,HD_INK);
+   hd_rect(p,x-2,y-54,5,1,HD_BRICK_LIT);
+  }else if(mouth==1)hd_rect(p,x-2,y-56,5,1,HD_INK);
   else hd_line(p,x-4,y-56,x+5,y-56+(emotion==5?1:0),HD_BARK);
- }else if(emotion==1&&((frame/10u)&1u)){
+ }else if(mouth){
   hd_line(p,x-5,y-56,x+6,y-56,HD_BARK);
-  hd_rect(p,x-3,y-55,8,3,HD_BRICK_DARK);
+  hd_rect(p,x-3,y-55,8,mouth==2?3:1,HD_BRICK_DARK);
   hd_rect(p,x-1,y-52,5,1,HD_SKIN_LIT);
  }else if(emotion==5){
   hd_line(p,x-5,y-55,x+6,y-54,HD_BARK);
