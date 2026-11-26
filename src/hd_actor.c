@@ -37,7 +37,7 @@ static void limb(uint8_t *p,int sx,int sy,int ex,int ey,int wx,int wy,
 /* Roles: Danny 1, Mara 2, archivist 3, witness 4, doctor 5.
    Gestures: listening 0, speaking 1, walking 2, reaching 3, reflective 5,
    worried 7. The foot and hand positions remain shared with the scenes. */
-void hd_actor_stage(uint8_t *p,int x,int feet,int role,unsigned frame,int emotion){
+void hd_actor_stage_spoken(uint8_t *p,int x,int feet,int role,unsigned frame,int emotion,int speaking){
  int walk=emotion==2;
  unsigned phase=(frame/4u)&7u;
  static const int8_t strides[8]={-5,-3,0,3,5,3,0,-3};
@@ -49,7 +49,7 @@ void hd_actor_stage(uint8_t *p,int x,int feet,int role,unsigned frame,int emotio
  if(lift&&other_lift){if(phase&4u)other_lift=0;else lift=0;}
  HdActingAnchor anchor=hd_acting_anchor(feet,frame,walk);
  int fy=anchor.torso,ground=anchor.ground;
- int mouth=hd_acting_mouth(frame,(unsigned)role,emotion);
+ int mouth=hd_acting_mouth(frame,(unsigned)role,speaking?1:0);
  unsigned coat=role==1?HD_RED:role==2?HD_GLASS:
                role==3?HD_STONE_LIT:role==4?HD_LEAF_DARK:HD_PLASTER_LIT;
  unsigned dark=role==1?HD_RED_SHADE:role==2?HD_ROAD_COOL:
@@ -240,8 +240,8 @@ void hd_actor_stage(uint8_t *p,int x,int feet,int role,unsigned frame,int emotio
  }
 }
 
-void hd_actor_closeup(uint8_t *p,int x,int base,int role,
-                      unsigned frame,int emotion){
+void hd_actor_closeup_spoken(uint8_t *p,int x,int base,int role,
+                      unsigned frame,int emotion,int speaking){
  unsigned jacket=role==1?HD_RED:role==2?HD_GLASS:
                  role==3?HD_STONE_LIT:role==4?HD_LEAF_DARK:HD_PLASTER_LIT;
  unsigned shadow=role==1?HD_RED_SHADE:role==2?HD_ROAD_COOL:
@@ -251,7 +251,7 @@ void hd_actor_closeup(uint8_t *p,int x,int base,int role,
  unsigned hair=role==2?HD_BARK:role==3?HD_STONE_DARK:
                role==4?HD_BARK:HD_INK;
  int y=base-(int)((frame/27u)&1u);
- int mouth=hd_acting_mouth(frame,(unsigned)role,emotion);
+ int mouth=hd_acting_mouth(frame,(unsigned)role,speaking?1:0);
  /* The torso reaches the lower matte. Broad shadow shapes describe the
     shoulder and chest; a few seams are kept off the lit fabric planes. */
  plane(p,x,y-51,-12,12,-32,31,13,HD_INK);
@@ -571,4 +571,12 @@ void hd_actor_closeup(uint8_t *p,int x,int base,int role,
   plane(p,x,y-66,12,15,13,18,9,HD_SKIN);
   hd_line(p,x+13,y-65,x+14,y-59,HD_SKIN_LIT);
  }
+}
+
+/* Unscripted montage/gallery callers retain their existing pose semantics. */
+void hd_actor_stage(uint8_t *p,int x,int feet,int role,unsigned frame,int emotion){
+ hd_actor_stage_spoken(p,x,feet,role,frame,emotion,emotion==1);
+}
+void hd_actor_closeup(uint8_t *p,int x,int base,int role,unsigned frame,int emotion){
+ hd_actor_closeup_spoken(p,x,base,role,frame,emotion,emotion==1);
 }

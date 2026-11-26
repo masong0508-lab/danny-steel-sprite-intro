@@ -15,3 +15,19 @@ static inline int hd_acting_mouth(unsigned frame,unsigned role,int emotion){
  if(emotion!=1)return 0;
  return beat[(frame/4u+role*3u)%12u];
 }
+
+/* Exact speaker labels, including archive aliases. Narration, texts and
+   off-screen voices never animate a visible character's mouth. */
+static inline int hd_acting_label(const char *a,const char *b){
+ if(!a)return 0;
+ while(*a&&*a==*b){a++;b++;}
+ return *a==*b;
+}
+static inline unsigned hd_acting_speaker_role(const char *label){
+ if(hd_acting_label(label,"DANNY"))return 1u;
+ if(hd_acting_label(label,"MARA"))return 2u;
+ if(hd_acting_label(label,"BORE CLERK")||hd_acting_label(label,"ARCHIVIST"))return 3u;
+ if(hd_acting_label(label,"WITNESS"))return 4u;
+ if(hd_acting_label(label,"DOCTOR"))return 5u;
+ return 0u;
+}

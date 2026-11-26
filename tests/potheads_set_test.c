@@ -6,28 +6,19 @@
 #include <stdio.h>
 #include <string.h>
 
-/* A broken run count, truncated literal block, stale generated set or
+/* An incorrect word count, stale generated set or
    unaligned word write must fail before this data reaches a cartridge. */
 static uint8_t projected[HD_BYTES];
 static uint8_t decoded[HD_BYTES+132];
 
-static void verify_stream(void){
- unsigned at=0,words=0,limit=(unsigned)(sizeof pot_set_rle/sizeof pot_set_rle[0]);
- while(at<limit){
-  uint32_t token=pot_set_rle[at++];
-  unsigned count=token&0x7fffffffu;
-  assert(count>0u&&count<=HD_BYTES/4u-words);
-  unsigned stored=token&0x80000000u?1u:count;
-  assert(stored<=limit-at);
-  for(unsigned i=0;i<stored;i++){
-   uint32_t four=pot_set_rle[at++];
-   for(unsigned pixel=0;pixel<4u;pixel++){
-    assert((four&255u)<64u);four>>=8;
-   }
+static void verify_words(void){
+ assert(sizeof pot_set_words==HD_BYTES);
+ for(unsigned i=0;i<HD_BYTES/4u;i++){
+  uint32_t four=pot_set_words[i];
+  for(unsigned pixel=0;pixel<4u;pixel++){
+   assert((four&255u)<64u);four>>=8;
   }
-  words+=count;
  }
- assert(at==limit&&words==HD_BYTES/4u);
 }
 static void crop(uint8_t *p){
  hd_rect(p,0,135,HD_W,25,HD_INK);
@@ -35,7 +26,7 @@ static void crop(uint8_t *p){
  hd_rect(p,0,158,240,2,HD_INK);
 }
 int main(void){
- verify_stream();
+ verify_words();
  static const unsigned settled[]={180u,181u,450u,790u,1274u,65535u};
  for(unsigned t=0;t<sizeof settled/sizeof settled[0];t++){
   PotCamera camera=pot_camera(settled[t]);
@@ -54,6 +45,6 @@ int main(void){
   pot_scene_fixed(pixels);crop(pixels);crop(projected);
   assert(memcmp(projected,pixels,HD_BYTES)==0);
  }
- printf("Potheads set: all 38400 pixels match the projected camera, palette, guards, four alignments and exact stream end OK (%zu ROM bytes)\n",sizeof pot_set_rle);
+ printf("Potheads set: all 38400 pixels match the projected camera, palette, guards, four alignments and exact word count OK (%zu ROM bytes)\n",sizeof pot_set_words);
  return 0;
 }

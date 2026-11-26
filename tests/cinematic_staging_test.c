@@ -127,7 +127,42 @@ static void verify_grounded_acting(void){
  for(unsigned t=0;t<127u;t++)
   assert(!(hd_acting_eye(t,1u)==2&&hd_acting_eye(t,2u)==2));
 }
+static void verify_scripted_mouth(void){
+ assert(hd_acting_speaker_role("DANNY")==1u);
+ assert(hd_acting_speaker_role("MARA")==2u);
+ assert(hd_acting_speaker_role("BORE CLERK")==3u);
+ assert(hd_acting_speaker_role("ARCHIVIST")==3u);
+ assert(hd_acting_speaker_role("WITNESS")==4u);
+ assert(hd_acting_speaker_role("DOCTOR")==5u);
+ assert(hd_acting_speaker_role("MARA'S CAFE")==0u);
+ assert(hd_acting_speaker_role("NARRATOR")==0u);
+ assert(hd_acting_speaker_role("PHONE MESSAGE")==0u);
+ assert(hd_acting_speaker_role(0)==0u);
+ static uint8_t silent[HD_BYTES];
+ for(int role=1;role<=5;role++){
+  unsigned t=0;
+  while(hd_acting_mouth(t,(unsigned)role,1)!=2)t++;
+  hd_rect(silent,0,0,HD_W,HD_H,HD_STONE_DARK);
+  memset(&sample,0xA5,sizeof sample);
+  hd_rect(sample.pixels,0,0,HD_W,HD_H,HD_STONE_DARK);
+  /* Speaking versus listening uses the same reaching gesture/pose. */
+  hd_actor_stage_spoken(silent,120,143,role,t,3,0);
+  hd_actor_stage_spoken(sample.pixels,120,143,role,t,3,1);
+  unsigned changes=0;
+  for(unsigned y=0;y<HD_H;y++)for(unsigned x=0;x<HD_W;x++){
+   unsigned i=y*HD_W+x;
+   if(silent[i]!=sample.pixels[i]){
+    assert(x>=115u&&x<=125u&&y>=92u&&y<=98u);
+    changes++;
+   }
+  }
+  assert(changes>0u);
+  for(unsigned g=0;g<32u;g++)
+   assert(sample.before[g]==0xA5&&sample.after[g]==0xA5);
+ }
+}
 int main(void){
+ verify_scripted_mouth();
  verify_grounded_acting();
  verify_reachable_editorial_cuts();
  Story s;story_new(&s,0);s.dialogue=0;

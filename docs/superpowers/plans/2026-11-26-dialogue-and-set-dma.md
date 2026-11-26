@@ -1,0 +1,3 @@
+# Dialogue acting and settled-set DMA
+
+Base d20aa94ad83ed14e4c01af18eff7ee21edb4f446, the verified facial-acting source plus emulator captures. Maintain the current 240x160 film and story timing. Separate explicit speaker from pose in the native story renderer, preserving legacy montage callers. Treat off-screen voices and narrative labels as silent. Trade 15,924 ROM bytes for an aligned DMA3 transfer of the immutable 38,400-byte background; preserve the full projected image, unaligned fallback and single EWRAM framebuffer. Add native raster and background equality assertions. Measure the actual GBA page-flip cadence before claiming a speed gain. The private optional rotoscope data is not copied into the public branch.
