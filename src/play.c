@@ -37,8 +37,9 @@ static unsigned scene_music_cue(void){
                (id==2u||id==12u)?MUSIC_CUE_ROOFTOP:
                (id==7u||id==9u)?MUSIC_CUE_FARCE:MUSIC_CUE_STREETS;
     }
-    if((game.activity==STORY_ACT_STUDIO && game.activity_choice)||story_master_showcase(&game))
-        return MUSIC_CUE_STUDIO; /* Audition or share the player's actual PSG arrangement. */
+    if(game.activity==STORY_ACT_STUDIO)
+        return game.activity_choice?MUSIC_CUE_STUDIO:MUSIC_CUE_STUDIO_IDLE;
+    if(story_master_showcase(&game))return MUSIC_CUE_STUDIO;
     if(game.ended && game.ending==STORY_END_GOOD)return MUSIC_CUE_LEGACY;
     if(game.life_stage==STORY_LIFE_FINALE ||
        (game.ended && game.ending==STORY_END_NEUTRAL) ||
@@ -253,7 +254,13 @@ void play_enter(int want_load,int slot){
     music_set_volume(65);
 }
 static int play_tick(u16 keys){
+    int was_studio=game.activity==STORY_ACT_STUDIO;
     story_tick(&game,keys);
+    /* Leaving the editor commits the edited arrangement immediately,
+       instead of waiting two seconds for the periodic SRAM checkpoint. */
+    if(was_studio&&game.activity!=STORY_ACT_STUDIO&&game.dirty){
+        write_save();save_cooldown=0;
+    }
     if(game.quit){
         roto_cache_begin_frame(0);
         frame_runtime_stop();

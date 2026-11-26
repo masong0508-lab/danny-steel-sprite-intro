@@ -10,14 +10,14 @@
 #define STUDIO_EXT_OFFSET 0x140u
 #define STUDIO_EXT_LEN 24u
 enum { STUDIO_SONG, STUDIO_NOTES, STUDIO_ORDER, STUDIO_LYRICS,
-       STUDIO_CHOIR, STUDIO_PERFORM };
+       STUDIO_MIX, STUDIO_PERFORM };
 typedef struct {
  uint8_t notes[STUDIO_STEPS];      /* 0 rest; 1..7 notes in C major */
  uint8_t order[STUDIO_SECTIONS];  /* 0..3 phrase variants */
  uint8_t tempo;                    /* 0..3, slow through brisk */
  uint8_t mood;                     /* 0..2, soft/warm/bright */
  uint8_t lyric;                    /* 0..3, displayed lyric cue */
- uint8_t choir;                    /* 0..3, PSG harmony density */
+ uint8_t mix;                      /* packed 2-bit levels: lead/keys/bass/drums */
 } StudioPatch;
 
 void studio_reset(void);
@@ -27,6 +27,10 @@ const char *studio_note_label(unsigned pitch);
 void studio_change(unsigned tab,unsigned cursor,int delta);
 void studio_toggle(unsigned tab,unsigned cursor);
 unsigned studio_cursor_count(unsigned tab);
+enum { STUDIO_LEAD, STUDIO_KEYS, STUDIO_BASS, STUDIO_DRUMS, STUDIO_TRACK_COUNT };
+unsigned studio_mix_level(const StudioPatch *p,unsigned track);
+const char *studio_mix_name(unsigned track);
+void studio_preview_step(const StudioPatch *p,unsigned step,MotifBeat *out);
 void studio_motif_step(unsigned step,MotifBeat *out);
 uint32_t studio_ticks(void);
 unsigned studio_playhead(void);

@@ -29,7 +29,7 @@ static unsigned render(Story *s,unsigned tick){
 static unsigned pixel(int x,int y){return frame.pixel[y*HD_W+x];}
 static void set(unsigned tab,unsigned cursor,unsigned value){
  const StudioPatch *p=studio_patch();
- unsigned old=tab==STUDIO_CHOIR?p->choir:tab==STUDIO_SONG?
+ unsigned old=tab==STUDIO_MIX?studio_mix_level(p,cursor):tab==STUDIO_SONG?
   (cursor?p->mood:p->tempo):tab==STUDIO_ORDER?p->order[cursor]:p->notes[cursor];
  if(tab==STUDIO_NOTES){
   if(!value){if(old)studio_toggle(tab,cursor);return;}
@@ -82,22 +82,25 @@ int main(void){
   }
  }
 
- /* CHOIR pattern lights and LIVE gates match actual PSG events for all
-    moods, harmony settings, parts and steps. Drawing is read-only. */
+ /* Mixer level meters and LIVE gates agree with actual sequencer events.
+    Exercise all 256 packed level combinations across four sections. */
  unsigned gates=0;
- for(unsigned mood=0;mood<3u;mood++)for(unsigned harmony=0;harmony<4u;harmony++){
-  set(STUDIO_SONG,1,mood);set(STUDIO_CHOIR,0,harmony);
-  for(unsigned part=0;part<4u;part++)for(unsigned step=0;step<8u;step++){
-   MotifBeat actual;studio_motif_step(part*8u+step,&actual);
+ for(unsigned mix=0;mix<256u;mix++){
+  for(unsigned voice=0;voice<4u;voice++)set(STUDIO_MIX,voice,(mix>>(voice*2u))&3u);
+  for(unsigned step=0;step<32u;step++){
+   MotifBeat actual;studio_motif_step(step,&actual);
    unsigned active[4]={actual.lead>0,actual.comp!=0,actual.bass!=0,actual.noise!=0};
    s.activity_choice=1;s.studio_tab=STUDIO_PERFORM;render(&s,0);
    for(unsigned voice=0;voice<4u;voice++)
     assert(pixel(22+(int)voice*53,115)==(active[voice]?HD_LAMP:HD_STONE_DARK));
-   s.studio_tab=STUDIO_CHOIR;render(&s,0);
-   for(unsigned voice=0;voice<4u;voice++)
-    assert(pixel(19+(int)voice*53+(int)step*6,118)==
-           (active[voice]?HD_GOLD:HD_STONE_DARK));
-   assert(pixel(18+(int)harmony*53,84)==HD_LAMP);
+   s.studio_tab=STUDIO_MIX;s.studio_cursor=(uint8_t)(step&3u);render(&s,0);
+   for(unsigned voice=0;voice<4u;voice++){
+    int x=18+(int)voice*53;
+    unsigned level=(mix>>(voice*2u))&3u;
+    assert(pixel(x+5,125)==(active[voice]?HD_LEAF_LIT:HD_STONE_DARK));
+    for(unsigned k=0;k<3u;k++)assert(pixel(x+5+(int)k*13,103)==(k<level?HD_GOLD:HD_STONE_DARK));
+    assert(pixel(x,84)==(voice==s.studio_cursor?HD_LAMP:HD_STONE_DARK));
+   }
    gates++;
   }
  }

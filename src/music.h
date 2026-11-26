@@ -15,9 +15,9 @@ MUSIC_CLOCK_CODE void music_clock_vblank(void);
 void music_set_volume(int pct);
 void music_set_cue(unsigned cue);
 unsigned music_get_cue(void);
-/* Reserved next cue: a live eight-step arrangement heard ONLY in the
-   unlockable studio's preview. Existing soundtrack cue IDs stay intact. */
+/* Studio and genuinely silent transport; original soundtrack IDs unchanged. */
 #define MUSIC_CUE_STUDIO MUSIC_CUE_COUNT
+#define MUSIC_CUE_STUDIO_IDLE (MUSIC_CUE_COUNT+1u)
 
 /* Original 72.5-second HERE TODAY score, played one time through the ending.
    Good ending adds a distinct BORE legacy coda; other endings end quietly.

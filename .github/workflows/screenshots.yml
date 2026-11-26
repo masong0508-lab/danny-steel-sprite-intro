@@ -183,7 +183,8 @@ jobs:
       - name: Verify dimensions and save contact sheet
         run: |
           identify -format '%f %wx%h\n' docs/screenshots/*.png
-          # Only authored gallery frames; include lettered rest/choir variants.
+          # Only authored gallery frames; include lettered rest/mixer variants.
+          rm -f docs/screenshots/17a_advanced_studio_choir.png
           montage docs/screenshots/[0-9][0-9]*_*.png -tile 3x -geometry 480x320+6+6 \
             -background '#171919' docs/screenshots/contact_sheet.png
       # The repository stores the images directly; Actions artifact upload is

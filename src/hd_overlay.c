@@ -165,7 +165,7 @@ void hd_game_overlay(uint8_t *p,const Story *s){
   hd_text(p,29,77,"A MOMENT TO BREATHE",HD_PAPER,1,0);
   hd_line(p,29,91,210,91,HD_STONE_DARK);
   hd_text(p,30,96,"START  RETURN TO STREET",HD_PAPER,1,0);
-  hd_text(p,30,107,"L  FIELD GUIDE / WHERE NEXT",HD_LAMP,1,0);
+  hd_text(p,30,107,"A  GOALS / L FIELD GUIDE",HD_LAMP,1,0);
   hd_text(p,30,119,"R  JOURNAL / CONSEQUENCES",HD_STONE_LIT,1,0);
   hd_text(p,30,128,"SELECT  SIDE STORIES",HD_LAMP,1,0);
   hd_text(p,30,139,"B  SAVE AND LEAVE",HD_PAPER,1,0);

@@ -90,7 +90,7 @@ void music_begin_ending(unsigned ending){
 }
 unsigned music_ending_phase(void){return ending_phase;}
 void music_set_cue(unsigned cue){
-    if(cue>MUSIC_CUE_STUDIO)cue=MUSIC_CUE_STREETS;
+    if(cue>MUSIC_CUE_STUDIO_IDLE)cue=MUSIC_CUE_STREETS;
     if(ending_phase){
         /* Explicit return to title is the only way to cancel the ending. */
         if(cue!=MUSIC_CUE_TITLE)return;
@@ -102,7 +102,7 @@ void music_set_cue(unsigned cue){
     }
     if(cue==active_cue){pending_cue=cue;return;}
     if(active_cue==MUSIC_CUE_TITLE || cue==MUSIC_CUE_TITLE ||
-       active_cue==MUSIC_CUE_STUDIO || cue==MUSIC_CUE_STUDIO){
+       active_cue>=MUSIC_CUE_STUDIO || cue>=MUSIC_CUE_STUDIO){
         /* Title transitions and the player's studio transport are immediate.
          * Scene-to-scene music still respects the short phrase boundary. */
         music_stop();time_update();
@@ -152,16 +152,22 @@ static void play_motif(unsigned cue,unsigned step){
         REG_SND1CNT=((unsigned)n.volume<<12)|(5<<8)|((unsigned)n.duty<<6);
         REG_SND1FREQ=0x8000|sq_rate((unsigned)n.lead);
     } else if(n.lead<0)REG_SND1CNT=((unsigned)n.duty<<6);
+    const StudioPatch *mix=cue==MUSIC_CUE_STUDIO?studio_patch():0;
+    static const uint8_t track_volume[4]={0,3,5,8};
     if(n.comp){
-        REG_SND2CNT=(5<<12)|(3<<8)|(0<<6);
+        unsigned v=mix?track_volume[studio_mix_level(mix,STUDIO_KEYS)]:5u;
+        REG_SND2CNT=(v<<12)|(3<<8)|(0<<6);
         REG_SND2FREQ=0x8000|sq_rate(n.comp);
     }else if(cue==MUSIC_CUE_STUDIO)REG_SND2CNT=0;
     if(n.bass){
-        REG_SND3CNT=0x4000;
+        /* GBA wave-channel volume: 25%, 50%, 100%. */
+        static const uint16_t wave_level[4]={0,0x6000,0x4000,0x2000};
+        REG_SND3CNT=mix?wave_level[studio_mix_level(mix,STUDIO_BASS)]:0x4000;
         REG_SND3FREQ=0x8000|wav_rate(n.bass);
     }else if(cue==MUSIC_CUE_STUDIO)REG_SND3CNT=0;
     if(n.noise){
-        REG_SND4CNT=(n.noise==1?0x5700:0x8300);
+        REG_SND4CNT=mix?((unsigned)track_volume[studio_mix_level(mix,STUDIO_DRUMS)]<<12)|
+                    (n.noise==1?0x0700u:0x0300u):(n.noise==1?0x5700u:0x8300u);
         REG_SND4FREQ=0x8000|(n.noise==1?0x21:0x5B);
     }else if(cue==MUSIC_CUE_STUDIO)REG_SND4CNT=0;
     /* A rest in Danny's editor really silences the corresponding channel.
@@ -212,7 +218,7 @@ static void play_here_today(void){
 void music_poll(void){
     time_update();
     if(ending_phase==1){play_here_today();return;}
-    if(ending_phase==3)return;
+    if(ending_phase==3||active_cue==MUSIC_CUE_STUDIO_IDLE)return;
     if(active_cue==MUSIC_CUE_TITLE){
         u32 now=total-start;
         for(;;){

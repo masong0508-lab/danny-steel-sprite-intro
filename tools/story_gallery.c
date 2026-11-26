@@ -284,8 +284,10 @@ int main(int argc,char **argv){
  write_frame("16_advanced_studio_order",&s,135);
  s.studio_tab=STUDIO_LYRICS;
  write_frame("17_advanced_studio_lyrics",&s,148);
- s.studio_tab=STUDIO_CHOIR;
- write_frame("17a_advanced_studio_choir",&s,148);
+ s.studio_tab=STUDIO_MIX;s.studio_cursor=1;
+ write_frame("17a_advanced_studio_mixer",&s,148);
+ {Story basic=s;basic.song_steps=1u;basic.activity_choice=0;
+  write_frame("17b_basic_studio_mixer",&basic,148);}
  /* Additional actual in-game plot states exercise the expanded native
     cinematics; no art is fabricated for the screenshot pipeline. */
  s.activity=0;s.activity_choice=0;s.dialogue=0;s.ended=0;

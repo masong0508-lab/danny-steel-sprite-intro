@@ -335,9 +335,9 @@ Erasing an early demo does not erase a different completed master.
 ### Unlockable BORE Advanced Studio — Bogotchi-style hierarchy
 After four normal recording sessions, the BORE desk offers **LISTEN**
 (the original simple mode) or **STUDIO**. The latter opens six readable
-SONG/NOTES/ORDER/LYRICS/CHOIR/PERFORM tabs. The 8-step note grid and
-four-phrase order control genuine PSG playback; tempo and digital
-harmony are editable, while lyrics are displayed **text cues**, not
+SONG/NOTES/ORDER/LYRICS/MIXER/PERFORM tabs. The 8-step note grid and
+four-phrase order control genuine PSG playback; tempo and four instrument
+levels are editable, while lyrics are displayed **text cues**, not
 sampled vocals. L/R changes tabs, D-pad edits, A changes a value,
 SELECT previews, B exits. Every slot saves its own arrangement in
 a checksummed 24-byte extension without changing the main SRAM format.
@@ -345,3 +345,5 @@ See docs/BORE_ADVANCED_STUDIO.md.
 
 
 The new ambient street observations describe five areas of Old Quarter; A on a neutral approach to the Last Bus prioritizes the marked objective. A skillful FACTS parry can restore a point of focus, while CARE prevents one missed hit. These actions are optional and preserve the same save and story layout.
+
+The basic studio now offers Song, Notes, Mixer and Live before the four-take unlock. START then A opens the goal picker directly. See docs/STUDIO_CAMPAIGN_ACCESS.md.

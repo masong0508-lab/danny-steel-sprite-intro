@@ -235,6 +235,10 @@ jobs:
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c src/story_save.c src/hd_canvas.c src/hd_studio.c src/hd_overlay.c tests/studio_campaign_access_test.c -o /tmp/danny_studio_campaign
           /tmp/danny_studio_campaign
+      - name: Validate four-track mixer, all packed levels and legacy studio-save migration
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/studio.c tests/studio_mixer_test.c -o /tmp/danny_mixer
+          /tmp/danny_mixer
       - name: Test actual GBA PSG playback of edited music without interrupting ending score
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Itests/stubs -Isrc -DHOST_MUSIC_TEST -include tests/stubs/gba.h src/music.c src/studio.c src/music_motifs.c tests/studio_audio_test.c -o /tmp/danny_studio_audio_test

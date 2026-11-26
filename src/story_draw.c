@@ -710,7 +710,7 @@ static void ending_caption(uint8_t *p,unsigned ending,unsigned rescue,
 static void studio_editor(uint8_t *p,const Story *s,int frame){
  const StudioPatch *a=studio_patch();
  static const char *const tabs[STUDIO_TAB_COUNT]={
-  "SNG","NTS","ORD","LYR","CHR","LIVE"
+  "SNG","NTS","ORD","LYR","MIX","LIVE"
  };
  const unsigned tab=s->studio_tab<STUDIO_TAB_COUNT?s->studio_tab:0u;
  unsigned cursor=s->studio_cursor;
@@ -720,9 +720,10 @@ static void studio_editor(uint8_t *p,const Story *s,int frame){
  int basic=s->song_steps<STORY_PROJECT_DONE;
  text(p,3,1,basic?"BORE / BASIC STUDIO":"BORE / ADVANCED STUDIO",20,24);
  text(p,95,1,s->activity_choice?"PLAY":"STOP",s->activity_choice?12:7,5);
- for(unsigned j=0;j<(basic?3u:STUDIO_TAB_COUNT);j++){
-   unsigned i=basic?(j==2u?STUDIO_PERFORM:j):j;
-   int w=basic?37:18,x=3+(int)j*(basic?38:19);
+ for(unsigned j=0;j<(basic?4u:STUDIO_TAB_COUNT);j++){
+   static const uint8_t simple[4]={STUDIO_SONG,STUDIO_NOTES,STUDIO_MIX,STUDIO_PERFORM};
+   unsigned i=basic?simple[j]:j;
+   int w=basic?27:18,x=3+(int)j*(basic?29:19);
    box(p,x,12,w,10,tab==i?25:3);
    box(p,x,20,w,2,tab==i?18:5);
    text(p,x+2,14,tabs[i],tab==i?3:20,4);
@@ -778,15 +779,16 @@ static void studio_editor(uint8_t *p,const Story *s,int frame){
    box(p,9,40,102,14,3);
    text(p,12,44,studio_lyric(a->lyric),20,25);
    text(p,8,59,"TEXT ONLY / NOT SUNG",18,27);
- }else if(tab==STUDIO_CHOIR){
-   static const char *const voice[4]={"SOLO","WARM","BRIGHT","FULL"};
-   text(p,8,28,"CHOIR / PSG LAYERS",20,27);
-   box(p,8,37,103,11,25);box(p,9,38,101,9,3);
-   text(p,16,40,voice[a->choir],20,15);
-   text(p,8,51,"LEAD HARM BASS BEAT",18,27);
-   for(int i=0;i<4;i++)
-     box(p,8+i*26,60,22,3,
-         i==1 && a->choir==0u?5:i==3&&a->mood!=2u?5:18);
+ }else if(tab==STUDIO_MIX){
+   static const char *const level_names[4]={"OFF","LOW","MID","HIGH"};
+   text(p,8,28,"MIXER / SET LEVELS",20,27);
+   for(unsigned i=0;i<STUDIO_TRACK_COUNT;i++){
+    int x=8+(int)i*26;unsigned level=studio_mix_level(a,i);
+    box(p,x,37,24,26,i==cursor?25:3);
+    text(p,x+2,39,studio_mix_name(i),i==cursor?3:20,5);
+    for(unsigned k=0;k<3u;k++)box(p,x+2+(int)k*7,48,6,5,k<level?18:5);
+    text(p,x+2,56,level_names[level],20,5);
+   }
  }else{
    text(p,8,28,"PERFORM / LIVE PREVIEW",20,27);
    char part[]="1/4";part[0]=(char)('1'+studio_playpart());
@@ -921,7 +923,7 @@ void story_draw(const Story *s,int frame,uint8_t *p) {
             panel(p,38,80);
             box(p,4,41,112,1,18);
             text(p,6,44,"PAUSED / OLD QUARTER",20,27);
-            text(p,6,53,"L  FIELD GUIDE",20,27);
+            text(p,6,53,"A GOALS / L GUIDE",20,27);
             text(p,6,61,"R  LIFE CONSEQUENCES",18,27);
             text(p,6,69,"START  RESUME GAME",20,27);
             text(p,6,76,"B  SAVE AND MENU",20,27);

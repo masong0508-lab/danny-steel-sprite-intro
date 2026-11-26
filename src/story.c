@@ -714,7 +714,7 @@ SCRIPT(d_act_clerk_joke,
  {"BORE CLERK", "Wrong queue. That", "one has a bell."},
  {"DANNY", "You laughed. I'll", "file that under joy."});
 SCRIPT(d_act_music_listen,
- {"ARCHIVE TAPE", "An old BORE theme", "plays back softly."},
+ {"ARCHIVE TAPE", "An old BORE theme", "plays from your take."},
  {"DANNY", "The rest between", "notes is part of it."},
  {"DANNY", "Maybe I can just", "listen this time."});
 SCRIPT(d_act_art_rest,
@@ -748,7 +748,7 @@ SCRIPT(d_project_song_done,
  {"DANNY", "The quiet parts", "made it in too."},
  {"DANNY", "Let someone else", "hear the whole song."},
  {"BORE ARCHIVE", "ADVANCED UNLOCKED.", "A AT THE MUSIC DESK."},
- {"BORE ARCHIVE", "ORDER, LYRICS, CHOIR.", "EDIT WHEN YOU WANT."},
+ {"BORE ARCHIVE", "ORDER, LYRICS, MIXER.", "EDIT WHEN YOU WANT."},
  {"DANNY", "I'll take it to Mara.", "She heard the rough one."});
 SCRIPT(d_project_art_2,
  {"ROOFTOP", "Buildings rise over", "the painted horizon."},
@@ -1214,7 +1214,7 @@ int story_neighborhood_panel(const Story *s){
 int story_master_showcase(const Story *s){
  return s->song_steps>=STORY_PROJECT_DONE&&
         (s->dialogue==D_MARA_MASTER||s->dialogue==D_MARA_MASTER_SHARED||
-         s->dialogue==D_MARA_CREATIONS);
+         s->dialogue==D_MARA_CREATIONS||s->dialogue==D_ACT_MUSIC_LISTEN);
 }
 const StoryPage *story_pages(const Story *s, int *count) {
     unsigned id = s->dialogue;
@@ -2140,9 +2140,9 @@ void story_tick(Story *s, uint16_t keys) {
         }
         if(pressed&(L|R)){
             if(basic){
-                static const uint8_t tabs[3]={STUDIO_SONG,STUDIO_NOTES,STUDIO_PERFORM};
-                unsigned pos=s->studio_tab==STUDIO_NOTES?1u:s->studio_tab==STUDIO_PERFORM?2u:0u;
-                s->studio_tab=tabs[(pos+((pressed&L)?2u:1u))%3u];
+                static const uint8_t tabs[4]={STUDIO_SONG,STUDIO_NOTES,STUDIO_MIX,STUDIO_PERFORM};
+                unsigned pos=s->studio_tab==STUDIO_NOTES?1u:s->studio_tab==STUDIO_MIX?2u:s->studio_tab==STUDIO_PERFORM?3u:0u;
+                s->studio_tab=tabs[(pos+((pressed&L)?3u:1u))%4u];
             }else s->studio_tab=(uint8_t)((s->studio_tab+((pressed&L)?STUDIO_TAB_COUNT-1u:1u))%STUDIO_TAB_COUNT);
             s->studio_cursor=0;
         }
@@ -2237,6 +2237,11 @@ void story_tick(Story *s, uint16_t keys) {
                 s->neighborhood_target=(uint8_t)(s->neighborhood_target==target?0u:target);
                 s->paused=0;s->choice&=1u;
             }
+            return;
+        }
+        /* A directly opens destinations from the pause root. */
+        if((pressed&A)&&!(s->choice&(STORY_CHECK_PAGE_ACTIVE|STORY_FIELD_GUIDE_ACTIVE))){
+            s->choice=(uint8_t)((s->choice&1u)|STORY_FIELD_GUIDE_ACTIVE|STORY_FIELD_GUIDE_DETAIL);
             return;
         }
         /* L is a direct two-page help guide. R remains the four-page
