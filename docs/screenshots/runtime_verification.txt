@@ -1,16 +1,16 @@
-Source commit: e499e1faf94d03b17a361a0cf6e3a00e26c52024
+Source commit: ec807d8de4cf87eebb03d2eb8faf3e7695d7d45b
 mGBA 0.10.2; read-only runtime verification, Story bytes=62
 PASS: built ROM exports its real input-queue counters
-opening state: scene=1, dialogue=1, page=0, ticks=174
+opening state: scene=1, dialogue=1, page=0, ticks=176
 PASS: New Game reaches the scripted opening
 PASS: held menu confirm does not skip opening dialogue
 PASS: actual ROM capture saved
-opening clock: video=600, processed=603, queue=3->0, accounted=600
+opening clock: video=600, processed=601, queue=1->0, accounted=600
 PASS: clock window advances 600 emulated video frames
 PASS: input queue remains bounded
 PASS: processed plus queued ticks track video time
 PASS: simulation keeps pace during painting
-  cinematic ticks advanced=603
+  cinematic ticks advanced=601
 PASS: opening route remains the actual Potheads scene
 PASS: cinematic clock advances with each simulation tick
 PASS: active Mode4 display survives the clock window
