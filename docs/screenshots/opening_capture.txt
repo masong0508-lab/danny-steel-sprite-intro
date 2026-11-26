@@ -1,13 +1,13 @@
-Source commit: ec807d8de4cf87eebb03d2eb8faf3e7695d7d45b
+Source commit: 5961e6c8f17a2f73b7b3584d0e23830ffdf01227
 mGBA 0.10.2; 59.727500569606 Hz; 1434 native video frames requested
-Verified 3323496 ELF/ROM load bytes; ROM CRC32 b40a69a1; ELF CRC32 adf873b1
+Verified 3327292 ELF/ROM load bytes; ROM CRC32 a93f2abd; ELF CRC32 31853932
 Captured 1434 frames, 24.009040833 seconds, video 1974..3407, cinema 0..1433
 Displayed flips 660; changed video frames 577; dialogue 0->6 (6 A taps); cinema/clock error at most 1 tick(s); no dropped inputs or emulator errors
 {
-  "mp4": "/tmp/tmp.59oqlCtvmt/opening.mp4",
-  "gif": "/tmp/tmp.59oqlCtvmt/opening.gif",
-  "manifest": "/tmp/tmp.59oqlCtvmt/opening.json",
-  "source_rom_sha256": "ff97cdd972b386c3b3574cfa6014c6701533df8e104b1c3bf5319c2486ff0c48",
+  "mp4": "/tmp/tmp.QYEugxzcmJ/opening.mp4",
+  "gif": "/tmp/tmp.QYEugxzcmJ/opening.gif",
+  "manifest": "/tmp/tmp.QYEugxzcmJ/opening.json",
+  "source_rom_sha256": "63f8179590566d92b3f86481676969061bc5c4f88027e695b88a780232e9bcd0",
   "source_frames": 1434,
   "source_seconds": 24.00904083251953
 }
