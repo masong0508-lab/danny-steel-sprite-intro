@@ -3,6 +3,7 @@
 #include "potheads_drape.h"
 #include "potheads_cloth_render.h"
 #include "potheads_leg_render.h"
+#include "potheads_upper_render.h"
 
 /* Source-timed articulated cutout. The anatomy and motion use measured
    landmarks; material planes and pixel lighting are authored native art.
@@ -366,6 +367,29 @@ static void pot_source_leg_draw(uint8_t *p,const PotCamera *c,int frame){
  (void)p;(void)c;(void)frame;
 #endif
 }
+static void pot_source_upper_draw(uint8_t *p,const PotCamera *c,int frame){
+#if POTHEADS_UPPER_ENABLED
+ if(frame<0)return;
+ static const uint8_t palette[5]={HD_INK,HD_ROAD,HD_ROAD_COOL,HD_SKIN,HD_SKIN_LIT};
+ unsigned a=pot_upper_off[frame],b=pot_upper_off[frame+1];
+ int settled=c->zoom==256&&c->ground==48&&c->rise==256&&c->skew==0&&c->ground_y==128;
+ for(unsigned k=a;k<b;k+=4u){
+  int y=pot_upper_rects[k],x=pot_upper_rects[k+1],h=pot_upper_rects[k+3];
+  unsigned packed=pot_upper_rects[k+2];
+  PotClothRect r;
+  if(!pot_upper_settled_rect(&r,y,x,packed,h))continue;
+  unsigned ink=palette[(packed>>5)-1u];
+  if(settled)hd_rect(p,r.x,r.y,r.w,r.h,ink);
+  else for(int j=0;j<h;j++){
+   PotClothRect row;
+   if(pot_cloth_rect(&row,x,y+j,r.w,c->zoom,c->ground,c->rise,c->skew,c->ground_y))
+    hd_rect(p,row.x,row.y,row.w,row.h,ink);
+  }
+ }
+#else
+ (void)p;(void)c;(void)frame;
+#endif
+}
 static void pot_tunic(uint8_t *p,const PotCamera *c,const PotPose *pose,int source_cloth){
  unsigned body=(1u<<POT_LSHOULDER)|(1u<<POT_RSHOULDER)|(1u<<POT_LHIP)|(1u<<POT_RHIP);
  if((pose->located&body)!=body)return;
@@ -410,9 +434,12 @@ static void pot_tunic(uint8_t *p,const PotCamera *c,const PotPose *pose,int sour
 static void pot_dancer(uint8_t *p,const PotCamera *c,unsigned t){
  PotPose pose;
  unsigned source=t>180u?t-180u:0u;
- pot_trace_sample(source,&pose);
  int cloth_frame=pot_source_cloth_frame(source);
  int leg_frame=pot_source_leg_frame(source);
+ int upper_frame=pot_source_upper_frame(source,cloth_frame,leg_frame);
+ // Sample authored face, props and contacts at the same source timestamp
+ // as all three private mattes; avoid one-tick head/hand seam drift.
+ pot_trace_sample(pot_upper_pose_tick(source,upper_frame),&pose);
  unsigned sign=pose.flags&3u;
  for(unsigned i=0;i<4u;i++)if(pose.contact_mask&(1u<<i)){
   PotPoint contact=pot_actor_point(c,pose.contact[i]);
@@ -428,7 +455,7 @@ static void pot_dancer(uint8_t *p,const PotCamera *c,unsigned t){
  unsigned near_arm=(pose.flags&POT_NEAR_LEFT)?0u:1u;
  unsigned near_leg=(pose.flags&POT_NEAR_LEFT_LEG)?0u:1u;
  int floor_work=source>=570u;
- pot_arm(p,c,&pose,near_arm^1u);
+ if(upper_frame<0)pot_arm(p,c,&pose,near_arm^1u);
  /* Private source matte already contains the visible overlap between the
     legs, so do not paint either articulated leg or the old hip stroke. */
  if(leg_frame<0){
@@ -439,17 +466,24 @@ static void pot_dancer(uint8_t *p,const PotCamera *c,unsigned t){
     pot_caps(&pose,POT_LHIP,POT_RHIP));
   if(!floor_work)pot_leg(p,c,&pose,near_leg);
  }else if(!floor_work)pot_source_leg_draw(p,c,leg_frame);
- pot_tunic(p,c,&pose,cloth_frame);
+ if(upper_frame<0)pot_tunic(p,c,&pose,cloth_frame);
  pot_head(p,c,&pose);
  if(floor_work){
   if(leg_frame>=0)pot_source_leg_draw(p,c,leg_frame);
   else pot_leg(p,c,&pose,near_leg);
  }
- if(pose.bag_state!=POT_BAG_RESTING)pot_bag_draw(p,c,&pose);
- pot_arm(p,c,&pose,near_arm);
+ int front_sign=sign&&(pose.flags&POT_SIGN_FRONT);
+ if(pose.bag_state!=POT_BAG_RESTING&&(upper_frame<0||front_sign))pot_bag_draw(p,c,&pose);
+ if(upper_frame<0)pot_arm(p,c,&pose,near_arm);
  if(cloth_frame>=0)pot_source_cloth_draw(p,c,cloth_frame);
- if(sign&&(pose.flags&POT_SIGN_FRONT))pot_sign_draw(p,c,&pose);
- if(sign==POT_SIGN_HELD){
+ if(front_sign)pot_sign_draw(p,c,&pose);
+ // Source matte contains only visible sleeve/skin pixels, including
+ // visible grips in front of the sign. No duplicate joint hands.
+ if(upper_frame>=0){
+  pot_source_upper_draw(p,c,upper_frame);
+  if(!front_sign&&pose.bag_state!=POT_BAG_RESTING)pot_bag_draw(p,c,&pose);
+ }
+ if(sign==POT_SIGN_HELD&&upper_frame<0){
   for(unsigned i=0;i<2u;i++){
    unsigned wrist=i?POT_RWRIST:POT_LWRIST;
    if(!(pose.visible&(1u<<wrist)))continue;
