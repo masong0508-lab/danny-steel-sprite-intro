@@ -37,7 +37,8 @@ static void limb(uint8_t *p,int sx,int sy,int ex,int ey,int wx,int wy,
 /* Roles: Danny 1, Mara 2, archivist 3, witness 4, doctor 5.
    Gestures: listening 0, speaking 1, walking 2, reaching 3, reflective 5,
    worried 7. The foot and hand positions remain shared with the scenes. */
-void hd_actor_stage_spoken(uint8_t *p,int x,int feet,int role,unsigned frame,int emotion,int speaking){
+void hd_actor_stage_directed(uint8_t *p,int x,int feet,int role,unsigned frame,int emotion,int speaking,int gaze){
+ gaze=(gaze>0)-(gaze<0);
  int walk=emotion==2;
  unsigned phase=(frame/4u)&7u;
  static const int8_t strides[8]={-5,-3,0,3,5,3,0,-3};
@@ -190,13 +191,19 @@ void hd_actor_stage_spoken(uint8_t *p,int x,int feet,int role,unsigned frame,int
  if(blink==0){
   hd_rect(p,x-5,fy-57,3,1,HD_INK);
   hd_rect(p,x+3,fy-57,3,1,HD_INK);
-  hd_pixel(p,x-4,fy-56,HD_PAPER);
-  hd_pixel(p,x+4,fy-56,HD_SKIN_LIT);
+  if(gaze){
+   hd_pixel(p,x-4+gaze,fy-56,HD_INK);
+   hd_pixel(p,x+4+gaze,fy-56,HD_INK);
+   hd_pixel(p,x-4-gaze,fy-56,HD_SKIN_LIT);
+  }else{
+   hd_pixel(p,x-4,fy-56,HD_PAPER);
+   hd_pixel(p,x+4,fy-56,HD_SKIN_LIT);
+  }
  }else if(blink==1){
   hd_rect(p,x-5,fy-57,3,1,HD_BARK);
   hd_rect(p,x+3,fy-57,3,1,HD_BARK);
-  hd_pixel(p,x-4,fy-56,HD_INK);
-  hd_pixel(p,x+4,fy-56,HD_INK);
+  hd_pixel(p,x-4+gaze,fy-56,HD_INK);
+  hd_pixel(p,x+4+gaze,fy-56,HD_INK);
  }else{
   hd_line(p,x-5,fy-56,x-2,fy-56,HD_BARK);
   hd_line(p,x+3,fy-56,x+5,fy-56,HD_BARK);
@@ -240,8 +247,8 @@ void hd_actor_stage_spoken(uint8_t *p,int x,int feet,int role,unsigned frame,int
  }
 }
 
-void hd_actor_closeup_spoken(uint8_t *p,int x,int base,int role,
-                      unsigned frame,int emotion,int speaking){
+void hd_actor_closeup_directed(uint8_t *p,int x,int base,int role,
+                      unsigned frame,int emotion,int speaking,int gaze){
  unsigned jacket=role==1?HD_RED:role==2?HD_GLASS:
                  role==3?HD_STONE_LIT:role==4?HD_LEAF_DARK:HD_PLASTER_LIT;
  unsigned shadow=role==1?HD_RED_SHADE:role==2?HD_ROAD_COOL:
@@ -456,7 +463,7 @@ void hd_actor_closeup_spoken(uint8_t *p,int x,int base,int role,
  }
  /* Narrow lids and displaced pupils provide a gaze without giant white
     square eyes. Highlights occupy one pixel, never an entire eyeball. */
- int gaze=emotion==7?-1:emotion==5?1:0;
+ gaze=gaze<-2?-2:gaze>2?2:gaze;
  int blink=hd_acting_eye(frame,(unsigned)role);
  if(blink==2){
   hd_line(p,x-12,y-74,x-5,y-73,HD_BARK);
@@ -573,6 +580,13 @@ void hd_actor_closeup_spoken(uint8_t *p,int x,int base,int role,
  }
 }
 
+/* Compatibility callers retain the original face and gesture semantics. */
+void hd_actor_stage_spoken(uint8_t *p,int x,int feet,int role,unsigned frame,int emotion,int speaking){
+ hd_actor_stage_directed(p,x,feet,role,frame,emotion,speaking,0);
+}
+void hd_actor_closeup_spoken(uint8_t *p,int x,int base,int role,unsigned frame,int emotion,int speaking){
+ hd_actor_closeup_directed(p,x,base,role,frame,emotion,speaking,emotion==7?-1:emotion==5?1:0);
+}
 /* Unscripted montage/gallery callers retain their existing pose semantics. */
 void hd_actor_stage(uint8_t *p,int x,int feet,int role,unsigned frame,int emotion){
  hd_actor_stage_spoken(p,x,feet,role,frame,emotion,emotion==1);

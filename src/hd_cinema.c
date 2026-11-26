@@ -171,11 +171,27 @@ static int scene_speaking(const Story *s,int role,int emotion){
  if(!pages||s->page>=(unsigned)count)return 0;
  return hd_acting_speaker_role(pages[s->page].speaker)==(unsigned)role;
 }
+/* Match the established blocking: Danny occupies screen-left in the
+   cafe, archive and consultation, while the counterpart faces him.
+   The bus approaches from left; the letter and canvas sit to his right.
+   Other scenes retain their original acting rather than guessing a target. */
+static int scene_eyeline(const Story *s,int who){
+ switch(s->cinema){
+ case CINE_MARA:case CINE_STAY:return who==1?2:who==2?-2:0;
+ case CINE_BORE:return who==1?2:who==3?-2:0;
+ case CINE_CLINIC:case CINE_LAST_CLINIC:return who==5?-2:2;
+ case CINE_LETTER:case CINE_ART:return who==1?2:0;
+ case CINE_BUS:return who==1?-2:0;
+ default:return 0;
+ }
+}
 static void actor(uint8_t *p,const Story *s,int x,int feet,int who,unsigned t,int emotion){
- hd_actor_stage_spoken(p,x,feet,who,t,emotion,scene_speaking(s,who,emotion));
+ hd_actor_stage_directed(p,x,feet,who,t,emotion,scene_speaking(s,who,emotion),scene_eyeline(s,who));
 }
 static void close_actor(uint8_t *p,const Story *s,int x,int feet,int who,unsigned t,int emotion){
- hd_actor_closeup_spoken(p,x,feet,who,t,emotion,scene_speaking(s,who,emotion));
+ int gaze=scene_eyeline(s,who);
+ if(!gaze)gaze=emotion==7?-1:emotion==5?1:0;
+ hd_actor_closeup_directed(p,x,feet,who,t,emotion,scene_speaking(s,who,emotion),gaze);
 }
 
 /* The opening uses one continuous projected set and compact source-video

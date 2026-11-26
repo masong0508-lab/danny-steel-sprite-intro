@@ -161,7 +161,30 @@ static void verify_scripted_mouth(void){
    assert(sample.before[g]==0xA5&&sample.after[g]==0xA5);
  }
 }
+static void verify_eyeline(void){
+ static uint8_t left[HD_BYTES];
+ for(int role=1;role<=5;role++){
+  unsigned t=0u;while(hd_acting_eye(t,(unsigned)role)!=0)t++;
+  hd_rect(left,0,0,HD_W,HD_H,HD_STONE_DARK);
+  memset(&sample,0xA5,sizeof sample);
+  hd_rect(sample.pixels,0,0,HD_W,HD_H,HD_STONE_DARK);
+  hd_actor_closeup_directed(left,120,143,role,t,0,0,-2);
+  hd_actor_closeup_directed(sample.pixels,120,143,role,t,0,0,2);
+  unsigned changed=0;
+  for(unsigned y=0;y<HD_H;y++)for(unsigned x=0;x<HD_W;x++){
+   unsigned i=y*HD_W+x;
+   if(left[i]!=sample.pixels[i]){
+    assert(x>=106u&&x<=134u&&y>=66u&&y<=69u);
+    changed++;
+   }
+  }
+  assert(changed>0u);
+  for(unsigned g=0;g<32u;g++)
+   assert(sample.before[g]==0xA5&&sample.after[g]==0xA5);
+ }
+}
 int main(void){
+ verify_eyeline();
  verify_scripted_mouth();
  verify_grounded_acting();
  verify_reachable_editorial_cuts();

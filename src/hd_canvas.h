@@ -54,6 +54,8 @@ void hd_actor_stage(uint8_t *p,int x,int feet,int role,unsigned frame,int emotio
 void hd_actor_closeup(uint8_t *p,int x,int base,int role,unsigned frame,int emotion);
 void hd_actor_stage_spoken(uint8_t *p,int x,int feet,int role,unsigned frame,int emotion,int speaking);
 void hd_actor_closeup_spoken(uint8_t *p,int x,int base,int role,unsigned frame,int emotion,int speaking);
+void hd_actor_stage_directed(uint8_t *p,int x,int feet,int role,unsigned frame,int emotion,int speaking,int gaze);
+void hd_actor_closeup_directed(uint8_t *p,int x,int base,int role,unsigned frame,int emotion,int speaking,int gaze);
 int hd_special_cinema_draw(uint8_t *p,const Story *s,unsigned frame);
 int hd_special_supports(unsigned scene);
 void hd_cafe_facade(uint8_t *p,int x,int y,unsigned frame);
