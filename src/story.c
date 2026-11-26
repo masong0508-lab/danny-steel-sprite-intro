@@ -103,7 +103,7 @@ static int creative_tracking(const Story *s){
 }
 static int share_pending(const Story *s){
  return s->song_steps>=STORY_PROJECT_DONE&&(s->flags&STORY_MARA)&&
-        !(s->project_style&STORY_STYLE_SONG_SHARED);
+        !story_bad_count(s)&&!(s->project_style&STORY_STYLE_SONG_SHARED);
 }
 int story_goal(const Story *s, int *x, int *y, const char **label) {
     if (s->ended || s->life_stage==STORY_LIFE_FINALE) return 0;
@@ -1211,6 +1211,11 @@ int story_neighborhood_panel(const Story *s){
  }
  return -1;
 }
+int story_master_showcase(const Story *s){
+ return s->song_steps>=STORY_PROJECT_DONE&&
+        (s->dialogue==D_MARA_MASTER||s->dialogue==D_MARA_MASTER_SHARED||
+         s->dialogue==D_MARA_CREATIONS);
+}
 const StoryPage *story_pages(const Story *s, int *count) {
     unsigned id = s->dialogue;
     if (id >= sizeof(scripts) / sizeof(scripts[0])) id = 0;
@@ -1796,7 +1801,9 @@ static void interact(Story *s) {
                 /* The promise is not granted until the player actually
                    finishes and confirms Danny's answer with A. */
                 talk(s,D_MARA);
-            } else if(can_make_memory(s) &&
+            } else if(creative_tracking(s)&&s->neighborhood_target==STORY_TRACK_STUDIO&&share_pending(s))
+                talk(s,s->art_steps>=STORY_PROJECT_DONE?D_MARA_CREATIONS:D_MARA_MASTER);
+            else if(can_make_memory(s) &&
                       !(s->daily_mask&STORY_DAY_MARA))moment_menu(s,'F');
             else if(story_bad_count(s)>=2)talk(s,D_MARA_WARNING);
             else if(story_bad_count(s)==1)talk(s,D_MARA_CONCERN);

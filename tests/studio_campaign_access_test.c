@@ -39,7 +39,7 @@ int main(void){
  stand(&s,8,12,3);tap(&s,A);done(&s);assert((s.flags&STORY_ALL)==STORY_ALL);
  tap(&s,A);tap(&s,A);done(&s);
  track(&s,0);goal(&s,8,11,"SHARE SONG");
- unsigned bond=s.bond;tap(&s,A);assert(s.dialogue);tap(&s,B);assert(!(s.project_style&STORY_STYLE_SONG_SHARED));
+ unsigned bond=s.bond;tap(&s,A);assert(s.dialogue&&story_master_showcase(&s));tap(&s,B);assert(!story_master_showcase(&s)&&!(s.project_style&STORY_STYLE_SONG_SHARED));
  tap(&s,A);done(&s);assert(s.project_style&STORY_STYLE_SONG_SHARED);
  assert(s.bond==(bond>=STORY_STAT_MAX?STORY_STAT_MAX:bond+1u));
  unsigned saved=s.bond;tap(&s,A);done(&s);assert(s.bond==saved);

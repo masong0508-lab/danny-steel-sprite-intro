@@ -160,6 +160,7 @@ const char *story_goal_kind(const Story *s);
 const char *story_action_hint(const Story *s);
 int story_risk_available(const Story *s); /* only at confirmed optional risk sites */
 const StoryPage *story_pages(const Story *s, int *count);
+int story_master_showcase(const Story *s);
 int story_track_available(const Story *s,unsigned choice);
 const char *story_track_name(unsigned choice);
 unsigned story_track_selected(const Story *s);

@@ -37,8 +37,8 @@ static unsigned scene_music_cue(void){
                (id==2u||id==12u)?MUSIC_CUE_ROOFTOP:
                (id==7u||id==9u)?MUSIC_CUE_FARCE:MUSIC_CUE_STREETS;
     }
-    if(game.activity==STORY_ACT_STUDIO && game.activity_choice)
-        return MUSIC_CUE_STUDIO; /* SELECT: hear actual edited pattern */
+    if((game.activity==STORY_ACT_STUDIO && game.activity_choice)||story_master_showcase(&game))
+        return MUSIC_CUE_STUDIO; /* Audition or share the player's actual PSG arrangement. */
     if(game.ended && game.ending==STORY_END_GOOD)return MUSIC_CUE_LEGACY;
     if(game.life_stage==STORY_LIFE_FINALE ||
        (game.ended && game.ending==STORY_END_NEUTRAL) ||
