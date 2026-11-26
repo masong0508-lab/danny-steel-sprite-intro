@@ -21,11 +21,23 @@ LDFLAGS := $(ARCH) -specs=gba.specs -Wl,-Map=$(TARGET).map
 SRC     := $(wildcard src/*.c)
 HDR     := $(wildcard src/*.h)
 ART     := $(wildcard assets/neighborhood/*.bin)
+HOST_CC ?= cc
+OPENING_CACHE ?= 1
+ifeq ($(OPENING_CACHE),1)
+CACHE_BIN := build/potheads-opening-cache.bin
+CACHE_ASM := tools/potheads_cache_blob.S
+CFLAGS += -DDANNY_OPENING_CACHE
+endif
 
 all: $(TARGET).gba
 
-$(TARGET).elf: $(SRC) $(HDR) $(ART)
-	$(CC) $(CFLAGS) $(SRC) $(LDFLAGS) -o $@
+ifeq ($(OPENING_CACHE),1)
+$(CACHE_BIN): tools/build_potheads_cache.c tools/build_potheads_cache.sh $(HDR) src/hd_canvas.c
+	HOST_CC="$(HOST_CC)" sh tools/build_potheads_cache.sh
+endif
+
+$(TARGET).elf: $(SRC) $(HDR) $(ART) $(CACHE_BIN) $(CACHE_ASM) Makefile
+	$(CC) $(CFLAGS) $(SRC) $(CACHE_ASM) $(LDFLAGS) -o $@
 
 $(TARGET).gba: $(TARGET).elf
 	$(OBJCOPY) -O binary $< $@
@@ -33,6 +45,6 @@ $(TARGET).gba: $(TARGET).elf
 	else echo "warning: gbafix not found; ROM header not fixed"; fi
 
 clean:
-	rm -f $(TARGET).elf $(TARGET).gba $(TARGET).map
+	rm -f $(TARGET).elf $(TARGET).gba $(TARGET).map build/potheads-opening-cache.bin build/potheads_cache_export
 
 .PHONY: all clean

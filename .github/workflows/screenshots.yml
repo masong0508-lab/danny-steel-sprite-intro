@@ -57,6 +57,7 @@ jobs:
       - name: Compile this revision's playable ROM for mGBA capture
         run: |
           set -euo pipefail
+          sh tools/build_potheads_cache.sh
           docker pull devkitpro/devkitarm
           arm_image_id="$(docker image inspect --format '{{.Id}}' devkitpro/devkitarm)"
           {

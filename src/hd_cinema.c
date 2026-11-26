@@ -196,15 +196,12 @@ static void close_actor(uint8_t *p,const Story *s,int x,int feet,int who,unsigne
 
 /* The opening uses one continuous projected set and compact source-video
    joint measurements. Scene time never depends on dialogue-page rendering. */
-#include "hd_potheads_set.h"
-#include "hd_potheads_actor.h"
-#include "hd_potheads_fixed.h"
+#include "hd_potheads_film.h"
 static void potheads_open(uint8_t *p,unsigned t){
- PotCamera camera=pot_camera(t);
- if(t>=180u)pot_scene_fixed(p);
- else pot_scene(p,&camera,t);
- pot_dancer(p,&camera,t);
- hd_rect(p,0,135,HD_W,25,HD_INK); /* preserve source-camera crop */
+#if defined(DANNY_OPENING_CACHE) && defined(__arm__) && !defined(HOST_TEST)
+ if(pot_film_cached(p,t))return;
+#endif
+ pot_film_live(p,t);
 }
 
 static void cafe(uint8_t *p,unsigned t){
