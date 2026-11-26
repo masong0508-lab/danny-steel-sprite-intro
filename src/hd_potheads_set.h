@@ -68,6 +68,7 @@ static HD_CANVAS_CODE void pot_set_quad(uint8_t *p,PotPoint a,PotPoint b,
   int step=(w.x-u.x)*65536/(w.y-u.y);
   edges[n++]=(Edge){first,w.y,u.x*65536+step*(first-u.y),step};
  }
+ int run_x=0,run_w=0,run_y=low,run_h=0;
  for(int y=low;y<=high;y++){
   int left=0x7fffffff,right=(-0x7fffffff-1);
   for(unsigned i=0;i<n;i++)if(y>=edges[i].low&&y<edges[i].high){
@@ -78,9 +79,15 @@ static HD_CANVAS_CODE void pot_set_quad(uint8_t *p,PotPoint a,PotPoint b,
   }
   if(left<=right){
    int x=pot_set_round(left,65536),xx=pot_set_round(right,65536);
-   hd_rect(p,x,y,xx-x+1,1,ink);
+   int w=xx-x+1;
+   if(run_h&&x==run_x&&w==run_w){run_h++;continue;}
+   if(run_h)hd_rect(p,run_x,run_y,run_w,run_h,ink);
+   run_x=x;run_w=w;run_y=y;run_h=1;
+  }else if(run_h){
+   hd_rect(p,run_x,run_y,run_w,run_h,ink);run_h=0;
   }
  }
+ if(run_h)hd_rect(p,run_x,run_y,run_w,run_h,ink);
 }
 /* Horizontal or sloped plane, with its height specified at each depth. */
 static void pot_set_face(uint8_t *p,const PotCamera *c,int x,int xx,
