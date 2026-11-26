@@ -5,27 +5,31 @@
    Painting never advances or changes the sequencer. */
 static const char *const phrase_names[4]={"BASE","UP","LOW","FILL"};
 static const char *const voice_names[4]={"LEAD","HARM","BASS","BEAT"};
-static void title(uint8_t *p,unsigned tab,int playing){
+static void title(uint8_t *p,unsigned tab,int playing,int basic,unsigned take){
  /* These three bands cover the page exactly once. The panel interior
     is already ink; paint its thin border without two full-panel fills. */
  hd_rect(p,0,23,HD_W,113,HD_INK);
  hd_rect(p,0,0,HD_W,23,HD_SHADOW);
  hd_rect(p,0,21,HD_W,2,HD_COPPER);
- hd_text(p,9,5,"BORE ARCHIVE",HD_LAMP,1,2);
- hd_text(p,9,13,"THE MASTER TAPE",HD_PAPER,1,1);
+ hd_text(p,9,5,basic?"BASIC STUDIO":"ADVANCED STUDIO",HD_LAMP,1,1);
+ if(basic){
+  char next[]="TAKE 1/4 - START SAVE";next[5]=(char)('1'+take);
+  hd_text(p,9,13,next,HD_PAPER,1,0);
+ }else hd_text(p,9,13,"YOUR MASTER TAPE",HD_PAPER,1,1);
  hd_rect(p,176,9,3,5,playing?HD_LEAF_LIT:HD_STONE_DARK);
  hd_text(p,184,8,playing?"PLAYING":"STOPPED",
          playing?HD_LEAF_LIT:HD_STONE_LIT,1,0);
  static const char *const names[STUDIO_TAB_COUNT]={
   "SONG","NOTES","ORDER","LYRICS","CHOIR","LIVE"
  };
- for(unsigned i=0;i<STUDIO_TAB_COUNT;i++){
-  int x=4+(int)i*39,selected=i==tab;
-  hd_rect(p,x,27,37,20,selected?HD_ROAD_COOL:HD_SHADOW);
-  hd_rect(p,x,27,37,selected?3:1,selected?HD_LAMP:HD_STONE_DARK);
-  hd_rect(p,x,46,37,1,selected?HD_COPPER:HD_STONE_DARK);
+ for(unsigned j=0;j<(basic?3u:STUDIO_TAB_COUNT);j++){
+  unsigned i=basic?(j==2u?STUDIO_PERFORM:j):j;
+  int w=basic?76:37,x=4+(int)j*(basic?78:39),selected=i==tab;
+  hd_rect(p,x,27,w,20,selected?HD_ROAD_COOL:HD_SHADOW);
+  hd_rect(p,x,27,w,selected?3:1,selected?HD_LAMP:HD_STONE_DARK);
+  hd_rect(p,x,46,w,1,selected?HD_COPPER:HD_STONE_DARK);
   int width=hd_text_width(names[i],1,0);
-  hd_text(p,x+(37-width)/2,35,names[i],
+  hd_text(p,x+(w-width)/2,35,names[i],
           selected?HD_PAPER:HD_STONE_LIT,1,0);
  }
  hd_rect(p,5,51,230,2,HD_STONE_DARK);
@@ -272,7 +276,8 @@ void hd_studio_draw(uint8_t *p,const Story *s,unsigned tick){
  unsigned tab=s->studio_tab<STUDIO_TAB_COUNT?s->studio_tab:0u;
  unsigned cursor=s->studio_cursor;
  int playing=s->activity_choice!=0;
- title(p,tab,playing);
+ int basic=s->song_steps<STORY_PROJECT_DONE;
+ title(p,tab,playing,basic,s->song_steps);
  switch(tab){
   case STUDIO_SONG:song(p,a,cursor,playing,tick);break;
   case STUDIO_NOTES:notes(p,a,cursor,playing);break;
@@ -292,6 +297,12 @@ void hd_studio_draw(uint8_t *p,const Story *s,unsigned tick){
   "UP/DOWN VARIANT A NEXT B EXIT":tab==STUDIO_PERFORM?
   (playing?"A STOP B EXIT":"A PLAY B EXIT"):
   "UP/DOWN CHANGE A NEXT B EXIT";
+ if(basic){
+  row1=tab==STUDIO_NOTES?"L/R TABS D-PAD EDIT A REST":
+       tab==STUDIO_PERFORM?"L/R TABS A OR SELECT PLAY":
+       "L/R TABS D-PAD CHANGE TEMPO/FEEL";
+  row2="SELECT PLAY  START SAVE TAKE  B EXIT";
+ }
  hd_text(p,8,139,row1,HD_STONE_LIT,1,0);
  hd_text(p,8,150,row2,HD_PAPER,1,0);
 }

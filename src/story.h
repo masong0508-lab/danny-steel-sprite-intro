@@ -40,6 +40,12 @@
 #define STORY_PROJECT_DONE 4u
 #define STORY_STYLE_SONG_SOFT 1u
 #define STORY_STYLE_ART_WARM 2u
+#define STORY_STYLE_SONG_SHARED 4u
+#define STORY_PROJECT_STYLE_MASK (STORY_STYLE_SONG_SOFT|STORY_STYLE_ART_WARM|STORY_STYLE_SONG_SHARED)
+#define STORY_TRACK_STUDIO 15u
+#define STORY_TRACK_ROOF 16u
+#define STORY_TRACK_ORCHARD 17u
+#define STORY_TRACK_COUNT 4u
 /* 72.5-second source song, then the good-only 16-second reprise. */
 #define STORY_END_SCORE_FRAMES 4350u
 #define STORY_END_CODA_FRAMES 960u
@@ -154,6 +160,9 @@ const char *story_goal_kind(const Story *s);
 const char *story_action_hint(const Story *s);
 int story_risk_available(const Story *s); /* only at confirmed optional risk sites */
 const StoryPage *story_pages(const Story *s, int *count);
+int story_track_available(const Story *s,unsigned choice);
+const char *story_track_name(unsigned choice);
+unsigned story_track_selected(const Story *s);
 int story_neighborhood_enabled(const Story *s);
 int story_neighborhood_at(const Story *s);
 int story_neighborhood_panel(const Story *s);

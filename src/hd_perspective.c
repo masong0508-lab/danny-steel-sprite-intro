@@ -449,7 +449,7 @@ static void actor(uint8_t *p,int sx,int ground,int h,char kind,unsigned tick){
   hd_rect(p,sx-w/2+3,ground-h+4,w-6,3,HD_PAPER);
   if(h>=45){
    const char *title=kind=='K'?"CLINIC":kind=='R'?"ART":
-                     kind=='M'?"MUSIC":kind=='S'?"DATA":
+                     kind=='M'?"STUDIO":kind=='S'?"DATA":
                      kind=='H'?"HOME":"LETTER";
    hd_text(p,sx-w/2+3,ground-h+9,title,HD_INK,1,0);
   }

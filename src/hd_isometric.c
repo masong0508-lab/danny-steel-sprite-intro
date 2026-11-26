@@ -301,6 +301,8 @@ static void object(uint8_t *p,int sx,int sy,char kind,unsigned tick,
   hd_line(p,cx+6,foot-7,cx+1,foot-6,HD_PAPER);
   hd_rect(p,cx-14,foot-16,3,10,HD_SHADOW);
   hd_rect(p,cx+11,foot-16,3,10,HD_SHADOW);
+  hd_rect(p,cx-16,foot-30,33,8,HD_SHADOW);
+  hd_text(p,cx-15,foot-30,"STUDIO",HD_LAMP,1,0);
   /* A raised meter bridge leaves the stages legible even where
      another street object hides the desk's front edge. */
   unsigned phase=s->song_steps>4u?4u:s->song_steps;

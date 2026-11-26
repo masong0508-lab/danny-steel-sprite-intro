@@ -49,7 +49,7 @@ static void heading(uint8_t *p,const Story *s){
  hd_rect(p,94,144,1,12,HD_STONE_DARK);
  hd_text(p,103,147,"L CAMERA",HD_STONE_LIT,1,0);
  hd_rect(p,166,144,1,12,HD_STONE_DARK);
- hd_text(p,174,147,"R NOTES",HD_STONE_LIT,1,0);
+ hd_text(p,174,147,"START HELP",HD_STONE_LIT,1,0);
 }
 void hd_world_draw(uint8_t *p,const Story *s,unsigned frame){
  hd_isometric_draw(p,s,frame);

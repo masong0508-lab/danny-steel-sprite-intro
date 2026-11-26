@@ -416,14 +416,14 @@ static void field_guide_120(uint8_t *p,const Story *s){
     box(p,2,9,116,71,3);box(p,4,11,112,67,21);
     box(p,4,11,112,12,24);
     if(s->choice&STORY_FIELD_GUIDE_DETAIL){
-        text(p,8,14,"GUIDE / HOW TO PLAY",20,25);
-        text(p,7,26,"CORE: LETTER BORE MARA",20,27);
-        text(p,7,34,"BUS OPENS AFTER CORE",20,27);
-        text(p,7,42,"TAPE + ART CHANGE END",18,27);
-        box(p,7,51,106,1,3);
-        text(p,7,55,"TRY GO MAY START DAYS",20,27);
-        text(p,7,63,"REST ENERGY / BOND TRUST",20,27);
-        text(p,7,72,"LEFT RIGHT PAGE B BACK",18,27);
+        text(p,8,14,"GUIDE / TRACK A GOAL",20,25);
+        unsigned selected=story_track_selected(s);
+        for(unsigned i=0;i<STORY_TRACK_COUNT;i++){
+            int y=26+(int)i*10;
+            if(i==selected)box(p,6,y-1,108,9,24);
+            text(p,9,y,story_track_name(i),story_track_available(s,i)?20:7,25);
+        }
+        text(p,7,68,"UP/DOWN A TRACK B BACK",18,27);
         return;
     }
     text(p,8,14,"FIELD GUIDE",20,21);
@@ -545,7 +545,7 @@ static void activity_menu(uint8_t *p,const Story *s){
         effect=selected?"ADVANCED / SIX TABS":"EASY / PLAY THE MASTER";break;
     case 'J':where="POTHEADS / SHIFT";left="WORK";right="LEAVE";
         effect=selected?"NO ENERGY SPENT":"WORK +2 ENERGY -1";break;
-    case 'm':where="BORE TAPE";left="BUILD";right="SOFTEN";
+    case 'm':where="MUSIC DESK";left="MIX";right="SOFT";
         effect=selected?"STAGE +1 ENERGY +1":"STAGE +1 / MORE WORK";break;
     case 'r':where="ROOFTOP ART";left="LAYER";right="LIGHT";
         effect=selected?"STAGE +1 ENERGY +1":"STAGE +1 / MORE WORK";break;
@@ -560,6 +560,16 @@ static void activity_menu(uint8_t *p,const Story *s){
         unsigned phase=(s->activity=='r'||s->activity=='R')?s->art_steps:s->song_steps;
         progress[0]=(char)('0'+(phase>4u?4u:phase));
         text(p,91,45,progress,18,5);
+    }
+    if(s->activity=='m'||s->activity=='M'){
+        text(p,8,53,selected==2u?"EDIT / PLAY / SAVE TAKE":effect,18,27);
+        for(unsigned i=0;i<3u;i++){
+            int x=6+(int)i*37;
+            box(p,x,61,35,10,selected==i?24:3);
+            text(p,x+3,64,i==0u?(s->activity=='M'?"MIX":left):i==1u?right:"STUDIO",selected==i?20:10,8);
+        }
+        text(p,7,74,"LEFT/RIGHT  A OK  B BACK",20,27);
+        return;
     }
     text(p,8,53,effect,18,27);
     box(p,7,61,50,10,selected?3:24);
@@ -707,12 +717,14 @@ static void studio_editor(uint8_t *p,const Story *s,int frame){
  box(p,0,0,120,80,21);
  box(p,0,0,120,8,3);
  box(p,0,8,120,2,18);
- text(p,3,1,"BORE / ADVANCED STUDIO",20,24);
+ int basic=s->song_steps<STORY_PROJECT_DONE;
+ text(p,3,1,basic?"BORE / BASIC STUDIO":"BORE / ADVANCED STUDIO",20,24);
  text(p,95,1,s->activity_choice?"PLAY":"STOP",s->activity_choice?12:7,5);
- for(unsigned i=0;i<STUDIO_TAB_COUNT;i++){
-   int x=3+(int)i*19;
-   box(p,x,12,18,10,tab==i?25:3);
-   box(p,x,20,18,2,tab==i?18:5);
+ for(unsigned j=0;j<(basic?3u:STUDIO_TAB_COUNT);j++){
+   unsigned i=basic?(j==2u?STUDIO_PERFORM:j):j;
+   int w=basic?37:18,x=3+(int)j*(basic?38:19);
+   box(p,x,12,w,10,tab==i?25:3);
+   box(p,x,20,w,2,tab==i?18:5);
    text(p,x+2,14,tabs[i],tab==i?3:20,4);
  }
  box(p,3,25,114,41,3);
@@ -791,7 +803,10 @@ static void studio_editor(uint8_t *p,const Story *s,int frame){
    (void)frame;
  }
  box(p,0,68,120,12,3);
- if(tab==STUDIO_PERFORM){
+ if(basic){
+  text(p,3,69,"L/R TABS  SEL PLAY",18,29);
+  text(p,3,75,"START SAVE TAKE  B EXIT",20,29);
+ }else if(tab==STUDIO_PERFORM){
   text(p,3,69,"L/R TABS  SEL PREVIEW",18,29);
   text(p,3,75,"A PLAY/STOP  B EXIT",20,29);
  }else{

@@ -38,7 +38,7 @@ static void set(unsigned tab,unsigned cursor,unsigned value){
  studio_change(tab,cursor,(int)value-(int)old);
 }
 int main(void){
- Story s={0};studio_reset();s.activity=STORY_ACT_STUDIO;
+ Story s={0};studio_reset();s.activity=STORY_ACT_STUDIO;s.song_steps=STORY_PROJECT_DONE;
  /* A stopped transport must not animate the record or announce sound. */
  s.studio_tab=STUDIO_SONG;s.activity_choice=0;
  unsigned stopped=render(&s,0);

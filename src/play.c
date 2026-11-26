@@ -188,7 +188,7 @@ void play_enter(int want_load,int slot){
         game.work=b[26]>99?99:b[26];
         game.song_steps=b[27]>STORY_PROJECT_DONE?STORY_PROJECT_DONE:b[27];
         game.art_steps=b[28]>STORY_PROJECT_DONE?STORY_PROJECT_DONE:b[28];
-        game.project_style=b[29]&(STORY_STYLE_SONG_SOFT|STORY_STYLE_ART_WARM);
+        game.project_style=b[29]&STORY_PROJECT_STYLE_MASK;
         if(b[4]==SAVE_VER){
             u8 extension[RESCUE_EXT_LEN],bad_mask=0,rescue_stage=0;
             for(unsigned i=0;i<RESCUE_EXT_LEN;i++)
