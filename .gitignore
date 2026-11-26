@@ -1,0 +1,8 @@
+# Owner-private source-derived costume trace; never publish raw source video.
+/src/potheads_cloth_data.h
+
+# Owner-private source-derived lower-body matte.
+/src/potheads_leg_data.h
+
+# Owner-private source-derived upper-body matte.
+/src/potheads_upper_data.h

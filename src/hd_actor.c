@@ -150,6 +150,14 @@ void hd_actor_stage(uint8_t *p,int x,int feet,int role,unsigned frame,int emotio
   hd_rect(p,x-9,fy-61,2,8,HD_STONE_DARK);
   hd_rect(p,x+7,fy-61,2,5,HD_STONE);
   hd_line(p,x-6,fy-63,x+4,fy-63,HD_STONE_DARK);
+ }else if(role==1){
+  /* Danny's full swept crown and short temple hair. */
+  plane(p,x,fy-69,-4,2,-8,7,4,HD_HAIR);
+  plane(p,x,fy-65,-9,9,-8,7,4,HD_HAIR);
+  hd_line(p,x-5,fy-67,x+2,fy-68,HD_BARK);
+  hd_line(p,x-6,fy-65,x-1,fy-66,HD_BRICK);
+  hd_rect(p,x-8,fy-61,2,6,HD_HAIR);
+  hd_rect(p,x+7,fy-62,2,5,HD_HAIR);
  }else{
   plane(p,x,fy-67,-4,2,-9,7,4,hair);
   plane(p,x,fy-63,-10,7,-7,5,3,hair);
@@ -162,6 +170,12 @@ void hd_actor_stage(uint8_t *p,int x,int feet,int role,unsigned frame,int emotio
   hd_line(p,x-5,fy-42,x+8,fy-24,HD_COPPER);
   hd_rect(p,x+5,fy-26,7,8,HD_BARK);
   hd_rect(p,x+6,fy-25,5,2,HD_COPPER);
+  hd_line(p,x-7,fy-47,x-6,fy-42,HD_INK);
+  hd_line(p,x+7,fy-47,x+6,fy-42,HD_INK);
+  hd_ellipse(p,x-6,fy-42,3,3,HD_INK);
+  hd_ellipse(p,x+6,fy-42,3,3,HD_INK);
+  hd_pixel(p,x-6,fy-43,HD_ROAD_COOL);
+  hd_pixel(p,x+6,fy-43,HD_STONE_DARK);
  }else if(role==5){
   hd_line(p,x-5,fy-44,x-1,fy-36,HD_PAPER);
   hd_line(p,x+5,fy-44,x+1,fy-36,HD_PAPER);
@@ -191,9 +205,22 @@ void hd_actor_stage(uint8_t *p,int x,int feet,int role,unsigned frame,int emotio
   hd_line(p,x-6,fy-60,x-2,fy-59,HD_BARK);
   hd_line(p,x+2,fy-59,x+6,fy-60,HD_BARK);
  }
- hd_rect(p,x-2,fy-50,5,1,HD_BARK);
- if(emotion==1&&((frame/11u)&1u))hd_rect(p,x-1,fy-50,3,2,HD_BRICK_DARK);
- else hd_rect(p,x-1,fy-49,3,1,HD_SKIN_LIT);
+ if(role==1){
+  /* Sideburns connect to the warm tapered jaw and mustache. */
+  hd_line(p,x-7,fy-57,x-6,fy-51,HD_HAIR);
+  hd_line(p,x+7,fy-57,x+6,fy-51,HD_HAIR);
+  plane(p,x,fy-52,-6,6,-5,5,4,HD_HAIR);
+  plane(p,x,fy-48,-5,5,-2,3,3,HD_BARK);
+  hd_line(p,x-4,fy-49,x+3,fy-49,HD_BRICK);
+  hd_line(p,x-3,fy-48,x+2,fy-47,HD_COPPER);
+  hd_rect(p,x-3,fy-51,7,1,HD_HAIR);
+  hd_rect(p,x-2,fy-50,5,1,HD_BRICK_DARK);
+  if(emotion==1&&((frame/11u)&1u))hd_rect(p,x-1,fy-50,3,2,HD_INK);
+ }else{
+  hd_rect(p,x-2,fy-50,5,1,HD_BARK);
+  if(emotion==1&&((frame/11u)&1u))hd_rect(p,x-1,fy-50,3,2,HD_BRICK_DARK);
+  else hd_rect(p,x-1,fy-49,3,1,HD_SKIN_LIT);
+ }
  if(emotion==5){
   hd_line(p,x+21,fy-39,x+9,fy-42,HD_SKIN);
   hd_line(p,x+21,fy-38,x+9,fy-41,HD_SKIN_LIT);
@@ -278,6 +305,18 @@ void hd_actor_closeup(uint8_t *p,int x,int base,int role,
   hd_rect(p,x+11,y+5,16,14,HD_BARK);
   hd_rect(p,x+12,y+6,14,3,HD_COPPER);
   hd_rect(p,x+17,y+9,4,3,HD_GOLD);
+  /* Headphones lie around the neck behind the head. */
+  hd_line(p,x-12,y-48,x-15,y-40,HD_INK);
+  hd_line(p,x+12,y-48,x+15,y-40,HD_INK);
+  hd_line(p,x-15,y-40,x-11,y-34,HD_ROAD_COOL);
+  hd_line(p,x+15,y-40,x+11,y-34,HD_ROAD_COOL);
+  hd_ellipse(p,x-12,y-34,6,8,HD_INK);
+  hd_ellipse(p,x+12,y-34,6,8,HD_INK);
+  hd_ellipse(p,x-12,y-34,4,6,HD_ROAD);
+  hd_ellipse(p,x+12,y-34,4,6,HD_ROAD);
+  hd_line(p,x-15,y-38,x-15,y-32,HD_STONE_DARK);
+  hd_line(p,x+14,y-38,x+14,y-32,HD_ROAD_COOL);
+  hd_pixel(p,x+15,y-32,HD_GLASS_LIT);
  }else if(role==2){
   /* Mara's scarf has its own folded teal silhouette, with the pendant
      sitting in front of the cloth instead of floating at the neckline. */
@@ -320,6 +359,22 @@ void hd_actor_closeup(uint8_t *p,int x,int base,int role,
  }
  /* Hand-authored forehead, cheek and jaw planes replace the balloon
     face. One broad lit plane and one quiet shadow preserve the volumes. */
+ if(role==1){
+  /* Taller forehead, soft cheeks and rounded jaw from the photo. */
+  plane(p,x,y-98,-9,8,-18,17,13,HD_BARK);
+  plane(p,x,y-85,-18,17,-16,18,25,HD_BARK);
+  plane(p,x,y-60,-16,18,-7,8,16,HD_BARK);
+  plane(p,x,y-96,-8,7,-16,15,12,HD_SKIN);
+  plane(p,x,y-84,-16,15,-14,16,24,HD_SKIN);
+  plane(p,x,y-60,-14,16,-6,7,14,HD_SKIN);
+  plane(p,x,y-89,-8,0,-13,0,14,HD_SKIN_LIT);
+  plane(p,x,y-75,-12,0,-9,1,13,HD_SKIN_LIT);
+  plane(p,x,y-83,12,15,10,16,23,HD_BRICK_LIT);
+  hd_rect(p,x-19,y-75,4,10,HD_SKIN);
+  hd_rect(p,x-19,y-72,2,5,HD_BRICK_LIT);
+  hd_rect(p,x+16,y-73,3,8,HD_BRICK_LIT);
+  hd_pixel(p,x-9,y-68,HD_BRICK);
+ }else{
  plane(p,x,y-96,-8,8,-18,17,12,HD_BARK);
  plane(p,x,y-84,-18,17,-16,18,24,HD_BARK);
  plane(p,x,y-60,-16,18,-6,8,15,HD_BARK);
@@ -335,6 +390,7 @@ void hd_actor_closeup(uint8_t *p,int x,int base,int role,
  hd_rect(p,x-19,y-71,2,5,HD_BRICK_LIT);
  hd_rect(p,x+16,y-73,4,8,HD_BRICK_LIT);
  hd_pixel(p,x+17,y-70,HD_SKIN);
+ }
  if(role==2){
   plane(p,x,y-102,-8,9,-20,18,10,hair);
   plane(p,x,y-92,-20,18,-18,-3,11,hair);
@@ -364,6 +420,18 @@ void hd_actor_closeup(uint8_t *p,int x,int base,int role,
   plane(p,x,y-86,13,17,15,18,12,HD_STONE);
   hd_line(p,x-12,y-96,x+4,y-97,HD_STONE_DARK);
   hd_line(p,x-14,y-91,x-4,y-93,HD_ROAD_COOL);
+ }else if(role==1){
+  plane(p,x,y-110,-5,4,-13,11,6,HD_HAIR);
+  plane(p,x,y-104,-13,11,-20,18,8,HD_HAIR);
+  plane(p,x,y-96,-20,18,-17,15,8,HD_HAIR);
+  plane(p,x,y-91,-18,-13,-16,-14,16,HD_HAIR);
+  plane(p,x,y-91,13,18,14,16,14,HD_HAIR);
+  plane(p,x,y-106,-9,-2,-14,-6,8,HD_BARK);
+  hd_line(p,x-11,y-102,x-5,y-107,HD_BRICK);
+  hd_line(p,x-5,y-105,x+1,y-108,HD_BARK);
+  hd_line(p,x+1,y-107,x+8,y-104,HD_BRICK);
+  hd_line(p,x+6,y-103,x+13,y-100,HD_BARK);
+  hd_line(p,x-16,y-97,x-10,y-102,HD_BARK);
  }else{
   plane(p,x,y-104,-4,3,-14,12,7,hair);
   plane(p,x,y-97,-14,12,-21,17,8,hair);
@@ -399,7 +467,12 @@ void hd_actor_closeup(uint8_t *p,int x,int base,int role,
   hd_line(p,x-12,y-72,x-7,y-72,HD_BRICK_LIT);
   hd_line(p,right+1,y-72,right+5,y-72,HD_BRICK_LIT);
  }
- if(emotion==7){
+ if(role==1){
+  hd_line(p,x-13,y-82,x-6,y-82+(emotion==7?2:0),HD_HAIR);
+  hd_line(p,x-12,y-81,x-5,y-81+(emotion==7?1:0),HD_BARK);
+  hd_line(p,x+4,y-81+(emotion==7?1:0),x+13,y-82,HD_HAIR);
+  hd_line(p,x+5,y-80+(emotion==7?1:0),x+12,y-81,HD_BARK);
+ }else if(emotion==7){
   hd_line(p,x-13,y-81,x-5,y-79,HD_BARK);
   hd_line(p,x+5,y-79,x+13,y-82,HD_BARK);
  }else{
@@ -433,7 +506,27 @@ void hd_actor_closeup(uint8_t *p,int x,int base,int role,
  }else{
   hd_line(p,x-13,y-70,x-8,y-69,HD_SKIN);
  }
- if(emotion==1&&((frame/10u)&1u)){
+ if(role==1){
+  /* The beard is a connected silhouette, not scattered stubble dots. */
+  plane(p,x,y-76,-16,-14,-15,-11,10,HD_HAIR);
+  plane(p,x,y-76,14,16,10,16,10,HD_HAIR);
+  plane(p,x,y-66,-15,-11,-14,-7,9,HD_HAIR);
+  plane(p,x,y-66,11,16,8,15,9,HD_HAIR);
+  plane(p,x,y-60,-14,16,-11,13,10,HD_HAIR);
+  plane(p,x,y-50,-11,13,-6,7,8,HD_HAIR);
+  plane(p,x,y-57,-9,8,-7,7,12,HD_BRICK);
+  plane(p,x,y-51,-5,5,-3,4,7,HD_COPPER);
+  hd_line(p,x-10,y-54,x-7,y-47,HD_BRICK);
+  hd_line(p,x+9,y-54,x+7,y-46,HD_BARK);
+  hd_line(p,x-3,y-48,x-2,y-44,HD_BRICK);
+  hd_line(p,x+1,y-49,x+2,y-44,HD_BRICK);
+  hd_line(p,x-6,y-60,x-2,y-61,HD_HAIR);
+  hd_line(p,x-2,y-61,x+1,y-60,HD_HAIR);
+  hd_line(p,x+1,y-60,x+6,y-59,HD_HAIR);
+  hd_rect(p,x-5,y-57,11,3,HD_BRICK_LIT);
+  if(emotion==1&&((frame/10u)&1u))hd_rect(p,x-3,y-56,7,2,HD_INK);
+  else hd_line(p,x-4,y-56,x+5,y-56+(emotion==5?1:0),HD_BARK);
+ }else if(emotion==1&&((frame/10u)&1u)){
   hd_line(p,x-5,y-56,x+6,y-56,HD_BARK);
   hd_rect(p,x-3,y-55,8,3,HD_BRICK_DARK);
   hd_rect(p,x-1,y-52,5,1,HD_SKIN_LIT);
@@ -449,11 +542,7 @@ void hd_actor_closeup(uint8_t *p,int x,int base,int role,
   hd_line(p,x-5,y-55,x+5,y-55,HD_BARK);
   hd_rect(p,x-2,y-52,5,1,HD_SKIN_LIT);
  }
- if(role==1){
-  hd_line(p,x-10,y-55,x-7,y-50,HD_BRICK_LIT);
-  hd_line(p,x+8,y-52,x+11,y-57,HD_BARK);
-  hd_rect(p,x-1,y-48,5,1,HD_BRICK_LIT);
- }
+ /* Danny's warm chin and connected mustache are already painted. */
  /* Fingers lie in front of the cheek at the end of a real forearm. */
  if(emotion==5){
   plane(p,x,y-56,-9,-4,-11,-5,7,HD_SKIN);

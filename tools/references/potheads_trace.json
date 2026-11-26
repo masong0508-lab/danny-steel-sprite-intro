@@ -21,7 +21,7 @@
     "y": "down",
     "scale_from_source": 0.5,
     "anatomical_sides": "performer left/right, never screen left/right",
-    "precision_note": "Integer coordinates are manual estimates, typically about 3\u20137 pixels for visible joints. Concealed floor-work joints and anatomical side assignments can be substantially less precise. This is a 2-D visual trace, not calibrated motion capture."
+    "precision_note": "Integer coordinates are manual estimates, typically about 3–7 pixels for visible joints. Concealed floor-work joints and anatomical side assignments can be substantially less precise. This is a 2-D visual trace, not calibrated motion capture."
   },
   "landmark_order": [
     "head",
@@ -43,9 +43,9 @@
   ],
   "point_format": "[x,y,visibility]; null coordinates for unavailable landmarks",
   "visibility": {
-    "2": "located from a visible feature or limb/shoe contour",
+    "0": "not locatable in this frame; no coordinate supplied",
     "1": "inferred under costume, sign, or overlapping body part; not directly observed",
-    "0": "not locatable in this frame; no coordinate supplied"
+    "2": "located from a visible feature or limb/shoe contour"
   },
   "contact_format": "contacts.left/right are foot sole/pavement anchors; contacts.left_hand/right_hand are palm or visible hand/pavement anchors. Null means no observed/assigned contact, including when support is outside the source crop; it does not by itself mean airborne. Visibility 1 flags an inferred concealed contact. Toes and wrists remain anatomical landmarks distinct from contacts.",
   "sign_geometry": "quad is a four-point approximation of the visible bent-arrow envelope, clockwise in image space; it is not a calibrated rigid rectangle. Frame-edge intersections are marked by clipped_edges. arrow_tip is separately measured only when visible. Do not infer an off-screen full sign from a clipped quad.",
@@ -57,14 +57,14 @@
     "end_pts_s": 18.273644,
     "start_clip_time_s": 0,
     "end_clip_time_s": 18.224844,
-    "pose_count": 110,
-    "opening_pose_count": 47,
+    "pose_count": 120,
+    "opening_pose_count": 57,
     "floor_pose_count": 63,
     "segment_ends_here": false,
     "end_is_source_eof": true,
     "full_clip_covered": true,
     "later_floor_work_traced": true,
-    "sampling_note": "Opening samples retained. Later motion is sampled every five source frames with nine additional samples at hand plants, lift-off, inversion hand changes, support transfers, and fast leg/edge turns. Only selected source poses are measured; interpolation is a renderer concern."
+    "sampling_note": "Opening samples retained. Later motion is sampled every five source frames with nine additional samples at hand plants, lift-off, inversion hand changes, support transfers, and fast leg/edge turns. Only selected source poses are measured; interpolation is a renderer concern. Ten directly reviewed intermediate source frames (5 through 95) halve the initial standing-dance sample intervals from ten frames to five. All original source poses and later floor-work annotations remain unchanged."
   },
   "events": [
     {
@@ -195,7 +195,7 @@
     {
       "frame_index": 0,
       "source_timestamp_s": 0.0488,
-      "clip_time_s": 0.0,
+      "clip_time_s": 0,
       "tick_60": 0,
       "points": [
         [
@@ -330,6 +330,160 @@
         "clipped_edges": []
       },
       "note": "Initial sign carried behind shoulders; anatomical left hand supports it."
+    },
+    {
+      "frame_index": 5,
+      "source_timestamp_s": 0.215389,
+      "clip_time_s": 0.166589,
+      "tick_60": 10,
+      "points": [
+        [
+          310,
+          57,
+          2
+        ],
+        [
+          306,
+          85,
+          1
+        ],
+        [
+          334,
+          94,
+          2
+        ],
+        [
+          341,
+          145,
+          2
+        ],
+        [
+          368,
+          155,
+          2
+        ],
+        [
+          270,
+          96,
+          2
+        ],
+        [
+          249,
+          145,
+          2
+        ],
+        [
+          238,
+          196,
+          2
+        ],
+        [
+          307,
+          198,
+          1
+        ],
+        [
+          312,
+          258,
+          2
+        ],
+        [
+          301,
+          320,
+          2
+        ],
+        [
+          261,
+          198,
+          1
+        ],
+        [
+          257,
+          260,
+          2
+        ],
+        [
+          239,
+          327,
+          2
+        ],
+        [
+          328,
+          333,
+          2
+        ],
+        [
+          245,
+          354,
+          2
+        ]
+      ],
+      "facing": "front",
+      "near_arm": "none",
+      "near_leg": "left",
+      "facing_inferred": false,
+      "grounded": true,
+      "contacts": {
+        "left": [
+          306,
+          338,
+          2
+        ],
+        "right": [
+          241,
+          357,
+          2
+        ],
+        "left_hand": null,
+        "right_hand": null
+      },
+      "sign": {
+        "state": "held",
+        "layer": "behind_torso",
+        "quad": [
+          [
+            205,
+            81,
+            2
+          ],
+          [
+            388,
+            53,
+            2
+          ],
+          [
+            410,
+            145,
+            2
+          ],
+          [
+            236,
+            169,
+            2
+          ]
+        ],
+        "arrow_tip": [
+          392,
+          170,
+          2
+        ],
+        "clipped_edges": []
+      },
+      "bag": {
+        "state": "attached",
+        "centre": [
+          321,
+          173,
+          1
+        ],
+        "quad": null,
+        "clipped_edges": []
+      },
+      "head_size": [
+        19,
+        23
+      ],
+      "note": "Additional manually estimated intermediate pose from the exact decoded reference frame; concealed neck/hips and uncertain joints are inferred."
     },
     {
       "frame_index": 10,
@@ -470,6 +624,160 @@
       }
     },
     {
+      "frame_index": 15,
+      "source_timestamp_s": 0.548467,
+      "clip_time_s": 0.499667,
+      "tick_60": 30,
+      "points": [
+        [
+          306,
+          69,
+          2
+        ],
+        [
+          304,
+          94,
+          1
+        ],
+        [
+          331,
+          103,
+          2
+        ],
+        [
+          346,
+          134,
+          2
+        ],
+        [
+          394,
+          138,
+          2
+        ],
+        [
+          270,
+          100,
+          2
+        ],
+        [
+          239,
+          148,
+          2
+        ],
+        [
+          217,
+          190,
+          2
+        ],
+        [
+          310,
+          200,
+          1
+        ],
+        [
+          322,
+          261,
+          2
+        ],
+        [
+          306,
+          318,
+          2
+        ],
+        [
+          263,
+          198,
+          1
+        ],
+        [
+          248,
+          263,
+          2
+        ],
+        [
+          221,
+          326,
+          2
+        ],
+        [
+          329,
+          334,
+          2
+        ],
+        [
+          238,
+          348,
+          2
+        ]
+      ],
+      "facing": "front",
+      "near_arm": "right",
+      "near_leg": "left",
+      "facing_inferred": false,
+      "grounded": true,
+      "contacts": {
+        "left": [
+          310,
+          339,
+          2
+        ],
+        "right": [
+          224,
+          351,
+          2
+        ],
+        "left_hand": null,
+        "right_hand": null
+      },
+      "sign": {
+        "state": "held",
+        "layer": "behind_torso",
+        "quad": [
+          [
+            211,
+            143,
+            2
+          ],
+          [
+            410,
+            58,
+            2
+          ],
+          [
+            423,
+            144,
+            2
+          ],
+          [
+            230,
+            162,
+            2
+          ]
+        ],
+        "arrow_tip": [
+          506,
+          120,
+          2
+        ],
+        "clipped_edges": []
+      },
+      "bag": {
+        "state": "attached",
+        "centre": [
+          331,
+          174,
+          1
+        ],
+        "quad": null,
+        "clipped_edges": []
+      },
+      "head_size": [
+        19,
+        23
+      ],
+      "note": "Additional manually estimated intermediate pose from the exact decoded reference frame; concealed neck/hips and uncertain joints are inferred."
+    },
+    {
       "frame_index": 20,
       "source_timestamp_s": 0.714989,
       "clip_time_s": 0.666189,
@@ -606,6 +914,160 @@
         ],
         "clipped_edges": []
       }
+    },
+    {
+      "frame_index": 25,
+      "source_timestamp_s": 0.881589,
+      "clip_time_s": 0.832789,
+      "tick_60": 50,
+      "points": [
+        [
+          299,
+          76,
+          2
+        ],
+        [
+          294,
+          99,
+          1
+        ],
+        [
+          325,
+          104,
+          2
+        ],
+        [
+          331,
+          134,
+          1
+        ],
+        [
+          353,
+          137,
+          2
+        ],
+        [
+          266,
+          103,
+          2
+        ],
+        [
+          246,
+          151,
+          2
+        ],
+        [
+          236,
+          194,
+          2
+        ],
+        [
+          300,
+          209,
+          1
+        ],
+        [
+          324,
+          268,
+          2
+        ],
+        [
+          319,
+          315,
+          2
+        ],
+        [
+          264,
+          207,
+          1
+        ],
+        [
+          240,
+          267,
+          2
+        ],
+        [
+          217,
+          325,
+          2
+        ],
+        [
+          330,
+          335,
+          2
+        ],
+        [
+          235,
+          350,
+          2
+        ]
+      ],
+      "facing": "front",
+      "near_arm": "right",
+      "near_leg": "left",
+      "facing_inferred": false,
+      "grounded": true,
+      "contacts": {
+        "left": [
+          320,
+          338,
+          2
+        ],
+        "right": [
+          222,
+          352,
+          2
+        ],
+        "left_hand": null,
+        "right_hand": null
+      },
+      "sign": {
+        "state": "held",
+        "layer": "behind_torso",
+        "quad": [
+          [
+            198,
+            43,
+            2
+          ],
+          [
+            360,
+            44,
+            2
+          ],
+          [
+            411,
+            137,
+            2
+          ],
+          [
+            218,
+            135,
+            2
+          ]
+        ],
+        "arrow_tip": [
+          444,
+          132,
+          2
+        ],
+        "clipped_edges": []
+      },
+      "bag": {
+        "state": "attached",
+        "centre": [
+          324,
+          179,
+          1
+        ],
+        "quad": null,
+        "clipped_edges": []
+      },
+      "head_size": [
+        19,
+        23
+      ],
+      "note": "Additional manually estimated intermediate pose from the exact decoded reference frame; concealed neck/hips and uncertain joints are inferred."
     },
     {
       "frame_index": 30,
@@ -746,6 +1208,160 @@
       }
     },
     {
+      "frame_index": 35,
+      "source_timestamp_s": 1.214878,
+      "clip_time_s": 1.166078,
+      "tick_60": 70,
+      "points": [
+        [
+          297,
+          82,
+          2
+        ],
+        [
+          293,
+          109,
+          1
+        ],
+        [
+          319,
+          105,
+          2
+        ],
+        [
+          349,
+          132,
+          2
+        ],
+        [
+          417,
+          125,
+          2
+        ],
+        [
+          264,
+          110,
+          2
+        ],
+        [
+          241,
+          148,
+          2
+        ],
+        [
+          226,
+          181,
+          2
+        ],
+        [
+          301,
+          207,
+          1
+        ],
+        [
+          324,
+          266,
+          2
+        ],
+        [
+          314,
+          316,
+          2
+        ],
+        [
+          259,
+          204,
+          1
+        ],
+        [
+          230,
+          270,
+          2
+        ],
+        [
+          199,
+          319,
+          2
+        ],
+        [
+          332,
+          333,
+          2
+        ],
+        [
+          222,
+          345,
+          2
+        ]
+      ],
+      "facing": "front",
+      "near_arm": "right",
+      "near_leg": "left",
+      "facing_inferred": false,
+      "grounded": true,
+      "contacts": {
+        "left": [
+          317,
+          337,
+          2
+        ],
+        "right": [
+          205,
+          349,
+          2
+        ],
+        "left_hand": null,
+        "right_hand": null
+      },
+      "sign": {
+        "state": "held",
+        "layer": "behind_torso",
+        "quad": [
+          [
+            207,
+            121,
+            2
+          ],
+          [
+            414,
+            61,
+            2
+          ],
+          [
+            427,
+            130,
+            2
+          ],
+          [
+            230,
+            148,
+            2
+          ]
+        ],
+        "arrow_tip": [
+          530,
+          115,
+          2
+        ],
+        "clipped_edges": []
+      },
+      "bag": {
+        "state": "attached",
+        "centre": [
+          324,
+          180,
+          1
+        ],
+        "quad": null,
+        "clipped_edges": []
+      },
+      "head_size": [
+        19,
+        23
+      ],
+      "note": "Additional manually estimated intermediate pose from the exact decoded reference frame; concealed neck/hips and uncertain joints are inferred."
+    },
+    {
       "frame_index": 40,
       "source_timestamp_s": 1.381544,
       "clip_time_s": 1.332744,
@@ -882,6 +1498,160 @@
         ],
         "clipped_edges": []
       }
+    },
+    {
+      "frame_index": 45,
+      "source_timestamp_s": 1.548211,
+      "clip_time_s": 1.499411,
+      "tick_60": 90,
+      "points": [
+        [
+          296,
+          77,
+          2
+        ],
+        [
+          292,
+          101,
+          1
+        ],
+        [
+          320,
+          104,
+          2
+        ],
+        [
+          330,
+          143,
+          2
+        ],
+        [
+          370,
+          144,
+          2
+        ],
+        [
+          259,
+          105,
+          2
+        ],
+        [
+          232,
+          148,
+          2
+        ],
+        [
+          210,
+          195,
+          2
+        ],
+        [
+          300,
+          213,
+          1
+        ],
+        [
+          326,
+          269,
+          2
+        ],
+        [
+          309,
+          320,
+          2
+        ],
+        [
+          266,
+          207,
+          1
+        ],
+        [
+          239,
+          271,
+          2
+        ],
+        [
+          211,
+          330,
+          2
+        ],
+        [
+          330,
+          337,
+          2
+        ],
+        [
+          218,
+          350,
+          2
+        ]
+      ],
+      "facing": "front",
+      "near_arm": "right",
+      "near_leg": "left",
+      "facing_inferred": false,
+      "grounded": true,
+      "contacts": {
+        "left": [
+          313,
+          339,
+          2
+        ],
+        "right": [
+          209,
+          351,
+          2
+        ],
+        "left_hand": null,
+        "right_hand": null
+      },
+      "sign": {
+        "state": "held",
+        "layer": "behind_torso",
+        "quad": [
+          [
+            180,
+            124,
+            2
+          ],
+          [
+            382,
+            68,
+            2
+          ],
+          [
+            436,
+            151,
+            2
+          ],
+          [
+            217,
+            168,
+            2
+          ]
+        ],
+        "arrow_tip": [
+          484,
+          140,
+          2
+        ],
+        "clipped_edges": []
+      },
+      "bag": {
+        "state": "attached",
+        "centre": [
+          317,
+          177,
+          1
+        ],
+        "quad": null,
+        "clipped_edges": []
+      },
+      "head_size": [
+        19,
+        23
+      ],
+      "note": "Additional manually estimated intermediate pose from the exact decoded reference frame; concealed neck/hips and uncertain joints are inferred."
     },
     {
       "frame_index": 50,
@@ -1022,6 +1792,160 @@
       }
     },
     {
+      "frame_index": 55,
+      "source_timestamp_s": 1.881533,
+      "clip_time_s": 1.832733,
+      "tick_60": 110,
+      "points": [
+        [
+          295,
+          80,
+          2
+        ],
+        [
+          290,
+          104,
+          1
+        ],
+        [
+          318,
+          113,
+          2
+        ],
+        [
+          329,
+          150,
+          2
+        ],
+        [
+          365,
+          154,
+          2
+        ],
+        [
+          255,
+          108,
+          2
+        ],
+        [
+          226,
+          149,
+          2
+        ],
+        [
+          204,
+          180,
+          2
+        ],
+        [
+          299,
+          210,
+          1
+        ],
+        [
+          320,
+          267,
+          2
+        ],
+        [
+          326,
+          312,
+          2
+        ],
+        [
+          263,
+          208,
+          1
+        ],
+        [
+          231,
+          270,
+          2
+        ],
+        [
+          207,
+          329,
+          2
+        ],
+        [
+          310,
+          335,
+          2
+        ],
+        [
+          215,
+          349,
+          2
+        ]
+      ],
+      "facing": "front",
+      "near_arm": "right",
+      "near_leg": "left",
+      "facing_inferred": false,
+      "grounded": true,
+      "contacts": {
+        "left": [
+          325,
+          338,
+          2
+        ],
+        "right": [
+          208,
+          351,
+          2
+        ],
+        "left_hand": null,
+        "right_hand": null
+      },
+      "sign": {
+        "state": "held",
+        "layer": "behind_torso",
+        "quad": [
+          [
+            179,
+            54,
+            2
+          ],
+          [
+            420,
+            76,
+            2
+          ],
+          [
+            412,
+            160,
+            2
+          ],
+          [
+            184,
+            144,
+            2
+          ]
+        ],
+        "arrow_tip": [
+          487,
+          136,
+          2
+        ],
+        "clipped_edges": []
+      },
+      "bag": {
+        "state": "attached",
+        "centre": [
+          313,
+          175,
+          1
+        ],
+        "quad": null,
+        "clipped_edges": []
+      },
+      "head_size": [
+        19,
+        23
+      ],
+      "note": "Additional manually estimated intermediate pose from the exact decoded reference frame; concealed neck/hips and uncertain joints are inferred."
+    },
+    {
       "frame_index": 60,
       "source_timestamp_s": 2.048211,
       "clip_time_s": 1.999411,
@@ -1158,6 +2082,160 @@
         ],
         "clipped_edges": []
       }
+    },
+    {
+      "frame_index": 65,
+      "source_timestamp_s": 2.214867,
+      "clip_time_s": 2.166067,
+      "tick_60": 130,
+      "points": [
+        [
+          303,
+          87,
+          2
+        ],
+        [
+          294,
+          113,
+          1
+        ],
+        [
+          320,
+          111,
+          2
+        ],
+        [
+          350,
+          120,
+          2
+        ],
+        [
+          409,
+          107,
+          2
+        ],
+        [
+          260,
+          117,
+          2
+        ],
+        [
+          232,
+          156,
+          2
+        ],
+        [
+          209,
+          193,
+          2
+        ],
+        [
+          282,
+          215,
+          1
+        ],
+        [
+          291,
+          267,
+          2
+        ],
+        [
+          312,
+          315,
+          2
+        ],
+        [
+          246,
+          211,
+          1
+        ],
+        [
+          207,
+          270,
+          2
+        ],
+        [
+          177,
+          326,
+          2
+        ],
+        [
+          345,
+          330,
+          2
+        ],
+        [
+          207,
+          348,
+          2
+        ]
+      ],
+      "facing": "front",
+      "near_arm": "right",
+      "near_leg": "left",
+      "facing_inferred": false,
+      "grounded": true,
+      "contacts": {
+        "left": [
+          319,
+          337,
+          2
+        ],
+        "right": [
+          183,
+          349,
+          2
+        ],
+        "left_hand": null,
+        "right_hand": null
+      },
+      "sign": {
+        "state": "held",
+        "layer": "behind_torso",
+        "quad": [
+          [
+            188,
+            74,
+            2
+          ],
+          [
+            437,
+            18,
+            2
+          ],
+          [
+            470,
+            98,
+            2
+          ],
+          [
+            222,
+            136,
+            2
+          ]
+        ],
+        "arrow_tip": [
+          540,
+          53,
+          2
+        ],
+        "clipped_edges": []
+      },
+      "bag": {
+        "state": "attached",
+        "centre": [
+          305,
+          175,
+          1
+        ],
+        "quad": null,
+        "clipped_edges": []
+      },
+      "head_size": [
+        19,
+        23
+      ],
+      "note": "Additional manually estimated intermediate pose from the exact decoded reference frame; concealed neck/hips and uncertain joints are inferred."
     },
     {
       "frame_index": 70,
@@ -1298,6 +2376,160 @@
       }
     },
     {
+      "frame_index": 75,
+      "source_timestamp_s": 2.548189,
+      "clip_time_s": 2.499389,
+      "tick_60": 150,
+      "points": [
+        [
+          286,
+          88,
+          2
+        ],
+        [
+          279,
+          110,
+          1
+        ],
+        [
+          307,
+          119,
+          2
+        ],
+        [
+          330,
+          155,
+          2
+        ],
+        [
+          357,
+          151,
+          2
+        ],
+        [
+          256,
+          114,
+          2
+        ],
+        [
+          230,
+          160,
+          2
+        ],
+        [
+          215,
+          196,
+          2
+        ],
+        [
+          290,
+          218,
+          1
+        ],
+        [
+          315,
+          272,
+          2
+        ],
+        [
+          345,
+          311,
+          2
+        ],
+        [
+          254,
+          218,
+          1
+        ],
+        [
+          218,
+          270,
+          2
+        ],
+        [
+          197,
+          328,
+          2
+        ],
+        [
+          329,
+          333,
+          2
+        ],
+        [
+          173,
+          348,
+          2
+        ]
+      ],
+      "facing": "front",
+      "near_arm": "right",
+      "near_leg": "left",
+      "facing_inferred": false,
+      "grounded": true,
+      "contacts": {
+        "left": [
+          343,
+          338,
+          2
+        ],
+        "right": [
+          188,
+          350,
+          2
+        ],
+        "left_hand": null,
+        "right_hand": null
+      },
+      "sign": {
+        "state": "held",
+        "layer": "behind_torso",
+        "quad": [
+          [
+            185,
+            38,
+            2
+          ],
+          [
+            385,
+            80,
+            2
+          ],
+          [
+            430,
+            178,
+            2
+          ],
+          [
+            173,
+            105,
+            2
+          ]
+        ],
+        "arrow_tip": [
+          470,
+          185,
+          2
+        ],
+        "clipped_edges": []
+      },
+      "bag": {
+        "state": "attached",
+        "centre": [
+          310,
+          179,
+          1
+        ],
+        "quad": null,
+        "clipped_edges": []
+      },
+      "head_size": [
+        19,
+        23
+      ],
+      "note": "Additional manually estimated intermediate pose from the exact decoded reference frame; concealed neck/hips and uncertain joints are inferred."
+    },
+    {
       "frame_index": 80,
       "source_timestamp_s": 2.714844,
       "clip_time_s": 2.666044,
@@ -1434,6 +2666,160 @@
         ],
         "clipped_edges": []
       }
+    },
+    {
+      "frame_index": 85,
+      "source_timestamp_s": 2.8815,
+      "clip_time_s": 2.8327,
+      "tick_60": 170,
+      "points": [
+        [
+          285,
+          88,
+          2
+        ],
+        [
+          278,
+          113,
+          1
+        ],
+        [
+          305,
+          121,
+          2
+        ],
+        [
+          340,
+          145,
+          2
+        ],
+        [
+          398,
+          152,
+          2
+        ],
+        [
+          249,
+          110,
+          2
+        ],
+        [
+          222,
+          152,
+          2
+        ],
+        [
+          193,
+          191,
+          2
+        ],
+        [
+          278,
+          216,
+          1
+        ],
+        [
+          310,
+          260,
+          2
+        ],
+        [
+          331,
+          311,
+          2
+        ],
+        [
+          235,
+          213,
+          1
+        ],
+        [
+          194,
+          266,
+          2
+        ],
+        [
+          169,
+          324,
+          2
+        ],
+        [
+          342,
+          333,
+          2
+        ],
+        [
+          145,
+          347,
+          2
+        ]
+      ],
+      "facing": "front",
+      "near_arm": "right",
+      "near_leg": "left",
+      "facing_inferred": false,
+      "grounded": true,
+      "contacts": {
+        "left": [
+          334,
+          338,
+          2
+        ],
+        "right": [
+          163,
+          350,
+          2
+        ],
+        "left_hand": null,
+        "right_hand": null
+      },
+      "sign": {
+        "state": "held",
+        "layer": "behind_torso",
+        "quad": [
+          [
+            207,
+            23,
+            2
+          ],
+          [
+            450,
+            79,
+            2
+          ],
+          [
+            482,
+            163,
+            2
+          ],
+          [
+            208,
+            101,
+            2
+          ]
+        ],
+        "arrow_tip": [
+          538,
+          161,
+          2
+        ],
+        "clipped_edges": []
+      },
+      "bag": {
+        "state": "attached",
+        "centre": [
+          300,
+          178,
+          1
+        ],
+        "quad": null,
+        "clipped_edges": []
+      },
+      "head_size": [
+        19,
+        23
+      ],
+      "note": "Additional manually estimated intermediate pose from the exact decoded reference frame; concealed neck/hips and uncertain joints are inferred."
     },
     {
       "frame_index": 90,
@@ -1573,6 +2959,156 @@
         "clipped_edges": []
       },
       "note": "Broad side reach before the first body pivot; sign remains behind the head."
+    },
+    {
+      "frame_index": 95,
+      "source_timestamp_s": 3.214822,
+      "clip_time_s": 3.166022,
+      "tick_60": 190,
+      "points": [
+        [
+          315,
+          94,
+          2
+        ],
+        [
+          304,
+          117,
+          1
+        ],
+        [
+          321,
+          115,
+          1
+        ],
+        [
+          333,
+          157,
+          1
+        ],
+        [
+          339,
+          167,
+          1
+        ],
+        [
+          285,
+          124,
+          2
+        ],
+        [
+          299,
+          167,
+          2
+        ],
+        [
+          341,
+          208,
+          2
+        ],
+        [
+          275,
+          208,
+          1
+        ],
+        [
+          276,
+          260,
+          2
+        ],
+        [
+          250,
+          319,
+          2
+        ],
+        [
+          248,
+          205,
+          1
+        ],
+        [
+          225,
+          266,
+          2
+        ],
+        [
+          181,
+          294,
+          2
+        ],
+        [
+          273,
+          338,
+          2
+        ],
+        [
+          160,
+          337,
+          2
+        ]
+      ],
+      "facing": "right",
+      "near_arm": "right",
+      "near_leg": "left",
+      "facing_inferred": false,
+      "grounded": true,
+      "contacts": {
+        "left": [
+          252,
+          341,
+          2
+        ],
+        "right": null,
+        "left_hand": null,
+        "right_hand": null
+      },
+      "sign": {
+        "state": "held",
+        "layer": "behind_torso",
+        "quad": [
+          [
+            233,
+            70,
+            2
+          ],
+          [
+            412,
+            92,
+            2
+          ],
+          [
+            476,
+            183,
+            2
+          ],
+          [
+            255,
+            100,
+            2
+          ]
+        ],
+        "arrow_tip": [
+          500,
+          200,
+          2
+        ],
+        "clipped_edges": []
+      },
+      "bag": {
+        "state": "attached",
+        "centre": [
+          301,
+          194,
+          1
+        ],
+        "quad": null,
+        "clipped_edges": []
+      },
+      "head_size": [
+        19,
+        23
+      ],
+      "note": "Additional manually estimated intermediate pose from the exact decoded reference frame; concealed neck/hips and uncertain joints are inferred."
     },
     {
       "frame_index": 100,

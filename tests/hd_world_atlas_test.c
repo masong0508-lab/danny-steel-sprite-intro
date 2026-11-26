@@ -104,6 +104,23 @@ int main(void){
   assert(hd_world_danny_gait(&gait_state)==4u);
   gait_state.anim=0;assert(hd_world_danny_gait(&gait_state)==0u);
  }
+ /* Same reference head across every idle and walking cel. */
+ for(unsigned face=0;face<4u;face++){
+  uint8_t head[11*11];
+  for(unsigned gait=0;gait<=5u;gait++){
+   reset();hd_world_person_art(guarded.image,120,97,0u,face,gait);
+   unsigned beard=0,skin=0;
+   for(unsigned y=0;y<11u;y++)for(unsigned x=0;x<11u;x++){
+    uint8_t ink=guarded.image[(65u+y)*HD_W+115u+x];
+    if(gait==0)head[y*11u+x]=ink;
+    else assert(head[y*11u+x]==ink);
+    if(y>=8u&&ink==HD_COPPER)++beard;
+    if(ink==HD_SKIN||ink==HD_SKIN_LIT)++skin;
+   }
+   if(face==3u)assert(!beard&&!skin);
+   else assert(beard>=2u&&skin>=8u);
+  }
+ }
  for(int height=5;height<=116;height+=9)for(unsigned role=0;role<7;role++){
   reset();
   hd_world_person_projected(guarded.image,120,129,height,role,1u,0u);

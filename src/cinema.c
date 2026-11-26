@@ -208,7 +208,13 @@ static void actor(uint8_t *p,int x,int foot,int role,unsigned t,int gesture){
   rect(p,x-8,brow+1,3,12,14);rect(p,x+6,brow+2,3,11,14);
   rect(p,x-6,brow-2,13,2,11);
  }else if(role==1){
-  rect(p,x-7,brow+1,7,2,3);pixel(p,x+4,brow-1,14);
+  rect(p,x-5,brow-2,9,3,14);
+  rect(p,x-7,brow,14,3,14);
+  rect(p,x-7,brow+2,3,5,14);
+  rect(p,x-6,foot-32+bob,2,4,14);
+  rect(p,x+5,foot-32+bob,2,4,14);
+  rect(p,x-5,foot-30+bob,11,3,23);
+  rect(p,x-3,foot-27+bob,7,2,14);
  }else rect(p,x+4,brow+3,4,6,hair);
  if((t%97)<92){
   rect(p,x-4,foot-35+bob,2,1,3);

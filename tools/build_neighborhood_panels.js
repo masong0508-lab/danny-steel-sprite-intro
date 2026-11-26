@@ -26,7 +26,20 @@ function makePanels(){
    const s=scale,q=(n)=>Math.round(n*s),R=(xx,yy,w,h,c)=>rect(x+q(xx),y+q(yy),Math.max(1,q(w)),Math.max(1,q(h)),c),L=(x1,y1,x2,y2,c)=>line(x+q(x1),y+q(y1),x+q(x2),y+q(y2),c);
    ellipse(x,y+1,q(13),q(2),shade);R(-7,-20,6,16,slate);R(2,-20,6,16,cool);R(-8,-4,9,4,ink);R(1,-4,9,4,ink);R(-10,-43,20,24,coat);R(5,-43,5,24,dark);R(-10,-42,3,20,hl);R(-5,-24,10,5,dark);L(-5,-42,1,-34,hl);L(4,-42,1,-34,dark);L(0,-33,0,-21,dark);
    R(-4,-48,8,7,skin);R(-7,-60,14,15,skin);R(-7,-60,14,5,hairc);R(-9,-57,3,8,hairc);R(6,-56,2,6,dark);R(-6,-55,4,9,lit);R(-4,-53,2,1,ink);R(3,-53,2,1,ink);R(-1,-47,5,1,wood);
-   if(role===0){L(-7,-43,8,-21,wood);L(-6,-43,9,-21,copper);R(6,-22,7,7,wood);R(7,-21,5,1,gold)}
+   if(role===0){
+    // Reference-based brown crown, connected auburn beard, collar headphones.
+    R(-5,-63,9,3,hair);R(-8,-60,15,4,hair);
+    L(-5,-61,0,-62,wood);L(1,-62,5,-60,wall);
+    R(-8,-57,3,9,hair);R(5,-57,3,8,hair);
+    L(-6,-51,-5,-47,hair);L(6,-51,5,-47,hair);
+    R(-6,-49,12,3,hair);R(-5,-46,10,3,wall);
+    R(-3,-44,6,2,copper);R(-3,-50,7,1,hair);
+    R(-2,-48,5,1,darkred);
+    L(-7,-44,-6,-40,ink);L(7,-44,6,-40,ink);
+    R(-7,-41,4,5,ink);R(4,-41,4,5,ink);
+    R(-6,-40,2,2,slate);R(5,-40,2,2,slate);
+    L(-7,-43,8,-21,wood);L(-6,-43,9,-21,copper);R(6,-22,7,7,wood);R(7,-21,5,1,gold)
+   }
    if(role===1){R(-8,-58,3,17,hairc);R(6,-58,3,18,hairc);R(-4,-42,8,3,sky)}
    if(role===3||role===4){R(-6,-55,12,1,ink);R(-1,-42,3,9,wood)}
    let hx=pose===1?17:pose===2?12:14,hy=pose===1?-42:pose===2?-32:-25;

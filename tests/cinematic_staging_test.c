@@ -245,6 +245,21 @@ int main(void){
  assert(neutral!=reflective);
  for(unsigned g=0;g<32u;g++)
   assert(sample.before[g]==0xA5&&sample.after[g]==0xA5);
+ /* The warm beard survives all actual portrait expressions. */
+ for(unsigned pose=0;pose<4u;pose++){
+  const int expression[]={0,1,5,7};
+  memset(&sample,0xA5,sizeof sample);
+  hd_rect(sample.pixels,0,0,HD_W,HD_H,HD_STONE_DARK);
+  hd_actor_closeup(sample.pixels,120,143,1,171u,expression[pose]);
+  unsigned warm=0,skin=0;
+  for(int yy=90;yy<101;yy++)for(int xx=114;xx<=127;xx++)
+   if(color(xx,yy)==HD_COPPER||color(xx,yy)==HD_BRICK)++warm;
+  for(int yy=63;yy<79;yy++)for(int xx=107;xx<=133;xx++)
+   if(color(xx,yy)==HD_SKIN||color(xx,yy)==HD_SKIN_LIT)++skin;
+  assert(warm>=12u&&skin>=30u);
+  for(unsigned g=0;g<32u;g++)
+   assert(sample.before[g]==0xA5&&sample.after[g]==0xA5);
+ }
  /* Every role's distinct portrait must stay bounded in the exact same
     guarded 240x160 buffer, with no new RAM backing. */
  uint32_t portraits[5],faces[5];

@@ -1,5 +1,9 @@
 #pragma once
 #include "potheads_motion.h"
+#include "potheads_drape.h"
+#include "potheads_cloth_render.h"
+#include "potheads_leg_render.h"
+#include "potheads_upper_render.h"
 
 /* Source-timed articulated cutout. The anatomy and motion use measured
    landmarks; material planes and pixel lighting are authored native art.
@@ -125,8 +129,18 @@ static void pot_arm(uint8_t *p,const PotCamera *c,const PotPose *pose,unsigned s
  if((pose->visible&(1u<<wrist))!=0u){
   PotPoint hand=pot_actor_point(c,pose->joint[wrist]);
   int r=pot_actor_size(c,3);
-  hd_ellipse(p,hand.x,hand.y,r,r-1,HD_SKIN);
-  hd_line(p,hand.x-1,hand.y-1,hand.x+1,hand.y-1,HD_SKIN_LIT);
+  unsigned contact=side+2u;
+  if(pose->contact_mask&(1u<<contact)){
+   PotPoint palm=pot_actor_point(c,pose->contact[contact]);
+   int dx=palm.x-hand.x,dy=palm.y-hand.y;
+   if(dx*dx+dy*dy<=r*r*16){
+    pot_stroke(p,hand,palm,r*2,HD_SKIN,HD_SKIN_LIT,3u);
+    hd_ellipse(p,palm.x,palm.y,r+1,r>1?r-1:1,HD_SKIN);
+   }else hd_ellipse(p,hand.x,hand.y,r,r>1?r-1:1,HD_SKIN);
+  }else{
+   hd_ellipse(p,hand.x,hand.y,r,r>1?r-1:1,HD_SKIN);
+   hd_line(p,hand.x-1,hand.y-1,hand.x+1,hand.y-1,HD_SKIN_LIT);
+  }
  }
 }
 static void pot_leg(uint8_t *p,const PotCamera *c,const PotPose *pose,unsigned side){
@@ -151,7 +165,15 @@ static void pot_leg(uint8_t *p,const PotCamera *c,const PotPose *pose,unsigned s
   PotPoint foot=pot_actor_point(c,pose->joint[ankle]);
   PotPoint tip=pot_actor_point(c,pose->joint[toe]);
   pot_stroke(p,foot,tip,pot_actor_size(c,7),HD_STONE_DARK,HD_STONE,3u);
-  hd_line(p,foot.x,foot.y+1,tip.x,tip.y+1,HD_STONE_LIT);
+  int sx=0,sy=1;
+  if(!(pose->contact_mask&(1u<<side))&&pot_has(pose,knee)){
+   PotPoint k=pot_actor_point(c,pose->joint[knee]);
+   int dx=tip.x-foot.x,dy=tip.y-foot.y;
+   sx=dy<0?1:dy>0?-1:0;sy=dx<0?-1:dx>0?1:0;
+   if(sx*(foot.x-k.x)+sy*(foot.y-k.y)<0){sx=-sx;sy=-sy;}
+   if(!sx&&!sy)sy=1;
+  }
+  hd_line(p,foot.x+sx,foot.y+sy,tip.x+sx,tip.y+sy,HD_STONE_LIT);
  }
 }
 static HD_CANVAS_CODE PotPoint pot_sign_point(const PotPoint *q,int u,int v){
@@ -265,13 +287,41 @@ static void pot_head(uint8_t *p,const PotCamera *c,const PotPose *pose){
  if(facing!=3u){
   PotJoint face=pot_local(centre,across,down,0,1);
   pot_head_oval(p,c,face,across,down,rx-1,ry-1,HD_SKIN);
-  pot_head_oval(p,c,pot_local(face,across,down,-1,-1),across,down,rx-2,ry-2,HD_SKIN_LIT);
+  if(rx>=3&&ry>=3)
+   pot_head_oval(p,c,pot_local(face,across,down,-1,-1),across,down,rx-2,ry-2,HD_SKIN_LIT);
+  if(rx>=3&&ry>=3){
+   int look=facing==1u?-1:facing==2u?1:0;
+   int jaw=rx-1,chin=ry-1;
+   /* Rotate the beard with the measured head, including inversions.
+      A rear-facing pose never receives any facial hair. */
+   PotJoint beard[6]={
+    pot_local(centre,across,down,-jaw,1),
+    pot_local(centre,across,down,-jaw,chin-1),
+    pot_local(centre,across,down,-jaw/2,chin+1),
+    pot_local(centre,across,down,jaw/2+look,chin+1),
+    pot_local(centre,across,down,jaw,chin-1),
+    pot_local(centre,across,down,jaw,1)};
+   pot_cloth(p,c,beard,6u,HD_HAIR,0);
+   PotJoint warm[4]={
+    pot_local(centre,across,down,-jaw/2,chin-2),
+    pot_local(centre,across,down,jaw/2+look,chin-2),
+    pot_local(centre,across,down,jaw/2,chin),
+    pot_local(centre,across,down,-jaw/2,chin)};
+   pot_cloth(p,c,warm,4u,HD_COPPER,0);
+   PotPoint upper=pot_actor_point(c,pot_local(centre,across,down,look,1));
+   hd_pixel(p,upper.x,upper.y,HD_SKIN_LIT);
+  }
  }
  PotJoint hair[6]={pot_local(centre,across,down,-rx,0),
-  pot_local(centre,across,down,-rx,-ry/2),pot_local(centre,across,down,-2,-ry),
+  pot_local(centre,across,down,-rx,-ry/2),pot_local(centre,across,down,-rx/3,-ry-1),
   pot_local(centre,across,down,rx-1,-ry+1),pot_local(centre,across,down,rx,-2),
   pot_local(centre,across,down,0,-ry/2+1)};
  pot_cloth(p,c,hair,6u,HD_HAIR,0);
+ if(rx>=4){
+  PotPoint a=pot_actor_point(c,pot_local(centre,across,down,-rx/2,-ry+1));
+  PotPoint b=pot_actor_point(c,pot_local(centre,across,down,1,-ry));
+  hd_line(p,a.x,a.y,b.x,b.y,HD_BARK);
+ }
  for(int side=-1;side<=1;side+=2){
   PotPoint cup=pot_actor_point(c,pot_local(centre,across,down,side*(rx+1),0));
   hd_ellipse(p,cup.x,cup.y,pot_actor_size(c,2),pot_actor_size(c,3),HD_INK);
@@ -288,7 +338,59 @@ static void pot_head(uint8_t *p,const PotCamera *c,const PotPose *pose){
   hd_line(p,a.x,a.y,b.x,b.y,HD_BARK);
  }
 }
-static void pot_tunic(uint8_t *p,const PotCamera *c,const PotPose *pose){
+static void pot_source_cloth_draw(uint8_t *p,const PotCamera *c,int frame){
+#if POTHEADS_CLOTH_ENABLED
+ if(frame<0)return;
+ unsigned a=pot_cloth_off[frame],b=pot_cloth_off[frame+1];
+ for(unsigned k=a;k<b;k+=3u){
+  PotClothRect r;
+  if(pot_cloth_rect(&r,pot_cloth_spans[k+1],pot_cloth_spans[k],pot_cloth_spans[k+2],
+                    c->zoom,c->ground,c->rise,c->skew,c->ground_y))
+   hd_rect(p,r.x,r.y,r.w,r.h,r.lit?HD_LAMP:HD_GOLD);
+ }
+#else
+ (void)p;(void)c;(void)frame;
+#endif
+}
+static void pot_source_leg_draw(uint8_t *p,const PotCamera *c,int frame){
+#if POTHEADS_LEG_ENABLED
+ if(frame<0)return;
+ static const uint8_t palette[5]={HD_INK,HD_ROAD,HD_ROAD_COOL,HD_STONE_DARK,HD_STONE};
+ unsigned a=pot_leg_off[frame],b=pot_leg_off[frame+1];
+ for(unsigned k=a;k<b;k+=3u){
+  PotClothRect r;unsigned ink;
+  if(pot_leg_rect(&r,&ink,pot_leg_spans[k+1],pot_leg_spans[k],pot_leg_spans[k+2],
+                  c->zoom,c->ground,c->rise,c->skew,c->ground_y))
+   hd_rect(p,r.x,r.y,r.w,r.h,palette[ink-1u]);
+ }
+#else
+ (void)p;(void)c;(void)frame;
+#endif
+}
+static void pot_source_upper_draw(uint8_t *p,const PotCamera *c,int frame){
+#if POTHEADS_UPPER_ENABLED
+ if(frame<0)return;
+ static const uint8_t palette[5]={HD_INK,HD_ROAD,HD_ROAD_COOL,HD_SKIN,HD_SKIN_LIT};
+ unsigned a=pot_upper_off[frame],b=pot_upper_off[frame+1];
+ int settled=c->zoom==256&&c->ground==48&&c->rise==256&&c->skew==0&&c->ground_y==128;
+ for(unsigned k=a;k<b;k+=4u){
+  int y=pot_upper_rects[k],x=pot_upper_rects[k+1],h=pot_upper_rects[k+3];
+  unsigned packed=pot_upper_rects[k+2];
+  PotClothRect r;
+  if(!pot_upper_settled_rect(&r,y,x,packed,h))continue;
+  unsigned ink=palette[(packed>>5)-1u];
+  if(settled)hd_rect(p,r.x,r.y,r.w,r.h,ink);
+  else for(int j=0;j<h;j++){
+   PotClothRect row;
+   if(pot_cloth_rect(&row,x,y+j,r.w,c->zoom,c->ground,c->rise,c->skew,c->ground_y))
+    hd_rect(p,row.x,row.y,row.w,row.h,ink);
+  }
+ }
+#else
+ (void)p;(void)c;(void)frame;
+#endif
+}
+static void pot_tunic(uint8_t *p,const PotCamera *c,const PotPose *pose,int source_cloth){
  unsigned body=(1u<<POT_LSHOULDER)|(1u<<POT_RSHOULDER)|(1u<<POT_LHIP)|(1u<<POT_RHIP);
  if((pose->located&body)!=body)return;
  PotJoint ls=pose->joint[POT_LSHOULDER],rs=pose->joint[POT_RSHOULDER];
@@ -298,14 +400,16 @@ static void pot_tunic(uint8_t *p,const PotCamera *c,const PotPose *pose){
  if((ls.x-rs.x)*across.x+(ls.y-rs.y)*across.y<0){across.x=-across.x;across.y=-across.y;}
  PotJoint chest[4]={ls,rs,rh,lh};
  pot_cloth(p,c,chest,4u,HD_ROAD,1);
+ if(source_cloth>=0)return; /* Source contour is drawn after the articulated limbs. */
  /* Loose cloth falls screen-down during inversion, exposing the dark
     shirt/waist; it does not remain a rigid upright banana silhouette. */
- int inverted=down.y<0;
- PotJoint low_left=inverted?pot_mid(ls,lh):lh;
- PotJoint low_right=inverted?pot_mid(rs,rh):rh;
+ int drape=pot_drape_weight(down.y);
+ PotJoint ml=pot_mid(ls,lh),mr=pot_mid(rs,rh);
+ PotJoint low_left={pot_drape_mix(lh.x,ml.x,drape),pot_drape_mix(lh.y,ml.y,drape)};
+ PotJoint low_right={pot_drape_mix(rh.x,mr.x,drape),pot_drape_mix(rh.y,mr.y,drape)};
  PotJoint hem=pot_mid(low_left,low_right);
- hem=pot_local(hem,across,down,2,inverted?-4:9);
- hem.y+=inverted?13:4;
+ hem=pot_local(hem,across,down,2,pot_drape_mix(9,-4,drape));
+ hem.y+=pot_drape_mix(4,13,drape);
  PotJoint suit[7]={pot_local(ls,across,down,3,-2),
   pot_local(rs,across,down,-3,-2),pot_local(rs,across,down,-5,6),
   pot_local(low_right,across,down,-4,3),hem,
@@ -330,7 +434,12 @@ static void pot_tunic(uint8_t *p,const PotCamera *c,const PotPose *pose){
 static void pot_dancer(uint8_t *p,const PotCamera *c,unsigned t){
  PotPose pose;
  unsigned source=t>180u?t-180u:0u;
- pot_trace_sample(source,&pose);
+ int cloth_frame=pot_source_cloth_frame(source);
+ int leg_frame=pot_source_leg_frame(source);
+ int upper_frame=pot_source_upper_frame(source,cloth_frame,leg_frame);
+ // Sample authored face, props and contacts at the same source timestamp
+ // as all three private mattes; avoid one-tick head/hand seam drift.
+ pot_trace_sample(pot_upper_pose_tick(source,upper_frame),&pose);
  unsigned sign=pose.flags&3u;
  for(unsigned i=0;i<4u;i++)if(pose.contact_mask&(1u<<i)){
   PotPoint contact=pot_actor_point(c,pose.contact[i]);
@@ -346,20 +455,35 @@ static void pot_dancer(uint8_t *p,const PotCamera *c,unsigned t){
  unsigned near_arm=(pose.flags&POT_NEAR_LEFT)?0u:1u;
  unsigned near_leg=(pose.flags&POT_NEAR_LEFT_LEG)?0u:1u;
  int floor_work=source>=570u;
- pot_arm(p,c,&pose,near_arm^1u);
- pot_leg(p,c,&pose,near_leg^1u);
- if(pot_has(&pose,POT_LHIP)&&pot_has(&pose,POT_RHIP))
-  pot_stroke(p,pot_actor_point(c,pose.joint[POT_LHIP]),
-   pot_actor_point(c,pose.joint[POT_RHIP]),pot_actor_size(c,pose.head_size.x*2),HD_INK,HD_ROAD,
-   pot_caps(&pose,POT_LHIP,POT_RHIP));
- if(!floor_work)pot_leg(p,c,&pose,near_leg);
- pot_tunic(p,c,&pose);
+ if(upper_frame<0)pot_arm(p,c,&pose,near_arm^1u);
+ /* Private source matte already contains the visible overlap between the
+    legs, so do not paint either articulated leg or the old hip stroke. */
+ if(leg_frame<0){
+  pot_leg(p,c,&pose,near_leg^1u);
+  if(pot_has(&pose,POT_LHIP)&&pot_has(&pose,POT_RHIP))
+   pot_stroke(p,pot_actor_point(c,pose.joint[POT_LHIP]),
+    pot_actor_point(c,pose.joint[POT_RHIP]),pot_actor_size(c,pose.head_size.x*2),HD_INK,HD_ROAD,
+    pot_caps(&pose,POT_LHIP,POT_RHIP));
+  if(!floor_work)pot_leg(p,c,&pose,near_leg);
+ }else if(!floor_work)pot_source_leg_draw(p,c,leg_frame);
+ if(upper_frame<0)pot_tunic(p,c,&pose,cloth_frame);
  pot_head(p,c,&pose);
- if(floor_work)pot_leg(p,c,&pose,near_leg);
- if(pose.bag_state!=POT_BAG_RESTING)pot_bag_draw(p,c,&pose);
- pot_arm(p,c,&pose,near_arm);
- if(sign&&(pose.flags&POT_SIGN_FRONT))pot_sign_draw(p,c,&pose);
- if(sign==POT_SIGN_HELD){
+ if(floor_work){
+  if(leg_frame>=0)pot_source_leg_draw(p,c,leg_frame);
+  else pot_leg(p,c,&pose,near_leg);
+ }
+ int front_sign=sign&&(pose.flags&POT_SIGN_FRONT);
+ if(pose.bag_state!=POT_BAG_RESTING&&(upper_frame<0||front_sign))pot_bag_draw(p,c,&pose);
+ if(upper_frame<0)pot_arm(p,c,&pose,near_arm);
+ if(cloth_frame>=0)pot_source_cloth_draw(p,c,cloth_frame);
+ if(front_sign)pot_sign_draw(p,c,&pose);
+ // Source matte contains only visible sleeve/skin pixels, including
+ // visible grips in front of the sign. No duplicate joint hands.
+ if(upper_frame>=0){
+  pot_source_upper_draw(p,c,upper_frame);
+  if(!front_sign&&pose.bag_state!=POT_BAG_RESTING)pot_bag_draw(p,c,&pose);
+ }
+ if(sign==POT_SIGN_HELD&&upper_frame<0){
   for(unsigned i=0;i<2u;i++){
    unsigned wrist=i?POT_RWRIST:POT_LWRIST;
    if(!(pose.visible&(1u<<wrist)))continue;
