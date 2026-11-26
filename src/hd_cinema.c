@@ -1,4 +1,5 @@
 #include "hd_canvas.h"
+#include "hd_actor_acting.h"
 #include "hd_neighborhood_panels.h"
 #include <string.h>
 
@@ -161,21 +162,46 @@ static void bus(uint8_t *p,int x,int y,unsigned t){
  hd_pixel(p,x+104,y+30,HD_PAPER);
 }
 /* All narrative characters share one connected skeletal renderer. */
-static void actor(uint8_t *p,int x,int feet,int who,unsigned t,int emotion){
- hd_actor_stage(p,x,feet,who,t,emotion);
+static int scene_speaking(const Story *s,int role,int emotion){
+ /* The authored gesture and script speaker are independent: a person can
+    reach, walk or look worried while speaking. Silent listeners keep the
+    same pose but never inherit the speaker's mouth animation. */
+ if(!s->dialogue)return emotion==1;
+ int count=0;const StoryPage *pages=story_pages(s,&count);
+ if(!pages||s->page>=(unsigned)count)return 0;
+ return hd_acting_speaker_role(pages[s->page].speaker)==(unsigned)role;
+}
+/* Match the established blocking: Danny occupies screen-left in the
+   cafe, archive and consultation, while the counterpart faces him.
+   The bus approaches from left; the letter and canvas sit to his right.
+   Other scenes retain their original acting rather than guessing a target. */
+static int scene_eyeline(const Story *s,int who){
+ switch(s->cinema){
+ case CINE_MARA:case CINE_STAY:return who==1?2:who==2?-2:0;
+ case CINE_BORE:return who==1?2:who==3?-2:0;
+ case CINE_CLINIC:case CINE_LAST_CLINIC:return who==5?-2:2;
+ case CINE_LETTER:case CINE_ART:return who==1?2:0;
+ case CINE_BUS:return who==1?-2:0;
+ default:return 0;
+ }
+}
+static void actor(uint8_t *p,const Story *s,int x,int feet,int who,unsigned t,int emotion){
+ hd_actor_stage_directed(p,x,feet,who,t,emotion,scene_speaking(s,who,emotion),scene_eyeline(s,who));
+}
+static void close_actor(uint8_t *p,const Story *s,int x,int feet,int who,unsigned t,int emotion){
+ int gaze=scene_eyeline(s,who);
+ if(!gaze)gaze=emotion==7?-1:emotion==5?1:0;
+ hd_actor_closeup_directed(p,x,feet,who,t,emotion,scene_speaking(s,who,emotion),gaze);
 }
 
 /* The opening uses one continuous projected set and compact source-video
    joint measurements. Scene time never depends on dialogue-page rendering. */
-#include "hd_potheads_set.h"
-#include "hd_potheads_actor.h"
-#include "hd_potheads_fixed.h"
+#include "hd_potheads_film.h"
 static void potheads_open(uint8_t *p,unsigned t){
- PotCamera camera=pot_camera(t);
- if(t>=180u)pot_scene_fixed(p);
- else pot_scene(p,&camera,t);
- pot_dancer(p,&camera,t);
- hd_rect(p,0,135,HD_W,25,HD_INK); /* preserve source-camera crop */
+#if defined(DANNY_OPENING_CACHE) && defined(__arm__) && !defined(HOST_TEST)
+ if(pot_film_cached(p,t))return;
+#endif
+ pot_film_live(p,t);
 }
 
 static void cafe(uint8_t *p,unsigned t){
@@ -275,7 +301,7 @@ static void interior(uint8_t *p,unsigned t,int variant){
  hd_rect(p,140,25,85,6,HD_SHADOW);
  hd_rect(p,141,25,83,2,HD_GOLD);
 }
-static void archive(uint8_t *p,unsigned t,unsigned page){
+static void archive(uint8_t *p,const Story *s,unsigned t,unsigned page){
  interior(p,t,0);
  hd_rect(p,144,37,77,63,HD_INK);
  for(int i=0;i<7;i++){
@@ -302,8 +328,8 @@ static void archive(uint8_t *p,unsigned t,unsigned page){
  }
  hd_rect(p,178,84,10,7,HD_INK);
  hd_rect(p,180,82,6,5,HD_BARK);
- actor(p,ease(64,76,t,8,60),137,1,t,page==0?2:page>=2?3:1);
- actor(p,193,135,3,t,page&1u?1:3);
+ actor(p,s,ease(64,76,t,8,60),137,1,t,page==0?2:page>=2?3:1);
+ actor(p,s,193,135,3,t,page&1u?1:3);
  if(page>=1u){
   hd_line(p,176,107,165,97,HD_STONE_LIT);
   hd_line(p,175,106,165,96,HD_PLASTER_LIT);
@@ -361,7 +387,7 @@ static void record_room(uint8_t *p,const Story *s,unsigned t){
  }
  for(int j=0;j<5;j++)
   hd_rect(p,136+j*17,76,11,2,HD_RED_SHADE);
- actor(p,38,136,1,t,t<80?2:3);
+ actor(p,s,38,136,1,t,t<80?2:3);
 }
 static void rooftop(uint8_t *p,const Story *s,unsigned t,unsigned page){
  dusk(p,t,0);
@@ -440,8 +466,8 @@ static void rooftop(uint8_t *p,const Story *s,unsigned t,unsigned page){
     extends from the raised hand and pigments appear only on contact. */
  int painter=ease(78,128,t,7,78);
  int reaction=page>=1u&&t>=192u;
- if(reaction)hd_actor_closeup(p,106,143,1,t,5);
- else actor(p,painter,142,1,t,t<92u?2:3);
+ if(reaction)close_actor(p,s,106,143,1,t,5);
+ else actor(p,s,painter,142,1,t,t<92u?2:3);
  if(t>=92u){
   /* Foreground reaction shots do not ERASE the work that was painted
      before the camera cut. Only the physically absent brush is hidden. */
@@ -509,16 +535,16 @@ static void clinic(uint8_t *p,const Story *s,unsigned t,int last){
  int doctor_close=(s->page==1u || (!last&&s->page==3u))&&t>=120u;
  int danny_close=(last?(s->page==3u||(missing&&s->page==2u)):s->page==2u)&&t>=150u;
  int mara_close=last&&!missing&&s->page==2u&&t>=150u;
- if(danny_close)hd_actor_closeup(p,78,145,1,t,last?5:7);
- else actor(p,68,135,1,t,last?7:1);
+ if(danny_close)close_actor(p,s,78,145,1,t,last?5:7);
+ else actor(p,s,68,135,1,t,last?7:1);
  if(last&&!missing){
-  if(mara_close)hd_actor_closeup(p,125,145,2,t,5);
-  else actor(p,115,136,2,t,5);
+  if(mara_close)close_actor(p,s,125,145,2,t,5);
+  else actor(p,s,115,136,2,t,5);
  }
  if(doctor_close){
-  hd_actor_closeup(p,184,142,5,t,1);
+  close_actor(p,s,184,142,5,t,1);
  }else{
-  actor(p,198,133,5,t,1);
+  actor(p,s,198,133,5,t,1);
   /* In a wide shot, the doctor makes contact with the chart. */
   hd_line(p,181,106,157,102,HD_PLASTER_LIT);
   hd_ellipse(p,157,101,3,2,HD_SKIN);
@@ -560,15 +586,15 @@ void hd_cinema_draw(uint8_t *p,const Story *s,unsigned t){
    hd_line(p,188,94,177,103,HD_COPPER);
    hd_rect(p,176,97,3,2,HD_RED_SHADE);
    int reaction=page>=3u&&t>=150u;
-   if(reaction)hd_actor_closeup(p,132,143,1,t,7);
-   else actor(p,dx,145,1,t,t<85u?2:page==0?1:3);
+   if(reaction)close_actor(p,s,132,143,1,t,7);
+   else actor(p,s,dx,145,1,t,t<85u?2:page==0?1:3);
    if(!reaction&&t>=85u&&page>=1u){
     hd_line(p,dx+23,96,166,97,HD_SKIN);
     hd_pixel(p,166,97,HD_SKIN_LIT);
    }
    break;
   }
-  case CINE_BORE:archive(p,t,page);break;
+  case CINE_BORE:archive(p,s,t,page);break;
   case CINE_MARA:
   case CINE_STAY:{
    cafe(p,t);
@@ -587,10 +613,10 @@ void hd_cinema_draw(uint8_t *p,const Story *s,unsigned t){
    table(p,121,110,t);
    int danny=ease(78,91,t,11,60);
    int mara=ease(178,164,t,18,63);
-   actor(p,danny,141,1,t,t<70?2:page>=1?5:1);
+   actor(p,s,danny,141,1,t,t<70?2:page>=1?5:1);
    int reaction=page>=3u&&t>=145u;
-   if(reaction)hd_actor_closeup(p,178,145,2,t,page>=4u?1:5);
-   else actor(p,mara,141,2,t,t<82?2:page>=2?3:1);
+   if(reaction)close_actor(p,s,178,145,2,t,page>=4u?1:5);
+   else actor(p,s,mara,141,2,t,t<82?2:page>=2?3:1);
    /* Body gestures have real table targets instead of floating cups. */
    if(t>=86u&&page>=1u){
     hd_line(p,danny+18,108,114,99,HD_SKIN);
@@ -622,8 +648,8 @@ void hd_cinema_draw(uint8_t *p,const Story *s,unsigned t){
     hd_line(p,bx+68,113,bx+92,113,HD_LAMP);
    }
    int danny=ease(192,165,t,20,78);
-   if(page>=2u&&t>=170u)hd_actor_closeup(p,162,143,1,t,7);
-   else actor(p,danny,142,1,t,t<100u?2:page>=2?7:0);
+   if(page>=2u&&t>=170u)close_actor(p,s,162,143,1,t,7);
+   else actor(p,s,danny,142,1,t,t<100u?2:page>=2?7:0);
    break;
   }
   case CINE_MUSIC:record_room(p,s,t);break;
@@ -631,7 +657,7 @@ void hd_cinema_draw(uint8_t *p,const Story *s,unsigned t){
   case CINE_NOTICE:{
    street(p,t,1);
    int x=ease(68,91,t,13,71);
-   actor(p,x,142,1,t,t<80?2:7);
+   actor(p,s,x,142,1,t,t<80?2:7);
    /* Phone aligns with Danny's raised hand at (x+19,85). */
    hd_rect(p,x+18,75,11,20,HD_INK);
    hd_rect(p,x+20,77,7,16,HD_GLASS_LIT);
@@ -706,13 +732,13 @@ void hd_cinema_draw(uint8_t *p,const Story *s,unsigned t){
     /* The single actor cannot duplicate himself or silently confirm
        Mara's safety while the unanswered-phone plot is unresolved. */
     if(page>=1u&&t>=91u)
-     hd_actor_closeup(p,176,145,1,t,7);
-    else actor(p,danny,142,1,t,t<89u?2:7);
+     close_actor(p,s,176,145,1,t,7);
+    else actor(p,s,danny,142,1,t,t<89u?2:7);
    }else{
-    if(danny_close)hd_actor_closeup(p,157,145,1,t,7);
-    else actor(p,danny,142,1,t,t<89u?2:page>=2u?7:0);
-    if(mara_close)hd_actor_closeup(p,176,145,2,t,5);
-    else actor(p,mara,142,2,t,t<104u?2:5);
+    if(danny_close)close_actor(p,s,157,145,1,t,7);
+    else actor(p,s,danny,142,1,t,t<89u?2:page>=2u?7:0);
+    if(mara_close)close_actor(p,s,176,145,2,t,5);
+    else actor(p,s,mara,142,2,t,t<104u?2:5);
    }
    break;
   }

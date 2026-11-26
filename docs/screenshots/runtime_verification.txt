@@ -1,23 +1,23 @@
-Source commit: 30a49d230a364311d73bd1fa5cbe6c1eef0a1336
+Source commit: ec807d8de4cf87eebb03d2eb8faf3e7695d7d45b
 mGBA 0.10.2; read-only runtime verification, Story bytes=62
 PASS: built ROM exports its real input-queue counters
 opening state: scene=1, dialogue=1, page=0, ticks=176
 PASS: New Game reaches the scripted opening
 PASS: held menu confirm does not skip opening dialogue
 PASS: actual ROM capture saved
-opening clock: video=600, processed=600, queue=0->0, accounted=600
+opening clock: video=600, processed=601, queue=1->0, accounted=600
 PASS: clock window advances 600 emulated video frames
 PASS: input queue remains bounded
 PASS: processed plus queued ticks track video time
 PASS: simulation keeps pace during painting
-  cinematic ticks advanced=600
+  cinematic ticks advanced=601
 PASS: opening route remains the actual Potheads scene
 PASS: cinematic clock advances with each simulation tick
 PASS: active Mode4 display survives the clock window
 PASS: one-frame A press advances exactly one dialogue page
 PASS: B reaches overhead town gameplay
 PASS: actual ROM capture saved
-town clock: video=600, processed=600, queue=0->0, accounted=600
+town clock: video=600, processed=600, queue=2->2, accounted=600
 PASS: clock window advances 600 emulated video frames
 PASS: input queue remains bounded
 PASS: processed plus queued ticks track video time
@@ -35,7 +35,7 @@ PASS: one-frame camera tap is captured once while drawing
 PASS: one-frame camera tap is captured once while drawing
 PASS: one-frame camera tap is captured once while drawing
 PASS: one-frame camera tap is captured once while drawing
-short camera taps: 12/12; observed response 1..3 video frames
+short camera taps: 12/12; observed response 1..2 video frames
 PASS: all tested one-frame camera presses are retained
 PASS: tested camera actions apply within twelve video frames
 held camera button: 1 observed toggle(s)

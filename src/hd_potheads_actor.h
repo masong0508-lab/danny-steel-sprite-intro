@@ -10,7 +10,8 @@
    The final projection maps the complete source camera to 240x135. */
 static int pot_abs(int value){return value<0?-value:value;}
 static unsigned pot_sqrt(unsigned value){
- unsigned root=0,bit=1u<<30;
+ unsigned root=0,bit=value<256u?1u<<6:value<65536u?1u<<14:
+                       value<16777216u?1u<<22:1u<<30;
  while(bit>value)bit>>=2;
  while(bit){
   if(value>=root+bit){value-=root+bit;root=(root>>1)+bit;}
@@ -23,8 +24,7 @@ static int pot_actor_size(const PotCamera *c,int value){
  int out=value*c->zoom*9/(256*8);return out<1?1:out;
 }
 static PotPoint pot_actor_point(const PotCamera *c,PotJoint point){
- return pot_project(c,113+pot_set_round(point.x*9,8),14,
-                       -pot_set_round(point.y*9,8));
+ return pot_actor_project(c,point.x,point.y);
 }
 static PotJoint pot_mid(PotJoint a,PotJoint b){
  return (PotJoint){(a.x+b.x)/2,(a.y+b.y)/2};
@@ -43,47 +43,12 @@ static PotJoint pot_local(PotJoint p,PotJoint across,PotJoint down,int x,int y){
 static int pot_has(const PotPose *pose,unsigned joint){
  return (pose->located&(1u<<joint))!=0u;
 }
-static HD_CANVAS_CODE void pot_shape(uint8_t *p,const PotPoint *v,unsigned count,unsigned ink){
- /* Scan-convert actual polygon spans, including the loose concave hem.
-    Divide once per edge; never divide once per painted pixel or row. */
- typedef struct {int low,high,x,step;} Edge;
- Edge edges[8];unsigned n=0;
- int low=135,high=-1,minx=HD_W,maxx=-1;
- if(count>8u)return;
- for(unsigned i=0;i<count;i++){
-  if(v[i].y<low)low=v[i].y;
-  if(v[i].y>high)high=v[i].y;
-  if(v[i].x<minx)minx=v[i].x;
-  if(v[i].x>maxx)maxx=v[i].x;
- }
- if(high<0||low>=135||maxx<0||minx>=HD_W)return;
- if(low==high){hd_rect(p,minx,low,maxx-minx+1,1,ink);return;}
- if(low<0)low=0;
- if(high>134)high=134;
- for(unsigned i=0;i<count;i++){
-  PotPoint a=v[i],b=v[(i+1u)%count];
-  if(a.y>b.y){PotPoint swap=a;a=b;b=swap;}
-  if(a.y==b.y||b.y<=low||a.y>high)continue;
-  int first=a.y<low?low:a.y;
-  int step=(b.x-a.x)*65536/(b.y-a.y);
-  edges[n++]=(Edge){first,b.y,a.x*65536+step*(first-a.y),step};
- }
- for(int y=low;y<=high;y++){
-  int hits[8];unsigned used=0;
-  for(unsigned i=0;i<n;i++)if(y>=edges[i].low&&y<edges[i].high){
-   int x=edges[i].x;unsigned at=used;
-   while(at&&hits[at-1u]>x){hits[at]=hits[at-1u];at--;}
-   hits[at]=x;used++;edges[i].x+=edges[i].step;
-  }
-  for(unsigned i=0;i+1u<used;i+=2u){
-   int x=pot_set_round(hits[i],65536),xx=pot_set_round(hits[i+1u],65536);
-   hd_rect(p,x,y,xx-x+1,1,ink);
-  }
- }
-}
+#include "potheads_shape.h"
 static void pot_shape_edge(uint8_t *p,const PotPoint *v,unsigned n,unsigned ink){
- for(unsigned i=0;i<n;i++)
-  hd_line(p,v[i].x,v[i].y,v[(i+1u)%n].x,v[(i+1u)%n].y,ink);
+ for(unsigned i=0;i<n;i++){
+  unsigned j=i+1u==n?0u:i+1u;
+  hd_line(p,v[i].x,v[i].y,v[j].x,v[j].y,ink);
+ }
 }
 static void pot_cloth(uint8_t *p,const PotCamera *c,const PotJoint *j,
                       unsigned count,unsigned ink,int outline){
@@ -322,19 +287,32 @@ static void pot_head(uint8_t *p,const PotCamera *c,const PotPose *pose){
   PotPoint b=pot_actor_point(c,pot_local(centre,across,down,1,-ry));
   hd_line(p,a.x,a.y,b.x,b.y,HD_BARK);
  }
+ int look=facing==1u?-1:facing==2u?1:0;
  for(int side=-1;side<=1;side+=2){
+  /* A profile exposes the earpiece behind the face, not both cups.
+     Its material highlight follows the head's measured orientation. */
+  if(look&&side==look)continue;
   PotPoint cup=pot_actor_point(c,pot_local(centre,across,down,side*(rx+1),0));
+  PotPoint glint=pot_actor_point(c,pot_local(centre,across,down,side*(rx+1),-1));
   hd_ellipse(p,cup.x,cup.y,pot_actor_size(c,2),pot_actor_size(c,3),HD_INK);
-  hd_pixel(p,cup.x,cup.y-1,HD_ROAD_COOL);
+  hd_pixel(p,glint.x,glint.y,HD_ROAD_COOL);
  }
- if(facing!=3u&&c->rise>140){
-  int look=facing==1u?-1:facing==2u?1:0;
+ if(facing!=3u&&c->rise>140&&rx>=3&&ry>=3){
+  int gap=rx>=6?3:2;
   for(int side=-1;side<=1;side+=2)if(!look||look==side){
-   PotPoint eye=pot_actor_point(c,pot_local(centre,across,down,side*2,0));
+   int eye_x=side*gap;
+   PotPoint eye=pot_actor_point(c,pot_local(centre,across,down,eye_x,0));
+   PotPoint brow=pot_actor_point(c,pot_local(centre,across,down,eye_x,-1));
+   hd_pixel(p,brow.x,brow.y,HD_BARK);
    hd_pixel(p,eye.x,eye.y,HD_INK);
   }
-  PotPoint a=pot_actor_point(c,pot_local(centre,across,down,-3,ry-2));
-  PotPoint b=pot_actor_point(c,pot_local(centre,across,down,3,ry-2));
+  /* Brow, nose and mouth stay in head-local coordinates on the upside-down
+     poses; the reference determines orientation, not a synthetic blink. */
+  PotPoint nose=pot_actor_point(c,pot_local(centre,across,down,look*(gap+1),2));
+  hd_pixel(p,nose.x,nose.y,HD_SKIN_LIT);
+  int m0=look?look:-(rx/3),m1=look?look*(rx/2):rx/3;
+  PotPoint a=pot_actor_point(c,pot_local(centre,across,down,m0,ry-2));
+  PotPoint b=pot_actor_point(c,pot_local(centre,across,down,m1,ry-2));
   hd_line(p,a.x,a.y,b.x,b.y,HD_BARK);
  }
 }
@@ -437,9 +415,11 @@ static void pot_dancer(uint8_t *p,const PotCamera *c,unsigned t){
  int cloth_frame=pot_source_cloth_frame(source);
  int leg_frame=pot_source_leg_frame(source);
  int upper_frame=pot_source_upper_frame(source,cloth_frame,leg_frame);
- // Sample authored face, props and contacts at the same source timestamp
- // as all three private mattes; avoid one-tick head/hand seam drift.
- pot_trace_sample(pot_upper_pose_tick(source,upper_frame),&pose);
+ /* All visible components share the held source frame, including
+    source-only and partially installed matte builds. Floor staging below
+    also uses this clock so a leg cannot switch depth ahead of its pose. */
+ source=pot_source_pose_tick(source,cloth_frame,leg_frame,upper_frame);
+ pot_trace_sample(source,&pose);
  unsigned sign=pose.flags&3u;
  for(unsigned i=0;i<4u;i++)if(pose.contact_mask&(1u<<i)){
   PotPoint contact=pot_actor_point(c,pose.contact[i]);

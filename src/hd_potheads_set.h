@@ -23,6 +23,14 @@ static PotPoint pot_project(const PotCamera *c,int world_x,int depth,int height)
              c->ground_y+pot_set_round(depth*c->ground-height*c->rise,256)};
  return p;
 }
+/* The settled camera's actor plane simplifies exactly to these offsets.
+   Keep the general projection for the descent or any other camera. */
+static inline PotPoint pot_actor_project(const PotCamera *c,int x,int y){
+ int px=pot_set_round(x*9,8),py=pot_set_round(y*9,8);
+ if(c->zoom==256&&c->rise==256&&c->skew==0&&c->ground==48&&c->ground_y==128)
+  return (PotPoint){113+px,131+py};
+ return pot_project(c,113+px,14,-py);
+}
 static HD_CANVAS_CODE void pot_set_line(uint8_t *p,const PotCamera *c,
                           int x,int d,int h,int xx,int dd,int hh,unsigned ink){
  PotPoint a=pot_project(c,x,d,h),b=pot_project(c,xx,dd,hh);
@@ -60,6 +68,7 @@ static HD_CANVAS_CODE void pot_set_quad(uint8_t *p,PotPoint a,PotPoint b,
   int step=(w.x-u.x)*65536/(w.y-u.y);
   edges[n++]=(Edge){first,w.y,u.x*65536+step*(first-u.y),step};
  }
+ int run_x=0,run_w=0,run_y=low,run_h=0;
  for(int y=low;y<=high;y++){
   int left=0x7fffffff,right=(-0x7fffffff-1);
   for(unsigned i=0;i<n;i++)if(y>=edges[i].low&&y<edges[i].high){
@@ -70,9 +79,15 @@ static HD_CANVAS_CODE void pot_set_quad(uint8_t *p,PotPoint a,PotPoint b,
   }
   if(left<=right){
    int x=pot_set_round(left,65536),xx=pot_set_round(right,65536);
-   hd_rect(p,x,y,xx-x+1,1,ink);
+   int w=xx-x+1;
+   if(run_h&&x==run_x&&w==run_w){run_h++;continue;}
+   if(run_h)hd_rect(p,run_x,run_y,run_w,run_h,ink);
+   run_x=x;run_w=w;run_y=y;run_h=1;
+  }else if(run_h){
+   hd_rect(p,run_x,run_y,run_w,run_h,ink);run_h=0;
   }
  }
+ if(run_h)hd_rect(p,run_x,run_y,run_w,run_h,ink);
 }
 /* Horizontal or sloped plane, with its height specified at each depth. */
 static void pot_set_face(uint8_t *p,const PotCamera *c,int x,int xx,

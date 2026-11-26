@@ -1,5 +1,6 @@
 #!/bin/sh
 # Rebuild without devkitARM or GitHub Actions using GNU ARM Embedded GCC.
+# Cached film builds also need the host C compiler and liblz4-dev.
 set -eu
 cd "$(dirname "$0")/../.."
 ARM_PREFIX=${ARM_PREFIX:-arm-none-eabi-}
@@ -20,8 +21,15 @@ count=sum(p.is_file() for p in assets)
 if sys.argv[2] not in ('0','1') or (sys.argv[2]=='1' and count!=3) or count not in (0,3):
     raise SystemExit('Install all three private V4 headers; use PRIVATE_ROTOSCOPE=0 only for a deliberate source-only build.')
 PY
+cache_define=
+cache_source=
+if [ "${OPENING_CACHE:-1}" = 1 ]; then
+    sh tools/build_potheads_cache.sh
+    cache_define=-DDANNY_OPENING_CACHE
+    cache_source=tools/potheads_cache_blob.S
+fi
 "${ARM_PREFIX}gcc" --version | head -n 1
-"${ARM_PREFIX}gcc" -mthumb -mthumb-interwork -mcpu=arm7tdmi -O2 -Wall -Wextra -std=gnu11 -ffreestanding -fno-builtin -fno-tree-loop-distribute-patterns -fomit-frame-pointer -Itools/offline/include -Isrc src/*.c tools/offline/memory.c tools/offline/start.S -nostdlib -Wl,-T,tools/offline/gba.ld,-Map,build/offline/danny.map -lgcc -o build/offline/danny.elf
+"${ARM_PREFIX}gcc" -mthumb -mthumb-interwork -mcpu=arm7tdmi -O2 -Wall -Wextra -std=gnu11 -ffreestanding -fno-builtin -fno-tree-loop-distribute-patterns -fomit-frame-pointer -Itools/offline/include -Isrc $cache_define src/*.c $cache_source tools/offline/memory.c tools/offline/start.S -nostdlib -Wl,-T,tools/offline/gba.ld,-Map,build/offline/danny.map -lgcc -o build/offline/danny.elf
 "${ARM_PREFIX}objcopy" -O binary build/offline/danny.elf build/offline/danny.gba
 "${ARM_PREFIX}size" -A build/offline/danny.elf
 python3 - <<'PY'

@@ -157,7 +157,28 @@ typedef struct {
  PotJoint joint[POT_JOINTS],contact[4],sign[5],bag,bag_size,head_size;
 } PotPose;
 static inline int pot_trace_lerp(int a,int b,unsigned n,unsigned d){
- return d?a+(b-a)*(int)n/(int)d:a;
+ /* Round the absolute interpolated coordinate, not the signed travel
+    delta. Reversing a limb's direction must not move its half-tick pixel. */
+ if(!d||!n||a==b)return a;
+ if(n==d)return b;
+ int numerator=a*(int)d+(b-a)*(int)n;
+ /* For the measured short intervals the exact rounded quotient uses a
+    bounded unsigned reciprocal. ARM7 has no integer divide instruction.
+    ceil(65536/d) gives the exact floor for magnitude <=4095, d<=16:
+    its error is strictly below 1/16, the smallest possible fraction.
+    Retain the original division for all larger/custom intervals. */
+ if(d<=16u){
+  static const uint32_t inverse[17]={
+   0u,65536u,32768u,21846u,16384u,13108u,10923u,9363u,8192u,
+   7282u,6554u,5958u,5462u,5042u,4682u,4370u,4096u
+  };
+  unsigned magnitude=(numerator<0?0u-(unsigned)numerator:(unsigned)numerator)+d/2u;
+  if(magnitude<=4095u){
+   int q=(int)((magnitude*inverse[d])>>16);
+   return numerator<0?-q:q;
+  }
+ }
+ return (numerator+(numerator<0?-(int)(d/2u):(int)(d/2u)))/(int)d;
 }
 static inline void pot_trace_sample(unsigned tick,PotPose *out){
  unsigned lo=0u,hi=POT_TRACE_COUNT-1u;

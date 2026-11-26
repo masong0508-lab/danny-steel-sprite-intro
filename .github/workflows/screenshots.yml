@@ -33,7 +33,7 @@ jobs:
       - name: Install screenshot tools and mGBA core
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq libmgba-dev libpng-dev imagemagick ffmpeg
+          sudo apt-get install -y -qq libmgba-dev libpng-dev imagemagick ffmpeg liblz4-dev
       - name: Build mGBA headless picture capture
         run: |
           git clone --depth 1 https://github.com/JohnnySun/gba-rom-debugger.git /tmp/gba-rom-debugger
@@ -57,6 +57,7 @@ jobs:
       - name: Compile this revision's playable ROM for mGBA capture
         run: |
           set -euo pipefail
+          sh tools/build_potheads_cache.sh
           docker pull devkitpro/devkitarm
           arm_image_id="$(docker image inspect --format '{{.Id}}' devkitpro/devkitarm)"
           {

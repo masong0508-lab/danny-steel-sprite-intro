@@ -1,4 +1,5 @@
 #include "hd_canvas.h"
+#include "hd_actor_acting.h"
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -98,7 +99,94 @@ static void verify_reachable_editorial_cuts(void){
  lines=story_pages(&safe,&count);
  assert(count==3 && strcmp(lines[1].speaker,"MARA")==0);
 }
+static void verify_grounded_acting(void){
+ /* Real production rasters: breathing may move the torso but not the
+    shoe and floor pixels. The previous whole-body bob fails this test. */
+ static uint8_t ground[8*HD_W];
+ for(int role=1;role<=5;role++){
+  memset(&sample,0xA5,sizeof sample);
+  hd_rect(sample.pixels,0,0,HD_W,HD_H,HD_STONE_DARK);
+  hd_actor_stage(sample.pixels,120,143,role,37u,0);
+  memcpy(ground,sample.pixels+139u*HD_W,sizeof ground);
+  hd_rect(sample.pixels,0,0,HD_W,HD_H,HD_STONE_DARK);
+  hd_actor_stage(sample.pixels,120,143,role,38u,0);
+  assert(!memcmp(ground,sample.pixels+139u*HD_W,sizeof ground));
+  for(unsigned g=0;g<32u;g++)
+   assert(sample.before[g]==0xA5&&sample.after[g]==0xA5);
+  unsigned lids=0u,mouth=0u;
+  for(unsigned t=0;t<256u;t++){
+   int e=hd_acting_eye(t,(unsigned)role),m=hd_acting_mouth(t,(unsigned)role,1);
+   assert(e>=0&&e<=2&&m>=0&&m<=2);
+   lids|=1u<<e;mouth|=1u<<m;
+   assert(hd_acting_mouth(t,(unsigned)role,0)==0);
+   assert(hd_acting_mouth(t,(unsigned)role,5)==0);
+   assert(hd_acting_mouth(t,(unsigned)role,7)==0);
+  }
+  assert(lids==7u&&mouth==7u);
+ }
+ for(unsigned t=0;t<127u;t++)
+  assert(!(hd_acting_eye(t,1u)==2&&hd_acting_eye(t,2u)==2));
+}
+static void verify_scripted_mouth(void){
+ assert(hd_acting_speaker_role("DANNY")==1u);
+ assert(hd_acting_speaker_role("MARA")==2u);
+ assert(hd_acting_speaker_role("BORE CLERK")==3u);
+ assert(hd_acting_speaker_role("ARCHIVIST")==3u);
+ assert(hd_acting_speaker_role("WITNESS")==4u);
+ assert(hd_acting_speaker_role("DOCTOR")==5u);
+ assert(hd_acting_speaker_role("MARA'S CAFE")==0u);
+ assert(hd_acting_speaker_role("NARRATOR")==0u);
+ assert(hd_acting_speaker_role("PHONE MESSAGE")==0u);
+ assert(hd_acting_speaker_role(0)==0u);
+ static uint8_t silent[HD_BYTES];
+ for(int role=1;role<=5;role++){
+  unsigned t=0;
+  while(hd_acting_mouth(t,(unsigned)role,1)!=2)t++;
+  hd_rect(silent,0,0,HD_W,HD_H,HD_STONE_DARK);
+  memset(&sample,0xA5,sizeof sample);
+  hd_rect(sample.pixels,0,0,HD_W,HD_H,HD_STONE_DARK);
+  /* Speaking versus listening uses the same reaching gesture/pose. */
+  hd_actor_stage_spoken(silent,120,143,role,t,3,0);
+  hd_actor_stage_spoken(sample.pixels,120,143,role,t,3,1);
+  unsigned changes=0;
+  for(unsigned y=0;y<HD_H;y++)for(unsigned x=0;x<HD_W;x++){
+   unsigned i=y*HD_W+x;
+   if(silent[i]!=sample.pixels[i]){
+    assert(x>=115u&&x<=125u&&y>=92u&&y<=98u);
+    changes++;
+   }
+  }
+  assert(changes>0u);
+  for(unsigned g=0;g<32u;g++)
+   assert(sample.before[g]==0xA5&&sample.after[g]==0xA5);
+ }
+}
+static void verify_eyeline(void){
+ static uint8_t left[HD_BYTES];
+ for(int role=1;role<=5;role++){
+  unsigned t=0u;while(hd_acting_eye(t,(unsigned)role)!=0)t++;
+  hd_rect(left,0,0,HD_W,HD_H,HD_STONE_DARK);
+  memset(&sample,0xA5,sizeof sample);
+  hd_rect(sample.pixels,0,0,HD_W,HD_H,HD_STONE_DARK);
+  hd_actor_closeup_directed(left,120,143,role,t,0,0,-2);
+  hd_actor_closeup_directed(sample.pixels,120,143,role,t,0,0,2);
+  unsigned changed=0;
+  for(unsigned y=0;y<HD_H;y++)for(unsigned x=0;x<HD_W;x++){
+   unsigned i=y*HD_W+x;
+   if(left[i]!=sample.pixels[i]){
+    assert(x>=106u&&x<=134u&&y>=66u&&y<=69u);
+    changed++;
+   }
+  }
+  assert(changed>0u);
+  for(unsigned g=0;g<32u;g++)
+   assert(sample.before[g]==0xA5&&sample.after[g]==0xA5);
+ }
+}
 int main(void){
+ verify_eyeline();
+ verify_scripted_mouth();
+ verify_grounded_acting();
  verify_reachable_editorial_cuts();
  Story s;story_new(&s,0);s.dialogue=0;
  /* The optimized sky stripes preserve the original dusk colors on real

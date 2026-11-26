@@ -6,3 +6,8 @@
 
 # Owner-private source-derived upper-body matte.
 /src/potheads_upper_data.h
+
+# Build-local generated film cache; do not commit binary artwork.
+/build/potheads-opening-cache.bin
+/build/potheads-opening-cache.bin.tmp
+/build/potheads_cache_export
