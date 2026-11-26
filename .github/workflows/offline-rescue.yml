@@ -1,0 +1,37 @@
+name: Danny Steele offline rescue
+on:
+  push:
+    branches:
+      - rescue/2026-11-26-offline-backup
+    paths:
+      - .github/workflows/offline-rescue.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Preserve all branches, tags, main source and committed ROM
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --prune --tags origin '+refs/heads/*:refs/remotes/origin/*'
+          mkdir -p "$RUNNER_TEMP/danny-rescue"
+          git bundle create "$RUNNER_TEMP/danny-rescue/danny-steel-full-history.bundle" --all
+          git bundle verify "$RUNNER_TEMP/danny-rescue/danny-steel-full-history.bundle"
+          git archive --format=zip --output="$RUNNER_TEMP/danny-rescue/danny-steel-main-source.zip" refs/remotes/origin/main
+          git show refs/remotes/origin/main:dist/Danny-Steel-GBA-Playable.zip > "$RUNNER_TEMP/danny-rescue/Danny-Steel-GBA-Playable.zip"
+          git for-each-ref --format='%(objectname) %(refname)' refs/remotes/origin refs/tags > "$RUNNER_TEMP/danny-rescue/refs.txt"
+          cd "$RUNNER_TEMP/danny-rescue"
+          sha256sum *.bundle *.zip > SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Danny-Steele-offline-rescue
+          path: ${{ runner.temp }}/danny-rescue/
+          if-no-files-found: error
+          retention-days: 30
