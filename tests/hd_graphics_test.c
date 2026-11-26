@@ -76,7 +76,20 @@ int main(void){
  check();
  assert(view.pixels[135*HD_W]==HD_GOLD);
  assert(view.pixels[103*HD_W+8]==HD_ROAD); /* opening leaves full source crop clear */
- s.cinema=CINE_LETTER; /* ordinary conversations retain the larger native panel */
+ /* The compact film subtitle must never obscure the extra 19 rows
+    recovered from the former world-dialogue card. */
+ s.cinema=CINE_LETTER;
+ memset(view.pixels,HD_ROAD,HD_BYTES);
+ hd_game_overlay(view.pixels,&s);
+ check();
+ for(unsigned i=0;i<122u*HD_W;i++)assert(view.pixels[i]==HD_ROAD);
+ assert(view.pixels[122*HD_W]==HD_COPPER);
+ unsigned subtitle_ink=0;
+ for(unsigned i=136u*HD_W;i<156u*HD_W;i++)
+  subtitle_ink+=view.pixels[i]==HD_PAPER;
+ assert(subtitle_ink>0u);
+ s.cinema=CINE_NONE; /* ordinary world conversations retain the old panel */
+ memset(view.pixels,HD_ROAD,HD_BYTES);
  hd_game_overlay(view.pixels,&s);
  check();
  assert(view.pixels[103*HD_W+8]==HD_COPPER);

@@ -117,6 +117,25 @@ void hd_game_overlay(uint8_t *p,const Story *s){
      hd_rect(p,7+i*4,150,2,3,i<=s->page?HD_LAMP:HD_STONE_DARK);
     return;
    }
+   /* Real cinematic frames deserve the space previously occupied by the
+      54-row dialogue card. Keep authored neighborhood panels (whose art
+      intentionally ends at row 104) and ordinary world dialogue unchanged. */
+   if(s->cinema!=CINE_NONE&&story_neighborhood_panel(s)<0){
+    hd_rect(p,0,122,HD_W,HD_H-122,HD_INK);
+    hd_rect(p,0,122,HD_W,1,HD_COPPER);
+    hd_text(p,8,125,d->speaker,HD_LAMP,1,0);
+    hd_text(p,194,125,"A NEXT",HD_STONE_LIT,1,0);
+    for(int i=0;i<count&&i<9;i++)
+     hd_rect(p,148+i*4,127,2,3,i<=s->page?HD_LAMP:HD_STONE_DARK);
+    const char *lines[2]={d->line1,d->line2};
+    for(unsigned i=0;i<2u;i++){
+     int track=hd_text_width(lines[i],1,1)>224?0:1;
+     int width=hd_text_width(lines[i],1,track);
+     int x=(HD_W-width)/2;
+     hd_text(p,x<4?4:x,136+(int)i*10,lines[i],HD_PAPER,1,track);
+    }
+    return;
+   }
    framebox(p,8,103,224,54);
    hd_rect(p,13,108,4,10,HD_GOLD);
    hd_rect(p,19,106,91,13,HD_BRICK_DARK);

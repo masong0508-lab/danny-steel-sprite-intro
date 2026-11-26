@@ -437,9 +437,11 @@ static void pot_dancer(uint8_t *p,const PotCamera *c,unsigned t){
  int cloth_frame=pot_source_cloth_frame(source);
  int leg_frame=pot_source_leg_frame(source);
  int upper_frame=pot_source_upper_frame(source,cloth_frame,leg_frame);
- // Sample authored face, props and contacts at the same source timestamp
- // as all three private mattes; avoid one-tick head/hand seam drift.
- pot_trace_sample(pot_upper_pose_tick(source,upper_frame),&pose);
+ /* All visible components share the held source frame, including
+    source-only and partially installed matte builds. Floor staging below
+    also uses this clock so a leg cannot switch depth ahead of its pose. */
+ source=pot_source_pose_tick(source,cloth_frame,leg_frame,upper_frame);
+ pot_trace_sample(source,&pose);
  unsigned sign=pose.flags&3u;
  for(unsigned i=0;i<4u;i++)if(pose.contact_mask&(1u<<i)){
   PotPoint contact=pot_actor_point(c,pose.contact[i]);

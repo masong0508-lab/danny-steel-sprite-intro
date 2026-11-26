@@ -157,7 +157,11 @@ typedef struct {
  PotJoint joint[POT_JOINTS],contact[4],sign[5],bag,bag_size,head_size;
 } PotPose;
 static inline int pot_trace_lerp(int a,int b,unsigned n,unsigned d){
- return d?a+(b-a)*(int)n/(int)d:a;
+ /* Round the absolute interpolated coordinate, not the signed travel
+    delta. Reversing a limb's direction must not move its half-tick pixel. */
+ if(!d)return a;
+ int numerator=a*(int)d+(b-a)*(int)n;
+ return (numerator+(numerator<0?-(int)(d/2u):(int)(d/2u)))/(int)d;
 }
 static inline void pot_trace_sample(unsigned tick,PotPose *out){
  unsigned lo=0u,hi=POT_TRACE_COUNT-1u;

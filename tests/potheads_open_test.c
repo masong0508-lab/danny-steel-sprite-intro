@@ -1,5 +1,6 @@
 #include "hd_canvas.h"
 #include "potheads_motion.h"
+#include "potheads_upper_render.h"
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -271,7 +272,36 @@ static void verify_work_not_wishful_thinking(void){
  assert(s.cinema==CINE_NOTICE);
  assert(s.work==2u&&s.energy==2u); /* rescue takes precedence */
 }
+static void verify_pose_clock_and_rounding(void){
+ assert(pot_trace_lerp(-10,-7,1,2)==pot_trace_lerp(-7,-10,1,2));
+ assert(pot_trace_lerp(0,3,1,2)==2);
+ assert(pot_trace_lerp(0,-3,1,2)==-2);
+ for(int a=-113;a<=113;a+=7)for(int b=-113;b<=113;b+=7)
+  for(unsigned n=0;n<=10u;n++){
+   int v=pot_trace_lerp(a,b,n,10u);
+   assert(v==pot_trace_lerp(b,a,10u-n,10u));
+   assert(v>=(a<b?a:b)&&v<=(a>b?a:b));
+  }
+ for(unsigned t=0;t<=POT_TRACE_LAST_TICK+1u;t++){
+  assert(pot_source_pose_tick(t,-1,-1,-1)==t);
+  int c=pot_source_cloth_frame(t),l=pot_source_leg_frame(t);
+  int u=pot_source_upper_frame(t,c,l);
+#if POTHEADS_CLOTH_ENABLED
+  if(c>=0)assert(pot_source_pose_tick(t,c,-1,-1)==pot_cloth_tick[c]);
+#endif
+#if POTHEADS_LEG_ENABLED
+  if(l>=0)assert(pot_source_pose_tick(t,-1,l,-1)==pot_leg_tick[l]);
+#endif
+  unsigned pose=pot_source_pose_tick(t,c,l,u);
+  assert(pose<=t);
+  if(c<0&&l<0&&u<0)assert(pose==t);
+#if POTHEADS_UPPER_ENABLED
+  if(u>=0)assert(pose==pot_upper_tick[u]);
+#endif
+ }
+}
 int main(void){
+ verify_pose_clock_and_rounding();
  verify_full_source_track();
  verify_observed_floor_poses();
  verify_caption_boundary();

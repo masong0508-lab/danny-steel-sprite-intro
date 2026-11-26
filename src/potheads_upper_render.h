@@ -36,6 +36,28 @@ static inline unsigned pot_upper_pose_tick(unsigned tick,int frame){
 #endif
  return tick;
 }
+/* Every available matte is a held source-camera frame. Keep the
+   procedural face, hands, sign, bag and contacts on that same timestamp,
+   even when only the leg or costume matte is available. The generated
+   tracks share one timeline; upper is preferred when all layers exist. */
+static inline unsigned pot_source_pose_tick(unsigned tick,int cloth,int leg,int upper){
+#if POTHEADS_UPPER_ENABLED
+ if(upper>=0&&(unsigned)upper<POT_UPPER_FRAMES)return pot_upper_tick[upper];
+#else
+ (void)upper;
+#endif
+#if POTHEADS_CLOTH_ENABLED
+ if(cloth>=0&&(unsigned)cloth<POT_CLOTH_FRAMES)return pot_cloth_tick[cloth];
+#else
+ (void)cloth;
+#endif
+#if POTHEADS_LEG_ENABLED
+ if(leg>=0&&(unsigned)leg<POT_LEG_FRAMES)return pot_leg_tick[leg];
+#else
+ (void)leg;
+#endif
+ return tick;
+}
 /* Exact settled rectangle; the moving-camera path expands rows using the
    original per-span projection, preserving the old rounding and clipping. */
 static inline int pot_upper_settled_rect(PotClothRect *r,int y,int x,unsigned packed,int height){
