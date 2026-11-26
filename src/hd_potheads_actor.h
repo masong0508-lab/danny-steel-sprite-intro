@@ -265,13 +265,41 @@ static void pot_head(uint8_t *p,const PotCamera *c,const PotPose *pose){
  if(facing!=3u){
   PotJoint face=pot_local(centre,across,down,0,1);
   pot_head_oval(p,c,face,across,down,rx-1,ry-1,HD_SKIN);
-  pot_head_oval(p,c,pot_local(face,across,down,-1,-1),across,down,rx-2,ry-2,HD_SKIN_LIT);
+  if(rx>=3&&ry>=3)
+   pot_head_oval(p,c,pot_local(face,across,down,-1,-1),across,down,rx-2,ry-2,HD_SKIN_LIT);
+  if(rx>=3&&ry>=3){
+   int look=facing==1u?-1:facing==2u?1:0;
+   int jaw=rx-1,chin=ry-1;
+   /* Rotate the beard with the measured head, including inversions.
+      A rear-facing pose never receives any facial hair. */
+   PotJoint beard[6]={
+    pot_local(centre,across,down,-jaw,1),
+    pot_local(centre,across,down,-jaw,chin-1),
+    pot_local(centre,across,down,-jaw/2,chin+1),
+    pot_local(centre,across,down,jaw/2+look,chin+1),
+    pot_local(centre,across,down,jaw,chin-1),
+    pot_local(centre,across,down,jaw,1)};
+   pot_cloth(p,c,beard,6u,HD_HAIR,0);
+   PotJoint warm[4]={
+    pot_local(centre,across,down,-jaw/2,chin-2),
+    pot_local(centre,across,down,jaw/2+look,chin-2),
+    pot_local(centre,across,down,jaw/2,chin),
+    pot_local(centre,across,down,-jaw/2,chin)};
+   pot_cloth(p,c,warm,4u,HD_COPPER,0);
+   PotPoint upper=pot_actor_point(c,pot_local(centre,across,down,look,1));
+   hd_pixel(p,upper.x,upper.y,HD_SKIN_LIT);
+  }
  }
  PotJoint hair[6]={pot_local(centre,across,down,-rx,0),
-  pot_local(centre,across,down,-rx,-ry/2),pot_local(centre,across,down,-2,-ry),
+  pot_local(centre,across,down,-rx,-ry/2),pot_local(centre,across,down,-rx/3,-ry-1),
   pot_local(centre,across,down,rx-1,-ry+1),pot_local(centre,across,down,rx,-2),
   pot_local(centre,across,down,0,-ry/2+1)};
  pot_cloth(p,c,hair,6u,HD_HAIR,0);
+ if(rx>=4){
+  PotPoint a=pot_actor_point(c,pot_local(centre,across,down,-rx/2,-ry+1));
+  PotPoint b=pot_actor_point(c,pot_local(centre,across,down,1,-ry));
+  hd_line(p,a.x,a.y,b.x,b.y,HD_BARK);
+ }
  for(int side=-1;side<=1;side+=2){
   PotPoint cup=pot_actor_point(c,pot_local(centre,across,down,side*(rx+1),0));
   hd_ellipse(p,cup.x,cup.y,pot_actor_size(c,2),pot_actor_size(c,3),HD_INK);

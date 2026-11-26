@@ -160,7 +160,9 @@ static void overhead(const Story *s,int tick,uint8_t *p) {
     int dx=0,dy=0;
     if(s->anim){dx=(s->prev_x-(int)s->x)*s->anim*2;dy=(s->prev_y-(int)s->y)*s->anim*2;}
     int px=60+dx,py=36+dy;
-    box(p,px-2,py-4,5,4,31);box(p,px-2,py-5,5,1,24);
+    box(p,px-2,py-4,5,4,31);box(p,px-2,py-5,5,1,14);
+    if(s->facing!=3u)box(p,px-2,py-1,5,1,23);
+    else box(p,px-2,py-4,5,4,14);
     box(p,px-3,py,7,4,16);box(p,px-2,py+4,2,3,3);box(p,px+1,py+4,2,3,3);
     put(p,px+(s->facing==0?2:s->facing==2?-2:0),py-2,19);
 }
