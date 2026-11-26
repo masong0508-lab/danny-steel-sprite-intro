@@ -19,3 +19,8 @@ The existing tests are extended to cover all four directional masks,
 idle/walking consistency, rear-facing head, and actual portrait
 expressions. The earlier interactive-interiors PR remains separate
 until its failed CI can be diagnosed.
+
+All 42 production side-story panels have been regenerated with the same
+hair, beard and collar headphones. The original panel generator, binary
+artwork, manifest and golden checks agree byte-for-byte. All panels remain
+unique and the original palette and ROM art byte count are unchanged.

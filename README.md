@@ -49,6 +49,15 @@ is drawn as five large bands rather than one rectangle per scanline.
 See the [updated capture gallery](docs/SCREENSHOT_GALLERY.md) and
 [art direction notes](docs/INKED_OLD_QUARTER.md).
 
+## Danny's in-game appearance
+
+The native walking sprites, cinematic actor, portrait expressions,
+Potheads rotoscope and illustrated neighborhood scenes now share
+reference-based dark swept hair, shorter temples, a warm connected
+beard and dark headphones. Danny's red coat, satchel, work uniform
+and original measured motion remain. The private source media are not
+published. See [the likeness pass](docs/DANNY_LIKENESS.md).
+
 ## Fourteen illustrated Old Quarter stories
 
 After the letter, BORE stamp and Mara promise, press START then SELECT.

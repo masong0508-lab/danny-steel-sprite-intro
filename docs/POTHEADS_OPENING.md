@@ -15,6 +15,12 @@ PTS 0.048800 to 18.273644 seconds. The complete file's SHA256 is
 `9181173802c83b52e945ea2f7043eb3367ecbf78401c0f76bdf9911fca8971b8`.
 The original video remains outside the repository and cartridge.
 
+The owner's original video was recovered and its SHA256 reverified on
+November 25. New reference-based facial hair follows the measured local
+head axes during turns and inversions. The existing 110 measured poses,
+contact points, sign, duration and crop are unchanged. Neither the video
+nor the new reference photograph is published as raw media.
+
 `tools/references/potheads_trace.json` contains 110 manually estimated source
 poses: 47 standing/sign poses and 63 later floor poses. Every sample retains its
 source frame, timestamp, anatomical left/right landmarks and uncertainty.
