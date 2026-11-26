@@ -10,6 +10,7 @@
 #include "hd_canvas.h"
 #include "frame_runtime.h"
 #include "video_present.h"
+#include "roto_cache.h"
 
 #define REG_BG2PA R16(0x04000020)
 #define REG_BG2PB R16(0x04000022)
@@ -104,6 +105,16 @@ static void write_save(void){
     game.dirty=0;
 }
 static void draw_hidden(int page){
+    /* The opening's dialogue overlay never touches the film except for
+       its fixed top matte. Revoke the persistent canvas on every other
+       draw, including world, pause menus, studio, combat and endings. */
+    int count=0;
+    int film_lease=game.cinema==CINE_OPEN && game.dialogue &&
+        !game.ended && !game.battle && game.life_stage!=STORY_LIFE_FINALE &&
+        game.activity!=STORY_ACT_STUDIO && !(game.paused && (game.choice & 0x80u)) &&
+        story_neighborhood_panel(&game)<0;
+    if(film_lease)film_lease=story_pages(&game,&count)!=0 && game.page<(unsigned)count;
+    roto_cache_begin_frame(film_lease);
     int native_map=!game.view && game.scene==STORY_SCENE_NONE &&
         game.cinema==CINE_NONE && !game.battle && !game.ended &&
         game.life_stage!=STORY_LIFE_FINALE &&
@@ -155,6 +166,7 @@ static void draw_hidden(int page){
     video_copy_frame(hd_shared_frame,(unsigned)page);
 }
 void play_enter(int want_load,int slot){
+    roto_cache_begin_frame(0);
     frame_runtime_stop();
     u8 b[SAVE_LEN];
     studio_reset();
@@ -243,6 +255,7 @@ void play_enter(int want_load,int slot){
 static int play_tick(u16 keys){
     story_tick(&game,keys);
     if(game.quit){
+        roto_cache_begin_frame(0);
         frame_runtime_stop();
         write_save();music_set_cue(MUSIC_CUE_TITLE);music_set_volume(40);return 1;
     }

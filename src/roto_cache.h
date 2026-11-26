@@ -3,7 +3,10 @@
 #if defined(DANNY_OPENING_CACHE) && defined(__arm__) && !defined(HOST_TEST)
 typedef void (*RotoBase)(uint8_t *p);
 typedef void (*RotoPaint)(uint8_t *p,unsigned tick);
-/* One shared workspace for any authored film, not per scene. Each clip
-   supplies its own immutable data, background and deterministic painter. */
+/* The game grants a lease only if the following painter and overlays
+   preserve the movie's picture region. All other paths revoke it. */
+void roto_cache_begin_frame(int preserve_picture);
 int roto_cache_render(uint8_t *out,const uint32_t *clip,unsigned tick,RotoBase base,RotoPaint live);
+#else
+static inline void roto_cache_begin_frame(int preserve_picture){(void)preserve_picture;}
 #endif

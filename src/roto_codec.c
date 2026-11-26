@@ -9,14 +9,23 @@ typedef uint32_t RotoWord __attribute__((may_alias));
    safe only with equal alignment and a distance of at least four. */
 static inline void forward(uint8_t *d,const uint8_t *s,unsigned n){
  if(d==s)return;
- if(((uintptr_t)d^(uintptr_t)s)&3u){while(n--)*d++=*s++;return;}
+ if(((uintptr_t)d^(uintptr_t)s)&3u){
+  while(n>=4u){d[0]=s[0];d[1]=s[1];d[2]=s[2];d[3]=s[3];d+=4;s+=4;n-=4u;}
+  while(n--)*d++=*s++;
+  return;
+ }
  while(n&&((uintptr_t)d&3u)){*d++=*s++;n--;}
+ while(n>=16u){
+  RotoWord *dw=(RotoWord *)(void *)d;const RotoWord *sw=(const RotoWord *)(const void *)s;
+  dw[0]=sw[0];dw[1]=sw[1];dw[2]=sw[2];dw[3]=sw[3];d+=16;s+=16;n-=16u;
+ }
  while(n>=4u){*(RotoWord *)(void *)d=*(const RotoWord *)(const void *)s;d+=4;s+=4;n-=4u;}
  while(n--)*d++=*s++;
 }
 static inline void repeat(uint8_t *d,unsigned n,uint8_t v){
  while(n&&((uintptr_t)d&3u)){*d++=v;n--;}
  uint32_t four=(uint32_t)v*0x01010101u;
+ while(n>=16u){RotoWord *dw=(RotoWord *)(void *)d;dw[0]=four;dw[1]=four;dw[2]=four;dw[3]=four;d+=16;n-=16u;}
  while(n>=4u){*(RotoWord *)(void *)d=four;d+=4;n-=4u;}
  while(n--)*d++=v;
 }
@@ -44,21 +53,18 @@ ROTO_CODE int roto_lz4_decode(const uint8_t *src,unsigned src_size,uint8_t *dst,
  }
  return 0;
 }
-static int varint(const uint8_t **s,const uint8_t *end,unsigned *out){
- unsigned n=0;for(unsigned shift=0;shift<=14u;shift+=7u){
-  if(*s==end)return 0;
-  unsigned v=*(*s)++;n|=(v&127u)<<shift;
-  if(!(v&128u)){*out=n;return 1;}
- }
- return 0;
-}
-ROTO_CODE int roto_apply_patch(uint8_t *dst,const uint8_t *src,unsigned size){
- const uint8_t *end=src+size;unsigned at=0;
- while(src<end){
-  unsigned skip,n;
-  if(!varint(&src,end,&skip)||!varint(&src,end,&n)||!n||skip>ROTO_PIXELS-at)return 0;
-  at+=skip;if(n>ROTO_PIXELS-at||n>(unsigned)(end-src))return 0;
-  forward(dst+at,src,n);src+=n;at+=n;
+/* Absolute word spans allow a single aligned copy per run. */
+ROTO_PATCH_CODE int roto_apply_words(uint8_t *dst,const uint8_t *src,unsigned size){
+ if(((uintptr_t)dst|(uintptr_t)src|size)&3u)return 0;
+ RotoWord *out=(RotoWord *)(void *)dst;
+ const RotoWord *in=(const RotoWord *)(const void *)src;
+ const RotoWord *end=in+size/4u;
+ while(in<end){
+  unsigned span=*in++,start=span&65535u,n=span>>16;
+  if(!n||start>=ROTO_WORDS||n>ROTO_WORDS-start||n>(unsigned)(end-in))return 0;
+  RotoWord *d=out+start;
+  while(n>=4u){d[0]=in[0];d[1]=in[1];d[2]=in[2];d[3]=in[3];d+=4;in+=4;n-=4u;}
+  while(n--)*d++=*in++;
  }
  return 1;
 }
