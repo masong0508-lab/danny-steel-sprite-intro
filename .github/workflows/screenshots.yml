@@ -33,7 +33,7 @@ jobs:
       - name: Install screenshot tools and mGBA core
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq libmgba-dev libpng-dev imagemagick ffmpeg
+          sudo apt-get install -y -qq libmgba-dev libpng-dev imagemagick ffmpeg liblz4-dev
       - name: Build mGBA headless picture capture
         run: |
           git clone --depth 1 https://github.com/JohnnySun/gba-rom-debugger.git /tmp/gba-rom-debugger

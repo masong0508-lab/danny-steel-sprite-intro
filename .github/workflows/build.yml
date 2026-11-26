@@ -319,7 +319,9 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build cartridge and record the exact ARM compiler
         run: |
-          command -v cc >/dev/null || (apt-get update -qq && apt-get install -y -qq gcc libc6-dev)
+          if ! command -v cc >/dev/null || ! test -f /usr/include/lz4hc.h; then
+            apt-get update -qq && apt-get install -y -qq gcc libc6-dev liblz4-dev
+          fi
           "${DEVKITARM:-/opt/devkitpro/devkitARM}/bin/arm-none-eabi-gcc" --version
           make
           sha256sum danny_steel_title.gba

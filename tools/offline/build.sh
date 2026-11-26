@@ -1,5 +1,6 @@
 #!/bin/sh
 # Rebuild without devkitARM or GitHub Actions using GNU ARM Embedded GCC.
+# Cached film builds also need the host C compiler and liblz4-dev.
 set -eu
 cd "$(dirname "$0")/../.."
 ARM_PREFIX=${ARM_PREFIX:-arm-none-eabi-}

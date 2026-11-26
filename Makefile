@@ -7,6 +7,7 @@ DEVKITARM ?= $(DEVKITPRO)/devkitARM
 export DEVKITPRO DEVKITARM
 export PATH := $(DEVKITARM)/bin:$(DEVKITPRO)/tools/bin:$(PATH)
 
+# Cached opening builds also require a host C compiler and liblz4 development headers.
 # Check the compiler by its full path. (`which` inside $(shell) does NOT see the PATH exported above on
 # older GNU make, which made this check fail even inside the devkitARM container.)
 ifeq ($(wildcard $(DEVKITARM)/bin/arm-none-eabi-gcc*),)
@@ -32,7 +33,7 @@ endif
 all: $(TARGET).gba
 
 ifeq ($(OPENING_CACHE),1)
-$(CACHE_BIN): tools/build_potheads_cache.c tools/build_potheads_cache.sh $(HDR) src/hd_canvas.c
+$(CACHE_BIN): tools/build_potheads_cache.c tools/build_potheads_cache.sh $(HDR) src/hd_canvas.c src/roto_codec.c
 	HOST_CC="$(HOST_CC)" sh tools/build_potheads_cache.sh
 endif
 
