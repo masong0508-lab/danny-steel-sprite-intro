@@ -33,7 +33,7 @@ endif
 all: $(TARGET).gba
 
 ifeq ($(OPENING_CACHE),1)
-$(CACHE_BIN): tools/build_potheads_cache.c tools/build_potheads_cache.sh $(HDR) src/hd_canvas.c src/roto_codec.c
+$(CACHE_BIN): tools/build_potheads_cache.c tools/build_potheads_cache.sh $(HDR) src/hd_canvas.c src/roto_codec.c src/roto_cache.c
 	HOST_CC="$(HOST_CC)" sh tools/build_potheads_cache.sh
 endif
 
