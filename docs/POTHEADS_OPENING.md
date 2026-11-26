@@ -17,12 +17,14 @@ The original video remains outside the repository and cartridge.
 
 The owner's original video was recovered and its SHA256 reverified on
 November 25. New reference-based facial hair follows the measured local
-head axes during turns and inversions. The existing 110 measured poses,
-contact points, sign, duration and crop are unchanged. Neither the video
+head axes during turns and inversions. The original 110 measured poses remain; ten additional source-reviewed
+standing samples refine the early sign and foot motion. Duration and crop
+are unchanged. Neither the video
 nor the new reference photograph is published as raw media.
 
-`tools/references/potheads_trace.json` contains 110 manually estimated source
-poses: 47 standing/sign poses and 63 later floor poses. Every sample retains its
+`tools/references/potheads_trace.json` contains 120 manually estimated source
+poses: 57 standing/sign poses and 63 later floor poses. The first 100 source
+frames are sampled every five frames instead of ten. Every sample retains its
 source frame, timestamp, anatomical left/right landmarks and uncertainty.
 Samples between those measured poses are interpolated in the game. This is a
 source-guided articulated rotoscope, not a claim that every source pixel or
@@ -96,7 +98,7 @@ precedence. There is no new save field or schema version.
 
 ## Cartridge budget and validation
 
-The motion header packs 110 poses into 7,480 bytes of immutable ROM data.
+The motion header packs 120 poses into 8,160 bytes of immutable ROM data.
 It uses integer interpolation, the existing 64-color palette and the existing
 240×160 shared page. There is no video decoder, heap allocation, second canvas
 or runtime motion cache. The projected architecture is retained for the moving

@@ -1,5 +1,6 @@
 #pragma once
 #include "potheads_motion.h"
+#include "potheads_drape.h"
 
 /* Source-timed articulated cutout. The anatomy and motion use measured
    landmarks; material planes and pixel lighting are authored native art.
@@ -328,12 +329,13 @@ static void pot_tunic(uint8_t *p,const PotCamera *c,const PotPose *pose){
  pot_cloth(p,c,chest,4u,HD_ROAD,1);
  /* Loose cloth falls screen-down during inversion, exposing the dark
     shirt/waist; it does not remain a rigid upright banana silhouette. */
- int inverted=down.y<0;
- PotJoint low_left=inverted?pot_mid(ls,lh):lh;
- PotJoint low_right=inverted?pot_mid(rs,rh):rh;
+ int drape=pot_drape_weight(down.y);
+ PotJoint ml=pot_mid(ls,lh),mr=pot_mid(rs,rh);
+ PotJoint low_left={pot_drape_mix(lh.x,ml.x,drape),pot_drape_mix(lh.y,ml.y,drape)};
+ PotJoint low_right={pot_drape_mix(rh.x,mr.x,drape),pot_drape_mix(rh.y,mr.y,drape)};
  PotJoint hem=pot_mid(low_left,low_right);
- hem=pot_local(hem,across,down,2,inverted?-4:9);
- hem.y+=inverted?13:4;
+ hem=pot_local(hem,across,down,2,pot_drape_mix(9,-4,drape));
+ hem.y+=pot_drape_mix(4,13,drape);
  PotJoint suit[7]={pot_local(ls,across,down,3,-2),
   pot_local(rs,across,down,-3,-2),pot_local(rs,across,down,-5,6),
   pot_local(low_right,across,down,-4,3),hem,

@@ -61,6 +61,25 @@ int main(void){
                             str(folder / "check.c"), "-o", str(folder / "check")], check=True)
             subprocess.run([str(folder / "check")], check=True)
 
+    def test_full_reference_contains_direct_intermediate_standing_poses(self):
+        data = json.loads((ROOT / "tools/references/potheads_trace.json").read_bytes())
+        self.assertEqual(data["source"]["frame_count"], 548)
+        self.assertEqual(data["coverage"]["pose_count"], len(data["poses"]))
+        poses = {p["frame_index"]: p for p in data["poses"]}
+        self.assertTrue(all(frame in poses for frame in range(0, 101, 5)))
+        self.assertEqual(len(poses), 120)
+        for frame in range(5, 100, 10):
+            p = poses[frame]
+            self.assertEqual(p["tick_60"], frame * 2)
+            self.assertEqual(p["sign"]["state"], "held")
+            self.assertEqual(len(p["sign"]["quad"]), 4)
+            self.assertIn("exact decoded reference frame", p["note"])
+        # Actual sign swing maximum and right-foot lift between old samples.
+        self.assertGreater(poses[15]["sign"]["arrow_tip"][0], 500)
+        self.assertIsNone(poses[95]["contacts"]["right"])
+        self.assertEqual(poses[95]["points"][4][2], 1)
+        self.assertEqual(poses[547]["tick_60"], 1093)
+
     def test_release_rejects_the_short_hop_only_excerpt(self):
         data = fixture()
         data["poses"][-1]["frame_index"] = 280

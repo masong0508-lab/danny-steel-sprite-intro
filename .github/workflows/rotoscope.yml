@@ -1,0 +1,27 @@
+name: Potheads source rotoscope regression
+on:
+  push:
+    paths: ["src/potheads_motion.h","src/potheads_drape.h","src/hd_potheads_actor.h","tools/references/potheads_trace.json","tools/build_potheads_trace.py","tests/potheads*.c","tests/potheads_trace_pack_test.py",".github/workflows/rotoscope.yml"]
+  workflow_dispatch:
+jobs:
+  rotoscope:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check measured source coverage and deterministic ROM packing
+        run: |
+          python3 tests/potheads_trace_pack_test.py
+          python3 tools/build_potheads_trace.py tools/references/potheads_trace.json /tmp/potheads_motion.h
+          cmp src/potheads_motion.h /tmp/potheads_motion.h
+      - name: Check continuous costume gravity transition
+        run: |
+          gcc -std=c99 -Wall -Wextra -Werror -Isrc tests/potheads_drape_test.c -o /tmp/potheads_drape
+          /tmp/potheads_drape
+      - name: Exercise every tick of the production cutscene painter
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
+            src/story.c src/studio.c src/cinema.c src/hd_canvas.c \
+            src/hd_cinema.c src/hd_actor.c src/hd_special.c \
+            src/hd_ending.c src/hd_overlay.c tests/potheads_open_test.c \
+            -o /tmp/danny_potheads_open
+          /tmp/danny_potheads_open
