@@ -1,10 +1,10 @@
-Source commit: 33aee03729ba6b4b1c93c1fbf555e1cb88b9966a
+Source commit: 5db36ae40804aecd8f69b981811711872b5cdff2
 mGBA 0.10.2; emulated video 59.727500570 Hz (280896 cycles/frame, 16777216 Hz CPU)
 Cadence counts presented Mode4 page changes, including identical content. It does not measure host speed or certify all-scene 30 FPS.
 Stage names describe the scripted route; verify the accompanying cadence pictures before treating them as scene measurements.
-opening after New Game: video_frames=600, active_mode4_samples=600/600, page_flips=219, emulated_seconds=10.045624, observed_page_flips_per_second=21.801
-  complete flip intervals: count=218, min=2, mean=2.743, max=6 video_frames (max 100.456 ms), over_two_frames=159
-  window edges: 1 frames before first observed flip, 1 after last (partial intervals)
+opening after New Game: video_frames=600, active_mode4_samples=600/600, page_flips=224, emulated_seconds=10.045624, observed_page_flips_per_second=22.298
+  complete flip intervals: count=223, min=2, mean=2.668, max=3 video_frames (max 50.228 ms), over_two_frames=149
+  window edges: 5 frames before first observed flip, 0 after last (partial intervals)
 town after B dismisses opening: video_frames=600, active_mode4_samples=600/600, page_flips=150, emulated_seconds=10.045624, observed_page_flips_per_second=14.932
   complete flip intervals: count=149, min=4, mean=4.000, max=4 video_frames (max 66.971 ms), over_two_frames=149
   window edges: 3 frames before first observed flip, 1 after last (partial intervals)
