@@ -2,6 +2,7 @@
 #include "potheads_motion.h"
 #include "potheads_drape.h"
 #include "potheads_cloth_render.h"
+#include "potheads_leg_render.h"
 
 /* Source-timed articulated cutout. The anatomy and motion use measured
    landmarks; material planes and pixel lighting are authored native art.
@@ -350,6 +351,21 @@ static void pot_source_cloth_draw(uint8_t *p,const PotCamera *c,int frame){
  (void)p;(void)c;(void)frame;
 #endif
 }
+static void pot_source_leg_draw(uint8_t *p,const PotCamera *c,int frame){
+#if POTHEADS_LEG_ENABLED
+ if(frame<0)return;
+ static const uint8_t palette[5]={HD_INK,HD_ROAD,HD_ROAD_COOL,HD_STONE_DARK,HD_STONE};
+ unsigned a=pot_leg_off[frame],b=pot_leg_off[frame+1];
+ for(unsigned k=a;k<b;k+=3u){
+  PotClothRect r;unsigned ink;
+  if(pot_leg_rect(&r,&ink,pot_leg_spans[k+1],pot_leg_spans[k],pot_leg_spans[k+2],
+                  c->zoom,c->ground,c->rise,c->skew,c->ground_y))
+   hd_rect(p,r.x,r.y,r.w,r.h,palette[ink-1u]);
+ }
+#else
+ (void)p;(void)c;(void)frame;
+#endif
+}
 static void pot_tunic(uint8_t *p,const PotCamera *c,const PotPose *pose,int source_cloth){
  unsigned body=(1u<<POT_LSHOULDER)|(1u<<POT_RSHOULDER)|(1u<<POT_LHIP)|(1u<<POT_RHIP);
  if((pose->located&body)!=body)return;
@@ -396,6 +412,7 @@ static void pot_dancer(uint8_t *p,const PotCamera *c,unsigned t){
  unsigned source=t>180u?t-180u:0u;
  pot_trace_sample(source,&pose);
  int cloth_frame=pot_source_cloth_frame(source);
+ int leg_frame=pot_source_leg_frame(source);
  unsigned sign=pose.flags&3u;
  for(unsigned i=0;i<4u;i++)if(pose.contact_mask&(1u<<i)){
   PotPoint contact=pot_actor_point(c,pose.contact[i]);
@@ -412,15 +429,22 @@ static void pot_dancer(uint8_t *p,const PotCamera *c,unsigned t){
  unsigned near_leg=(pose.flags&POT_NEAR_LEFT_LEG)?0u:1u;
  int floor_work=source>=570u;
  pot_arm(p,c,&pose,near_arm^1u);
- pot_leg(p,c,&pose,near_leg^1u);
- if(pot_has(&pose,POT_LHIP)&&pot_has(&pose,POT_RHIP))
-  pot_stroke(p,pot_actor_point(c,pose.joint[POT_LHIP]),
-   pot_actor_point(c,pose.joint[POT_RHIP]),pot_actor_size(c,pose.head_size.x*2),HD_INK,HD_ROAD,
-   pot_caps(&pose,POT_LHIP,POT_RHIP));
- if(!floor_work)pot_leg(p,c,&pose,near_leg);
+ /* Private source matte already contains the visible overlap between the
+    legs, so do not paint either articulated leg or the old hip stroke. */
+ if(leg_frame<0){
+  pot_leg(p,c,&pose,near_leg^1u);
+  if(pot_has(&pose,POT_LHIP)&&pot_has(&pose,POT_RHIP))
+   pot_stroke(p,pot_actor_point(c,pose.joint[POT_LHIP]),
+    pot_actor_point(c,pose.joint[POT_RHIP]),pot_actor_size(c,pose.head_size.x*2),HD_INK,HD_ROAD,
+    pot_caps(&pose,POT_LHIP,POT_RHIP));
+  if(!floor_work)pot_leg(p,c,&pose,near_leg);
+ }else if(!floor_work)pot_source_leg_draw(p,c,leg_frame);
  pot_tunic(p,c,&pose,cloth_frame);
  pot_head(p,c,&pose);
- if(floor_work)pot_leg(p,c,&pose,near_leg);
+ if(floor_work){
+  if(leg_frame>=0)pot_source_leg_draw(p,c,leg_frame);
+  else pot_leg(p,c,&pose,near_leg);
+ }
  if(pose.bag_state!=POT_BAG_RESTING)pot_bag_draw(p,c,&pose);
  pot_arm(p,c,&pose,near_arm);
  if(cloth_frame>=0)pot_source_cloth_draw(p,c,cloth_frame);

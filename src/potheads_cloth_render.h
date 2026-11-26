@@ -19,6 +19,11 @@ static inline int pot_cloth_rect(PotClothRect *r,int x,int y,int packed,
     int zoom,int ground,int rise,int skew,int ground_y){
     int n=packed&127;
     if(!n||x<0||x+n>240||y<0||y>=135)return 0;
+    /* Settled camera is the exact source raster. Avoid projecting every
+       span of every source frame, including the optional lower body. */
+    if(zoom==256&&ground==48&&rise==256&&skew==0&&ground_y==128){
+        *r=(PotClothRect){x,y,n,1,(packed&128)!=0};return 1;
+    }
     int a=120+pot_cloth_round((x-120)*zoom+14*skew);
     int b=120+pot_cloth_round((x+n-120)*zoom+14*skew);
     int c=ground_y+pot_cloth_round(14*ground-(131-y)*rise);
