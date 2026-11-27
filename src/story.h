@@ -49,6 +49,7 @@
 #define STORY_SHOW_DONE 7u
 #define STORY_PROJECT_STYLE_MASK 0xffu
 #define STORY_ACT_SHOW 'Y'
+#define STORY_ACT_ROOF_REST 'G'
 #define STORY_ACT_REHEARSAL 'U'
 #define STORY_ACT_PAINT 'T'
 #define STORY_PAINT_WARM 0x80u
@@ -154,6 +155,12 @@ typedef struct {
     uint16_t neighborhood_seen, neighborhood_right;
     uint8_t neighborhood_cursor, neighborhood_target;
 } Story;
+/* Shared menu and gameplay predicate: an ordinary visit may earn a daily
+   memory exactly once, regardless of whether a creative project is finished. */
+static inline int story_daily_pending(const Story *s,unsigned bit){
+    return (s->life_stage==STORY_LIFE_WAIT||s->life_stage==STORY_LIFE_FOLLOWUP_WAIT)&&
+           !(s->daily_mask&bit);
+}
 static inline unsigned story_show_stage(const Story *s){return (s->project_style&STORY_SHOW_STAGE_MASK)>>3;}
 static inline int story_paint_workshop_available(const Story *s){
  return (s->activity=='r'||s->activity=='R')&&s->art_steps<STORY_PROJECT_DONE;

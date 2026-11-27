@@ -352,6 +352,9 @@ const char *story_goal_reason(const Story *s){
         return "THE DOCTOR IS WAITING";
     case STORY_LIFE_LAST_WORK:return "FINISH THE LAST PAINTING";
     case STORY_LIFE_WAIT:case STORY_LIFE_FOLLOWUP_WAIT:
+        if((s->daily_mask&STORY_DAY_ALL)==STORY_DAY_ALL&&
+           s->song_steps>=STORY_PROJECT_DONE&&s->art_steps>=STORY_PROJECT_DONE)
+            return "REST OR EXPLORE UNTIL CALL";
         return "MAKE MEMORIES AT YOUR PACE";
     default:break;
     }
@@ -1741,6 +1744,17 @@ static void finish_moment(Story *s){
         s->cinema_frame=184u; /* avoid replaying the full aerial intro */
         return;
     }
+    if(station==STORY_ACT_ROOF_REST){
+        s->activity=STORY_ACT_NONE;s->activity_choice=0;
+        if(option){s->cinema=CINE_NONE;return;}
+        /* A finished canvas still leaves a place to sit. Rest is renewable
+           recovery, not another painting, paycheck or daily memory. */
+        if(can_make_memory(s)){
+            if(s->energy<STORY_STAT_MAX){stat_gain(&s->energy,1);s->dirty=1;}
+            talk(s,D_ACT_ART_REST);
+        }else s->cinema=CINE_NONE;
+        return;
+    }
     if(station=='E'){
         if(option){
             s->activity=STORY_ACT_STUDIO;
@@ -1749,6 +1763,11 @@ static void finish_moment(Story *s){
             s->cinema=CINE_MUSIC;s->cinema_frame=0;
         }else{
             s->activity=STORY_ACT_NONE;
+            /* Listening to a completed master is still a real daily moment.
+               Do not pay or advance the project a second time. */
+            if(remember(s,STORY_DAY_MUSIC)){
+                stat_gain(&s->energy,1);stat_gain(&s->spark,1);
+            }
             talk(s,D_ACT_MUSIC_LISTEN);
         }
         return;
@@ -2085,7 +2104,7 @@ static void interact(Story *s) {
                    s->life_stage == STORY_LIFE_FOLLOWUP_WAIT) {
             if(!(s->daily_mask&STORY_DAY_ART))moment_menu(s,'R');
             else if(s->art_steps<STORY_PROJECT_DONE)moment_menu(s,'r');
-            else talk(s,D_PROJECT_ART_DONE);
+            else moment_menu(s,STORY_ACT_ROOF_REST);
         } else if (!(s->flags & STORY_ART)) {
             s->flags |= STORY_ART;s->dirty=1;talk(s,D_ART);
         } else if(!s->life_stage && s->art_steps<STORY_PROJECT_DONE)

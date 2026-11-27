@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <string.h>
 #define A 1u
+#define B 2u
+#define RIGHT 16u
 static void press(Story *s,unsigned key){story_tick(s,0);story_tick(s,(uint16_t)key);story_tick(s,0);}
 static void done(Story *s){for(int i=0;i<48&&s->dialogue;i++)press(s,A);assert(!s->dialogue);}
 static void stand(Story *s,int x,int y){
@@ -68,6 +70,46 @@ int main(void){
  t.life_stage=STORY_LIFE_WAIT;t.day_frame=STORY_DAY_FRAMES-1;
  story_tick(&t,0);
  assert(t.life_stage==STORY_LIFE_CLINIC&&t.daily_mask==0&&t.daily_memories==0&&!t.ended);
+ /* Finished projects must not block the last daily objective or recap.
+    Start with all but art and music, and visit the real world stations. */
+ Story master;story_new(&master,0);done(&master);
+ master.flags=STORY_FULL;master.life_stage=STORY_LIFE_WAIT;
+ master.day_number=1;master.day_frame=0;
+ master.song_steps=master.art_steps=STORY_PROJECT_DONE;
+ master.daily_mask=STORY_DAY_MARA|STORY_DAY_LETTER|STORY_DAY_CLERK;
+ master.daily_memories=3;master.energy=1;master.spark=1;master.work=12;
+ goal(&master,14,6,"PAINT");
+ stand(&master,14,7);press(&master,A);assert(master.activity=='R');
+ render(&master);press(&master,A);done(&master);
+ assert(master.art_steps==4&&master.daily_memories==4&&master.work==12);
+ goal(&master,19,7,"MUSIC");
+ stand(&master,19,8);press(&master,A);assert(master.activity=='E');
+ render(&master);press(&master,RIGHT);press(&master,B);
+ assert(!master.activity&&master.daily_memories==4&&master.energy==1);
+ press(&master,A);press(&master,RIGHT);press(&master,A);
+ assert(master.activity==STORY_ACT_STUDIO);press(&master,B);
+ assert(master.daily_memories==4&&!(master.daily_mask&STORY_DAY_MUSIC));
+ press(&master,A);assert(master.activity=='E');press(&master,A);done(&master);
+ assert(master.daily_memories==5&&master.daily_mask&STORY_DAY_RECAP);
+ assert(master.song_steps==4&&master.work==12&&master.energy==2&&master.spark==2);
+ press(&master,A);press(&master,A);done(&master);
+ assert(master.daily_memories==5&&master.energy==2&&master.spark==2);
+ goal(&master,14,6,"REST");
+ assert(!strcmp(story_goal_reason(&master),"REST OR EXPLORE UNTIL CALL"));
+ stand(&master,14,7);press(&master,A);assert(master.activity==STORY_ACT_ROOF_REST);
+ render(&master);press(&master,RIGHT);press(&master,A);
+ assert(!master.activity&&master.energy==2);
+ for(unsigned i=0;i<5u;i++){
+  press(&master,A);assert(master.activity==STORY_ACT_ROOF_REST);
+  press(&master,A);done(&master);
+ }
+ assert(master.energy==STORY_STAT_MAX&&master.spark==2&&master.work==12);
+ assert(master.daily_memories==5&&master.art_steps==4);
+ master.day_frame=STORY_DAY_FRAMES-1;story_tick(&master,0);
+ assert(master.life_stage==STORY_LIFE_CLINIC);done(&master);
+ goal(&master,16,5,"CLINIC");
+ stand(&master,14,7);press(&master,A);
+ assert(!master.activity&&master.dialogue);done(&master);
  assert(sizeof(Story)<64);
  puts("daily memories: 5 optional scenes, changing scripts, 2D/3D guards, day reset, appointments and endings accessible");
  return 0;

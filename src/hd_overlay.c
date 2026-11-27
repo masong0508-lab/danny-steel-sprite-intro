@@ -269,6 +269,8 @@ void hd_game_overlay(uint8_t *p,const Story *s){
   case 'M':where="MUSIC DESK";left="MIX";right="LISTEN";benefit="MAKE A SONG OR EDIT IT";break;
   case 'E':where="MUSIC DESK";left="LISTEN";right="EDIT";benefit="ADVANCED STUDIO UNLOCKED";break;
   case 'J':where="POTHEADS / SHIFT";left="WORK";right="LEAVE";benefit="PAID HOURS, NOT HIS DREAM";break;
+  case STORY_ACT_ROOF_REST:where="ROOFTOP / FINISHED ART";left="REST";right="LEAVE";benefit="WATCH THE SKY FOR AWHILE";break;
+  case 'R':where="ROOFTOP / THE SKY";left=s->art_steps>=STORY_PROJECT_DONE?"VIEW":"PAINT";right="REST";benefit="A QUIET AFTERNOON";break;
   case 'm':where="MUSIC DESK";left="MIX";right="SOFT";benefit="MAKE A SONG OR EDIT IT";break;
   case 'r':where="ROOFTOP / ART";left="LAYER";right="LIGHT";benefit="MAKE THE CITY YOURS";break;
   default:where="ROOFTOP / THE SKY";left="PAINT";right="REST";benefit="A QUIET AFTERNOON";break;
@@ -278,7 +280,12 @@ void hd_game_overlay(uint8_t *p,const Story *s){
    case 'L':effect=s->activity_choice?"SPARK +1 ENERGY +1":"SPARK +2 ENERGY -1";break;
    case 'C':effect=s->activity_choice?"BOND +1 ENERGY +1":"SPARK +1 ENERGY -1";break;
    case 'M':effect=s->activity_choice?"SPARK +1 ENERGY +1":"MUSIC STAGE +1";break;
-   case 'E':effect=s->activity_choice?"ADVANCED SIX-TAB STUDIO":"LISTEN TO THE MASTER";break;
+   case 'E':effect=s->activity_choice?"ADVANCED SIX-TAB STUDIO":
+       story_daily_pending(s,STORY_DAY_MUSIC)?"DAILY MEMORY / ENERGY +1":"LISTEN TO THE MASTER";break;
+   case STORY_ACT_ROOF_REST:effect=s->activity_choice?"BACK TO THE STREET":
+       s->energy<STORY_STAT_MAX?"ENERGY +1 / NO WORK COST":"ENERGY FULL / ENJOY THE VIEW";break;
+   case 'R':effect=s->activity_choice?"ENERGY +2 SPARK +1":
+       s->art_steps>=STORY_PROJECT_DONE?"VIEW YOUR FINISHED CANVAS":"PAINT STAGE +1";break;
    case 'J':effect=s->activity_choice?"NO ENERGY SPENT":"WORK +2 ENERGY -1";break;
    case 'm':case 'r':effect=s->activity_choice?
        "STAGE +1  ENERGY +1":"STAGE +1  MORE WORK";break;

@@ -570,7 +570,12 @@ static void activity_menu(uint8_t *p,const Story *s){
     case 'M':where="BORE / MUSIC STUDIO";left="ARRANGE";right="LISTEN";
         effect=selected?"SPARK +1 ENERGY +1":"MUSIC STAGE +1";break;
     case 'E':where="MASTER / COMPLETE";left="LISTEN";right="STUDIO";
-        effect=selected?"ADVANCED / SIX TABS":"EASY / PLAY THE MASTER";break;
+        effect=selected?"ADVANCED / SIX TABS":story_daily_pending(s,STORY_DAY_MUSIC)?
+            "MEMORY / ENERGY +1":"PLAY THE MASTER";break;
+    case STORY_ACT_ROOF_REST:where="ROOFTOP / FINISHED ART";left="REST";right="LEAVE";
+        effect=selected?"BACK TO THE STREET":s->energy<STORY_STAT_MAX?"ENERGY +1 / NO WORK":"ENERGY FULL / VIEW";break;
+    case 'R':where="ROOFTOP / THE SKY";left=s->art_steps>=STORY_PROJECT_DONE?"VIEW":"PAINT";right="REST";
+        effect=selected?"ENERGY +2 SPARK +1":s->art_steps>=STORY_PROJECT_DONE?"VIEW FINISHED CANVAS":"PAINT STAGE +1";break;
     case 'J':where="POTHEADS / SHIFT";left="WORK";right="LEAVE";
         effect=selected?"NO ENERGY SPENT":"WORK +2 ENERGY -1";break;
     case 'm':where="MUSIC DESK";left="MIX";right="SOFT";
