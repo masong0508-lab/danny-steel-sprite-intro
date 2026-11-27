@@ -8,6 +8,8 @@
 #include "hd_ray_trace.h"
 #include "hd_wall_shades.h"
 #include "hd_floor_runs.inc"
+#include "hd_skyline_rom.h"
+#include "hd_extra_floor_atlas.h"
 #if defined(GBA_PROFILE_RENDER) && defined(__arm__)
 #include "gba.h"
 /* Debug-build-only counters. Normal release builds allocate NONE of these.
@@ -87,7 +89,8 @@ static void dirs(const Story *s,int *fx,int *fy,int *rx,int *ry){
   default:*fx=0;*fy=-1;*rx=1;*ry=0;break;
  }
 }
-static void set_sky(uint8_t *p,unsigned tick,int facing,int cx,int cy){
+#if !defined(__arm__)
+static void set_sky_reference(uint8_t *p,unsigned tick,int facing,int cx,int cy){
  /* Floor and walls jointly cover EVERY column in rows 80..139.
     Never prefill their opaque region: 14,400 dead stores per frame.
     Retain the historical full clear on the host comparison path. */
@@ -141,6 +144,25 @@ static void set_sky(uint8_t *p,unsigned tick,int facing,int cx,int cy){
  }
  /* A flat-toned, quiet horizon instead of procedural neon sky. */
  hd_line(p,0,79,239,79,HD_STONE);
+}
+#endif
+static void set_sky(uint8_t *p,unsigned tick,int facing,int cx,int cy){
+#if !defined(__arm__)
+ if(reference_floor){set_sky_reference(p,tick,facing,cx,cy);return;}
+#endif
+ hd_rect(p,0,0,HD_W,24,19);
+ hd_rect(p,0,24,HD_W,8,17);
+ hd_rect(p,0,140,HD_W,20,HD_ROAD);
+ int pan=(facing*71+(cx+cy)/96)%53;
+ hd_skyline_draw(p,pan,(tick/180u)%5u);
+ /* Only the clouds are drawn procedurally. They remain above the
+    skyline band, with the same original time and movement. */
+ int drift=(int)(tick/42u)%40;
+ for(int k=0;k<4;k++){
+  int x=k*73+12-drift,y=17+(k&1)*8;
+  hd_line(p,x,y,x+32,y,HD_STONE_DARK);
+  hd_line(p,x+6,y-2,x+24,y-2,HD_STONE_DARK);
+ }
 }
 /* 400 ROM bytes replace the repeating 17-column road dither modulo. */
 static const uint8_t hd_floor_dither17[HD_W+HD_H] = {
@@ -400,11 +422,15 @@ static HD_CANVAS_CODE __attribute__((noinline)) void floor_render(uint8_t *p,con
    while(x<end){
     int tv=q>>16,tx=along_x?tv:ft,ty=along_x?ft:tv;
     char tile=story_tile(tx,ty);
-    if(tile=='.'){
-     unsigned id=hd_road_tile_index[(unsigned)ty*24u+(unsigned)tx];
-     /* Transposed columns make vertical scans just as cheap as horizontal
-        scans. Load one packed word for this entire run inside a tile. */
-     unsigned word=along_x?read_packed_road_row(id,sub):hd_road_columns[id*16u+sub];
+    unsigned landmark=tile=='.'?255u:hd_landmark_floor_id(tx,ty);
+    if(tile=='.'||landmark!=255u){
+     /* All walkable road-like materials use exact original categories,
+        including the small patches beneath the letter, bus and NPCs. */
+     unsigned word;
+     if(tile=='.'){
+      unsigned id=hd_road_tile_index[(unsigned)ty*24u+(unsigned)tx];
+      word=along_x?read_packed_road_row(id,sub):hd_road_columns[id*16u+sub];
+     }else word=hd_landmark_floor_word(landmark,along_x,sub);
      do{
       int v=q>>8;
       unsigned cell=((unsigned)v>>4)&15u;
@@ -434,13 +460,31 @@ static HD_CANVAS_CODE __attribute__((noinline)) void floor_render(uint8_t *p,con
       x+=step;q+=dq;
      }while(x<end&&(q>>16)==tv);
     }else{
-     do{
-      int v=q>>8;
-      int wx=along_x?v:fixed,wy=along_x?fixed:v;
-      unsigned ink=floor_ink(tile,wx,wy,x,y,tick);
-      floor_store(row,x,begin,end,step,ink);
-      x+=step;q+=dq;
-     }while(x<end&&(q>>16)==tv);
+     unsigned soft=hd_soft_floor_id(tx,ty);
+     if(soft!=255u){
+      unsigned word=hd_soft_floor_word(soft,along_x,((unsigned)fixed>>5)&7u);
+      /* Only the original four-pixel moving water glint depends on
+         time. The underlying material hash is already in cartridge ROM. */
+      do{
+       int v=q>>8;
+       unsigned light=(word>>(((unsigned)v>>5)&7u))&1u;
+       unsigned ink;
+       if(tile=='~'){
+        int wy=along_x?fixed:v;
+        ink=((wy+((int)tick*2))&63)<4?HD_GLASS_LIT:light?HD_REFLECT:HD_GLASS;
+       }else ink=light?HD_LEAF:HD_LEAF_DARK;
+       floor_store(row,x,begin,end,step,ink);
+       x+=step;q+=dq;
+      }while(x<end&&(q>>16)==tv);
+     }else{
+      do{
+       int v=q>>8;
+       int wx=along_x?v:fixed,wy=along_x?fixed:v;
+       unsigned ink=floor_ink(tile,wx,wy,x,y,tick);
+       floor_store(row,x,begin,end,step,ink);
+       x+=step;q+=dq;
+      }while(x<end&&(q>>16)==tv);
+     }
     }
    }
    begin=end;
