@@ -99,6 +99,10 @@ jobs:
           cmp src/hd_ray_paths.inc /tmp/danny_ray_paths.inc
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c tests/hd_ray_trace_test.c -o /tmp/danny_ray_trace
           /tmp/danny_ray_trace
+          python3 tools/build_wall_shades.py /tmp/danny_wall_shades.inc
+          cmp src/hd_wall_shades.inc /tmp/danny_wall_shades.inc
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/hd_canvas.c src/hd_facade_art.c tests/hd_wall_shades_test.c -o /tmp/danny_wall_shades
+          /tmp/danny_wall_shades
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
             src/story.c src/studio.c src/hd_canvas.c src/hd_world_atlas.c \
             src/hd_facade_art.c src/hd_perspective.c \

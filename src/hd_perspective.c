@@ -6,6 +6,7 @@
 #include "hd_road_material_rom.inc"
 #include "hd_road_columns.inc"
 #include "hd_ray_trace.h"
+#include "hd_wall_shades.h"
 #if defined(GBA_PROFILE_RENDER) && defined(__arm__)
 #include "gba.h"
 /* Debug-build-only counters. Normal release builds allocate NONE of these.
@@ -53,7 +54,7 @@ static uint8_t wall_shade_cache[WALL_RAYS][WALL_SHADE_ROWS]
  __attribute__((section(".ewram"),aligned(4)));
 static int wall_cache_valid,wall_cam_x,wall_cam_y,wall_cam_fx,wall_cam_fy;
 #if !defined(__arm__)
-static int legacy_scenery,reference_restore,reference_floor,reference_ray;
+static int legacy_scenery,reference_restore,reference_floor,reference_ray,reference_shades;
 void hd_debug_invalidate_wall_cache(void){wall_cache_valid=0;}
 /* Shipped art remains a host-only baseline; do not weaken the existing
    3,456 golden-frame regression to bless unrelated rendering changes. */
@@ -61,6 +62,7 @@ void hd_debug_legacy_scenery(int enabled){legacy_scenery=!!enabled;wall_cache_va
 void hd_debug_reference_restore(int enabled){reference_restore=!!enabled;}
 void hd_debug_reference_floor(int enabled){reference_floor=!!enabled;}
 void hd_debug_reference_ray(int enabled){reference_ray=!!enabled;wall_cache_valid=0;}
+void hd_debug_reference_shades(int enabled){reference_shades=!!enabled;wall_cache_valid=0;}
 #else
 #define legacy_scenery 0
 #define reference_restore 0
@@ -426,7 +428,8 @@ void hd_debug_wall_store_span(uint8_t *canvas,int x,int y,int width,uint8_t ink)
  wall_store_span(row,head,pairs,tail,ink);
 }
 #endif
-static HD_CANVAS_CODE void wall_column(uint8_t *p,int x,int width,int top,int bottom,char type,
+#if !defined(__arm__)
+static void wall_column_reference(uint8_t *p,int x,int width,int top,int bottom,char type,
                         int u,int forward,int tx,int ty,unsigned face,uint8_t *save_ink){
 #if defined(GBA_PROFILE_RENDER) && defined(__arm__)
  uint32_t wallshade_start=gba_profile_clock();
@@ -516,6 +519,34 @@ static HD_CANVAS_CODE void wall_column(uint8_t *p,int x,int width,int top,int bo
   if(error>=height){v++;error-=height;}
  }
  if(top>18 && top<140)hd_rect(p,x,top,width,1,tree?HD_LEAF_LIT:HD_STONE_LIT);
+#if defined(GBA_PROFILE_RENDER) && defined(__arm__)
+ gba_profile_wallshade_cycles+=gba_profile_clock()-wallshade_start;
+#endif
+}
+#endif
+static HD_CANVAS_CODE void wall_column(uint8_t *p,int x,int width,int top,int bottom,char type,
+                        int u,int forward,int tx,int ty,unsigned face,uint8_t *save_ink){
+#if !defined(__arm__)
+ if(legacy_scenery||reference_shades){
+  wall_column_reference(p,x,width,top,bottom,type,u,forward,tx,ty,face,save_ink);return;
+ }
+#endif
+#if defined(GBA_PROFILE_RENDER) && defined(__arm__)
+ uint32_t wallshade_start=gba_profile_clock();
+#endif
+ const uint8_t *strip=hd_wall_strip(type,tx,ty,face,(unsigned)u,forward>1200);
+ const uint8_t *v=hd_wall_v_samples((unsigned)(bottom-top));
+ unsigned head=(unsigned)((uintptr_t)(p+x)&1u);
+ unsigned pairs=((unsigned)width-head)>>1u,tail=((unsigned)width-head)&1u;
+ uint8_t *row=p+top*HD_W+x;
+ int count=bottom-top;
+ if(bottom>140)count=140-top;
+ for(int i=0;i<count;i++,row+=HD_W){
+  uint8_t ink=strip[v[i]];
+  wall_store_span(row,head,pairs,tail,ink);
+  if(save_ink)save_ink[i]=ink;
+ }
+ if(top>18&&top<140)hd_rect(p,x,top,width,1,type=='T'?HD_LEAF_LIT:HD_STONE_LIT);
 #if defined(GBA_PROFILE_RENDER) && defined(__arm__)
  gba_profile_wallshade_cycles+=gba_profile_clock()-wallshade_start;
 #endif
