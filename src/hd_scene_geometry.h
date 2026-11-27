@@ -32,3 +32,29 @@ static inline HdSceneCamera hd_scene_camera(const Story *s){
   (dx-dy)*4,(dx+dy)*2,((int)s->x+(int)s->y)*8+(dx+dy)*2
  };
 }
+
+/* Texture coordinates belong to the actual crossed wall plane, not the
+   dominant camera heading. A coarse ray can cross two grid edges during
+   one step: the latter edge is the entrance to the final hit tile.
+   The wall depth itself remains the original ray step. */
+typedef struct {unsigned face,u;} HdWallSample;
+static inline int hd_scene_abs(int n){return n<0?-n:n;}
+static inline HdWallSample hd_wall_sample(int wx,int wy,int dx,int dy,
+                                         int tx,int ty,int old_tx,int old_ty){
+ int x0=wx-dx,y0=wy-dy;
+ int crossed_x=tx!=old_tx&&dx!=0,crossed_y=ty!=old_ty&&dy!=0;
+ int bx=(tx+(dx<0))*256,by=(ty+(dy<0))*256;
+ unsigned face;
+ if(crossed_x&&crossed_y){
+  face=(unsigned)(hd_scene_abs(bx-x0)*hd_scene_abs(dy)>=
+                  hd_scene_abs(by-y0)*hd_scene_abs(dx));
+ }else if(crossed_x)face=1u;
+ else if(crossed_y)face=0u;
+ else face=(unsigned)(hd_scene_abs(dx)>hd_scene_abs(dy));
+ int along=face?(dx?y0+dy*(bx-x0)/dx:wy)-ty*256:
+                 (dy?x0+dx*(by-y0)/dy:wx)-tx*256;
+ if(along<0)along=0;
+ if(along>255)along=255;
+ if(face?dx<0:dy>0)along=255-along;
+ return (HdWallSample){face,(unsigned)along};
+}

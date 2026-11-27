@@ -1,5 +1,6 @@
 #include "hd_scene_geometry.h"
 #include "hd_facade_art.h"
+#include "hd_project_props.h"
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -13,7 +14,64 @@ static void legacy_district(int x,int y,char type,unsigned *height,unsigned *var
  if(type=='A')*variant=6u;
 }
 static uint8_t frame[HD_BYTES];
+static void verify_wall_samples(void){
+ unsigned count=0;
+ const int velocity[]={-32,-22,-9,0,9,22,32};
+ for(int x=-257;x<=513;x+=7)for(int y=-257;y<=513;y+=11)
+  for(unsigned i=0;i<7u;i++)for(unsigned j=0;j<7u;j++){
+   int dx=velocity[i],dy=velocity[j];
+   if(!dx&&!dy)continue;
+   int wx=x+dx,wy=y+dy,tx=wx>>8,ty=wy>>8,ox=x>>8,oy=y>>8;
+   if(tx==ox&&ty==oy)continue;
+   HdWallSample sample=hd_wall_sample(wx,wy,dx,dy,tx,ty,ox,oy);
+   assert(sample.face<2u&&sample.u<=255u);
+   if(tx==ox)assert(!sample.face);
+   if(ty==oy)assert(sample.face);
+   /* Use independent double-precision intersection for the selected
+      physical edge. Integer production rounding differs by <=1 texel. */
+   double t;
+   int edge,expected;
+   if(sample.face){
+    edge=(tx+(dx<0))*256;
+    t=(double)(edge-x)/dx;
+    expected=(int)((double)y+dy*t)-ty*256;
+   }else{
+    edge=(ty+(dy<0))*256;
+    t=(double)(edge-y)/dy;
+    expected=(int)((double)x+dx*t)-tx*256;
+   }
+   assert(t>=0.0&&t<=1.0);
+   if(expected<0)expected=0;
+   if(expected>255)expected=255;
+   if(sample.face?dx<0:dy>0)expected=255-expected;
+   assert(hd_scene_abs((int)sample.u-expected)<=1);
+   count++;
+  }
+ printf("wall plane texture mapping: %u crossed-grid ray samples, bounded UV\n",count);
+}
+static void verify_props(void){
+ unsigned count=0;
+ for(unsigned which=0;which<2u;which++)for(unsigned warm=0;warm<2u;warm++)
+  for(int w=16;w<=40;w+=8){
+   uint32_t hashes[5];
+   for(unsigned phase=0;phase<=4u;phase++){
+    memset(frame,HD_INK,sizeof frame);
+    if(which)hd_project_desk(frame,120,120,w,w*2,phase,warm);
+    else hd_project_easel(frame,120,120,w,w*2,phase,warm);
+    uint32_t hash=2166136261u;
+    for(int y=0;y<HD_H;y++)for(int x=0;x<HD_W;x++){
+     unsigned ink=frame[y*HD_W+x];assert(ink<64u);
+     if(x<120-w/2-3||x>120+w/2+3||y>123)assert(ink==HD_INK);
+     hash=(hash^ink)*16777619u;
+    }
+    for(unsigned prior=0;prior<phase;prior++)assert(hashes[prior]!=hash);
+    hashes[phase]=hash;count++;
+   }
+  }
+ printf("creative props: %u distinct stage rasters, grounded/clipped bounds\n",count);
+}
 int main(void){
+ verify_wall_samples();verify_props();
  unsigned districts=0,steps=0,texels=0;
  for(int y=-1;y<=STORY_H;y++)for(int x=-1;x<=STORY_W;x++){
   char t=story_tile(x,y);

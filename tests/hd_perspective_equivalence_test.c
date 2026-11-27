@@ -153,6 +153,7 @@ int main(void){
  verify_camera_shade_cache();
  verify_coherent_restore();
  hd_debug_legacy_scenery(1);
+ hd_debug_reference_restore(1);
  verify_camera_shade_cache();
  assert(hd_first_person_anchor_map_valid());
  Story s;story_new(&s,0);
@@ -183,6 +184,7 @@ int main(void){
   }
  assert(cases==3456u);
  hd_debug_legacy_scenery(0);
+ hd_debug_reference_restore(0);
 
  /* Independently check the depth inequality at every possible sampled
     wall distance and floor row, including original height clamp edges. */

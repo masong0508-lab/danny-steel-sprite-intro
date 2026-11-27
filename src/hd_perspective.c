@@ -2,6 +2,7 @@
 #include "hd_world_atlas.h"
 #include "hd_facade_art.h"
 #include "hd_scene_geometry.h"
+#include "hd_project_props.h"
 #include "hd_road_material_rom.inc"
 #if defined(GBA_PROFILE_RENDER) && defined(__arm__)
 #include "gba.h"
@@ -45,6 +46,7 @@ static uint8_t wall_type[HD_W],wall_u[HD_W],wall_tx[HD_W],wall_ty[HD_W];
    at most 150 vertical palette entries per ray (6,750 EWRAM bytes).
    This is NOT another framebuffer and never caches moving sky or rain. */
 enum { WALL_RAYS=45, WALL_SHADE_ROWS=150 };
+static uint8_t wall_face[WALL_RAYS];
 static uint8_t wall_shade_cache[WALL_RAYS][WALL_SHADE_ROWS]
  __attribute__((section(".ewram"),aligned(4)));
 static int wall_cache_valid,wall_cam_x,wall_cam_y,wall_cam_fx,wall_cam_fy;
@@ -409,6 +411,7 @@ static HD_CANVAS_CODE __attribute__((noinline)) void cast_walls(uint8_t *p,int c
   int dx=fx*32+rx*side,dy=fy*32+ry*side;
   int wx=cx,wy=cy,hit_dist=2400,tx=0,ty=0;
   int previous_tx=cx>>8,previous_ty=cy>>8;
+  int hit_from_x=previous_tx,hit_from_y=previous_ty;
   char hit=0;
   for(int step=1;step<76;step++){
    wx+=dx;wy+=dy;
@@ -417,9 +420,11 @@ static HD_CANVAS_CODE __attribute__((noinline)) void cast_walls(uint8_t *p,int c
       Only touch the story grid on cell crossings. Same collision set,
       depth and view, but many fewer tile queries and branch chains. */
    if(tx==previous_tx && ty==previous_ty)continue;
-   previous_tx=tx;previous_ty=ty;
    char t=story_tile(tx,ty);
-   if(t=='#'||t=='A'||t=='T'){hit=t;hit_dist=step*32;break;}
+   if(t=='#'||t=='A'||t=='T'){
+    hit=t;hit_dist=step*32;hit_from_x=previous_tx;hit_from_y=previous_ty;break;
+   }
+   previous_tx=tx;previous_ty=ty;
   }
   if(hit_dist>2300)hit_dist=2300;
   for(int col=x;col<end;col++){
@@ -433,8 +438,11 @@ static HD_CANVAS_CODE __attribute__((noinline)) void cast_walls(uint8_t *p,int c
   int top=79-height/2,bottom=79+height/2;
   unsigned face=abs_i(dx)>abs_i(dy)?1u:0u;
   int u=face?wy&255:wx&255;
-  /* U increases to screen right, including opposite compass headings. */
-  if(!legacy_scenery&&(fx<0||fy>0))u=255-u;
+  if(!legacy_scenery){
+   HdWallSample sample=hd_wall_sample(wx,wy,dx,dy,tx,ty,hit_from_x,hit_from_y);
+   face=sample.face;u=(int)sample.u;
+  }
+  if(slot<WALL_RAYS)wall_face[slot]=(uint8_t)face;
   for(int col=x;col<end;col++){
    wall_u[col]=(uint8_t)u;
    wall_tx[col]=(uint8_t)tx;
@@ -450,8 +458,16 @@ static HD_CANVAS_CODE __attribute__((noinline)) void cast_walls(uint8_t *p,int c
  wall_cache_valid=slot==WALL_RAYS;
  wall_cam_x=cx;wall_cam_y=cy;wall_cam_fx=fx;wall_cam_fy=fy;
 }
-static void actor(uint8_t *p,int sx,int ground,int h,char kind,unsigned tick){
+static void actor(uint8_t *p,int sx,int ground,int h,char kind,unsigned tick,const Story *s){
  if(h<8)return;
+ if(!legacy_scenery&&(kind=='R'||kind=='M')){
+  int w=h*4/11;if(w<5)w=5;
+  if(kind=='R')hd_project_easel(p,sx,ground,w,h*3/4,s->art_steps,
+                               !!(s->project_style&STORY_STYLE_ART_WARM));
+  else hd_project_desk(p,sx,ground,w,h*3/4,s->song_steps,
+                       !!(s->project_style&STORY_STYLE_SONG_SOFT));
+  return;
+ }
  /* World-grounded people use the same authored 4-direction sprites in
     both views. The old rectangles stay only for physical shop markers. */
  if(kind=='F'||kind=='C'||kind=='P'||kind=='V'||kind=='Q'||kind=='W'){
@@ -566,7 +582,9 @@ static void restore_occluding_wall(uint8_t *p,int sx,int h,int depth){
     wall_cached_column(p,x,end-x,top,bottom,(char)wall_type[x],wall_shade_cache[slot]);
    else
     wall_column(p,x,1,top,bottom,(char)wall_type[x],wall_u[x],
-                wall_depth[x],wall_tx[x],wall_ty[x],wall_cam_fx!=0,0);
+                wall_depth[x],legacy_scenery?wall_tx[x]:(int)(int8_t)wall_tx[x],
+                legacy_scenery?wall_ty[x]:(int)(int8_t)wall_ty[x],
+                slot<WALL_RAYS?wall_face[slot]:(unsigned)(wall_cam_fx!=0),0);
   }
   x=end;
  }
@@ -608,7 +626,7 @@ static void render_billboards(uint8_t *p,int cx,int cy,
    hd_rect(p,x+w/2-2,top+2,2,y-top-2,HD_BARK);
    hd_rect(p,x,top-h/10,w/3+1,h/10+1,HD_INK);
    hd_pixel(p,x+1,top-h/10,HD_GOLD);
-  }else actor(p,item->sx,item->ground,item->height,(char)item->kind,tick);
+  }else actor(p,item->sx,item->ground,item->height,(char)item->kind,tick,s);
   restore_occluding_wall(p,item->sx,item->height,item->depth);
  }
 }

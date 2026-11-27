@@ -3,6 +3,7 @@
 #include "hd_world_atlas.h"
 #include "hd_facade_art.h"
 #include "hd_scene_geometry.h"
+#include "hd_project_props.h"
 
 /* A real isometric projection of the ACTUAL 24x18 walkable town:
    x grows southeast and y southwest, so D-pad logic stays cardinal
@@ -306,33 +307,8 @@ static void object(uint8_t *p,int sx,int sy,char kind,unsigned tick,
   return;
  }
  if(kind=='R'){
-  /* Freestanding painting with visible three-legged wooden easel. */
-  hd_ellipse(p,cx,foot,10,3,HD_SHADOW);
-  hd_line(p,cx-7,foot,cx-2,foot-19,HD_BARK);
-  hd_line(p,cx+7,foot,cx+2,foot-19,HD_BARK);
-  hd_line(p,cx,foot,cx,foot-17,HD_COPPER);
-  hd_rect(p,cx-8,foot-19,16,14,HD_BARK);
-  hd_rect(p,cx-6,foot-17,12,10,HD_PAPER);
-  /* Small but recognizable framed evening skyline, with a canvas edge
-     and easel legs rather than an abstract zig-zag symbol. */
-  unsigned phase=s->art_steps,warm=s->project_style&STORY_STYLE_ART_WARM;
-  if(!phase){
-   hd_rect(p,cx-5,foot-16,10,7,HD_PLASTER);
-   hd_line(p,cx-5,foot-10,cx+4,foot-10,HD_STONE);
-   hd_line(p,cx-4,foot-12,cx,foot-14,HD_STONE);
-   hd_line(p,cx,foot-14,cx+4,foot-12,HD_STONE);
-  }else{
-   hd_rect(p,cx-5,foot-16,10,4,warm?HD_COPPER:HD_GLASS);
-   hd_rect(p,cx-5,foot-12,10,3,warm?HD_BRICK_LIT:HD_ROAD_COOL);
-   hd_pixel(p,cx+3,foot-15,HD_LAMP);
-   if(phase>=2u){
-    hd_rect(p,cx-4,foot-12,3,3,HD_STONE_DARK);
-    hd_rect(p,cx,foot-13,3,4,HD_BRICK_DARK);
-   }
-   if(phase>=3u)hd_pixel(p,cx+1,foot-11,HD_GOLD);
-   if(phase>=4u)hd_line(p,cx-5,foot-8,cx+4,foot-8,HD_GOLD);
-  }
-  hd_rect(p,cx-10,foot-5,20,2,HD_COPPER);
+  hd_project_easel(p,cx,foot,16,20,s->art_steps,
+                   !!(s->project_style&STORY_STYLE_ART_WARM));
   return;
  }
  if(kind=='K'){
