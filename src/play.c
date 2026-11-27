@@ -26,6 +26,16 @@ const char story_sram_id[] __attribute__((used)) = "SRAM_V113";
 static Story game;
 static unsigned clock_ticks;
 static int save_cooldown;
+static unsigned presented_scene;
+/* Distinct locations and actual panel changes may settle visually.
+   Dialogue pages within one scene, camera toggles and menus do not. */
+static unsigned presentation_scene(void){
+    if(game.ended||game.life_stage==STORY_LIFE_FINALE)return 0x300u;
+    if(game.battle)return 0x301u;
+    if(game.activity==STORY_ACT_STUDIO)return 0x302u;
+    int panel=story_neighborhood_panel(&game);
+    return panel>=0?0x100u+(unsigned)panel:(unsigned)game.cinema;
+}
 
 /* Shared musical language for Danny and BORE. The same cue is heard in the
    associated 2D/3D location and during its corresponding cinematic. */
@@ -246,6 +256,7 @@ void play_enter(int want_load,int slot){
     REG_BG2PA=256; REG_BG2PB=0; REG_BG2PC=0; REG_BG2PD=256;
     REG_BG2X=0;REG_BG2Y=0;REG_BGCNT(2)=0;
     draw_hidden(0);
+    presented_scene=presentation_scene();
     REG_DISPCNT=4|DCNT_BG2;
     /* A held menu confirmation belongs to the menu. Only a release and
        new press may advance the opening after its initial page appears. */
@@ -303,8 +314,15 @@ int play_update(void){
         if(play_tick(keys))return 1;
     unsigned page;
     if(frame_runtime_begin_render(&page)){
+        unsigned scene=presentation_scene();
+        /* Preserve brightness and exact timing of source opening,
+           active combat and the musical ending. */
+        unsigned transition=game.cinema==CINE_OPEN||game.battle==BATTLE_DODGE||
+            game.ended||game.life_stage==STORY_LIFE_FINALE?FRAME_RUNTIME_CLEAR:
+            scene!=presented_scene?FRAME_RUNTIME_SOFTEN:FRAME_RUNTIME_KEEP;
         draw_hidden((int)page);
-        frame_runtime_submit(page);
+        frame_runtime_submit_transition(page,transition);
+        presented_scene=scene;
     }
     return 0;
 }

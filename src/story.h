@@ -201,6 +201,10 @@ const char *story_goal_reason(const Story *s);
 const char *story_goal_kind(const Story *s);
 /* Exactly the same adjacent target priority as pressing A. */
 const char *story_action_hint(const Story *s);
+/* Visible prompts describe the actual next input, including commits. */
+const char *story_dialogue_accept(const Story *s);
+const char *story_dialogue_back(const Story *s);
+const char *story_risk_action(const Story *s);
 int story_risk_available(const Story *s); /* only at confirmed optional risk sites */
 const StoryPage *story_pages(const Story *s, int *count);
 int story_master_showcase(const Story *s);

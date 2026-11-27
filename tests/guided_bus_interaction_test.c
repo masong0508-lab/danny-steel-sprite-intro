@@ -30,8 +30,12 @@ int main(void){
  assert(strcmp(story_action_hint(&s),"A BUS")==0);
  press(&s,1u);
  assert(s.dialogue);
- while(s.dialogue)press(&s,1u);
- assert(s.choosing);
+ assert(!strcmp(story_dialogue_back(&s),"B CANCEL"));
+ int pages_count=0;story_pages(&s,&pages_count);
+ assert(pages_count>1&&!strcmp(story_dialogue_accept(&s),"A NEXT"));
+ for(int i=1;i<pages_count;i++)press(&s,1u);
+ assert(!strcmp(story_dialogue_accept(&s),"A CHOOSE"));
+ press(&s,1u);assert(s.choosing);
  s.choosing=0;s.dialogue=0;s.cinema=CINE_NONE;
  s.x=12;s.y=12;s.facing=0;s.old_keys=0;
  assert(!story_risk_available(&s));

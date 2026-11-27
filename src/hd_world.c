@@ -44,12 +44,12 @@ static void heading(uint8_t *p,const Story *s){
     rendering engine. Low contrast secondary keys protect the scene. */
  hd_rect(p,0,140,HD_W,20,HD_INK);
  hd_rect(p,0,140,HD_W,1,HD_COPPER);
- hd_rect(p,8,145,3,10,HD_GOLD);
- hd_text(p,16,147,story_action_hint(s),HD_PAPER,1,0);
- hd_rect(p,94,144,1,12,HD_STONE_DARK);
- hd_text(p,103,147,"L CAMERA",HD_STONE_LIT,1,0);
- hd_rect(p,166,144,1,12,HD_STONE_DARK);
- hd_text(p,174,147,"START HELP",HD_STONE_LIT,1,0);
+ hd_rect(p,8,143,3,7,HD_GOLD);
+ hd_text(p,16,143,story_action_hint(s),HD_PAPER,1,0);
+ hd_rect(p,92,143,1,14,HD_STONE_DARK);
+ hd_text(p,100,143,"L CAMERA  START HELP",HD_STONE_LIT,1,0);
+ if(story_risk_available(s))hd_text(p,16,152,"B RISK OPTIONS",HD_STONE_LIT,1,0);
+ hd_text(p,158,152,story_neighborhood_revisit(s)>=0?"R REVISIT":"R NOTES",HD_STONE_LIT,1,0);
 }
 void hd_world_draw(uint8_t *p,const Story *s,unsigned frame){
  hd_isometric_draw(p,s,frame);

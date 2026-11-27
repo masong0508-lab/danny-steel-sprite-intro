@@ -52,6 +52,9 @@ int main(void){
   assert(story_neighborhood_at(&s)==(int)i);
   assert(!strcmp(story_action_hint(&s),"A STORY"));
   press(&s,A);assert(story_neighborhood_panel(&s)==(int)i*3);
+  assert(!strcmp(story_dialogue_back(&s),"B CANCEL"));
+  Story last=s;int pages=0;story_pages(&last,&pages);last.page=(uint8_t)(pages-1);
+  assert(!strcmp(story_dialogue_accept(&last),"A CHOOSE"));
   render(&s,i*3u);press(&s,A|B);assert(!s.dialogue&&!s.activity);
   assert(!(s.neighborhood_seen&(1u<<i)));
   press(&s,A);done(&s);assert(s.activity==STORY_ACT_NEIGHBORHOOD);
@@ -60,6 +63,9 @@ int main(void){
    press(&s,A);done(&s);assert(s.activity==STORY_ACT_NEIGHBORHOOD);
    if(b)press(&s,RIGHT);
    press(&s,A);assert(story_neighborhood_panel(&s)==(int)(i*3+1+b));render(&s,i*3u+1u+b);
+   Story ending=s;int outcome_pages=0;story_pages(&ending,&outcome_pages);
+   ending.page=(uint8_t)(outcome_pages-1);
+   assert(!strcmp(story_dialogue_accept(&ending),"A SAVE"));
    if(b==0){press(&s,B);assert(!(s.neighborhood_seen&(1u<<i)));press(&s,A);done(&s);press(&s,A);}
    done(&s);assert(!s.activity&&!s.dialogue&&s.cinema==CINE_NONE);
    assert(s.neighborhood_seen&(1u<<i));assert(!!(s.neighborhood_right&(1u<<i))==b);

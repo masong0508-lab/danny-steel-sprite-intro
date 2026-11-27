@@ -8,6 +8,12 @@ extern volatile uint32_t frame_runtime_video_frames;
 extern volatile uint32_t frame_runtime_read;
 extern volatile uint32_t frame_runtime_write;
 extern volatile uint32_t frame_runtime_dropped;
+/* Ease brightness only when a completed new scene is presented. */
+#define FRAME_RUNTIME_DIM_LEVEL 6u
+#define FRAME_RUNTIME_KEEP 0u
+#define FRAME_RUNTIME_SOFTEN 1u
+#define FRAME_RUNTIME_CLEAR 2u
+extern volatile unsigned frame_runtime_dim;
 
 void frame_runtime_init(void);
 void frame_runtime_start(unsigned displayed_page);
@@ -18,6 +24,7 @@ int frame_runtime_next(uint16_t *keys);
 int frame_runtime_begin_render(unsigned *page);
 /* Call only after the complete pixel page has reached hidden VRAM. */
 void frame_runtime_submit(unsigned page);
+void frame_runtime_submit_transition(unsigned page,unsigned transition);
 
 #if defined(__arm__)
 #define FRAME_RUNTIME_FAST __attribute__((section(".iwram"),long_call,target("arm")))
