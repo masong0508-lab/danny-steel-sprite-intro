@@ -73,6 +73,15 @@ int main(void){
  Story loaded;story_new(&loaded,0);assert(neighborhood_save_decode(&loaded,raw));
  assert(loaded.neighborhood_seen==s.neighborhood_seen&&loaded.neighborhood_right==s.neighborhood_right);
  for(unsigned i=0;i<sizeof raw;i++){raw[i]^=1u;assert(!neighborhood_save_decode(&loaded,raw));raw[i]^=1u;}
+ for(unsigned id=0;id<=STORY_TRACK_MAX;id++){
+  s.neighborhood_target=(uint8_t)id;neighborhood_save_encode(&s,raw);
+  assert(raw[2]==2u&&raw[8]==id&&neighborhood_save_decode(&loaded,raw));
+  assert(loaded.neighborhood_target==id);
+ }
+ raw[8]=STORY_TRACK_MAX+1u;raw[9]=neighborhood_crc(raw);
+ Story unchanged=loaded;assert(!neighborhood_save_decode(&loaded,raw));assert(!memcmp(&loaded,&unchanged,sizeof loaded));
+ raw[2]=1u;raw[8]=0xB6u;raw[9]=neighborhood_crc(raw);
+ assert(neighborhood_save_decode(&loaded,raw)&&!loaded.neighborhood_target);
  loaded.slot=1;assert(!neighborhood_save_decode(&loaded,raw));
  memset(raw,0xff,sizeof raw);assert(!neighborhood_save_decode(&loaded,raw));
  s.neighborhood_target=3;s.rescue_stage=STORY_RESCUE_MISSING;

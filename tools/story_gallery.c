@@ -288,6 +288,13 @@ int main(int argc,char **argv){
  write_frame("17a_advanced_studio_mixer",&s,148);
  {Story basic=s;basic.song_steps=1u;basic.activity_choice=0;
   write_frame("17b_basic_studio_mixer",&basic,148);}
+ /* Native gallery snapshots of the actual new activity painters. */
+ {Story art=s;art.activity=STORY_ACT_PAINT;art.cinema=CINE_ART;art.art_steps=2u;
+  art.activity_choice=STORY_PAINT_WARM|1u;art.studio_tab=2u;
+  write_frame("17c_rooftop_workshop",&art,100);
+  art.activity=0;art.cinema=CINE_NONE;art.paused=1;art.choice=STORY_FIELD_GUIDE_ACTIVE;
+  write_frame("17d_field_guide_map",&art,100);
+ }
  /* Additional actual in-game plot states exercise the expanded native
     cinematics; no art is fabricated for the screenshot pipeline. */
  s.activity=0;s.activity_choice=0;s.dialogue=0;s.ended=0;

@@ -56,6 +56,7 @@
 #define STORY_TRACK_ROOF 16u
 #define STORY_TRACK_ORCHARD 17u
 #define STORY_TRACK_SHOW 18u
+#define STORY_TRACK_MAX STORY_TRACK_SHOW
 #define STORY_TRACK_COUNT 5u
 #define STORY_TRACK_MAIN_INDEX 3u
 #define STORY_TRACK_SHOW_INDEX 4u
@@ -149,7 +150,7 @@ typedef struct {
     uint8_t cinema;
     uint16_t cinema_frame;
     uint16_t old_keys;
-    /* Independent companion save; selection and tracking are transient. */
+    /* Independent companion save; tracked destination persists, cursor is transient. */
     uint16_t neighborhood_seen, neighborhood_right;
     uint8_t neighborhood_cursor, neighborhood_target;
 } Story;

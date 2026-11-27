@@ -2489,7 +2489,7 @@ void story_tick(Story *s, uint16_t keys) {
             else if((pressed&A)&&story_neighborhood_enabled(s)){
                 unsigned target=s->neighborhood_cursor+1u;
                 s->neighborhood_target=(uint8_t)(s->neighborhood_target==target?0u:target);
-                s->paused=0;s->choice&=1u;
+                s->dirty=1;s->paused=0;s->choice&=1u;
             }
             return;
         }
@@ -2517,7 +2517,7 @@ void story_tick(Story *s, uint16_t keys) {
                 s->choice=(uint8_t)((s->choice&~STORY_TRACK_CHOICE_MASK)|(selected<<1));
             }else if((pressed&A)&&story_track_available(s,selected)){
                 s->neighborhood_target=(uint8_t)story_track_id(selected);
-                s->paused=0;s->choice&=1u;
+                s->dirty=1;s->paused=0;s->choice&=1u;
             }
         }else if(pressed&R){
             unsigned page=(s->choice&STORY_CHECK_PAGE_ACTIVE)?

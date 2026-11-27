@@ -247,6 +247,10 @@ jobs:
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c src/story_save.c src/hd_canvas.c src/hd_studio.c src/hd_overlay.c tests/studio_campaign_access_test.c -o /tmp/danny_studio_campaign
           /tmp/danny_studio_campaign
+      - name: Verify shared painting layers and collision-accurate map guide
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c src/hd_canvas.c tests/city_canvas_test.c -o /tmp/danny_city_canvas
+          /tmp/danny_city_canvas
       - name: Play the seven-stage cafe exhibition through live movement and creative sessions
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c src/story_save.c src/hd_canvas.c src/hd_cinema.c src/hd_actor.c src/hd_special.c src/hd_overlay.c tests/cafe_show_campaign_test.c -o /tmp/danny_cafe_show

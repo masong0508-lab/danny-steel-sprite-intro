@@ -255,10 +255,12 @@ void play_enter(int want_load,int slot){
 }
 static int play_tick(u16 keys){
     int was_editor=game.activity==STORY_ACT_STUDIO||game.activity==STORY_ACT_PAINT;
+    unsigned prior_show=story_show_stage(&game),prior_target=game.neighborhood_target;
     story_tick(&game,keys);
     /* Leaving the editor commits the edited arrangement immediately,
        instead of waiting two seconds for the periodic SRAM checkpoint. */
-    if(was_editor&&game.activity!=STORY_ACT_STUDIO&&game.activity!=STORY_ACT_PAINT&&game.dirty){
+    if(game.dirty&&((was_editor&&game.activity!=STORY_ACT_STUDIO&&game.activity!=STORY_ACT_PAINT)||
+       prior_show!=story_show_stage(&game)||prior_target!=game.neighborhood_target)){
         write_save();save_cooldown=0;
     }
     if(game.quit){

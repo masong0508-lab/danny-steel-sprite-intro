@@ -1,6 +1,7 @@
 #include "story.h"
 #include "studio.h"
 #include "story_save.h"
+#include "neighborhood_save.h"
 #include "hd_canvas.h"
 #include <assert.h>
 #include <stdio.h>
@@ -23,7 +24,13 @@ static void paint(Story *s){
  for(unsigned i=0;i<32u;i++)assert(frame.before[i]==0xA5&&frame.after[i]==0xA5);
  for(unsigned i=0;i<HD_BYTES;i++)assert(frame.pixels[i]<64);
 }
-static void stage(Story *s,unsigned n){assert(story_show_stage(s)==n);uint8_t raw[STORY_SAVE_BYTES],out[STORY_SAVE_BYTES];story_save_encode(s,raw);assert(story_save_decode(raw,out));assert(out[29]==s->project_style);}
+static void stage(Story *s,unsigned n){
+ assert(story_show_stage(s)==n);
+ uint8_t raw[STORY_SAVE_BYTES],out[STORY_SAVE_BYTES],extra[NEIGHBORHOOD_EXT_LEN];
+ story_save_encode(s,raw);assert(story_save_decode(raw,out));assert(out[29]==s->project_style);
+ neighborhood_save_encode(s,extra);Story reload=*s;reload.neighborhood_target=0;
+ assert(neighborhood_save_decode(&reload,extra)&&reload.neighborhood_target==s->neighborhood_target);
+}
 int main(void){
  Story s;story_new(&s,0);done(&s);assert(!story_track_available(&s,STORY_TRACK_SHOW_INDEX));
  stand(&s,5,5,2);tap(&s,A);done(&s);

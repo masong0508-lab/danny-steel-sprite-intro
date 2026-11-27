@@ -1,5 +1,6 @@
 #include "hd_canvas.h"
 #include "hd_actor_acting.h"
+#include "hd_city_canvas.h"
 #include "hd_neighborhood_panels.h"
 #include <string.h>
 
@@ -423,39 +424,10 @@ static void rooftop(uint8_t *p,const Story *s,unsigned t,unsigned page){
  unsigned warm=s->project_style&STORY_STYLE_ART_WARM;
  hd_rect(p,151,52,67,51,HD_BARK);
  hd_rect(p,155,56,59,43,HD_PAPER);
- if(phase==0u){
-  hd_rect(p,158,59,53,32,HD_PLASTER);
-  hd_line(p,158,89,210,89,HD_STONE);
-  hd_line(p,160,85,177,78,HD_STONE_LIT);
-  hd_line(p,177,78,190,83,HD_STONE_LIT);
-  hd_line(p,190,83,207,76,HD_STONE_LIT);
-  hd_line(p,160,95,208,95,HD_MORTAR);
- }else{
-  /* First layer: atmosphere. Second: masonry silhouettes. Third:
-     individual windows. Fourth: illuminated streets and final frame. */
-  hd_rect(p,158,59,53,32,warm?HD_COPPER:HD_GLASS);
-  hd_rect(p,158,59,53,5,warm?HD_GOLD:HD_GLASS_LIT);
-  hd_rect(p,158,82,53,9,warm?HD_BRICK_LIT:HD_REFLECT);
-  hd_ellipse(p,195,67,7,7,HD_LAMP);
-  if(phase>=2u){
-   for(int i=0;i<9;i++){
-    int x=158+i*6,h=(i*13)%17+7;
-    hd_rect(p,x,91-h,6,h,HD_STONE_DARK);
-    hd_rect(p,x,91-h,5,1,warm?HD_COPPER:HD_STONE_LIT);
-    if(phase>=3u){
-     hd_rect(p,x+2,87-h,2,2,HD_LAMP);
-     if(i&1)hd_pixel(p,x+2,89-h,HD_GOLD);
-    }
-   }
-  }
-  hd_rect(p,157,90,55,7,phase>=3u?HD_LEAF:HD_STONE);
-  if(phase>=STORY_PROJECT_DONE){
-   hd_line(p,159,94,209,94,HD_GOLD);
-   hd_line(p,162,93,174,92,HD_PAPER);
-   hd_line(p,190,96,205,95,HD_COPPER);
-   hd_rect(p,152,53,65,1,HD_GOLD);
-   hd_rect(p,152,101,65,1,HD_COPPER);
-  }
+ hd_city_painting(p,158,59,53,38,phase,warm!=0u,0u);
+ if(phase>=STORY_PROJECT_DONE){
+  hd_rect(p,152,53,65,1,HD_GOLD);
+  hd_rect(p,152,101,65,1,HD_COPPER);
  }
  hd_rect(p,169,105,7,35,HD_BARK);
  hd_line(p,171,113,156,147,HD_BARK);
@@ -478,7 +450,7 @@ static void rooftop(uint8_t *p,const Story *s,unsigned t,unsigned page){
   }
   int strokes=(int)((t-92u)/32u);
   if(strokes>6)strokes=6;
-  for(int j=0;j<strokes;j++){
+  for(int j=0;j<strokes&&phase<STORY_PROJECT_DONE;j++){
    int px=160+j*7;
    hd_line(p,px,78-(j&1)*3,px+5,76+(j&1)*3,
            j&1?HD_COPPER:HD_RED_SHADE);
@@ -606,13 +578,9 @@ void hd_cinema_draw(uint8_t *p,const Story *s,unsigned t){
     hd_rect(p,23,39,41,16,poster);
     hd_text(p,24,43,"SHOW",HD_PAPER,1,0);
     hd_text(p,24,59,"DANNY",HD_INK,1,0);
-    hd_rect(p,175,36,47,32,frame);hd_rect(p,178,39,41,26,HD_GLASS);
-    for(int i=0;i<5;i++){
-     int h=7+(i*9)%13,x=181+i*7;
-     hd_rect(p,x,61-h,6,h,HD_BRICK_DARK);
-     hd_rect(p,x+2,62-h,2,3,poster);
-    }
-    hd_line(p,179,62,217,62,HD_STONE_LIT);
+    hd_rect(p,175,36,47,32,frame);
+    hd_city_painting(p,178,39,41,26,s->art_steps,
+                     !!(s->project_style&STORY_STYLE_ART_WARM),0u);
    }
    /* Background commuter: connected legs and depth BEFORE the actors. */
    int passer=235-(int)((t/5u)%80u);

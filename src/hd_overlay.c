@@ -1,5 +1,7 @@
 #include "hd_canvas.h"
 #include "story_checks.h"
+#include "hd_city_canvas.h"
+#include "hd_guide_map.h"
 
 /* Native-pixel film subtitles, menus and prompts shared by the painted map
    and legacy cinematic/raycast frames. Narrative text is never removed. */
@@ -46,34 +48,25 @@ static void field_guide(uint8_t *p,const Story *s){
   hd_line(p,21,44,217,44,HD_STONE_DARK);
   int gx=0,gy=0;const char *goal=0;
   int has=story_goal(s,&gx,&gy,&goal);
-  hd_text(p,22,51,has?story_goal_kind(s):"NO URGENT ERRAND",
-          HD_STONE_LIT,1,0);
+  hd_guide_map(p,s,144,50);
+  hd_text(p,22,51,has?story_goal_kind(s):"FREE TIME",HD_STONE_LIT,1,0);
   if(has){
-   hd_text(p,22,63,goal,HD_PAPER,1,0);
+   hd_text(p,22,62,goal,HD_PAPER,1,0);
    int dir=-1,steps=-1;
    if(story_route(s,&dir,&steps)){
-    static const char *const compass[]={"AHEAD","RIGHT","BACK","LEFT"};
-    const char *heading=dir<0?"HERE":compass[(dir-(int)s->facing+4)&3];
-    char count[]="00 STEPS";
-    unsigned number=steps<0?0u:steps>99?99u:(unsigned)steps;
-    count[0]=(char)('0'+number/10u);
-    count[1]=(char)('0'+number%10u);
-    hd_text(p,139,63,heading,HD_GOLD,1,0);
-    hd_text(p,178,63,steps==0?"ACT NOW":count,HD_LAMP,1,0);
-   }else hd_text(p,121,63,"NO SAFE ROUTE",HD_RED,1,0);
-   hd_text(p,22,75,story_goal_reason(s),HD_PAPER,1,0);
-  }else hd_text(p,22,75,"EXPLORE AND MAKE SOMETHING",HD_PAPER,1,0);
-  hd_line(p,21,86,217,86,HD_STONE_DARK);
-  hd_text(p,22,93,story_action_hint(s),HD_LAMP,1,0);
-  hd_text(p,108,93,story_risk_available(s)?"B RISK / OPTIONAL":
-          "B NO RISK HERE",HD_STONE_LIT,1,0);
-  hd_text(p,22,105,"A TALK / WORK / INTERACT",HD_PAPER,1,0);
-  hd_text(p,22,117,"RIGHT PAGE: TRACK SIDE GOALS",HD_PAPER,1,0);
-  char stats[]="ENERGY 0  SPARK 0  BOND 0";
-  stats[7]=(char)('0'+(s->energy>5u?5u:s->energy));
-  stats[16]=(char)('0'+(s->spark>5u?5u:s->spark));
-  stats[24]=(char)('0'+(s->bond>5u?5u:s->bond));
-  hd_text(p,22,132,stats,HD_GOLD,1,0);
+    static const char *const compass[]={"EAST","SOUTH","WEST","NORTH"};
+    static const char *const relative[]={"AHEAD","RIGHT","BACK","LEFT"};
+    const char *heading=dir<0?"HERE":s->view?relative[(dir-(int)s->facing+4)&3]:compass[dir];
+    char count[]="000 STEPS";unsigned n=steps<0?0u:steps>999?999u:(unsigned)steps;
+    count[0]=(char)('0'+n/100u);count[1]=(char)('0'+n/10u%10u);count[2]=(char)('0'+n%10u);
+    hd_text(p,22,75,heading,HD_GOLD,1,0);
+    hd_text(p,22,86,steps?count:"A TO INTERACT",HD_PAPER,1,0);
+   }else hd_text(p,22,75,"NO SAFE ROUTE",HD_RED,1,0);
+  }
+  hd_text(p,22,98,story_action_hint(s),HD_LAMP,1,0);
+  hd_text(p,22,111,has?story_goal_reason(s):"EXPLORE AND CREATE",HD_PAPER,1,0);
+  hd_text(p,22,125,"WHITE YOU / GOLD GOAL",HD_STONE_LIT,1,0);
+  hd_text(p,22,135,"GREEN NEXT STEP / R CHECKS",HD_STONE_LIT,1,0);
  }
  hd_rect(p,19,143,202,1,HD_STONE_DARK);
  hd_text(p,22,147,"LEFT/RIGHT PAGE  B BACK  R CHECKS",HD_STONE_LIT,1,0);
@@ -206,26 +199,27 @@ void hd_game_overlay(uint8_t *p,const Story *s){
   hd_text(p,18,45,story_paint_layer(s),HD_PAPER,1,1);
   hd_text(p,168,45,story_paint_warm(s)?"WARM":"COOL",HD_GOLD,1,0);
   unsigned targets=story_paint_targets(s),brush=story_paint_brush(s);
-  unsigned sky=story_paint_warm(s)?HD_COPPER:HD_GLASS_LIT;
-  unsigned city=story_paint_warm(s)?HD_BRICK:HD_ROAD_COOL;
+  unsigned done=0;
+  hd_rect(p,63,53,114,66,HD_BARK);
+  hd_city_painting(p,68,54,104,64,s->art_steps,story_paint_warm(s),s->studio_tab);
   for(unsigned i=0;i<8u;i++){
-   int x=22+(int)(i&3u)*50,y=58+(int)(i>>2)*29;
+   int x=68+(int)(i&3u)*26,y=54+(int)(i>>2)*32;
    unsigned bit=1u<<i,marked=targets&bit,filled=s->studio_tab&bit;
-   hd_rect(p,x,y,47,26,brush==i?HD_LAMP:HD_STONE_DARK);
-   hd_rect(p,x+1,y+1,45,24,HD_SHADOW);
-   if(filled||s->art_steps){
-    hd_rect(p,x+2,y+2,43,22,i<4u?sky:city);
-    if(i>=4u&&s->art_steps>=1u){
-     int h=6+(int)(i*7u%9u);hd_rect(p,x+6,y+24-h,29,h,HD_BRICK_DARK);
-     if(s->art_steps>=2u||filled){
-      for(int j=0;j<3;j++)hd_rect(p,x+9+j*9,y+19,3,3,HD_LAMP);
-     }
-    }
-    if(i<4u&&s->art_steps>=2u)hd_line(p,x+5,y+20,x+38,y+20,HD_PAPER);
+   if(marked&&filled)done++;
+   /* Corner indicators keep the composition visible, including filled cells. */
+   if(brush==i){
+    hd_rect(p,x,y,7,1,HD_LAMP);hd_rect(p,x,y,1,7,HD_LAMP);
+    hd_rect(p,x+19,y+31,7,1,HD_LAMP);hd_rect(p,x+25,y+25,1,7,HD_LAMP);
    }
-   if(marked&&!filled){hd_rect(p,x+18,y+10,11,5,HD_INK);hd_rect(p,x+21,y+11,5,3,HD_GOLD);}
-   if(filled){hd_rect(p,x+35,y+4,8,2,HD_LEAF_LIT);hd_pixel(p,x+42,y+3,HD_LEAF_LIT);}
+   if(marked&&!filled){hd_rect(p,x+10,y+14,6,5,HD_INK);hd_rect(p,x+11,y+15,4,3,HD_GOLD);}
   }
+  hd_text(p,18,59,"STROKES",HD_STONE_LIT,1,0);
+  char marks[]="0/4";marks[0]=(char)('0'+done);
+  hd_text(p,20,72,marks,HD_PAPER,1,1);
+  for(unsigned j=0;j<4u;j++)hd_rect(p,18+(int)j*10,86,8,5,j<done?HD_GOLD:HD_STONE_DARK);
+  hd_text(p,183,60,"TONE",HD_STONE_LIT,1,0);
+  hd_rect(p,184,73,29,14,story_paint_warm(s)?HD_COPPER:HD_GLASS_LIT);
+  hd_text(p,182,94,story_paint_warm(s)?"WARM":"COOL",HD_PAPER,1,0);
   hd_text(p,18,119,story_paint_ready(s)?"LAYER READY - START TO SAVE":
        s->studio_cursor==2u?"FILL ALL FOUR GOLD MARKS":
        s->studio_cursor==1u?"MOVE TO A GOLD MARK":"PAINT THE FOUR GOLD MARKS",HD_PAPER,1,0);
