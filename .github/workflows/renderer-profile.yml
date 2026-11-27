@@ -10,6 +10,9 @@ on:
       - ".github/workflows/renderer-profile.yml"
       - "src/hd_perspective.c"
       - "tools/renderer_cycles.c"
+      - "tools/install_emulator_deps.sh"
+      - "src/hd_wall_shades*"
+      - "src/hd_ray_trace.h"
 
 permissions:
   contents: read
@@ -26,16 +29,17 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install mGBA profiler dependencies
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq libmgba-dev
+          sh tools/install_emulator_deps.sh libmgba-dev liblz4-dev
       - name: Build instrumented ARM cartridge (not published)
         run: |
           set -euo pipefail
+          # Build the cache on the host, which has the required LZ4 headers.
+          # Do not erase it in the cross-compiler container.
+          sh tools/build_potheads_cache.sh
           docker pull devkitpro/devkitarm
           image_id="$(docker image inspect --format '{{.Id}}' devkitpro/devkitarm)"
           docker run --rm -v "$PWD:/work" -w /work "$image_id" sh -ec '
-            make clean
-            make CFLAGS="-mthumb -mthumb-interwork -mcpu=arm7tdmi -O2 -Wall -std=gnu11 -fomit-frame-pointer -Isrc -DGBA_PROFILE_RENDER"
+            make CFLAGS="-mthumb -mthumb-interwork -mcpu=arm7tdmi -O2 -Wall -std=gnu11 -fomit-frame-pointer -Isrc -DGBA_PROFILE_RENDER -DDANNY_OPENING_CACHE"
           '
       - name: Measure real mGBA ARM stage cycles, not host CPU timing
         run: |
