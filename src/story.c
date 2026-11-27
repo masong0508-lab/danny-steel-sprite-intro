@@ -5,6 +5,13 @@
 #include "city_layout.h"
 #include "landscape_data.h"
 #include <string.h>
+/* Large, infrequently rebuilt world data must not consume the 32 KiB
+   IWRAM used by the renderer and interrupt/main stacks. */
+#if defined(__arm__)
+#define STORY_WORLD_RAM __attribute__((section(".ewram"),aligned(4)))
+#else
+#define STORY_WORLD_RAM
+#endif
 #if !defined(__arm__)
 /* Original immutable map retained for the original material generators
    and independent shipped-image regression, never selected on cartridge. */
@@ -40,7 +47,7 @@ static const uint8_t world_lots[4][2]={{25,2},{25,10},{15,18},{25,18}};
 typedef struct {unsigned seed;uint8_t order[4],inverse[4];} WorldLayout;
 static WorldLayout world={0,{0,1,2,3},{0,1,2,3}};
 static unsigned world_revision;
-static char world_city[STORY_H][STORY_CITY_W];
+static char world_city[STORY_H][STORY_CITY_W] STORY_WORLD_RAM;
 static void world_layout(WorldLayout *w,unsigned seed){
  static const uint8_t divisor[4]={6,2,1,1};
  uint8_t available[4]={0,1,2,3};
@@ -116,7 +123,7 @@ unsigned story_hike_stage(unsigned slot){return hike_stage[slot&1u];}
 void story_hike_restore(unsigned slot,unsigned stage){
  if(slot<2u&&stage<=4u)hike_stage[slot]=(uint8_t)stage;
 }
-static uint8_t terrain_mesh[STORY_H+1][STORY_W-STORY_CITY_W+1];
+static uint8_t terrain_mesh[STORY_H+1][STORY_W-STORY_CITY_W+1] STORY_WORLD_RAM;
 static unsigned mesh_slot=2u,mesh_style,mesh_revision;
 static void brush_reset(unsigned slot){
  slot&=1u;
@@ -502,9 +509,10 @@ int story_world_solid_for_seed(unsigned seed,int x,int y){
 /* Reverse flood from the current goal ONCE, not a new city search
    every step. All four routes use walkable tiles; a solid goal seeds its
    adjacent approaches. E/S/W/N tie order matches the original forward BFS.
-   4,800 bytes fixed scratch for 1,200 cells; zero heap or save growth. */
+   7,680 bytes fixed external-RAM scratch for 1,920 cells; no heap or save growth. */
 int story_route(const Story *s, int *direction, int *steps){
-    static uint16_t distance[STORY_W*STORY_H],queue[STORY_W*STORY_H];
+    static uint16_t distance[STORY_W*STORY_H] STORY_WORLD_RAM;
+    static uint16_t queue[STORY_W*STORY_H] STORY_WORLD_RAM;
     static int last_x=-1,last_y=-1;
     static unsigned last_world;
 #if !defined(__arm__)

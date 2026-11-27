@@ -30,3 +30,7 @@ relocated neighborhood sites, save record checksums, both rendering modes and
 the default release lock. The previous rescue SRAM assertion now checks the
 actual base save byte range rather than depending on map area. Full CI and
 emulator verification remain necessary.
+
+## Cartridge memory correction
+
+The initial seeded-city cartridge link placed `.data` beyond the 32 KiB IWRAM boundary (0x030081b4). The host tests passed, so the issue was cartridge-specific storage placement. The 7,680-byte route workspace, 1,200-byte generated urban map and 775-byte terrain mesh now explicitly reside in aligned EWRAM: 9,655 bytes of payload moved out of IWRAM. These arrays are populated before use. The existing 24 KiB IWRAM and 192 KiB EWRAM CI gates remain unchanged; exact linked sizes and emulator behavior require a fresh build.
