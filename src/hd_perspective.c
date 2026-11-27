@@ -5,6 +5,7 @@
 #include "hd_project_props.h"
 #include "hd_road_material_rom.inc"
 #include "hd_road_columns.inc"
+#include "hd_ray_trace.h"
 #if defined(GBA_PROFILE_RENDER) && defined(__arm__)
 #include "gba.h"
 /* Debug-build-only counters. Normal release builds allocate NONE of these.
@@ -52,13 +53,14 @@ static uint8_t wall_shade_cache[WALL_RAYS][WALL_SHADE_ROWS]
  __attribute__((section(".ewram"),aligned(4)));
 static int wall_cache_valid,wall_cam_x,wall_cam_y,wall_cam_fx,wall_cam_fy;
 #if !defined(__arm__)
-static int legacy_scenery,reference_restore,reference_floor;
+static int legacy_scenery,reference_restore,reference_floor,reference_ray;
 void hd_debug_invalidate_wall_cache(void){wall_cache_valid=0;}
 /* Shipped art remains a host-only baseline; do not weaken the existing
    3,456 golden-frame regression to bless unrelated rendering changes. */
 void hd_debug_legacy_scenery(int enabled){legacy_scenery=!!enabled;wall_cache_valid=0;}
 void hd_debug_reference_restore(int enabled){reference_restore=!!enabled;}
 void hd_debug_reference_floor(int enabled){reference_floor=!!enabled;}
+void hd_debug_reference_ray(int enabled){reference_ray=!!enabled;wall_cache_valid=0;}
 #else
 #define legacy_scenery 0
 #define reference_restore 0
@@ -539,6 +541,15 @@ static HD_CANVAS_CODE void wall_cached_column(uint8_t *p,int x,int width,
  gba_profile_wallshade_cycles+=gba_profile_clock()-wallshade_start;
 #endif
 }
+/* 72 bytes replace the height division in cold rays, warm rays,
+   and restored occluding columns. Depth 2272 shares the last bucket
+   with 2300: both project to exactly four half-height pixels. */
+static const uint8_t wall_half_height[72]={
+ 75,75,75,66,55,47,41,36,32,29,27,25,23,21,20,19,18,17,
+ 16,15,14,14,13,13,12,12,11,11,10,10,10,9,9,9,9,8,
+ 8,8,8,7,7,7,7,7,7,6,6,6,6,6,6,6,6,5,
+ 5,5,5,5,5,5,5,5,5,5,4,4,4,4,4,4,4,4,
+};
 static HD_CANVAS_CODE __attribute__((noinline)) void cast_walls(uint8_t *p,int cx,int cy,int fx,int fy,int rx,int ry){
  int warm=wall_cache_valid&&wall_cam_x==cx&&wall_cam_y==cy&&
           wall_cam_fx==fx&&wall_cam_fy==fy;
@@ -549,10 +560,8 @@ static HD_CANVAS_CODE __attribute__((noinline)) void cast_walls(uint8_t *p,int c
   for(unsigned slot=0;slot<WALL_RAYS;slot++){
    int end=ray_end[slot];
    if(wall_type[x]){
-    int h=20800/((int)wall_depth[x]+60);
-    if(h>150)h=150;
-    if(h<3)h=3;
-    wall_cached_column(p,x,end-x,79-h/2,79+h/2,(char)wall_type[x],wall_shade_cache[slot]);
+    int half=wall_half_height[wall_depth[x]>>5];
+    wall_cached_column(p,x,end-x,79-half,79+half,(char)wall_type[x],wall_shade_cache[slot]);
    }
    x=end;
   }
@@ -564,33 +573,23 @@ static HD_CANVAS_CODE __attribute__((noinline)) void cast_walls(uint8_t *p,int c
   int side=(int)slot-22;
   int end=ray_end[slot];
   int dx=fx*32+rx*side,dy=fy*32+ry*side;
-  int wx=cx,wy=cy,hit_dist=2400,tx=0,ty=0;
-  int previous_tx=cx>>8,previous_ty=cy>>8;
-  int hit_from_x=previous_tx,hit_from_y=previous_ty;
-  char hit=0;
-  for(int step=1;step<76;step++){
-   wx+=dx;wy+=dy;
-   tx=wx>>8;ty=wy>>8;
-   /* 32-step ray samples often sit in the SAME town tile.
-      Only touch the story grid on cell crossings. Same collision set,
-      depth and view, but many fewer tile queries and branch chains. */
-   if(tx==previous_tx && ty==previous_ty)continue;
-   char t=story_tile(tx,ty);
-   if(t=='#'||t=='A'||t=='T'){
-    hit=t;hit_dist=step*32;hit_from_x=previous_tx;hit_from_y=previous_ty;break;
-   }
-   previous_tx=tx;previous_ty=ty;
-  }
-  if(hit_dist>2300)hit_dist=2300;
+  HdRayHit sample;
+#if !defined(__arm__)
+  if(reference_ray)hd_ray_reference(cx,cy,dx,dy,&sample);
+  else
+#endif
+  hd_ray_trace(cx,cy,dx,dy,&sample);
+  int wx=sample.wx,wy=sample.wy,tx=sample.tx,ty=sample.ty;
+  int hit_from_x=sample.from_x,hit_from_y=sample.from_y;
+  int hit_dist=sample.depth;
+  char hit=sample.type;
   for(int col=x;col<end;col++){
    wall_depth[col]=(uint16_t)hit_dist;
    wall_type[col]=(uint8_t)hit;
   }
   if(!hit){x=end;slot++;continue;}
-  int height=20800/(hit_dist+60);
-  if(height>150)height=150;
-  if(height<3)height=3;
-  int top=79-height/2,bottom=79+height/2;
+  int half=wall_half_height[(unsigned)hit_dist>>5];
+  int top=79-half,bottom=79+half;
   unsigned face=abs_i(dx)>abs_i(dy)?1u:0u;
   int u=face?wy&255:wx&255;
   if(!legacy_scenery){
@@ -725,10 +724,8 @@ static void restore_occluding_wall(uint8_t *p,int sx,int h,int depth){
   int end=wall_cache_valid&&!reference_restore&&slot<WALL_RAYS?ray_end[slot]:x+1;
   if(end>right)end=right;
   if(wall_type[x]&&wall_depth[x]<depth){
-   int wh=20800/((int)wall_depth[x]+60);
-   if(wh>150)wh=150;
-   if(wh<3)wh=3;
-   int top=79-wh/2,bottom=79+wh/2;
+   int half=wall_half_height[wall_depth[x]>>5];
+   int top=79-half,bottom=79+half;
    if(wall_cache_valid&&!reference_restore&&slot<WALL_RAYS)
     wall_cached_column(p,x,end-x,top,bottom,(char)wall_type[x],wall_shade_cache[slot]);
    else

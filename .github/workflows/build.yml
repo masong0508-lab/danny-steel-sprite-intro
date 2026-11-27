@@ -95,6 +95,10 @@ jobs:
         run: |
           python3 tools/build_road_columns.py /tmp/danny_road_columns.inc
           cmp src/hd_road_columns.inc /tmp/danny_road_columns.inc
+          python3 tools/build_ray_paths.py /tmp/danny_ray_paths.inc
+          cmp src/hd_ray_paths.inc /tmp/danny_ray_paths.inc
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c tests/hd_ray_trace_test.c -o /tmp/danny_ray_trace
+          /tmp/danny_ray_trace
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
             src/story.c src/studio.c src/hd_canvas.c src/hd_world_atlas.c \
             src/hd_facade_art.c src/hd_perspective.c \

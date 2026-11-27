@@ -37,6 +37,7 @@ void hd_debug_invalidate_wall_cache(void);
 void hd_debug_legacy_scenery(int enabled);
 void hd_debug_reference_restore(int enabled);
 void hd_debug_reference_floor(int enabled);
+void hd_debug_reference_ray(int enabled);
 
 /* Captured from the original shipped PR14 painter before changing its
    ray reuse, floor ordering or instruction placement. Each value covers
@@ -137,10 +138,10 @@ static void verify_coherent_restore(void){
    if(story_solid(x,y))continue;
    s.x=(uint8_t)x;s.y=(uint8_t)y;s.facing=(uint8_t)facing;s.view=1;
    s.prev_x=s.x;s.prev_y=s.y;s.anim=0;
-   hd_debug_reference_restore(1);hd_debug_reference_floor(1);hd_debug_invalidate_wall_cache();
+   hd_debug_reference_restore(1);hd_debug_reference_floor(1);hd_debug_reference_ray(1);hd_debug_invalidate_wall_cache();
    memset(&canvas,0xA6,sizeof canvas);hd_first_person_draw(canvas.pixels,&s,71u);
    memcpy(reference,canvas.pixels,HD_BYTES);
-   hd_debug_reference_restore(0);hd_debug_reference_floor(0);
+   hd_debug_reference_restore(0);hd_debug_reference_floor(0);hd_debug_reference_ray(0);
    memset(&canvas,0xA6,sizeof canvas);hd_first_person_draw(canvas.pixels,&s,71u);
    assert(!memcmp(reference,canvas.pixels,HD_BYTES));
    for(unsigned i=0;i<HD_BYTES;i++)assert(canvas.pixels[i]<64u);
