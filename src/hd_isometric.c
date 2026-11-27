@@ -41,6 +41,11 @@ static const uint8_t iso_furniture[STORY_H][STORY_CITY_W]={
  [16][28]='u',
  [22][31]='u',
  [26][22]='u',
+ [6][26]='i',
+ [18][31]='i',
+ [24][11]='i',
+ [26][21]='i',
+ [23][34]='i',
 };
 static unsigned iso_prop(int x,int y){
  if((unsigned)x>=STORY_CITY_W||(unsigned)y>=STORY_H)return 0;
@@ -206,6 +211,16 @@ static void lamp(uint8_t *p,int sx,int sy,unsigned tick){
  hd_rect(p,x-4,y-27,9,3,HD_LAMP);
  hd_pixel(p,x,y-27,HD_PAPER);
  if(((tick/45u)&1u)==0u)hd_rect(p,x-1,y+3,3,1,HD_GOLD);
+}
+static void study_sign(uint8_t *p,int sx,int sy){
+ int x=sx+16,y=sy+12;
+ hd_ellipse(p,x,y+1,7,2,HD_SHADOW);
+ hd_rect(p,x-1,y-15,3,15,HD_BARK);
+ hd_rect(p,x-7,y-19,15,10,HD_STONE_DARK);
+ hd_rect(p,x-6,y-18,13,8,HD_PLASTER);
+ hd_rect(p,x-4,y-16,9,4,HD_COPPER);
+ hd_line(p,x-3,y-13,x,y-15,HD_INK);
+ hd_line(p,x,y-15,x+3,y-13,HD_INK);
 }
 static void bus(uint8_t *p,int sx,int sy,unsigned tick){
  /* Compact three-quarter view of the same cream-roofed last bus seen
@@ -460,7 +475,8 @@ static void rain(uint8_t *p,unsigned tick){
 static void landscape_iso(uint8_t *p,const Story *s,unsigned tick){
  hd_landscape_sky(p,s);
  HdSceneCamera camera=hd_scene_camera(s);
- int eye=story_terrain_height(s,camera.x,camera.y);
+ const StoryTerrainRow *mesh=story_terrain_mesh(s);
+ int eye=story_mesh_height(mesh,camera.x,camera.y);
  int gx=0,gy=0;const char *goal=0;
  int has_goal=story_goal(s,&gx,&gy,&goal);
  int dir=-1,steps=-1,route=story_route(s,&dir,&steps);
@@ -487,9 +503,16 @@ static void landscape_iso(uint8_t *p,const Story *s,unsigned tick){
     if(sx>256)break;
     int y=depth-x;
     char tile=story_tile(x,y);
-    int h=story_terrain_height(s,x*256+128,y*256+128),sy=base-h;
+    unsigned rural=story_rural(x,y);
+    int a=0,b=0,c=0,d=0;
+    if(rural){
+     int col=x-STORY_CITY_W;
+     a=mesh[y][col];b=mesh[y][col+1];
+     c=mesh[y+1][col];d=mesh[y+1][col+1];
+    }
+    int h=(a+b+c+d)>>2,sy=base-h;
     if(sy<-100||sy>214)continue;
-    unsigned n=grain(x,y),rural=story_rural(x,y);
+    unsigned n=grain(x,y);
     if(!pass){
      if(sy>175)continue;
      if(!rural){
@@ -497,8 +520,6 @@ static void landscape_iso(uint8_t *p,const Story *s,unsigned tick){
       if(tile=='~'||tile==','||tile=='='||tile=='.')
        ground_detail(p,sx,sy,n,tile,tick);
      }else{
-      int a=story_terrain_vertex(s,x,y),b=story_terrain_vertex(s,x+1,y);
-      int c=story_terrain_vertex(s,x,y+1),d=story_terrain_vertex(s,x+1,y+1);
       HdLandPoint top={sx+16,base-a},right={sx+32,base+8-b},
                   bottom={sx+16,base+16-d},left={sx,base+8-c};
       unsigned shade1=(a+b>d+c),shade2=(a+c>b+d);
@@ -538,6 +559,7 @@ static void landscape_iso(uint8_t *p,const Story *s,unsigned tick){
      unsigned prop=iso_prop(x,y);
      if(prop&&!story_solid(x,y)){
       if(prop=='j')lamp(p,sx,sy,tick);
+      else if(prop=='i'){if(story_city_tour_visible(s))study_sign(p,sx,sy);}
       else{
        hd_ellipse(p,sx+16,sy+12,11,3,HD_SHADOW);
        hd_line(p,sx+7,sy+1,sx+23,sy+9,HD_BARK);
@@ -639,6 +661,7 @@ void hd_isometric_draw(uint8_t *p,const Story *s,unsigned tick){
        !((wx+wy)*8>=player_depth&&sx<actor_x+12&&sx+32>actor_x-12&&
          sy+16>actor_foot-32&&sy-24<actor_foot+2)){
      if(prop=='j')lamp(p,sx,sy,tick);
+     else if(prop=='i'){if(story_city_tour_visible(s))study_sign(p,sx,sy);}
      else{
       hd_ellipse(p,sx+16,sy+12,11,3,HD_SHADOW);
       hd_line(p,sx+7,sy+1,sx+23,sy+9,HD_BARK);

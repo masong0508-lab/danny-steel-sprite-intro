@@ -8,6 +8,7 @@
 #include "neighborhood_save.h"
 #include "terrain_save.h"
 #include "brush_save.h"
+#include "city_tour_save.h"
 #include "world_save.h"
 #include "studio.h"
 #include "hd_canvas.h"
@@ -133,6 +134,7 @@ void play_erase_slot(int slot){
     for(unsigned i=0;i<TERRAIN_EXT_LEN;i++)
         save_ram[TERRAIN_EXT_OFFSET+slot*TERRAIN_EXT_LEN+i]=0xFF;
     for(unsigned i=0;i<BRUSH_EXT_LEN;i++)save_ram[BRUSH_EXT_OFFSET+slot*BRUSH_EXT_LEN+i]=0xFF;
+    for(unsigned i=0;i<CITY_TOUR_LEN;i++)save_ram[CITY_TOUR_OFFSET+slot*CITY_TOUR_LEN+i]=0xFF;
     for(unsigned i=0;i<WORLD_EXT_STRIDE;i++)save_ram[WORLD_EXT_OFFSET+slot*WORLD_EXT_STRIDE+i]=0xFF;
     /* The global layout cursor intentionally survives deleting a save. */
 }
@@ -165,6 +167,8 @@ static void write_save(void){
     uint8_t brush_bytes[BRUSH_EXT_LEN];
     brush_save_encode(&game,brush_bytes);
     for(unsigned i=0;i<BRUSH_EXT_LEN;i++)save_ram[BRUSH_EXT_OFFSET+game.slot*BRUSH_EXT_LEN+i]=brush_bytes[i];
+    uint8_t tour_bytes[CITY_TOUR_LEN];city_tour_encode(&game,tour_bytes);
+    for(unsigned i=0;i<CITY_TOUR_LEN;i++)save_ram[CITY_TOUR_OFFSET+game.slot*CITY_TOUR_LEN+i]=tour_bytes[i];
     game.dirty=0;
 }
 static void draw_hidden(int page){
@@ -301,6 +305,9 @@ void play_enter(int want_load,int slot){
         uint8_t brush_bytes[BRUSH_EXT_LEN];
         for(unsigned i=0;i<BRUSH_EXT_LEN;i++)brush_bytes[i]=save_ram[BRUSH_EXT_OFFSET+game.slot*BRUSH_EXT_LEN+i];
         (void)brush_save_decode(&game,brush_bytes);
+        uint8_t tour_bytes[CITY_TOUR_LEN];
+        for(unsigned i=0;i<CITY_TOUR_LEN;i++)tour_bytes[i]=save_ram[CITY_TOUR_OFFSET+game.slot*CITY_TOUR_LEN+i];
+        (void)city_tour_decode(&game,tour_bytes);
     } else {story_new_seeded(&game,slot,new_world_seed());write_save();}
     story_draw_init();
     if(game.life_stage==STORY_LIFE_FINALE ||
@@ -327,12 +334,12 @@ static int play_tick(u16 keys){
     int was_editor=game.activity==STORY_ACT_STUDIO||game.activity==STORY_ACT_PAINT;
     unsigned prior_show=story_show_stage(&game),prior_target=game.neighborhood_target,prior_land=game.terrain_style;
     unsigned prior_brush=story_brush_revision(game.slot),prior_hike=story_hike_stage(game.slot);
-    unsigned prior_seed=story_world_seed();
+    unsigned prior_seed=story_world_seed(),prior_tour=story_city_tour_stage(game.slot);
     story_tick(&game,keys);
     /* Leaving the editor commits the edited arrangement immediately,
        instead of waiting two seconds for the periodic SRAM checkpoint. */
     if(game.dirty&&((was_editor&&game.activity!=STORY_ACT_STUDIO&&game.activity!=STORY_ACT_PAINT)||
-       prior_show!=story_show_stage(&game)||prior_target!=game.neighborhood_target||prior_land!=game.terrain_style||prior_brush!=story_brush_revision(game.slot)||prior_hike!=story_hike_stage(game.slot)||prior_seed!=story_world_seed())){
+       prior_show!=story_show_stage(&game)||prior_target!=game.neighborhood_target||prior_land!=game.terrain_style||prior_brush!=story_brush_revision(game.slot)||prior_hike!=story_hike_stage(game.slot)||prior_seed!=story_world_seed()||prior_tour!=story_city_tour_stage(game.slot))){
         write_save();save_cooldown=0;
     }
     if(game.quit){

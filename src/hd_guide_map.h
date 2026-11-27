@@ -20,6 +20,11 @@ static inline void hd_guide_map(uint8_t *p,const Story *s,int x,int y){
   if(col==s->x&&row==s->y)ink=HD_PAPER;
   hd_rect(p,x+col,y+row,1,1,ink);
  }
+ if(story_city_tour_visible(s))for(unsigned i=0;i<STORY_CITY_STOPS;i++){
+  int px,py;story_city_site_position(i,&px,&py);
+  if((px!=s->x||py!=s->y)&&(!has||px!=gx||py!=gy))
+   hd_pixel(p,x+px,y+py,HD_COPPER);
+ }
  /* Only a genuine reachable next step is highlighted. */
  int dir=-1,steps=-1;
  static const int dx[]={1,0,-1,0},dy[]={0,1,0,-1};

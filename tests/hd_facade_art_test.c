@@ -41,7 +41,7 @@ static void verify_facade_copies(void){
  const int xs[]={-17,-16,-15,-14,-3,-2,-1,0,1,2,103,104,105,
                  224,225,237,238,239,240};
  const int ys[]={-50,-10,-1,0,1,40,72,158,159,160,180,220};
- const int heights[]={-3,0,1,2,3,7,16,24,27,36,40,44,64,95,127};
+ const int heights[]={-3,0,1,2,3,7,16,24,27,32,36,40,42,44,46,52,64,95,127};
  unsigned cases=0;
  for(unsigned side=0;side<2u;side++)for(unsigned variant=0;variant<8u;variant++){
   reset();memset(image.frame,HD_ROAD,HD_BYTES);

@@ -15,6 +15,7 @@
 #include "hd_floor_revisit.h"
 #include "city_furniture.h"
 #include "hd_landscape.h"
+#include "hd_land_ray_table.h"
 #include <string.h>
 #if defined(GBA_PROFILE_RENDER) && defined(__arm__)
 #include "gba.h"
@@ -796,6 +797,16 @@ static void actor(uint8_t *p,int sx,int ground,int h,char kind,unsigned tick,con
   hd_rect(p,sx-w+1,ground-h+2,w*2-1,h/9+2,HD_LAMP);
   return;
  }
+ if(kind=='i'){
+  int tall=h/2+3,w=tall/3+3;
+  hd_ellipse(p,sx,ground,w,2,HD_SHADOW);
+  hd_rect(p,sx-1,ground-tall,3,tall,HD_BARK);
+  hd_rect(p,sx-w,ground-tall-w,w*2+1,w+2,HD_STONE_DARK);
+  hd_rect(p,sx-w+1,ground-tall-w+1,w*2-1,w,HD_PLASTER);
+  hd_line(p,sx-w+2,ground-tall,sx,ground-tall-w+2,HD_COPPER);
+  hd_line(p,sx,ground-tall-w+2,sx+w-2,ground-tall,HD_COPPER);
+  return;
+ }
  if(kind=='u'){
   int w=h/4+2,seat=ground-h/6;
   hd_ellipse(p,sx,ground,w+1,2,HD_SHADOW);
@@ -949,6 +960,7 @@ static void render_billboards(uint8_t *p,int cx,int cy,
   }else{
    const CityFurniture *a=&city_furniture[i-original];x=a->x;y=a->y;kind=(char)a->kind;
   }
+  if(kind=='i'&&!story_city_tour_visible(s))continue;
   story_world_place(&x,&y);
   int dx=x*256+128-cx,dy=y*256+128-cy;
   int forward=dx*fx+dy*fy,side=dx*rx+dy*ry;
@@ -1013,19 +1025,21 @@ static void landscape_perspective(uint8_t *p,const Story *s,unsigned tick){
  hd_landscape_sky(p,s);
  HdSceneCamera cam=hd_scene_camera(s);
  int fx,fy,rx,ry;dirs(s,&fx,&fy,&rx,&ry);
- int eye=story_terrain_height(s,cam.x,cam.y)+21;
+ const StoryTerrainRow *mesh=story_terrain_mesh(s);
+ int eye=story_mesh_height(mesh,cam.x,cam.y)+21;
  uint8_t ceiling[80],prior_height[80];memset(ceiling,HD_H,sizeof ceiling);
  memset(prior_height,(unsigned)(eye-21),sizeof prior_height);
- for(int dist=96;dist<=4608;dist+=dist<768?64:dist<2048?128:256){
-  int scale=102400/dist;
+ for(unsigned ray_step=0;ray_step<HD_LAND_RAY_STEPS;ray_step++){
+  int dist=hd_land_distance[ray_step],scale=hd_land_scale[ray_step];
+  const int16_t *sides=hd_land_side[ray_step];
   int wx0=cam.x+fx*dist,wy0=cam.y+fy*dist;
   for(unsigned col=0;col<80u;col++){
    int bottom=ceiling[col];if(bottom<=0)continue;
-   int sx=(int)col*3+1,side=(sx-120)*dist/160;
+   int side=sides[col];
    int wx=wx0+rx*side,wy=wy0+ry*side,tx=wx>>8,ty=wy>>8;
    if((unsigned)tx>=STORY_W||(unsigned)ty>=STORY_H)continue;
    char tile=story_tile(tx,ty);
-   int h=story_terrain_height(s,wx,wy);
+   int h=story_mesh_height(mesh,wx,wy);
    /* The light follows actual rising/falling ground rather than a
       screen-space checkerboard pattern. */
    unsigned shade=h>(int)prior_height[col]+1;
