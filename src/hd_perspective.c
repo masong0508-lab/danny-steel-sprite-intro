@@ -220,6 +220,7 @@ static HD_CANVAS_CODE inline unsigned road_shade_color(
    four exact repeating asphalt and foliage textures, not an out-of-range
    index or an expensive per-pixel hash. */
 static inline unsigned city_road_id(int tx,int ty){
+ story_world_source(&tx,&ty);
  if((unsigned)tx<STORY_CORE_W&&(unsigned)ty<STORY_CORE_H)
   return hd_road_tile_index[(unsigned)ty*24u+(unsigned)tx];
  return hd_road_tile_index[24u+1u+((unsigned)(tx+3*ty)&3u)];
@@ -229,9 +230,13 @@ static inline unsigned city_soft_x(int tx,int ty){
  return n<2u?4u+n:16u+n;
 }
 static inline unsigned city_soft_id(int tx,int ty,char tile){
+ story_world_source(&tx,&ty);
  if(story_city_extension(tx,ty)&&(tile=='T'||tile=='g'||tile=='~'))
   return hd_soft_floor_id((int)city_soft_x(tx,ty),2);
  return hd_soft_floor_id(tx,ty);
+}
+static inline unsigned city_landmark_id(int tx,int ty){
+ story_world_source(&tx,&ty);return hd_landmark_floor_id(tx,ty);
 }
 #if !defined(__arm__)
 unsigned hd_debug_packed_road_column_category(int tx,int ty,unsigned cx,unsigned cy){
@@ -260,8 +265,11 @@ unsigned hd_debug_road_rom_category(int tx,int ty,unsigned cx,unsigned cy){
 #if !defined(__arm__)
 static inline unsigned floor_ink(char t,int wx,int wy,int x,int y,unsigned tick){
  int fx=wx&255,fy=wy&255;
- if(story_city_extension(wx>>8,wy>>8)&&(t=='T'||t=='g'||t=='~')){
-  wx=(int)city_soft_x(wx>>8,wy>>8)*256+fx;
+ int original_x=wx,original_y=wy,tx=wx>>8,ty=wy>>8;
+ story_world_source(&tx,&ty);
+ wx=tx*256+fx;wy=ty*256+fy;
+ if(story_city_extension(tx,ty)&&(t=='T'||t=='g'||t=='~')){
+  wx=(int)city_soft_x(tx,ty)*256+fx;
   wy=2*256+fy;
  }
  if(t=='~'){
@@ -280,7 +288,7 @@ static inline unsigned floor_ink(char t,int wx,int wy,int x,int y,unsigned tick)
  }
  if(t=='#'||t=='A')return HD_BRICK_DARK;
  unsigned n=texel((unsigned)(wx>>4),(unsigned)(wy>>4));
- if((fx<5||fy<5)&&(wx+wy)%3==0)return HD_ROAD_COOL;
+ if((fx<5||fy<5)&&(original_x+original_y)%3==0)return HD_ROAD_COOL;
  if((n&31u)==0u)return HD_REFLECT;
  if((n&7u)==1u)return HD_ROAD_LIGHT;
  return (x+y)%17==0?HD_ROAD_COOL:HD_ROAD;
@@ -456,7 +464,7 @@ static HD_CANVAS_CODE __attribute__((noinline)) void floor_render(uint8_t *p,con
    while(x<end){
     int tv=q>>16,tx=along_x?tv:ft,ty=along_x?ft:tv;
     char tile=story_tile(tx,ty);
-    unsigned landmark=tile=='.'?255u:hd_landmark_floor_id(tx,ty);
+    unsigned landmark=tile=='.'?255u:city_landmark_id(tx,ty);
     if(tile=='.'||landmark!=255u){
      /* All walkable road-like materials use exact original categories,
         including the small patches beneath the letter, bus and NPCs. */
@@ -630,7 +638,7 @@ static void wall_column_reference(uint8_t *p,int x,int width,int top,int bottom,
   if(!surface&&v>225&&(u&15)==1)c=HD_STONE;
   /* Same Potheads shop, same town coordinate in both cameras. This is
      environmental branding, not the future handheld/dancing sign. */
-  if(!tree && tx==21 && ty==11){
+  if(!tree && story_world_potheads(tx,ty)){
    int signage=hd_potheads_wall_ink(u,v);
    if(signage>=0)c=(unsigned)signage;
   }
@@ -887,8 +895,14 @@ int hd_first_person_anchor_map_valid(void){
      kind!='V'&&kind!='Q'&&kind!='S'&&kind!='W'&&kind!='H'&&
      kind!='R'&&kind!='M'&&kind!='K')continue;
   if(count>=sizeof scene_anchors/sizeof scene_anchors[0])return 0;
-  const SceneAnchor *a=&scene_anchors[count++];
-  if((int)a->x!=x||(int)a->y!=y||(char)a->kind!=kind)return 0;
+  int sx=x,sy=y;story_world_source(&sx,&sy);
+  unsigned found=0;
+  for(unsigned i=0;i<sizeof scene_anchors/sizeof scene_anchors[0];i++){
+   const SceneAnchor *a=&scene_anchors[i];
+   if((int)a->x==sx&&(int)a->y==sy&&(char)a->kind==kind)found++;
+  }
+  if(found!=1u)return 0;
+  count++;
  }
  return count==sizeof scene_anchors/sizeof scene_anchors[0];
 }
@@ -935,6 +949,7 @@ static void render_billboards(uint8_t *p,int cx,int cy,
   }else{
    const CityFurniture *a=&city_furniture[i-original];x=a->x;y=a->y;kind=(char)a->kind;
   }
+  story_world_place(&x,&y);
   int dx=x*256+128-cx,dy=y*256+128-cy;
   int forward=dx*fx+dy*fy,side=dx*rx+dy*ry;
   if(forward<85||forward>2200||abs_i(side)>forward*4/3)continue;
@@ -1060,6 +1075,12 @@ static void city_land_horizon(uint8_t *p,const Story *s,int cx,int cy,int fx,int
  }
 }
 void hd_first_person_draw(uint8_t *p,const Story *s,unsigned tick){
+ static unsigned prior_world;
+ unsigned world=story_world_revision();
+ if(prior_world!=world){
+  wall_cache_valid=0;background.valid=background.checked=0;
+  hd_floor_revisit_reset();prior_world=world;
+ }
  if(story_rural(s->x,s->y)){landscape_perspective(p,s,tick);return;}
 #if defined(GBA_PROFILE_RENDER) && defined(__arm__)
  gba_profile_begin();

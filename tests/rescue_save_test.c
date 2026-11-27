@@ -1,11 +1,12 @@
 #include "rescue_save.h"
 #include "story.h"
+#include "story_save.h"
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 int main(void){
- assert(RESCUE_EXT_OFFSET>STORY_W*STORY_H/4); /* outside basic slot range */
+ assert(RESCUE_EXT_OFFSET>=2u*STORY_SAVE_STRIDE); /* disjoint from actual base slots */
  assert(RESCUE_EXT_LEN==8u);
  uint8_t b[RESCUE_EXT_LEN],mask=0,phase=0;
  rescue_save_encode(0,STORY_BAD_LETTER|STORY_BAD_MUSIC,

@@ -10,7 +10,7 @@ static inline unsigned hd_land_ink(char tile,int h,unsigned shade){
  return shade?HD_LEAF_DARK:HD_LEAF;
 }
 static inline unsigned hd_land_marker(int x,int y){
- return x==44&&y==8?1u:x==54&&y==24?2u:x==56&&y==11?3u:x==43&&y==22?4u:
+ return story_land_tools_enabled()&&x==44&&y==8?1u:story_land_tools_enabled()&&x==54&&y==24?2u:x==56&&y==11?3u:x==43&&y==22?4u:
         x==42&&y==7?5u:x==49&&y==6?6u:x==53&&y==13?7u:0u;
 }
 static inline void hd_landscape_sky(uint8_t *p,const Story *s){

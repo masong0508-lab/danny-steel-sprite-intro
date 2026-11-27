@@ -32,13 +32,76 @@ static const char *const town[STORY_CORE_H] = {
 };
 #endif
 
+/* Seeded construction preserves the original asset inventory. Core
+   reflections carry the story anchors, while four identically sized lot
+   envelopes exchange their complete building footprints. Gateways,
+   waterfront, outer bounds and countryside remain unchanged. */
+static const uint8_t world_lots[4][2]={{25,2},{25,10},{15,18},{25,18}};
+typedef struct {unsigned seed;uint8_t order[4],inverse[4];} WorldLayout;
+static WorldLayout world={0,{0,1,2,3},{0,1,2,3}};
+static unsigned world_revision;
+static char world_city[STORY_H][STORY_CITY_W];
+static void world_layout(WorldLayout *w,unsigned seed){
+ static const uint8_t divisor[4]={6,2,1,1};
+ uint8_t available[4]={0,1,2,3};
+ w->seed=seed%STORY_WORLD_LAYOUTS;
+ unsigned rank=w->seed>>2;
+ for(unsigned i=0;i<4u;i++){
+  unsigned k=rank/divisor[i];rank%=divisor[i];
+  w->order[i]=available[k];w->inverse[available[k]]=(uint8_t)i;
+  for(unsigned j=k;j+1u<4u-i;j++)available[j]=available[j+1u];
+ }
+}
+static void world_transform(const WorldLayout *w,int *x,int *y,int inverse){
+ if(!w->seed)return;
+ if(*x>=1&&*x<=22&&*y>=1&&*y<=16){
+  if(w->seed&1u)*x=23-*x;
+  if(w->seed&2u)*y=17-*y;
+  return;
+ }
+ for(unsigned i=0;i<4u;i++){
+  int dx=*x-world_lots[i][0],dy=*y-world_lots[i][1];
+  if((unsigned)dx>=5u||(unsigned)dy>=4u)continue;
+  unsigned j=inverse?w->inverse[i]:w->order[i];
+  *x=world_lots[j][0]+dx;*y=world_lots[j][1]+dy;return;
+ }
+}
+unsigned story_world_seed(void){return world.seed;}
+unsigned story_world_revision(void){return world_revision;}
+void story_world_source(int *x,int *y){world_transform(&world,x,y,0);}
+void story_world_place(int *x,int *y){world_transform(&world,x,y,1);}
+unsigned story_world_facing(unsigned facing){
+ facing&=3u;
+ if((facing&1u)?(world.seed&2u):(world.seed&1u))facing^=2u;
+ return facing;
+}
+int story_world_potheads(int x,int y){
+ story_world_source(&x,&y);return x==21&&y==11;
+}
+static char world_tile(const WorldLayout *w,int x,int y){
+ if((unsigned)x>=STORY_W||(unsigned)y>=STORY_H)return '#';
+ if(x>=STORY_CITY_W)return landscape_tiles[y][x-STORY_CITY_W];
+ world_transform(w,&x,&y,0);
+ return city_layout[y][x];
+}
+char story_world_tile_for_seed(unsigned seed,int x,int y){
+ WorldLayout w;world_layout(&w,seed);return world_tile(&w,x,y);
+}
+void story_world_set(unsigned seed){
+ seed%=STORY_WORLD_LAYOUTS;
+ if(world.seed==seed)return;
+ world_layout(&world,seed);
+ if(seed)for(int y=0;y<STORY_H;y++)for(int x=0;x<STORY_CITY_W;x++)
+  world_city[y][x]=world_tile(&world,x,y);
+ ++world_revision;
+}
 char story_tile(int x, int y) {
 #if !defined(__arm__)
     if(core_map_reference)return (unsigned)x<STORY_CORE_W&&(unsigned)y<STORY_CORE_H?town[y][x]:'#';
 #endif
     if ((unsigned)x >= STORY_W || (unsigned)y >= STORY_H) return '#';
     if(x>=STORY_CITY_W)return landscape_tiles[y][x-STORY_CITY_W];
-    return city_layout[y][x];
+    return world.seed?world_city[y][x]:city_layout[y][x];
 }
 unsigned story_land_level(const Story *s,unsigned patch){
  return patch<2u?(s->terrain_style>>(patch*2u))&3u:0u;
@@ -150,11 +213,11 @@ static int hike_tracking(const Story *s){
 static unsigned brush_x(const Story *s){return ((unsigned)s->x-STORY_CITY_W+1u)/2u;}
 static unsigned brush_y(const Story *s){return ((unsigned)s->y+1u)/2u;}
 int story_brush_mode(const Story *s){
- return land_safe(s)&&!s->paused&&!s->dialogue&&!s->activity&&!s->battle&&!s->risk_menu&&
+ return story_land_tools_enabled()&&land_safe(s)&&!s->paused&&!s->dialogue&&!s->activity&&!s->battle&&!s->risk_menu&&
         !s->choosing&&(s->choice&STORY_BRUSH_MODE);
 }
 int story_brush_editable(const Story *s){
- if(!land_safe(s)||story_solid(s->x,s->y))return 0;
+ if(!story_land_tools_enabled()||!land_safe(s)||story_solid(s->x,s->y))return 0;
  return brush_weight(s->x,s->y)>0&&node_allowed(brush_x(s),brush_y(s));
 }
 unsigned story_brush_grade(const Story *s){
@@ -177,8 +240,10 @@ unsigned story_land_action(const Story *s){
  if((hike==1u&&s->x==49&&s->y==6)||(hike==2u&&s->x==53&&s->y==13))
     return STORY_LAND_WAYPOINT;
  if(hike==3u&&s->x==56&&s->y==11)return STORY_LAND_FINISH;
- if(s->x==44&&s->y==8)return STORY_LAND_PATCH0;
- if(s->x==54&&s->y==24)return STORY_LAND_PATCH1;
+ if(story_land_tools_enabled()){
+  if(s->x==44&&s->y==8)return STORY_LAND_PATCH0;
+  if(s->x==54&&s->y==24)return STORY_LAND_PATCH1;
+ }
  if(s->x==56&&s->y==11)return STORY_LAND_SUMMIT;
  if(s->x==43&&s->y==22)return STORY_LAND_SHORE;
  return 0;
@@ -223,14 +288,17 @@ int story_neighborhood_enabled(const Story *s){
 }
 int story_neighborhood_position(unsigned id,int *x,int *y){
  if(id>=STORY_NEIGHBORHOOD_COUNT)return 0;
- if(x)*x=neighborhood[id].x;
- if(y)*y=neighborhood[id].y;
+ int px=neighborhood[id].x,py=neighborhood[id].y;
+ story_world_place(&px,&py);
+ if(x)*x=px;
+ if(y)*y=py;
  return 1;
 }
 int story_neighborhood_at(const Story *s){
  if(!story_neighborhood_enabled(s))return -1;
+ int x=s->x,y=s->y;story_world_source(&x,&y);
  for(unsigned i=0;i<STORY_NEIGHBORHOOD_COUNT;i++)
-  if(s->x==neighborhood[i].x&&s->y==neighborhood[i].y)return (int)i;
+  if(x==neighborhood[i].x&&y==neighborhood[i].y)return (int)i;
  return -1;
 }
 int story_neighborhood_revisit(const Story *s){
@@ -286,6 +354,7 @@ static void show_goal(const Story *s,int *x,int *y,const char **label){
 static unsigned show_here(const Story *s){
  if(!show_tracking(s))return 0;
  int x,y;const char *label;show_goal(s,&x,&y,&label);
+ story_world_place(&x,&y);
  int dx=x-(int)s->x,dy=y-(int)s->y;
  int distance=(dx<0?-dx:dx)+(dy<0?-dy:dy);
  return distance==(story_solid(x,y)?1:0)?story_show_stage(s)+1u:0u;
@@ -332,7 +401,7 @@ static int share_pending(const Story *s){
  return s->song_steps>=STORY_PROJECT_DONE&&(s->flags&STORY_MARA)&&
         !story_bad_count(s)&&!(s->project_style&STORY_STYLE_SONG_SHARED);
 }
-int story_goal(const Story *s, int *x, int *y, const char **label) {
+static int story_goal_original(const Story *s, int *x, int *y, const char **label) {
     if (s->ended || s->life_stage==STORY_LIFE_FINALE) return 0;
     if(s->rescue_stage==STORY_RESCUE_MISSING){
         *x=6;*y=11;*label="WITNESS";return 1;
@@ -419,9 +488,16 @@ int story_goal(const Story *s, int *x, int *y, const char **label) {
     }
     return 1;
 }
-int story_solid(int x, int y) {
-    const char c = story_tile(x, y);
-    return c == '#' || c == 'A' || c == 'T' || c == '~' || c == 'L' || c == 'C' || c == 'F' || c == 'B' || c == 'P' || c == 'V' || c == 'Q' || c == 'S' || c == 'W' || c == 'H' || c == 'R' || c == 'M' || c == 'K';
+int story_goal(const Story *s,int *x,int *y,const char **label){
+ if(!story_goal_original(s,x,y,label))return 0;
+ story_world_place(x,y);return 1;
+}
+static int solid_tile(char c){
+ return c == '#' || c == 'A' || c == 'T' || c == '~' || c == 'L' || c == 'C' || c == 'F' || c == 'B' || c == 'P' || c == 'V' || c == 'Q' || c == 'S' || c == 'W' || c == 'H' || c == 'R' || c == 'M' || c == 'K';
+}
+int story_solid(int x,int y){return solid_tile(story_tile(x,y));}
+int story_world_solid_for_seed(unsigned seed,int x,int y){
+ return solid_tile(story_world_tile_for_seed(seed,x,y));
 }
 /* Reverse flood from the current goal ONCE, not a new city search
    every step. All four routes use walkable tiles; a solid goal seeds its
@@ -430,6 +506,7 @@ int story_solid(int x, int y) {
 int story_route(const Story *s, int *direction, int *steps){
     static uint16_t distance[STORY_W*STORY_H],queue[STORY_W*STORY_H];
     static int last_x=-1,last_y=-1;
+    static unsigned last_world;
 #if !defined(__arm__)
     static int last_reference=-1;
 #endif
@@ -440,12 +517,12 @@ int story_route(const Story *s, int *direction, int *steps){
     if(!story_goal(s,&gx,&gy,&name)||
        (unsigned)gx>=STORY_W||(unsigned)gy>=STORY_H||
        story_solid(s->x,s->y))return 0;
-    if(gx!=last_x||gy!=last_y
+    if(gx!=last_x||gy!=last_y||last_world!=world_revision
 #if !defined(__arm__)
        ||last_reference!=core_map_reference
 #endif
        ){
-        last_x=gx;last_y=gy;
+        last_x=gx;last_y=gy;last_world=world_revision;
 #if !defined(__arm__)
         last_reference=core_map_reference;
 #endif
@@ -521,7 +598,7 @@ const char *story_goal_reason(const Story *s){
     if(creative_tracking(s)){
         if(s->neighborhood_target==STORY_TRACK_STUDIO)
             return share_pending(s)?"PLAY YOUR SONG FOR MARA":s->song_steps>=4u?
-                "ADVANCED / EDIT OR PLAY":"EAST PLAZA / SAVE A TAKE";
+                "ADVANCED / EDIT OR PLAY":world.seed?"STUDIO / SAVE A TAKE":"EAST PLAZA / SAVE A TAKE";
         if(s->neighborhood_target==STORY_TRACK_ROOF)return "ROOFTOP / MAKE ART";
         return s->cult_stage==1u?"LISTEN TO THE WITNESS":s->cult_stage==2u?
             "VISIT THE SAFE HOUSE":"OPTIONAL SERVER STORY";
@@ -538,7 +615,7 @@ const char *story_goal_reason(const Story *s){
         return "MAKE MEMORIES AT YOUR PACE";
     default:break;
     }
-    if(!(s->flags&STORY_HOME))return "LETTER / WEST OLD QUARTER";
+    if(!(s->flags&STORY_HOME))return world.seed?"FIND THE LETTER FROM HOME":"LETTER / WEST OLD QUARTER";
     if(!(s->flags&STORY_STAMP))return "PROVE ADDRESS AT BORE";
     if(!(s->flags&STORY_MARA))return "TELL MARA ABOUT THE CALL";
     if(!(s->flags&STORY_MUSIC))return "OPTIONAL TAPE / BUS OPEN";
@@ -705,13 +782,13 @@ SCRIPT(d_letter_again,
  {"DANNY", "That little letter", "weighs a whole ton."});
 SCRIPT(d_clerk_locked,
  {"BORE CLERK", "To verify your name", "I need an old address."},
- {"BORE CLERK", "A letter from home", "will do. West street."});
+ {"BORE CLERK", "A letter from home", "will do. Follow the map."});
 SCRIPT(d_clerk,
  {"BORE CLERK", "Your letter proves", "your old address."},
  {"DANNY", "So I exist?", "That's a relief."},
  {"BORE CLERK", "STAMPED. Your name", "is on the record."},
  {"DANNY", "And the game music", "I left in storage?"},
- {"BORE CLERK", "Music desk. East plaza.", "Try the basic studio."});
+ {"BORE CLERK", "Find the music desk.", "Try the basic studio."});
 SCRIPT(d_clerk_again,
  {"BORE CLERK", "Do not fold the", "universe in half."},
  {"BORE CLERK", "The warranty is", "very specific."});
@@ -757,16 +834,16 @@ SCRIPT(d_end_stay,
  {"DANNY", "I call it THE END.", "We're open Tuesday."},
  {"THE END", "Tomorrow came on", "foot after all."});
 SCRIPT(d_journal_0,
- {"POCKET NOTEBOOK", "1 LETTER / WEST", "2 BORE CLERK / CENTER"},
+ {"POCKET NOTEBOOK", "1 LETTER FROM HOME", "2 VISIT THE BORE CLERK"},
  {"DANNY", "Then tell Mara why", "I am afraid to go."});
 SCRIPT(d_journal_1,
  {"POCKET NOTEBOOK", "LETTER FOUND. NEXT:", "BORE CLERK / CENTER"});
 SCRIPT(d_journal_2,
- {"POCKET NOTEBOOK", "STAMPED. NEXT:", "MARA / WEST CAFE"});
+ {"POCKET NOTEBOOK", "STAMPED. NEXT:", "MARA AT THE CAFE"});
 SCRIPT(d_journal_3,
  {"POCKET NOTEBOOK", "BUS IS OPEN. EXTRAS:", "MUSIC / ROOF PAINT"},
  {"DANNY", "START then L for help.", "Right page tracks goals."},
- {"DANNY", "East plaza: music desk.", "A again for BASIC."});
+ {"DANNY", "Find the music desk.", "A again for BASIC."});
 SCRIPT(d_nothing,
  {"DANNY", "Nothing here for me.", "Where was I headed?"},
  {"POCKET NOTEBOOK", "The gold mark guides me.", "START opens the map."});
@@ -928,13 +1005,13 @@ SCRIPT(d_day_notes,
 SCRIPT(d_clinic_locked,
  {"CLINIC", "OPEN BY APPOINTMENT", "NEXT NOTICE PENDING."});
 SCRIPT(d_note_visit,
- {"POCKET NOTEBOOK", "CLINIC ON EAST ST.", "They asked for me."},
+ {"POCKET NOTEBOOK", "CLINIC ON THE MAP.", "They asked for me."},
  {"DANNY", "I should see them", "before I paint."});
 SCRIPT(d_note_followup,
  {"POCKET NOTEBOOK", "WAIT FOR THE NEXT", "DOCTOR APPOINTMENT."},
  {"DANNY", "Mara offered to", "walk there with me."});
 SCRIPT(d_note_canvas,
- {"POCKET NOTEBOOK", "LAST ROOFTOP CANVAS", "NORTH PLAZA STAIRS."},
+ {"POCKET NOTEBOOK", "LAST ROOFTOP CANVAS", "FOLLOW THE CANVAS MARK."},
  {"DANNY", "The last detail is", "a corner of sky."});
 
 /* Small, world-grounded scenes, staged in the existing cinematic sets. */
@@ -1186,11 +1263,11 @@ SCRIPT(d_bad_end_saved,
  {"DANNY", "I asked for trust", "and spent it again."},
  {"BAD END", "Not every second", "chance gets a third."});
 SCRIPT(d_rescue_notes_1,
- {"POCKET NOTEBOOK", "MARA IS MISSING.", "WITNESS: WEST CAFE."});
+ {"POCKET NOTEBOOK", "MARA IS MISSING.", "WITNESS NEAR THE CAFE."});
 SCRIPT(d_rescue_notes_2,
- {"POCKET NOTEBOOK", "TERMINAL: EAST", "MIRROR ORCHARD."});
+ {"POCKET NOTEBOOK", "FOLLOW TERMINAL MARK", "MIRROR ORCHARD."});
 SCRIPT(d_rescue_notes_3,
- {"POCKET NOTEBOOK", "SAFE HOUSE: NORTH", "OPEN THE DOOR."});
+ {"POCKET NOTEBOOK", "FOLLOW SAFE HOUSE MARK", "OPEN THE DOOR."});
 SCRIPT(d_rescue_notes_saved,
  {"POCKET NOTEBOOK", "MARA IS SAFE.", "BAD CHECKS REMAIN."},
  {"DANNY", "One more bad choice", "could end it."});
@@ -1923,7 +2000,8 @@ static void talk(Story *s, uint8_t id) {
     s->dialogue=id;s->page=0;
     s->cinema=cinematics_for_dialogue(id);s->cinema_frame=0;
 }
-void story_new(Story *s, int slot) {
+void story_new_seeded(Story *s,int slot,unsigned seed) {
+    story_world_set(seed);
     *s = (Story){0};
     s->terrain_style=STORY_LAND_DEFAULT;
     brush_reset((unsigned)slot&1u);
@@ -1931,14 +2009,16 @@ void story_new(Story *s, int slot) {
     /* The Potheads opening now lands at its ACTUAL storefront; the first
        controllable frame starts beside the same facade seen in the film.
        Only a fresh game's spawn changes; old saves preserve coordinates. */
-    s->x = 20; s->y = 11; s->prev_x = s->x; s->prev_y = s->y;
-    s->facing = 0; s->slot = (uint8_t)(slot & 1);
+    int x=20,y=11;story_world_place(&x,&y);
+    s->x=(uint8_t)x;s->y=(uint8_t)y;s->prev_x=s->x;s->prev_y=s->y;
+    s->facing=(uint8_t)story_world_facing(0u); s->slot = (uint8_t)(slot & 1);
     s->day_number = 1;
     s->energy=3;s->spark=1;s->bond=1;
     talk(s, D_OPEN); s->dirty = 1;
 }
-void story_resume(Story *s, int slot, int x, int y, int facing, int view, int flags, int ended, int ending) {
-    story_new(s, slot);
+void story_new(Story *s,int slot){story_new_seeded(s,slot,0u);}
+void story_resume_seeded(Story *s,int slot,int x,int y,int facing,int view,int flags,int ended,int ending,unsigned seed){
+    story_new_seeded(s,slot,seed);
     if (!story_solid(x,y)) { s->x = (uint8_t)x; s->y = (uint8_t)y; }
     s->prev_x = s->x; s->prev_y = s->y;
     s->facing = (uint8_t)(facing & 3); s->view = (uint8_t)(view & 1);
@@ -1953,6 +2033,9 @@ void story_resume(Story *s, int slot, int x, int y, int facing, int view, int fl
         s->finale_frame=0;s->dialogue=0;s->page=0;s->cinema=CINE_FINALE;
         s->life_stage=STORY_LIFE_FINALE;
     } else talk(s,D_RETURN);
+}
+void story_resume(Story *s,int slot,int x,int y,int facing,int view,int flags,int ended,int ending){
+ story_resume_seeded(s,slot,x,y,facing,view,flags,ended,ending,0u);
 }
 /* Two waves of four telegraphed hazards each, delivered in 30 VBlanks.
    A parries for 15 ticks in FACTS or 12 in CARE; CARE also absorbs one
@@ -2300,6 +2383,10 @@ static char nearby_actor(const Story *s){
     }
     return c;
 }
+static int shift_here(const Story *s){
+ int x=20,y=11;story_world_place(&x,&y);
+ return s->x==x&&s->y==y&&s->facing==story_world_facing(0u);
+}
 const char *story_action_hint(const Story *s){
     if(story_brush_mode(s))return story_brush_editable(s)?"A RAISE":"LAND LOCKED";
     unsigned land=story_land_action(s);
@@ -2318,7 +2405,7 @@ const char *story_action_hint(const Story *s){
      return names[show-1u];
     }
     /* This special storefront interaction is checked BEFORE all actors. */
-    if(s->x==20u&&s->y==11u&&s->facing==0u)return "A SHIFT";
+    if(shift_here(s))return "A SHIFT";
     if(story_neighborhood_at(s)>=0)return "A STORY";
     switch(nearby_actor(s)){
     case 'L':return "A READ";
@@ -2458,7 +2545,7 @@ static void interact(Story *s) {
     /* The isometric shop occupies the solid (21,11) facade. Facing it
        from its adjacent walkable tile opens an OPTIONAL work interaction.
        No collision changes, new flags in SRAM, or mandatory job gate. */
-    if(s->x==20u && s->y==11u && s->facing==0u){
+    if(shift_here(s)){
         if(s->rescue_stage==STORY_RESCUE_LOST ||
            (s->rescue_stage>=STORY_RESCUE_MISSING &&
             s->rescue_stage<=STORY_RESCUE_TRACE)){
@@ -3052,8 +3139,8 @@ void story_tick(Story *s, uint16_t keys) {
     }
     /* SELECT switches the countryside brush on/off. L still switches
        cameras; outside the countryside SELECT retains its old alias. */
-    if(!land_safe(s))s->choice&=(uint8_t)~STORY_BRUSH_MODE;
-    if((pressed&SELECT)&&land_safe(s)){
+    if(!story_land_tools_enabled()||!land_safe(s))s->choice&=(uint8_t)~STORY_BRUSH_MODE;
+    if(story_land_tools_enabled()&&(pressed&SELECT)&&land_safe(s)){
         s->choice^=STORY_BRUSH_MODE;return;
     }
     if(story_brush_mode(s)){

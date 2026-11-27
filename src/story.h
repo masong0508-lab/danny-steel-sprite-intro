@@ -4,6 +4,8 @@
 #define STORY_CORE_W 24
 #define STORY_CORE_H 18
 #define STORY_CITY_W 40
+/* Four core orientations times 24 parcel arrangements, seed 0 is legacy. */
+#define STORY_WORLD_LAYOUTS 96u
 #define STORY_W 64
 #define STORY_H 30
 #define STORY_LAND_PATCH0 1u
@@ -214,6 +216,24 @@ void story_new(Story *s, int slot);
 void story_resume(Story *s, int slot, int x, int y, int facing, int view, int flags, int ended, int ending);
 void story_tick(Story *s, uint16_t keys);
 char story_tile(int x, int y);
+unsigned story_world_seed(void);
+unsigned story_world_revision(void);
+void story_world_set(unsigned seed);
+void story_world_source(int *x,int *y);
+void story_world_place(int *x,int *y);
+unsigned story_world_facing(unsigned facing);
+int story_world_potheads(int x,int y);
+char story_world_tile_for_seed(unsigned seed,int x,int y);
+int story_world_solid_for_seed(unsigned seed,int x,int y);
+void story_new_seeded(Story *s,int slot,unsigned seed);
+void story_resume_seeded(Story *s,int slot,int x,int y,int facing,int view,int flags,int ended,int ending,unsigned seed);
+static inline int story_land_tools_enabled(void){
+#if defined(DANNY_TERRAIN_DEBUG)
+ return 1;
+#else
+ return 0;
+#endif
+}
 const char *story_district_name(int x,int y);
 int story_terrain_vertex(const Story *s,int x,int y);
 int story_terrain_height(const Story *s,int wx,int wy);

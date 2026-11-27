@@ -38,9 +38,9 @@ static void field_guide(uint8_t *p,const Story *s){
    else if(!available)hd_text(p,177,y,"LATER",HD_STONE_LIT,1,0);
    if(i==STORY_TRACK_SHOW_INDEX){char progress[]="0/7";progress[0]=(char)('0'+story_show_stage(s));hd_text(p,145,y,progress,HD_GOLD,1,0);}
   }
-  hd_text(p,22,119,selected==0u?"EAST PLAZA: EDIT AND SAVE TAKES":
+  hd_text(p,22,119,selected==0u?"STUDIO: EDIT AND SAVE TAKES":
        selected==1u?"PAINT THE CITY / FOUR LAYERS":
-       selected==2u?"START AT THE EAST TERMINAL":
+       selected==2u?"START AT THE TERMINAL":
        selected==STORY_TRACK_SHOW_INDEX?"MUSIC + ART / 7 SHOW STEPS":
        "LETTER, BORE, MARA, THEN BUS",HD_PAPER,1,0);
   hd_text(p,22,131,"UP/DOWN CHOOSE  A TRACK",HD_GOLD,1,0);
@@ -366,7 +366,7 @@ void hd_game_overlay(uint8_t *p,const Story *s){
   hd_rect(p,8,143,3,7,HD_GOLD);
   hd_text(p,16,143,story_action_hint(s),HD_PAPER,1,0);
   hd_rect(p,92,143,1,14,HD_STONE_DARK);
-  hd_text(p,100,143,story_brush_mode(s)?"L CAMERA SELECT EXIT":story_rural(s->x,s->y)?"L CAMERA SELECT LAND":"L CAMERA  START HELP",HD_STONE_LIT,1,0);
+  hd_text(p,100,143,story_brush_mode(s)?"L CAMERA SELECT EXIT":story_land_tools_enabled()&&story_rural(s->x,s->y)?"L CAMERA SELECT LAND":"L CAMERA  START HELP",HD_STONE_LIT,1,0);
   if(story_rural(s->x,s->y))hd_land_status(p,s);
   else if(story_risk_available(s))hd_text(p,16,152,"B RISK OPTIONS",HD_STONE_LIT,1,0);
   hd_text(p,158,152,story_neighborhood_revisit(s)>=0?"R REVISIT":"R NOTES",HD_STONE_LIT,1,0);
