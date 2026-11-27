@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
-enum {A=1,B=2,SELECT=4,START=8,RIGHT=16,LEFT=32,UP=64,DOWN=128};
+enum {A=1,B=2,SELECT=4,START=8,RIGHT=16,LEFT=32,UP=64,DOWN=128,R=256};
 static struct {uint8_t before[32],pixels[HD_BYTES],after[32];} frame;
 static const uint32_t expected[42]={0x056c5df2u,0x8449fa74u,0x8d74dd3eu,0xc3f67fa4u,0x2a18805cu,0xfe1cf3ffu,0x4b9beeb3u,0xf123cef3u,0x3bab5b09u,0x8acf5cb8u,0x9f763248u,0xe12023aau,0x69ba85bdu,0xc6b39afdu,0xd3a9314fu,0xa0101a89u,0x3758c266u,0x63986615u,0x10042bc7u,0x6d29b22du,0x665b4936u,0x98f498f5u,0x1dd1e0c6u,0x723bf0b6u,0x89812402u,0x9ebc31f2u,0x225b169eu,0x8217b567u,0x4825199bu,0x4211abbeu,0xab41d88du,0x199ff238u,0x325110afu,0x0abe555eu,0x4aa9f709u,0xb2ff2d7eu,0x8c83a74cu,0x4d2ec278u,0x79576d30u,0x58715a3bu,0xdca0c072u,0x25dcd425u};
 static void press(Story *s,unsigned k){story_tick(s,0);story_tick(s,(uint16_t)k);story_tick(s,0);}
@@ -64,6 +64,26 @@ int main(void){
    done(&s);assert(!s.activity&&!s.dialogue&&s.cinema==CINE_NONE);
    assert(s.neighborhood_seen&(1u<<i));assert(!!(s.neighborhood_right&(1u<<i))==b);
   }
+  /* Both outcome-specific follow-ups reuse the actual matching panel,
+     never overwrite the selected outcome, and link to a completed site. */
+  static const unsigned pair[14]={9,7,12,13,11,10,8,1,6,0,5,4,2,3};
+  for(unsigned b=0;b<2u;b++){
+   Story v=s;v.neighborhood_seen=(uint16_t)(1u<<i);
+   v.neighborhood_right=b?v.neighborhood_seen:0u;
+   assert(story_neighborhood_revisit(&v)==(int)i);
+   press(&v,R);int n=0;const StoryPage *p=story_pages(&v,&n);
+   assert(n==2&&p&&p[0].line1[0]);unsigned dialogue=v.dialogue;
+   assert(story_neighborhood_panel(&v)==(int)(i*3+1+b));render(&v,i*3u+1u+b);
+   done(&v);assert(v.neighborhood_seen==(1u<<i)&&v.neighborhood_right==(b?(1u<<i):0u));
+   v.neighborhood_seen|=(uint16_t)(1u<<pair[i]);
+   press(&v,R);p=story_pages(&v,&n);
+   assert(v.dialogue==dialogue&&n==3&&p[2].line1[0]);
+   press(&v,B);assert(!v.dialogue&&!v.activity);
+   assert(v.neighborhood_seen==((1u<<i)|(1u<<pair[i]))&&v.energy==energy&&v.bond==bond&&v.work==work);
+   v.life_stage=STORY_LIFE_CLINIC;assert(story_neighborhood_revisit(&v)<0);
+   v.life_stage=STORY_LIFE_NONE;v.rescue_stage=STORY_RESCUE_MISSING;
+   assert(story_neighborhood_revisit(&v)<0);
+  }
   assert(story_neighborhood_count(&s)==i+1u);
   assert(s.neighborhood_target==0u);
  }
@@ -72,6 +92,10 @@ int main(void){
  uint8_t raw[NEIGHBORHOOD_EXT_LEN];neighborhood_save_encode(&s,raw);
  Story loaded;story_new(&loaded,0);assert(neighborhood_save_decode(&loaded,raw));
  assert(loaded.neighborhood_seen==s.neighborhood_seen&&loaded.neighborhood_right==s.neighborhood_right);
+ loaded.flags=STORY_ALL;done(&loaded);stand(&loaded,4);
+ assert(story_neighborhood_revisit(&loaded)==4);press(&loaded,R);
+ {int n=0;story_pages(&loaded,&n);assert(n==3&&story_neighborhood_panel(&loaded)==14);}
+ done(&loaded);
  for(unsigned i=0;i<sizeof raw;i++){raw[i]^=1u;assert(!neighborhood_save_decode(&loaded,raw));raw[i]^=1u;}
  for(unsigned id=0;id<=STORY_TRACK_MAX;id++){
   s.neighborhood_target=(uint8_t)id;neighborhood_save_encode(&s,raw);

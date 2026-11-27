@@ -209,6 +209,8 @@ const char *story_track_name(unsigned choice);
 unsigned story_track_selected(const Story *s);
 int story_neighborhood_enabled(const Story *s);
 int story_neighborhood_at(const Story *s);
+/* Returns a saved-outcome site only while ordinary exploration is safe. */
+int story_neighborhood_revisit(const Story *s);
 int story_neighborhood_panel(const Story *s);
 const char *story_neighborhood_name(unsigned id);
 const char *story_neighborhood_option(unsigned id,unsigned right);

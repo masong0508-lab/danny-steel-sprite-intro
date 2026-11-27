@@ -364,7 +364,10 @@ void hd_game_overlay(uint8_t *p,const Story *s){
   hd_rect(p,92,143,1,14,HD_STONE_DARK);
   hd_text(p,100,143,"L MAP  START HELP",HD_STONE_LIT,1,0);
   int risk=story_risk_available(s);
-  hd_text(p,16,152,risk?
+  if(story_neighborhood_revisit(s)>=0){
+   hd_text(p,16,152,risk?"B RISK / CONFIRM":"B NO RISK",risk?HD_LAMP:HD_STONE_LIT,1,0);
+   hd_text(p,158,152,"R REVISIT",HD_LAMP,1,0);
+  }else hd_text(p,16,152,risk?
           "B RISK  CONFIRM FIRST":"B NO RISK AT THIS LOCATION",
           risk?HD_LAMP:HD_STONE_LIT,1,0);
  }
