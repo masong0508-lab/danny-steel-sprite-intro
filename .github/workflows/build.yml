@@ -107,6 +107,11 @@ jobs:
           cmp src/hd_floor_runs.inc /tmp/danny_floor_runs.inc
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc tests/hd_floor_runs_test.c -o /tmp/danny_floor_runs
           /tmp/danny_floor_runs
+          python3 tools/build_scenery_atlas.py /tmp/danny_scenery_atlas
+          cmp src/hd_skyline_rom.inc /tmp/danny_scenery_atlas/hd_skyline_rom.inc
+          cmp src/hd_extra_floor_atlas.inc /tmp/danny_scenery_atlas/hd_extra_floor_atlas.inc
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c src/hd_canvas.c tests/hd_scenery_atlas_test.c -o /tmp/danny_scenery_atlas_test
+          /tmp/danny_scenery_atlas_test
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
             src/story.c src/studio.c src/hd_canvas.c src/hd_world_atlas.c \
             src/hd_facade_art.c src/hd_perspective.c \
