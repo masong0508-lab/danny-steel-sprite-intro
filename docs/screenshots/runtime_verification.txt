@@ -1,4 +1,4 @@
-Source commit: bcab0240e63924a748fcc00dd766a15e3fa9676e
+Source commit: d94176f18013e5591dc122960da1a376596b3a2b
 mGBA 0.10.2; read-only runtime verification, Story bytes=62
 PASS: built ROM exports its real input-queue counters
 PASS: New Game selects a valid generated layout
