@@ -4,6 +4,7 @@
 
 #include "city_layout.h"
 #include "landscape_data.h"
+#include <string.h>
 #if !defined(__arm__)
 /* Original immutable map retained for the original material generators
    and independent shipped-image regression, never selected on cartridge. */
@@ -42,29 +43,140 @@ char story_tile(int x, int y) {
 unsigned story_land_level(const Story *s,unsigned patch){
  return patch<2u?(s->terrain_style>>(patch*2u))&3u:0u;
 }
+/* Each save slot owns its landscape controls independently, like the
+   studio's arrangement. The rendered mesh is a small derived cache, not
+   persistent game state or a second framebuffer. */
+static uint8_t brush[2][STORY_BRUSH_BYTES];
+static unsigned brush_revision[2],brush_initialized;
+static uint8_t hike_stage[2];
+unsigned story_hike_stage(unsigned slot){return hike_stage[slot&1u];}
+void story_hike_restore(unsigned slot,unsigned stage){
+ if(slot<2u&&stage<=4u)hike_stage[slot]=(uint8_t)stage;
+}
+static uint8_t terrain_mesh[STORY_H+1][STORY_W-STORY_CITY_W+1];
+static unsigned mesh_slot=2u,mesh_style,mesh_revision;
+static void brush_reset(unsigned slot){
+ slot&=1u;
+ memset(brush[slot],0x55,STORY_BRUSH_BYTES);
+ brush_initialized|=1u<<slot;++brush_revision[slot];
+ hike_stage[slot]=0;
+}
+static void brush_init(unsigned slot){
+ if(!(brush_initialized&(1u<<(slot&1u))))brush_reset(slot);
+}
+unsigned story_brush_revision(unsigned slot){return brush_revision[slot&1u];}
+static unsigned node_grade(const uint8_t *data,unsigned x,unsigned y){
+ unsigned id=y*STORY_BRUSH_COLS+x;
+ return (data[id>>2]>>(2u*(id&3u)))&3u;
+}
+static void node_set(uint8_t *data,unsigned x,unsigned y,unsigned grade){
+ unsigned id=y*STORY_BRUSH_COLS+x,shift=(id&3u)*2u;
+ data[id>>2]=(uint8_t)((data[id>>2]&~(3u<<shift))|(grade<<shift));
+}
+/* Keep the city seam, exterior perimeter and every vertex touching
+   lake water at their original heights. Half strength one tile away
+   makes the brush blend into the shoreline instead of forming a cliff. */
+static int brush_weight(int x,int y){
+ if(x<=STORY_CITY_W||x>=STORY_W-1||y<=0||y>=STORY_H-1)return 0;
+ for(int dy=-1;dy<=0;dy++)for(int dx=-1;dx<=0;dx++)
+  if(story_tile(x+dx,y+dy)=='~')return 0;
+ for(int dy=-2;dy<=1;dy++)for(int dx=-2;dx<=1;dx++)
+  if(story_tile(x+dx,y+dy)=='~')return 1;
+ return 2;
+}
+static int node_allowed(unsigned x,unsigned y){
+ if(!x||x+1u>=STORY_BRUSH_COLS||!y||y+1u>=STORY_BRUSH_ROWS)return 0;
+ return brush_weight(STORY_CITY_W+(int)x*2,(int)y*2)>0;
+}
+void story_brush_export(unsigned slot,uint8_t out[STORY_BRUSH_BYTES]){
+ slot&=1u;brush_init(slot);memcpy(out,brush[slot],STORY_BRUSH_BYTES);
+}
+int story_brush_import(unsigned slot,const uint8_t in[STORY_BRUSH_BYTES]){
+ if(slot>1u)return 0;
+ for(unsigned y=0;y<STORY_BRUSH_ROWS;y++)for(unsigned x=0;x<STORY_BRUSH_COLS;x++)
+  if(!node_allowed(x,y)&&node_grade(in,x,y)!=1u)return 0;
+ memcpy(brush[slot],in,STORY_BRUSH_BYTES);
+ brush_initialized|=1u<<slot;++brush_revision[slot];return 1;
+}
+static int brush_sample(const uint8_t *data,int x,int y){
+ unsigned xx=(unsigned)(x-STORY_CITY_W),yy=(unsigned)y;
+ unsigned cx=xx>>1,cy=yy>>1,fx=xx&1u,fy=yy&1u;
+ unsigned nx=cx+1u<STORY_BRUSH_COLS?cx+1u:cx;
+ unsigned ny=cy+1u<STORY_BRUSH_ROWS?cy+1u:cy;
+ int a=(int)node_grade(data,cx,cy)-1,b=(int)node_grade(data,nx,cy)-1;
+ int c=(int)node_grade(data,cx,ny)-1,d=(int)node_grade(data,nx,ny)-1;
+ int h=(a*(2-(int)fx)+b*(int)fx)*(2-(int)fy)+(c*(2-(int)fx)+d*(int)fx)*(int)fy;
+ return h*3*brush_weight(x,y)/8;
+}
+static const uint8_t (*terrain_ready(const Story *s))[STORY_W-STORY_CITY_W+1]{
+ unsigned slot=s->slot;brush_init(slot);
+ if(mesh_slot!=slot||mesh_style!=s->terrain_style||mesh_revision!=brush_revision[slot]){
+  static const uint8_t px[2]={44,54},py[2]={8,24};
+  for(int y=0;y<=STORY_H;y++)for(int x=STORY_CITY_W;x<=STORY_W;x++){
+   int h=landscape_height[y][x-STORY_CITY_W];
+   for(unsigned i=0;i<2u;i++){
+    int dx=x-px[i],dy=y-py[i],d=(dx<0?-dx:dx)+(dy<0?-dy:dy);
+    if(d<4)h+=((int)story_land_level(s,i)-1)*6*(4-d)/4;
+   }
+   h+=brush_sample(brush[slot],x,y);
+   terrain_mesh[y][x-STORY_CITY_W]=(uint8_t)(h<0?0:h);
+  }
+  mesh_slot=slot;mesh_style=s->terrain_style;mesh_revision=brush_revision[slot];
+ }
+ return terrain_mesh;
+}
 int story_terrain_vertex(const Story *s,int x,int y){
  if(x<STORY_CITY_W||x>STORY_W||(unsigned)y>STORY_H)return 0;
- int h=landscape_height[y][x-STORY_CITY_W];
- static const uint8_t px[2]={44,54},py[2]={8,24};
- /* A bounded graded falloff; edited land does not change collision. */
- for(unsigned i=0;i<2u;i++){
-    int dx=x-px[i],dy=y-py[i];
-    int d=(dx<0?-dx:dx)+(dy<0?-dy:dy);
-    if(d<4)h+=((int)story_land_level(s,i)-1)*6*(4-d)/4;
- }
- return h<0?0:h;
+ return terrain_ready(s)[y][x-STORY_CITY_W];
 }
 int story_terrain_height(const Story *s,int wx,int wy){
  int x=wx>>8,y=wy>>8,fx=wx&255,fy=wy&255;
  if(x<STORY_CITY_W||x>=STORY_W||(unsigned)y>=STORY_H)return 0;
- int a=story_terrain_vertex(s,x,y),b=story_terrain_vertex(s,x+1,y);
- int c=story_terrain_vertex(s,x,y+1),d=story_terrain_vertex(s,x+1,y+1);
+ const uint8_t (*mesh)[STORY_W-STORY_CITY_W+1]=terrain_ready(s);
+ unsigned col=(unsigned)(x-STORY_CITY_W);
+ int a=mesh[y][col],b=mesh[y][col+1u],c=mesh[y+1][col],d=mesh[y+1][col+1u];
  return ((a*(256-fx)+b*fx)*(256-fy)+(c*(256-fx)+d*fx)*fy)>>16;
+}
+static int outdoor_available(const Story *s){
+ return !s->ended&&
+    (s->life_stage==STORY_LIFE_NONE||s->life_stage==STORY_LIFE_WAIT||s->life_stage==STORY_LIFE_FOLLOWUP_WAIT)&&
+    (s->rescue_stage==STORY_RESCUE_NONE||s->rescue_stage==STORY_RESCUE_SAVED);
+}
+static int land_safe(const Story *s){return outdoor_available(s)&&story_rural(s->x,s->y);}
+static int hike_tracking(const Story *s){
+ unsigned stage=story_hike_stage(s->slot);
+ return outdoor_available(s)&&stage>=1u&&stage<=3u;
+}
+static unsigned brush_x(const Story *s){return ((unsigned)s->x-STORY_CITY_W+1u)/2u;}
+static unsigned brush_y(const Story *s){return ((unsigned)s->y+1u)/2u;}
+int story_brush_mode(const Story *s){
+ return land_safe(s)&&!s->paused&&!s->dialogue&&!s->activity&&!s->battle&&!s->risk_menu&&
+        !s->choosing&&(s->choice&STORY_BRUSH_MODE);
+}
+int story_brush_editable(const Story *s){
+ if(!land_safe(s)||story_solid(s->x,s->y))return 0;
+ return brush_weight(s->x,s->y)>0&&node_allowed(brush_x(s),brush_y(s));
+}
+unsigned story_brush_grade(const Story *s){
+ if(!story_brush_editable(s))return 1u;
+ brush_init(s->slot);return node_grade(brush[s->slot],brush_x(s),brush_y(s));
+}
+static void brush_grade(Story *s,int delta){
+ if(!story_brush_editable(s))return;
+ int next=(int)story_brush_grade(s)+delta;
+ if(next<0||next>3)return;
+ node_set(brush[s->slot],brush_x(s),brush_y(s),(unsigned)next);
+ ++brush_revision[s->slot];s->dirty=1;
 }
 unsigned story_land_action(const Story *s){
  if(s->ended||!story_rural(s->x,s->y)||
     !(s->life_stage==STORY_LIFE_NONE||s->life_stage==STORY_LIFE_WAIT||s->life_stage==STORY_LIFE_FOLLOWUP_WAIT)||
     !(s->rescue_stage==STORY_RESCUE_NONE||s->rescue_stage==STORY_RESCUE_SAVED))return 0;
+ unsigned hike=story_hike_stage(s->slot);
+ if(s->x==42&&s->y==7)return STORY_LAND_TRAILHEAD;
+ if((hike==1u&&s->x==49&&s->y==6)||(hike==2u&&s->x==53&&s->y==13))
+    return STORY_LAND_WAYPOINT;
+ if(hike==3u&&s->x==56&&s->y==11)return STORY_LAND_FINISH;
  if(s->x==44&&s->y==8)return STORY_LAND_PATCH0;
  if(s->x==54&&s->y==24)return STORY_LAND_PATCH1;
  if(s->x==56&&s->y==11)return STORY_LAND_SUMMIT;
@@ -236,6 +348,13 @@ int story_goal(const Story *s, int *x, int *y, const char **label) {
            is the explicit center of Danny's two-day hope subplot. */
         *x=8;*y=11;*label="PHONE";return 1;
     }
+    if(hike_tracking(s)){
+        unsigned stage=story_hike_stage(s->slot);
+        if(stage==1u){*x=49;*y=6;*label="MEADOW PATH";}
+        else if(stage==2u){*x=53;*y=13;*label="RIDGE TRAIL";}
+        else {*x=56;*y=11;*label="SUMMIT";}
+        return 1;
+    }
     if(show_tracking(s)){show_goal(s,x,y,label);return 1;}
     if(creative_tracking(s)){
         switch(s->neighborhood_target){
@@ -387,6 +506,7 @@ const char *story_goal_reason(const Story *s){
     case STORY_RESCUE_LOST:return "NO VERIFIED RECOVERY YET";
     default:break;
     }
+    if(hike_tracking(s))return "HIKE / A AT NEXT TRAIL SIGN";
     if(show_tracking(s)){
         switch(story_show_stage(s)){
         case 0:return "ASK MARA ABOUT A SHOW";
@@ -436,6 +556,7 @@ const char *story_goal_kind(const Story *s){
     if(s->life_stage==STORY_LIFE_CLINIC ||
        s->life_stage==STORY_LIFE_FINAL_CLINIC)return "CARE";
     if(s->life_stage==STORY_LIFE_LAST_WORK)return "LAST";
+    if(hike_tracking(s))return "HIKE";
     if(show_tracking(s))return "SHOW";
     if(creative_tracking(s)||neighborhood_tracking(s))return "SIDE";
     if(s->life_stage==STORY_LIFE_WAIT ||
@@ -561,8 +682,9 @@ enum { D_NONE, D_OPEN, D_LETTER, D_LETTER_AGAIN, D_CLERK_LOCKED, D_CLERK, D_CLER
        D_NB_RETURN_12_1,
        D_NB_RETURN_13_0,
        D_NB_RETURN_13_1,D_CITY_EAST,D_CITY_CIVIC,D_CITY_PARK,D_CITY_CANAL,D_CITY_PLAZA,
-       D_LAND_TRAIL,D_LAND_RIDGE,D_LAND_SHORE,D_LAND_SKETCH,D_LAND_SKETCH_DONE,D_LAND_REST };
-_Static_assert(D_LAND_REST<256,"dialogue ID width");
+       D_LAND_TRAIL,D_LAND_RIDGE,D_LAND_SHORE,D_LAND_SKETCH,D_LAND_SKETCH_DONE,D_LAND_REST,
+       D_HIKE_START,D_HIKE_MEADOW,D_HIKE_RIDGE,D_HIKE_DONE,D_HIKE_STOP,D_HIKE_AGAIN };
+_Static_assert(D_HIKE_AGAIN<256,"dialogue ID width");
 #define SCRIPT(name, ...) static const StoryPage name[] = { __VA_ARGS__ }
 /* The banana-sign shift is practical income, not Danny's calling. He is
    grateful for the stability without pretending to enjoy mascot work. */
@@ -1407,6 +1529,22 @@ SCRIPT(d_land_sketch_done,
 SCRIPT(d_land_rest,
  {"DANNY","A moment by the lake.","Time to breathe."},
  {"DANNY","I feel a little better.","I can keep walking."});
+SCRIPT(d_hike_start,
+ {"DANNY","I'll walk the ridge.","Follow the trail signs."},
+ {"TRAIL MAP","First the meadow.","Then ridge and summit."});
+SCRIPT(d_hike_meadow,
+ {"DANNY","The meadow is behind me.","Next, the ridge trail."},
+ {"DANNY","Take it one step","at a time."});
+SCRIPT(d_hike_ridge,
+ {"DANNY","The climb is steeper.","The summit isn't far."},
+ {"DANNY","I'll take my time.","The view is waiting."});
+SCRIPT(d_hike_done,
+ {"DANNY","I made it all the way.","The city lies below."},
+ {"DANNY","A new idea for my art.","I'll keep this feeling."});
+SCRIPT(d_hike_stop,
+ {"DANNY","I'll head back for now.","The trail can wait."});
+SCRIPT(d_hike_again,
+ {"DANNY","I've climbed the ridge.","I can walk it again."});
 SCRIPT(d_mara_master_shared,
  {"MARA", "Your song is here.", "I kept the copy."},
  {"DANNY", "I can still change", "the arrangement."},
@@ -1588,9 +1726,10 @@ static const struct { const StoryPage *pages; uint8_t count; } scripts[] = {
   SEQ(d_nb_return_12_1),
   SEQ(d_nb_return_13_0),
   SEQ(d_nb_return_13_1),SEQ(d_city_east),SEQ(d_city_civic),SEQ(d_city_park),SEQ(d_city_canal),SEQ(d_city_plaza),
-  SEQ(d_land_trail),SEQ(d_land_ridge),SEQ(d_land_shore),SEQ(d_land_sketch),SEQ(d_land_sketch_done),SEQ(d_land_rest)
+  SEQ(d_land_trail),SEQ(d_land_ridge),SEQ(d_land_shore),SEQ(d_land_sketch),SEQ(d_land_sketch_done),SEQ(d_land_rest),
+  SEQ(d_hike_start),SEQ(d_hike_meadow),SEQ(d_hike_ridge),SEQ(d_hike_done),SEQ(d_hike_stop),SEQ(d_hike_again)
 };
-_Static_assert(sizeof(scripts)/sizeof(scripts[0])==D_LAND_REST+1u,"script table order");
+_Static_assert(sizeof(scripts)/sizeof(scripts[0])==D_HIKE_AGAIN+1u,"script table order");
 static int neighborhood_return_id(unsigned id){
  return id>=D_NB_RETURN_0_0&&id<=D_NB_RETURN_13_1?(int)(id-D_NB_RETURN_0_0):-1;
 }
@@ -1787,6 +1926,7 @@ static void talk(Story *s, uint8_t id) {
 void story_new(Story *s, int slot) {
     *s = (Story){0};
     s->terrain_style=STORY_LAND_DEFAULT;
+    brush_reset((unsigned)slot&1u);
     studio_reset(); /* a new game starts with a clean optional tune */
     /* The Potheads opening now lands at its ACTUAL storefront; the first
        controllable frame starts beside the same facade seen in the film.
@@ -2161,10 +2301,15 @@ static char nearby_actor(const Story *s){
     return c;
 }
 const char *story_action_hint(const Story *s){
+    if(story_brush_mode(s))return story_brush_editable(s)?"A RAISE":"LAND LOCKED";
     unsigned land=story_land_action(s);
     if(land==STORY_LAND_PATCH0||land==STORY_LAND_PATCH1)return "A RAISE";
     if(land==STORY_LAND_SUMMIT)return s->art_steps<STORY_PROJECT_DONE?"A SKETCH":"A VIEW";
     if(land==STORY_LAND_SHORE)return "A REST";
+    if(land==STORY_LAND_TRAILHEAD)return hike_tracking(s)?"A END HIKE":
+        story_hike_stage(s->slot)==4u?"A TRAIL":"A HIKE";
+    if(land==STORY_LAND_WAYPOINT)return "A MARK";
+    if(land==STORY_LAND_FINISH)return "A SUMMIT";
     unsigned show=show_here(s);
     if(show){
      static const char *const names[]={"A PLAN","A POSTER","A REHEARSE","A FRAME","A SET UP","A SHOW","A ARCHIVE"};
@@ -2268,6 +2413,22 @@ static void land_grade(Story *s,unsigned patch,int delta){
 }
 static void interact(Story *s) {
     unsigned land=story_land_action(s);
+    if(land==STORY_LAND_TRAILHEAD){
+        unsigned stage=story_hike_stage(s->slot);
+        if(stage==4u)talk(s,D_HIKE_AGAIN);
+        else if(stage){story_hike_restore(s->slot,0);s->dirty=1;talk(s,D_HIKE_STOP);}
+        else {story_hike_restore(s->slot,1);s->dirty=1;talk(s,D_HIKE_START);}
+        return;
+    }
+    if(land==STORY_LAND_WAYPOINT){
+        unsigned stage=story_hike_stage(s->slot);
+        story_hike_restore(s->slot,stage+1u);s->dirty=1;
+        talk(s,stage==1u?D_HIKE_MEADOW:D_HIKE_RIDGE);return;
+    }
+    if(land==STORY_LAND_FINISH){
+        story_hike_restore(s->slot,4u);s->dirty=1;
+        stat_gain(&s->spark,2u);talk(s,D_HIKE_DONE);return;
+    }
     if(land==STORY_LAND_SUMMIT){
         if(s->art_steps>=STORY_PROJECT_DONE)talk(s,D_LAND_SKETCH_DONE);
         else{
@@ -2829,7 +2990,7 @@ void story_tick(Story *s, uint16_t keys) {
     if(pressed&START){
         s->paused^=1u;
         /* The journal is transient UI, never part of a bus decision. */
-        if(!s->paused)s->choice&=1u;
+        s->choice&=1u;
         return;
     }
     if(s->paused){
@@ -2888,6 +3049,20 @@ void story_tick(Story *s, uint16_t keys) {
             else s->quit=1;
         }
         return;
+    }
+    /* SELECT switches the countryside brush on/off. L still switches
+       cameras; outside the countryside SELECT retains its old alias. */
+    if(!land_safe(s))s->choice&=(uint8_t)~STORY_BRUSH_MODE;
+    if((pressed&SELECT)&&land_safe(s)){
+        s->choice^=STORY_BRUSH_MODE;return;
+    }
+    if(story_brush_mode(s)){
+        if(pressed&R)s->choice&=(uint8_t)~STORY_BRUSH_MODE;
+        else if(pressed&(A|B)){
+            if((pressed&(A|B))==A)brush_grade(s,1);
+            else if((pressed&(A|B))==B)brush_grade(s,-1);
+            return;
+        }
     }
     if (pressed & (L|SELECT)) { s->view ^= 1; s->dirty = 1; }
     if (pressed & R) {

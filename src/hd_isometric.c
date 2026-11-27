@@ -413,73 +413,109 @@ static void rain(uint8_t *p,unsigned tick){
 /* In the countryside the ground is a real sloped triangular mesh.
    At the city edge the existing facade and object painters remain in
    the same depth pass. Walking camera height is bilinearly interpolated. */
+/* One terrain pass, then a depth-sorted scene pass. Ground can no longer
+   erase the base of a tree drawn on an earlier tile; Danny is inserted
+   between the same interpolated planes as the original city renderer. */
 static void landscape_iso(uint8_t *p,const Story *s,unsigned tick){
  hd_landscape_sky(p,s);
  HdSceneCamera camera=hd_scene_camera(s);
  int eye=story_terrain_height(s,camera.x,camera.y);
+ int gx=0,gy=0;const char *goal=0;
+ int has_goal=story_goal(s,&gx,&gy,&goal);
  int dir=-1,steps=-1,route=story_route(s,&dir,&steps);
  static const int dx[4]={1,0,-1,0},dy[4]={0,1,0,-1};
  int nx=s->x,ny=s->y;
  if(route&&steps>0&&dir>=0&&dir<4){nx+=dx[dir];ny+=dy[dir];}
  else route=0;
- /* Only a bounded window of depth planes can project into the screen.
-    Taller hills may enter from the far edge, so retain 22 planes. */
- int centre=(int)s->x+s->y;
- for(int depth=centre-18;depth<=centre+22;depth++){
-  int base=72+8*(depth-centre)-camera.iso_y+eye;
-  if(base<-60||base>250)continue;
-  int first=depth-(STORY_H-1),last=depth;
-  if(first<0)first=0;
-  if(last>=STORY_W)last=STORY_W-1;
-  int sx=104+16*(2*first-depth-(int)s->x+(int)s->y)-camera.iso_x;
-  for(int x=first;x<=last;x++,sx+=32){
-   if(sx<-64)continue;
-   if(sx>256)break;
-   int y=depth-x;
-   char tile=story_tile(x,y);
-   int h=story_terrain_height(s,x*256+128,y*256+128);
-   int sy=base-h;
-   if(sy<-100||sy>175)continue;
-   unsigned n=grain(x,y);
-   if(!story_rural(x,y)){
-    hd_iso_tile_detail(p,sx,sy,material(tile,n));
-    if(tile=='#'||tile=='A')building(p,sx,sy,x,y,tick,tile,120,88,camera.depth);
-    else if(tile=='T'||tile=='F'||tile=='C'||tile=='P'||tile=='V'||tile=='Q'||
-            tile=='W'||tile=='B'||tile=='L'||tile=='K'||tile=='M'||tile=='S'||
-            tile=='H'||tile=='R'||tile=='D')
-        object(p,sx,sy,tile,tick,x,y,s,1);
-   }else{
-    int a=story_terrain_vertex(s,x,y),b=story_terrain_vertex(s,x+1,y);
-    int c=story_terrain_vertex(s,x,y+1),d=story_terrain_vertex(s,x+1,y+1);
-    HdLandPoint top={sx+16,base-a},right={sx+32,base+8-b},
-                bottom={sx+16,base+16-d},left={sx,base+8-c};
-    unsigned shade1=(a+b>d+c),shade2=(a+c>b+d);
-    hd_land_tri(p,top,right,bottom,hd_land_ink(tile,h,shade1));
-    hd_land_tri(p,top,bottom,left,hd_land_ink(tile,h,shade2));
-    if(tile=='~'&&(n&3u)==0u)
-     hd_line(p,sx+12,sy+8,sx+20,sy+8,HD_REFLECT);
-    if(tile=='g'&&(n&7u)==0u){
-     hd_pixel(p,sx+15,sy+8,HD_LEAF_LIT);
-     hd_pixel(p,sx+20,sy+10,HD_LEAF_LIT);
+ int centre=(int)s->x+s->y,drew_player=0;
+ for(unsigned pass=0;pass<2u;pass++){
+  for(int depth=centre-18;depth<=centre+22;depth++){
+   if(pass&&!drew_player&&depth*8>camera.depth){
+    hd_world_person_art(p,120,88,0u,s->facing,hd_world_danny_gait(s));
+    drew_player=1;
+   }
+   int base=72+8*(depth-centre)-camera.iso_y+eye;
+   if(base<-60||base>250)continue;
+   int first=depth-(STORY_H-1),last=depth;
+   if(first<0)first=0;
+   if(last>=STORY_W)last=STORY_W-1;
+   int sx=104+16*(2*first-depth-(int)s->x+(int)s->y)-camera.iso_x;
+   for(int x=first;x<=last;x++,sx+=32){
+    if(sx<-64)continue;
+    if(sx>256)break;
+    int y=depth-x;
+    char tile=story_tile(x,y);
+    int h=story_terrain_height(s,x*256+128,y*256+128),sy=base-h;
+    if(sy<-100||sy>214)continue;
+    unsigned n=grain(x,y),rural=story_rural(x,y);
+    if(!pass){
+     if(sy>175)continue;
+     if(!rural){
+      hd_iso_tile_detail(p,sx,sy,material(tile,n));
+      if(tile=='~'||tile==','||tile=='='||tile=='.')
+       ground_detail(p,sx,sy,n,tile,tick);
+     }else{
+      int a=story_terrain_vertex(s,x,y),b=story_terrain_vertex(s,x+1,y);
+      int c=story_terrain_vertex(s,x,y+1),d=story_terrain_vertex(s,x+1,y+1);
+      HdLandPoint top={sx+16,base-a},right={sx+32,base+8-b},
+                  bottom={sx+16,base+16-d},left={sx,base+8-c};
+      unsigned shade1=(a+b>d+c),shade2=(a+c>b+d);
+      hd_land_tri(p,top,right,bottom,hd_land_ink(tile,h,shade1));
+      hd_land_tri(p,top,bottom,left,hd_land_ink(tile,h,shade2));
+      if(tile=='~'&&(n&3u)==0u){
+       hd_line(p,sx+10,sy+7,sx+20,sy+7,HD_REFLECT);
+       hd_pixel(p,sx+17,sy+10,HD_GLASS_LIT);
+      }
+      if(tile=='g'&&(n&7u)==0u){
+       hd_line(p,sx+13,sy+8,sx+17,sy+8,h>55?HD_MORTAR:HD_LEAF_LIT);
+       hd_pixel(p,sx+20,sy+10,h>55?HD_STONE_DARK:HD_LEAF_DARK);
+      }
+     }
+     if(route&&x==nx&&y==ny)ground_route(p,sx,sy,tick);
+     if(has_goal&&x==gx&&y==gy)ground_goal(p,sx,sy,tick);
+     continue;
     }
-    if(tile=='T')object(p,sx,sy,tile,tick,x,y,s,
-       !(sx<132&&sx+32>108&&sy+16>56&&sy-20<90));
-    unsigned marker=hd_land_marker(x,y);
-    if(marker){
-     int mx=sx+23,my=sy+10;
-     hd_rect(p,mx-1,my-12,2,12,HD_BARK);
-     hd_rect(p,mx-5,my-15,10,6,HD_COPPER);
-     hd_rect(p,mx-4,my-14,8,4,HD_PAPER);
-     hd_pixel(p,mx,my-13,HD_GOLD);
+    int tall=!(depth*8>=camera.depth&&sx<132&&sx+32>108&&sy+16>56&&sy-22<90);
+    if(tile=='#'||tile=='A'){
+     if(!rural)building(p,sx,sy,x,y,tick,tile,120,88,camera.depth);
+    }else if(tile=='T'||(!rural&&(tile=='F'||tile=='C'||tile=='P'||tile=='V'||tile=='Q'||
+            tile=='W'||tile=='B'||tile=='L'||tile=='K'||tile=='M'||tile=='S'||
+            tile=='H'||tile=='R'||tile=='D'))){
+     object(p,sx,sy,tile,tick,x,y,s,tall);
+    }
+    if(rural){
+     unsigned marker=hd_land_marker(x,y);
+     if(marker){
+      int mx=sx+23,my=sy+10;
+      hd_rect(p,mx-1,my-12,2,12,HD_BARK);
+      hd_rect(p,mx-5,my-15,10,6,HD_COPPER);
+      hd_rect(p,mx-4,my-14,8,4,HD_PAPER);
+      hd_pixel(p,mx,my-13,marker>=5u?HD_LEAF:HD_GOLD);
+     }
+    }else if(tall&&!story_solid(x,y)){
+     for(unsigned j=0;j<sizeof city_furniture/sizeof city_furniture[0];j++){
+      const CityFurniture *prop=&city_furniture[j];
+      if(prop->x!=x||prop->y!=y)continue;
+      if(prop->kind=='j')lamp(p,sx,sy,tick);
+      else{
+       hd_ellipse(p,sx+16,sy+12,11,3,HD_SHADOW);
+       hd_line(p,sx+7,sy+1,sx+23,sy+9,HD_BARK);
+       hd_line(p,sx+7,sy+3,sx+23,sy+11,HD_COPPER);
+       hd_rect(p,sx+8,sy+5,2,5,HD_INK);
+       hd_rect(p,sx+22,sy+11,2,3,HD_INK);
+      }
+      break;
+     }
     }
    }
-   if(route&&x==nx&&y==ny)ground_route(p,sx,sy,tick);
   }
  }
- hd_world_person_art(p,120,88,0u,s->facing,hd_world_danny_gait(s));
+ if(!drew_player)hd_world_person_art(p,120,88,0u,s->facing,hd_world_danny_gait(s));
 }
 void hd_isometric_draw(uint8_t *p,const Story *s,unsigned tick){
- if(story_rural(s->x,s->y)){landscape_iso(p,s,tick);return;}
+ /* Begin the same height-aware painter several tiles before the city
+    gates, so hills are already visible on approach. */
+ if(s->x>=34u||(s->anim&&s->prev_x>=34u)){landscape_iso(p,s,tick);return;}
  night(p);
  HdSceneCamera camera=hd_scene_camera(s);
  /* Translate every layer by the same fractional camera motion. The

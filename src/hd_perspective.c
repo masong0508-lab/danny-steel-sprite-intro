@@ -1039,6 +1039,26 @@ static void landscape_perspective(uint8_t *p,const Story *s,unsigned tick){
   }
  }
 }
+/* Real countryside elevations on the urban horizon, before nearer city
+   walls are painted. This is sampled only on the eastern approach. */
+static void city_land_horizon(uint8_t *p,const Story *s,int cx,int cy,int fx,int fy,int rx,int ry){
+ if(s->x<32u)return;
+ for(int col=0;col<HD_W;col+=5){
+  int top=79;
+  for(int dist=1024;dist<=6144;dist+=512){
+   int side=(col+2-120)*dist/160;
+   int wx=cx+fx*dist+rx*side,wy=cy+fy*dist+ry*side;
+   if(!story_rural(wx>>8,wy>>8))continue;
+   int h=story_terrain_height(s,wx,wy);
+   int y=76-(h-21)*400/dist;
+   if(h>21&&y<top)top=y;
+  }
+  if(top<79){
+   hd_rect(p,col,top,5,79-top,HD_LEAF_DARK);
+   hd_rect(p,col,top,5,1,HD_STONE_LIT);
+  }
+ }
+}
 void hd_first_person_draw(uint8_t *p,const Story *s,unsigned tick){
  if(story_rural(s->x,s->y)){landscape_perspective(p,s,tick);return;}
 #if defined(GBA_PROFILE_RENDER) && defined(__arm__)
@@ -1052,6 +1072,14 @@ void hd_first_person_draw(uint8_t *p,const Story *s,unsigned tick){
  int camx=camera.x,camy=camera.y;
  int warm=wall_cache_valid&&wall_cam_x==camx&&wall_cam_y==camy&&
           wall_cam_fx==fx&&wall_cam_fy==fy;
+ /* Terrain edits may change the distant hills while the city camera
+    itself remains unchanged. Invalidate only the background memo. */
+ static unsigned horizon_revision,horizon_style,horizon_slot=2u;
+ unsigned revision=story_brush_revision(s->slot);
+ if(horizon_revision!=revision||horizon_style!=s->terrain_style||horizon_slot!=s->slot){
+  background.valid=background.checked=0;
+  horizon_revision=revision;horizon_style=s->terrain_style;horizon_slot=s->slot;
+ }
  int allow=1;
 #if !defined(__arm__)
  allow=!(legacy_scenery||reference_restore||reference_floor||reference_ray||reference_shades);
@@ -1064,7 +1092,10 @@ void hd_first_person_draw(uint8_t *p,const Story *s,unsigned tick){
 #if !defined(__arm__)
   debug_background_hits++;
 #endif
- }else set_sky(p,tick,s->facing,camx,camy);
+ }else{
+  set_sky(p,tick,s->facing,camx,camy);
+  city_land_horizon(p,s,camx,camy,fx,fy,rx,ry);
+ }
 #if defined(GBA_PROFILE_RENDER) && defined(__arm__)
  profile_now=gba_profile_clock();
  gba_profile_sky_cycles=profile_now-profile_last;profile_last=profile_now;

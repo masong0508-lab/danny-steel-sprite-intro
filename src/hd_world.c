@@ -48,7 +48,7 @@ static void heading(uint8_t *p,const Story *s){
  hd_rect(p,8,143,3,7,HD_GOLD);
  hd_text(p,16,143,story_action_hint(s),HD_PAPER,1,0);
  hd_rect(p,92,143,1,14,HD_STONE_DARK);
- hd_text(p,100,143,"L CAMERA  START HELP",HD_STONE_LIT,1,0);
+ hd_text(p,100,143,story_brush_mode(s)?"L CAMERA SELECT EXIT":story_rural(s->x,s->y)?"L CAMERA SELECT LAND":"L CAMERA  START HELP",HD_STONE_LIT,1,0);
  if(story_rural(s->x,s->y))hd_land_status(p,s);
  else if(story_risk_available(s))hd_text(p,16,152,"B RISK OPTIONS",HD_STONE_LIT,1,0);
  hd_text(p,158,152,story_neighborhood_revisit(s)>=0?"R REVISIT":"R NOTES",HD_STONE_LIT,1,0);

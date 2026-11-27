@@ -10,7 +10,16 @@
 #define STORY_LAND_PATCH1 2u
 #define STORY_LAND_SUMMIT 3u
 #define STORY_LAND_SHORE 4u
+#define STORY_LAND_TRAILHEAD 5u
+#define STORY_LAND_WAYPOINT 6u
+#define STORY_LAND_FINISH 7u
 #define STORY_LAND_DEFAULT 5u
+/* Half-resolution editable control lattice, 2 bits per node. The
+   transient brush toggle is used only while freely roaming. */
+#define STORY_BRUSH_COLS 13u
+#define STORY_BRUSH_ROWS 16u
+#define STORY_BRUSH_BYTES 52u
+#define STORY_BRUSH_MODE 0x08u
 static inline int story_rural(int x,int y){
  return x>=STORY_CITY_W&&x<STORY_W&&(unsigned)y<STORY_H;
 }
@@ -210,6 +219,14 @@ int story_terrain_vertex(const Story *s,int x,int y);
 int story_terrain_height(const Story *s,int wx,int wy);
 unsigned story_land_action(const Story *s);
 unsigned story_land_level(const Story *s,unsigned patch);
+int story_brush_mode(const Story *s);
+int story_brush_editable(const Story *s);
+unsigned story_brush_grade(const Story *s);
+unsigned story_brush_revision(unsigned slot);
+unsigned story_hike_stage(unsigned slot);
+void story_hike_restore(unsigned slot,unsigned stage);
+void story_brush_export(unsigned slot,uint8_t out[STORY_BRUSH_BYTES]);
+int story_brush_import(unsigned slot,const uint8_t in[STORY_BRUSH_BYTES]);
 #if !defined(__arm__)
 /* Preserve the shipped map solely for historical golden-render checks. */
 void story_debug_core_map(int enabled);
