@@ -71,6 +71,10 @@ int main(void){
  }
  check();
  story_new(&s,0);
+ assert(!strcmp(story_dialogue_accept(&s),"A NEXT"));
+ int opening_pages=0;story_pages(&s,&opening_pages);
+ s.page=(uint8_t)(opening_pages-1);assert(!strcmp(story_dialogue_accept(&s),"A WALK"));
+ assert(!strcmp(story_dialogue_back(&s),"B CLOSE"));s.page=0;
  prepare();memset(view.pixels,HD_ROAD,HD_BYTES);
  hd_game_overlay(view.pixels,&s);
  check();

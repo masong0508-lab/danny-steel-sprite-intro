@@ -322,6 +322,16 @@ int story_route(const Story *s, int *direction, int *steps){
     if(steps)*steps=cache.steps;
     return cache.found;
 }
+const char *story_risk_action(const Story *s){
+    switch(s->risk_menu){
+    case 'H':return "LEAVE";
+    case 'L':return "HIDE REPLY";
+    case 'C':return "FORGE RECORD";
+    case 'M':return "ERASE DEMO";
+    case 'S':return "LEAK NAME";
+    default:return "BACK";
+    }
+}
 const char *story_goal_reason(const Story *s){
     if(s->ended||s->life_stage==STORY_LIFE_FINALE)
         return "YOUR STORY IS STILL HERE";
@@ -517,7 +527,7 @@ SCRIPT(d_open,
  {"DANNY", "After hours, I get", "to make my own art."},
  {"DANNY", "Last bus tonight.", "Clinic called again."},
  {"DANNY", "I missed their calls.", "I'm scared of the news."},
- {"DANNY", "First, the letter.", "Then clerk. Then Mara."});
+ {"DANNY", "First, the letter.", "Then BORE. Then Mara."});
 SCRIPT(d_letter,
  {"OLD LETTER", "I left the porch", "light on for you."},
  {"OLD LETTER", "The bill went up.", "I left it on anyway."},
@@ -591,7 +601,7 @@ SCRIPT(d_journal_3,
  {"DANNY", "East plaza: music desk.", "A again for BASIC."});
 SCRIPT(d_nothing,
  {"DANNY", "Nothing here for me.", "Where was I headed?"},
- {"POCKET NOTEBOOK", "Follow NEXT up top.", "R holds my notes."});
+ {"POCKET NOTEBOOK", "The gold mark guides me.", "START opens the map."});
 SCRIPT(d_look_potheads,
  {"DANNY", "Potheads. The suit", "still smells of rain."},
  {"DANNY", "I can be grateful", "and still want more."});
@@ -653,10 +663,10 @@ SCRIPT(d_cult_post_win,
  {"DANNY", "I wasn't trying to", "win a website."},
  {"DANNY", "The people we helped", "still matter."});
 SCRIPT(d_cult_run,
- {"DANNY", "I am logging off.", "This is a skill."});
+ {"DANNY", "I can walk away.", "No need to win this."});
 SCRIPT(d_cult_lose,
  {"DANNY", "Too much noise.", "I'll try another way."},
- {"DANNY", "Nobody needs me", "to win this fight."});
+ {"DANNY", "I can try again later.", "Or keep walking."});
 SCRIPT(d_cult_notes_1,
  {"POCKET NOTEBOOK", "MIRROR ORCHARD:", "Find the witness."});
 SCRIPT(d_cult_notes_2,
@@ -691,7 +701,7 @@ SCRIPT(d_neutral_start,
  {"CLINIC", "We need to discuss", "your earlier scans."},
  {"DANNY", "I let the bus go.", "I have to face this."},
  {"DANNY", "Mara was right.", "I can't vanish now."},
- {"POCKET NOTEBOOK", "A choose / B cancel.", "START+L for help."});
+ {"DANNY", "I'll spend today here.", "The clinic calls later."});
 SCRIPT(d_medical_notice,
  {"DAY TWO", "The clinic left", "another message."},
  {"DANNY", "I heard them this", "time. I'll go in."},
@@ -1581,6 +1591,35 @@ static uint16_t dialogue_shot_beat(unsigned script,unsigned page){
   default:break;
  }
  return beats&&page<length?beats[page]:0u;
+}
+/* A final A can commit a promise, save an outcome, or open a decision.
+   Expose the actual intent rather than describing everything as NEXT. */
+static int dialogue_commits(const Story *s){
+    int episode=neighborhood_dialogue(s->dialogue);
+    return episode>=0||s->dialogue==D_BUS_READY||s->dialogue==D_BUS_READY_LEGACY||
+           (s->dialogue==D_MARA&&!(s->flags&STORY_MARA))||
+           ((s->dialogue==D_MARA_MASTER||s->dialogue==D_MARA_CREATIONS)&&share_pending(s))||
+           (s->dialogue==D_SHOW_PLAY&&story_show_stage(s)==5u);
+}
+const char *story_dialogue_accept(const Story *s){
+    int count=0;
+    story_pages(s,&count);
+    if(s->page+1u<(unsigned)count)return "A NEXT";
+    int episode=neighborhood_dialogue(s->dialogue);
+    if(episode>=0)return episode%3==0?"A CHOOSE":"A SAVE";
+    if(s->dialogue==D_BUS_READY||s->dialogue==D_BUS_READY_LEGACY)return "A CHOOSE";
+    if(s->dialogue==D_MARA&&!(s->flags&STORY_MARA))return "A PROMISE";
+    if((s->dialogue==D_MARA_MASTER||s->dialogue==D_MARA_CREATIONS)&&share_pending(s))
+        return "A SHARE";
+    if(s->dialogue==D_SHOW_PLAY&&story_show_stage(s)==5u)return "A FINISH";
+    if(s->dialogue==D_OPEN)return "A WALK";
+    return s->ended?"A CLOSE":"A RETURN";
+}
+const char *story_dialogue_back(const Story *s){
+    int count=0;
+    story_pages(s,&count);
+    if(dialogue_commits(s))return "B CANCEL";
+    return s->page+1u<(unsigned)count?"B SKIP":"B CLOSE";
 }
 static uint8_t cinematics_for_dialogue(uint8_t d){
     if(neighborhood_dialogue(d)>=0||neighborhood_return_id(d)>=0)return CINE_DAY;

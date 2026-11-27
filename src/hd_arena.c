@@ -104,14 +104,20 @@ static void hud(uint8_t *p,const Story *s){
      a full-width banner cropping the rival's hair, hat or costume ears. */
   hd_rect(p,4,34,72,12,HD_INK);
   hd_rect(p,4,34,72,1,HD_COPPER);
-  /* These timing numbers are the real VBlank mechanics, not arbitrary
-     badge labels: FACTS is quicker, CARE has a one-hit guard. */
-  hd_text(p,8,37,s->battle_choice==1?"CARE 12/30":
-          s->battle_choice==2?"EXIT SAFELY":"FACTS 15/24",
+  /* Explain actual tradeoffs rather than cryptic timing fractions. */
+  hd_text(p,8,37,s->battle_choice==1?"BLOCK ONE HIT":
+          s->battle_choice==2?"EXIT SAFELY":"LONGER PARRY",
+          HD_PAPER,1,0);
+  hd_rect(p,4,46,72,12,HD_INK);
+  hd_text(p,8,49,s->battle_choice==1?"SHORT PARRY":
+          s->battle_choice==2?"NO PENALTY":"RESTORE FOCUS",
           HD_STONE_LIT,1,0);
   hd_rect(p,164,34,72,12,HD_INK);
   hd_rect(p,164,34,72,1,HD_COPPER);
-  hd_text(p,168,37,"A PICK B EXIT",HD_STONE_LIT,1,0);
+  hd_text(p,168,37,"A GO  B EXIT",HD_STONE_LIT,1,0);
+  hd_rect(p,164,46,72,22,HD_INK);
+  hd_text(p,168,49,"AVOID RED",HD_PAPER,1,0);
+  hd_text(p,168,59,"A NEAR IMPACT",HD_STONE_LIT,1,0);
  }else{
   /* A readable, explicit target card. The warning matches the SAME
      strike used in cult_tick(); it is not a decorative random arrow. */

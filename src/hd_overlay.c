@@ -104,6 +104,11 @@ void hd_game_overlay(uint8_t *p,const Story *s){
   int count=0;const StoryPage *pages=story_pages(s,&count);
   if(pages && s->page<(unsigned)count){
    const StoryPage *d=&pages[s->page];
+   const char *accept=story_dialogue_accept(s),*back=story_dialogue_back(s);
+   unsigned number=(unsigned)s->page+1u,total=(unsigned)count;
+   char progress[]="00/00";
+   progress[0]=(char)('0'+number/10u);progress[1]=(char)('0'+number%10u);
+   progress[3]=(char)('0'+total/10u);progress[4]=(char)('0'+total%10u);
    if(s->cinema==CINE_OPEN){
     /* Full 240x135 source framing stays above this film caption. */
     hd_rect(p,0,135,240,25,HD_INK);
@@ -112,10 +117,9 @@ void hd_game_overlay(uint8_t *p,const Story *s){
     hd_rect(p,37,139,1,16,HD_STONE_DARK);
     hd_text(p,44,139,d->line1,HD_PAPER,1,0);
     hd_text(p,44,149,d->line2,HD_PAPER,1,0);
-    hd_text(p,201,139,"A NEXT",HD_STONE_LIT,1,0);
-    hd_text(p,201,149,"B SKIP",HD_STONE_LIT,1,0);
-    for(int i=0;i<count&&i<9;i++)
-     hd_rect(p,7+i*4,150,2,3,i<=s->page?HD_LAMP:HD_STONE_DARK);
+    hd_text(p,234-hd_text_width(accept,1,0),139,accept,HD_LAMP,1,0);
+    hd_text(p,234-hd_text_width(back,1,0),149,back,HD_STONE_LIT,1,0);
+    hd_text(p,6,149,progress,HD_STONE_LIT,1,0);
     return;
    }
    /* Real cinematic frames deserve the space previously occupied by the
@@ -125,9 +129,9 @@ void hd_game_overlay(uint8_t *p,const Story *s){
     hd_rect(p,0,122,HD_W,HD_H-122,HD_INK);
     hd_rect(p,0,122,HD_W,1,HD_COPPER);
     hd_text(p,8,125,d->speaker,HD_LAMP,1,0);
-    hd_text(p,194,125,"A NEXT",HD_STONE_LIT,1,0);
-    for(int i=0;i<count&&i<9;i++)
-     hd_rect(p,148+i*4,127,2,3,i<=s->page?HD_LAMP:HD_STONE_DARK);
+    hd_text(p,98,125,progress,HD_STONE_LIT,1,0);
+    hd_text(p,136,125,accept,HD_LAMP,1,0);
+    hd_text(p,234-hd_text_width(back,1,0),125,back,HD_STONE_LIT,1,0);
     const char *lines[2]={d->line1,d->line2};
     for(unsigned i=0;i<2u;i++){
      int track=hd_text_width(lines[i],1,1)>224?0:1;
@@ -144,10 +148,9 @@ void hd_game_overlay(uint8_t *p,const Story *s){
    hd_line(p,18,120,222,120,HD_STONE_DARK);
    hd_text(p,18,124,d->line1,HD_PAPER,1,1);
    hd_text(p,18,136,d->line2,HD_PAPER,1,1);
-   hd_text(p,174,147,"A NEXT",HD_STONE_LIT,1,0);
-   if(story_neighborhood_panel(s)>=0)hd_text(p,18,147,"B BACK",HD_STONE_LIT,1,0);
-   for(int i=0;i<count&&i<9;i++)
-    hd_rect(p,205+i*3,112,2,3,i<=s->page?HD_LAMP:HD_STONE_DARK);
+   hd_text(p,222-hd_text_width(accept,1,0),147,accept,HD_LAMP,1,0);
+   hd_text(p,18,147,back,HD_STONE_LIT,1,0);
+   hd_text(p,197,110,progress,HD_STONE_LIT,1,0);
   }
   return;
  }
@@ -178,17 +181,17 @@ void hd_game_overlay(uint8_t *p,const Story *s){
   if(s->risk_menu=='H')risk_hint=s->risk_choice?
        "LEAVE THE DOOR CLOSED":"TRY TO OPEN THE DOOR";
   else if(s->rescue_stage==STORY_RESCUE_SAVED)risk_hint=
-       "A FOURTH CHECK CAN END THE STORY";
+       "ANOTHER HARM CAN END THE STORY";
   else if(s->rescue_stage>=STORY_RESCUE_MISSING &&
           s->rescue_stage<=STORY_RESCUE_TRACE)risk_hint=
-       "ANOTHER CHECK CAN BLOCK RESCUE";
+       "ANOTHER HARM CAN BLOCK RESCUE";
   else if(story_bad_count(s)>=2)risk_hint=
-       "THE NEXT CHECK MAY ENDANGER MARA";
-  else risk_hint="YOUR CHOICES HAVE CONSEQUENCES";
+       "THIS CHOICE MAY ENDANGER MARA";
+  else risk_hint="THIS CAN DAMAGE SOMEONE'S TRUST";
   hd_text(p,23,109,risk_hint,HD_STONE_LIT,1,0);
   selectable(p,23,121,91,s->risk_menu=='H'?"OPEN":"BACK",!s->risk_choice);
-  selectable(p,122,121,92,s->risk_menu=='H'?"LEAVE":"DO IT",s->risk_choice);
-  hd_text(p,28,146,"LEFT/RIGHT CHOOSE    B CANCEL",HD_PAPER,1,0);
+  selectable(p,122,121,92,story_risk_action(s),s->risk_choice);
+  hd_text(p,23,146,"D-PAD CHOOSE   A OK   B CANCEL",HD_PAPER,1,0);
   return;
  }
  if(s->activity==STORY_ACT_PAINT){
@@ -329,9 +332,9 @@ void hd_game_overlay(uint8_t *p,const Story *s){
   framebox(p,13,79,214,77);
   hd_text(p,23,90,"THE LAST BUS",HD_LAMP,1,1);
   hd_text(p,23,103,(s->flags&STORY_FULL)==STORY_FULL?
-     "TAPE + CANVAS: BOARD THE BUS":
-     s->life_stage?"YOU ARE ALREADY STAYING":
-     "CLINIC CALL WILL STOP THE TRIP",HD_PAPER,1,0);
+     "READY TO LEAVE WITH YOUR WORK":
+     s->life_stage?"YOU ARE STILL IN THE OLD QUARTER":
+     "LEAVING WILL START A NEW DAY",HD_PAPER,1,0);
   selectable(p,23,118,92,(s->flags&STORY_FULL)==STORY_FULL?
      "BOARD":"TRY TO GO",!s->choice);
   selectable(p,123,118,91,"STAY",s->choice);
@@ -362,14 +365,9 @@ void hd_game_overlay(uint8_t *p,const Story *s){
   hd_rect(p,8,143,3,7,HD_GOLD);
   hd_text(p,16,143,story_action_hint(s),HD_PAPER,1,0);
   hd_rect(p,92,143,1,14,HD_STONE_DARK);
-  hd_text(p,100,143,"L MAP  START HELP",HD_STONE_LIT,1,0);
-  int risk=story_risk_available(s);
-  if(story_neighborhood_revisit(s)>=0){
-   hd_text(p,16,152,risk?"B RISK / CONFIRM":"B NO RISK",risk?HD_LAMP:HD_STONE_LIT,1,0);
-   hd_text(p,158,152,"R REVISIT",HD_LAMP,1,0);
-  }else hd_text(p,16,152,risk?
-          "B RISK  CONFIRM FIRST":"B NO RISK AT THIS LOCATION",
-          risk?HD_LAMP:HD_STONE_LIT,1,0);
+  hd_text(p,100,143,"L CAMERA  START HELP",HD_STONE_LIT,1,0);
+  if(story_risk_available(s))hd_text(p,16,152,"B RISK OPTIONS",HD_STONE_LIT,1,0);
+  hd_text(p,158,152,story_neighborhood_revisit(s)>=0?"R REVISIT":"R NOTES",HD_STONE_LIT,1,0);
  }
 }
 

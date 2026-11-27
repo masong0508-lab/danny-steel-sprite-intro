@@ -648,13 +648,14 @@ static void risk_menu(uint8_t *p,const Story *s){
            "RIGHT = BAD CHECK +1",18,28);
     }
     text(p,4,69,s->risk_choice?
-        (s->risk_menu=='H'?" > LEAVE   A CONFIRM":" > DO IT   A CONFIRM"):
-        (s->risk_menu=='H'?" > OPEN    A CONFIRM":" > BACK    A CONFIRM"),20,28);
-    text(p,94,74,"B EXIT",22,7);
+        story_risk_action(s):(s->risk_menu=='H'?"OPEN":"BACK"),20,20);
+    text(p,73,69,"A CONFIRM",20,10);
+    text(p,94,74,"B EXIT",22,6);
 }
 /* Cinematic dialogue shares one clean speaker-first layout in every view,
    including good/neutral/bad ending and rescue. No new image assets. */
 static void dialogue_card(uint8_t *p,const Story *s,const StoryPage *page,int count){
+    (void)count;
     int accent=s->cinema==CINE_RESCUE_DOOR||s->cinema==CINE_BAD?16:
        s->cinema==CINE_MARA||s->cinema==CINE_RESCUE_SAVED?28:
        s->cinema==CINE_MUSIC?25:18;
@@ -665,8 +666,7 @@ static void dialogue_card(uint8_t *p,const Story *s,const StoryPage *page,int co
         box(p,0,0,3,24,accent);
         box(p,3,23,117,1,accent);
         text(p,7,2,page->speaker,accent,21);
-        for(int j=0;j<count&&j<5;j++)
-            box(p,97+j*4,3,3,3,j<=(int)s->page?accent:5);
+        text(p,78,2,story_dialogue_accept(s),20,10);
         text(p,7,9,page->line1,20,27);
         text(p,7,16,page->line2,20,27);
     }else{
@@ -674,11 +674,10 @@ static void dialogue_card(uint8_t *p,const Story *s,const StoryPage *page,int co
         box(p,1,49,2,30,accent);
         box(p,4,57,112,1,accent);
         text(p,7,51,page->speaker,accent,21);
-        for(int j=0;j<count&&j<5;j++)
-            box(p,97+j*4,52,3,3,j<=(int)s->page?accent:5);
+        text(p,78,51,story_dialogue_accept(s),20,10);
         text(p,7,60,page->line1,20,26);
         text(p,7,68,page->line2,20,26);
-        text(p,110,74,"A",20,1);
+        text(p,78,74,story_dialogue_back(s),20,10);
     }
 }
 static void ending_caption(uint8_t *p,unsigned ending,unsigned rescue,

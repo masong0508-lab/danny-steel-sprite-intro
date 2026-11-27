@@ -115,7 +115,34 @@ static void overflow_and_wrap(void){
  assert(frame_runtime_read==1u&&frame_runtime_write==1u);
  assert(frame_runtime_dropped==0u&&!frame_runtime_next(&keys));
 }
+static void transition_publication(void){
+ unsigned page=99u;
+ frame_runtime_init();frame_runtime_start(0u);
+ frame_runtime_capture(0u);frame_runtime_capture(0u);assert(drain(NULL)==2u);
+ assert(frame_runtime_begin_render(&page)&&page==1u);
+ for(unsigned i=0;i<5u;i++){frame_runtime_capture(0u);assert(frame_runtime_dim==0u);}
+ assert(drain(NULL)==5u);
+ frame_runtime_submit_transition(page,FRAME_RUNTIME_SOFTEN);
+ assert(frame_runtime_dim==0u);
+ frame_runtime_capture(1u);assert(frame_runtime_dim==FRAME_RUNTIME_DIM_LEVEL);
+ uint16_t key=0;assert(frame_runtime_next(&key)&&key==1u);
+ for(unsigned n=FRAME_RUNTIME_DIM_LEVEL;n>0u;n--){
+  frame_runtime_capture(0u);assert(frame_runtime_dim==n-1u);
+  assert(drain(NULL)==1u);
+ }
+ assert(frame_runtime_begin_render(&page)&&page==0u);
+ frame_runtime_submit_transition(page,FRAME_RUNTIME_SOFTEN);
+ frame_runtime_capture(0u);assert(drain(NULL)==1u);
+ frame_runtime_capture(0u);assert(drain(NULL)==1u);
+ assert(frame_runtime_dim==FRAME_RUNTIME_DIM_LEVEL-1u);
+ assert(frame_runtime_begin_render(&page)&&page==1u);
+ frame_runtime_submit_transition(page,FRAME_RUNTIME_CLEAR);
+ frame_runtime_capture(0u);assert(drain(NULL)==1u&&frame_runtime_dim==0u);
+ assert(!frame_runtime_dropped);
+ frame_runtime_stop();assert(frame_runtime_dim==0u);
+}
 int main(void){
+ transition_publication();
  clocks_survive_draws();chronological_edges();
  publication_and_budget();overflow_and_wrap();
  puts("Video-time runtime: 600 story ticks through blocked draws, chronological taps/holds, completed-page publication, overflow and counter-wrap checks passed");
