@@ -1,5 +1,6 @@
 #pragma once
 #include "potheads_motion.h"
+#include "potheads_continuity.h"
 #include "potheads_drape.h"
 #include "potheads_cloth_render.h"
 #include "potheads_leg_render.h"
@@ -459,7 +460,7 @@ static void pot_dancer(uint8_t *p,const PotCamera *c,unsigned t){
     source-only and partially installed matte builds. Floor staging below
     also uses this clock so a leg cannot switch depth ahead of its pose. */
  source=pot_source_pose_tick(source,cloth_frame,leg_frame,upper_frame);
- pot_trace_sample(source,&pose);
+ pot_render_sample(source,&pose,cloth_frame>=0||leg_frame>=0||upper_frame>=0);
  unsigned sign=pose.flags&3u;
  for(unsigned i=0;i<4u;i++)if(pose.contact_mask&(1u<<i)){
   PotPoint contact=pot_actor_point(c,pose.contact[i]);

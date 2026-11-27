@@ -104,6 +104,10 @@ jobs:
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
             src/hd_canvas.c tests/potheads_set_test.c -o /tmp/danny_potheads_set
           /tmp/danny_potheads_set
+      - name: Verify bounded body interpolation and measured sign tip transitions
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc tests/potheads_continuity_test.c -o /tmp/danny_motion_continuity
+          /tmp/danny_motion_continuity
       - name: Verify every sign silhouette, measured arrow tip and grip bounds
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Wno-unused-function -Isrc src/hd_canvas.c tests/potheads_sign_geometry_test.c -o /tmp/danny_sign_geometry
