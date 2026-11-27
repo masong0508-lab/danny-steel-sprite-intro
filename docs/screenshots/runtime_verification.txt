@@ -1,4 +1,4 @@
-Source commit: e6bdd68fc0f10bcc95459fb12d0d9844941ab2bf
+Source commit: 8e5197553a8a01a29f740aeab2175c9e7948c910
 mGBA 0.10.2; read-only runtime verification, Story bytes=62
 PASS: built ROM exports its real input-queue counters
 opening state: scene=1, dialogue=1, page=0, ticks=175
@@ -35,14 +35,14 @@ PASS: one-frame camera tap is captured once while drawing
 PASS: one-frame camera tap is captured once while drawing
 PASS: one-frame camera tap is captured once while drawing
 PASS: one-frame camera tap is captured once while drawing
-short camera taps: 12/12; observed response 1..2 video frames
+short camera taps: 12/12; observed response 1..3 video frames
 PASS: all tested one-frame camera presses are retained
 PASS: tested camera actions apply within twelve video frames
 held camera button: 1 observed toggle(s)
 PASS: holding camera button produces one toggle without repeats
 PASS: first-person camera is active
 PASS: actual ROM capture saved
-first-person clock: video=600, processed=600, queue=0->0, accounted=600
+first-person clock: video=600, processed=600, queue=1->1, accounted=600
 PASS: clock window advances 600 emulated video frames
 PASS: input queue remains bounded
 PASS: processed plus queued ticks track video time
@@ -51,10 +51,10 @@ PASS: active Mode4 display survives the clock window
 first-person turn: 0->1, response=1 video frames
 PASS: single-frame turn is retained promptly in each facing
 PASS: actual ROM capture saved
-first-person turn: 1->2, response=2 video frames
+first-person turn: 1->2, response=3 video frames
 PASS: single-frame turn is retained promptly in each facing
 PASS: actual ROM capture saved
-first-person turn: 2->3, response=1 video frames
+first-person turn: 2->3, response=4 video frames
 PASS: single-frame turn is retained promptly in each facing
 PASS: actual ROM capture saved
 first-person turn: 3->0, response=1 video frames
