@@ -1,4 +1,5 @@
 #include "hd_canvas.h"
+#include "hd_iso_bounds.h"
 #include "hd_isometric_atlas.h"
 #include "hd_world_atlas.h"
 #include "hd_scene_geometry.h"
@@ -177,7 +178,30 @@ static void verify_visible_spans(void){
  assert(views==STORY_W*STORY_H);
  puts("isometric visible spans: all 432 camera cells preserve original tile order and pixels");
 }
+extern int hd_iso_furniture_index_valid(void);
+static void verify_visible_prefixes(void){
+ unsigned samples=0;
+ for(int sx=-2048;sx<=320;sx++)for(int sy=-480;sy<=180;sy+=7){
+  int ref=0;
+  while(sx+16*ref<=-32||sy+8*ref<=-18)ref++;
+  assert(hd_iso_ground_prefix(sx,sy)==ref);
+  samples++;
+ }
+ for(int sx=-2048;sx<=320;sx++){
+  int a=0,b=0;
+  while(sx+32*a<=-48)a++;
+  while(sx+32*b<-64)b++;
+  assert(hd_iso_prefix(sx,-48,5u)==a);
+  assert(hd_iso_prefix(sx,-65,5u)==b);
+ }
+ for(unsigned seed=0;seed<STORY_WORLD_LAYOUTS;seed++){
+  story_world_set(seed);assert(hd_iso_furniture_index_valid());
+ }
+ story_world_set(0);
+ printf("Isometric clipping: %u exact prefixes and furniture lookup in all %u worlds\n",samples,STORY_WORLD_LAYOUTS);
+}
 int main(void){
+ verify_visible_prefixes();
  verify_iso_copies();
  verify_visible_spans();
  Story s;story_new(&s,0);

@@ -100,6 +100,19 @@ static void neighborhood_journal(uint8_t *p,const Story *s){
 }
 /* Hidden developer-only world panel. Previewing a seed changes no
    geometry; A must be pressed twice before any destructive operation. */
+static uint8_t proposed_world[STORY_H][STORY_W] __attribute__((section(".ewram"),aligned(4)));
+static unsigned preview_seed=STORY_WORLD_LAYOUTS;
+static void debug_world_preview(uint8_t *p,unsigned seed){
+ if(preview_seed!=seed){story_world_preview(seed,proposed_world);preview_seed=seed;}
+ hd_rect(p,151,48,68,34,HD_STONE_DARK);
+ for(int y=0;y<STORY_H;y++)for(int x=0;x<STORY_W;x++){
+  char t=(char)proposed_world[y][x];
+  unsigned ink=t=='~'?HD_GLASS:t=='g'||t=='T'?HD_LEAF_DARK:t=='#'||t=='A'?HD_STONE_DARK:
+    t=='.'||t==','||t=='='?HD_STONE_LIT:HD_COPPER;
+  hd_pixel(p,153+x,50+y,ink);
+ }
+ hd_text(p,153,84,"PROPOSED",HD_LAMP,1,0);
+}
 static void debug_world_panel(uint8_t *p,const Story *s){
  static const char *const names[STORY_DEBUG_ROWS]={
   "GENERATE NEW WORLD","TERRAIN BRUSH","SURVEY GRADES","RESET TERRAIN","RESUME GAME"
@@ -114,10 +127,11 @@ static void debug_world_panel(uint8_t *p,const Story *s){
  hd_text(p,20,37,seed,HD_PAPER,1,0);
  for(unsigned i=0;i<STORY_DEBUG_ROWS;i++){
   int y=53+(int)i*12;
-  if(i==selection)hd_rect(p,18,y-2,204,11,HD_ROAD_COOL);
+  if(i==selection)hd_rect(p,18,y-2,130,11,HD_ROAD_COOL);
   unsigned ink=(i==1u||i==2u)&&!story_rural(s->x,s->y)?HD_STONE_DARK:HD_PAPER;
   hd_text(p,22,y,names[i],ink,1,0);
  }
+ debug_world_preview(p,proposed);
  if(s->choice&STORY_DEBUG_CONFIRM){
   hd_text(p,20,119,selection==0u?"RELOCATE WORLD; KEEP PROGRESS?":"RESTORE ORIGINAL LAND GRADES?",HD_LAMP,1,0);
   hd_text(p,20,135,"A CONFIRM   B CANCEL",HD_GOLD,1,0);

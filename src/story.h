@@ -236,6 +236,7 @@ void story_world_place(int *x,int *y);
 unsigned story_world_facing(unsigned facing);
 int story_world_potheads(int x,int y);
 char story_world_tile_for_seed(unsigned seed,int x,int y);
+void story_world_preview(unsigned seed,uint8_t out[STORY_H][STORY_W]);
 int story_world_solid_for_seed(unsigned seed,int x,int y);
 void story_new_seeded(Story *s,int slot,unsigned seed);
 void story_resume_seeded(Story *s,int slot,int x,int y,int facing,int view,int flags,int ended,int ending,unsigned seed);

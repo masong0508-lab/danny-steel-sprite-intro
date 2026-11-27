@@ -334,6 +334,7 @@ int main(int argc,char **argv){
         Sample unlocked=sample(core,&symbols);
         check(story_debug_menu(&unlocked.game)&&!unlocked.game.quit&&read_word(core,symbols.world)==old_seed,
               "regular cartridge opens hidden World Tools without regeneration");
+        picture(core,directory,"world-tools");
         press(core,KEY_B,1u,48u);
         Sample locked=sample(core,&symbols);
         check(!locked.game.paused&&!story_debug_menu(&locked.game)&&read_word(core,symbols.world)==old_seed,

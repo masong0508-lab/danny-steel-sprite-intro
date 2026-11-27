@@ -113,6 +113,12 @@ static char world_tile(const WorldLayout *w,int x,int y){
 char story_world_tile_for_seed(unsigned seed,int x,int y){
  WorldLayout w;world_layout(&w,seed);return world_tile(&w,x,y);
 }
+/* Read-only proposed world, independent of the live renderer/route caches. */
+void story_world_preview(unsigned seed,uint8_t out[STORY_H][STORY_W]){
+ WorldLayout w;world_layout(&w,seed);
+ for(int y=0;y<STORY_H;y++)for(int x=0;x<STORY_W;x++)
+  out[y][x]=(uint8_t)world_tile(&w,x,y);
+}
 void story_world_set(unsigned seed){
  seed%=STORY_WORLD_LAYOUTS;
  if(world.seed==seed)return;

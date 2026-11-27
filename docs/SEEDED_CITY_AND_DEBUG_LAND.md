@@ -83,3 +83,7 @@ Choosing a terrain mode from the secret menu grants transient access only
 to that mode; leaving it removes access. Existing world/terrain saves and
 automatic randomized New Game are unchanged. Host and actual mGBA input
 regression coverage were extended; this revision still needs fresh CI.
+
+## World selector preview and overhead rendering pass
+
+The secret menu now displays a collision-aware proposed world map while choosing a seed. Preview generation uses a separate map buffer and leaves the live seed, routing and geometry caches untouched. Overhead rendering skips the entire off-screen prefix of each projected row using exact integer clip calculations. Furniture is addressed through a small canonical ROM table, rather than scanning all 18 decorations at every candidate tile; seeded mapping remains unchanged. The fixed Old Quarter lamp coordinate is computed once per frame. Host tests compare the clip calculations with the old scan, verify furniture in all 192 arrangements, and compare proposed-map samples without changing the live layout. Emulator capture now includes World Tools. Fresh cartridge performance is measured by the existing frame-cadence harness.

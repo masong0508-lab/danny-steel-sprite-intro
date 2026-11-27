@@ -13,6 +13,7 @@ static uint16_t queue[STORY_W*STORY_H];
 static struct {uint8_t pre[32],p[HD_BYTES],post[32];} frame;
 static uint8_t prior[HD_BYTES];
 static unsigned canonical_count[256];
+static uint8_t preview[STORY_H][STORY_W];
 /* Immutable layout hashes captured from the original 96 seed recipes.
    A later generator must never silently relocate an existing save. */
 static const uint32_t legacy_hash[STORY_WORLD_BASE_LAYOUTS]={
@@ -132,6 +133,12 @@ int main(void){
    assert(sx==x&&sy==y);
   }
   assert(!memcmp(tally,canonical_count,sizeof tally));
+  unsigned live_revision=story_world_revision();
+  unsigned proposed=(seed+37u)%STORY_WORLD_LAYOUTS;
+  story_world_preview(proposed,preview);
+  for(int y=0;y<STORY_H;y++)for(int x=0;x<STORY_W;x++)
+   assert(preview[y][x]==(uint8_t)story_world_tile_for_seed(proposed,x,y));
+  assert(story_world_seed()==seed&&story_world_revision()==live_revision);
   hashes[seed]=layout_hash(seed);
   if(seed<STORY_WORLD_BASE_LAYOUTS)assert(hashes[seed]==legacy_hash[seed]);
   for(unsigned i=0;i<seed;i++)assert(hashes[i]!=hashes[seed]);

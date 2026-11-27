@@ -439,6 +439,8 @@ jobs:
             'Title: START. Menu: D-pad (both axes), A or START select, B back.' \
             'Save erase requires a deliberate uninterrupted 40-frame A hold.' \
             'Exploration: D-pad move, A interact, L/SELECT view, R notes, START pause.' \
+            'Hidden World Tools: pause during free roaming, then UP UP DOWN DOWN LEFT RIGHT LEFT RIGHT B A START.' \
+            'New Game selects its own layout; saved games retain the same map. Preview a proposed layout before confirming regeneration.' \
             "Source commit: $GITHUB_SHA" > ROM-README.txt
           if command -v python3 >/dev/null 2>&1; then
             python3 -c "from zipfile import ZipFile,ZIP_DEFLATED; z=ZipFile('Danny-Steel-GBA-Playable.zip','w',ZIP_DEFLATED,compresslevel=9); [z.write(n) for n in ('danny_steel_title.gba','ROM-README.txt','SHA256SUMS.txt')]; z.close()"
