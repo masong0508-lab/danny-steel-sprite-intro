@@ -7,6 +7,7 @@
 #include "hd_road_columns.inc"
 #include "hd_ray_trace.h"
 #include "hd_wall_shades.h"
+#include "hd_floor_runs.inc"
 #if defined(GBA_PROFILE_RENDER) && defined(__arm__)
 #include "gba.h"
 /* Debug-build-only counters. Normal release builds allocate NONE of these.
@@ -87,22 +88,33 @@ static void dirs(const Story *s,int *fx,int *fy,int *rx,int *ry){
  }
 }
 static void set_sky(uint8_t *p,unsigned tick,int facing,int cx,int cy){
- /* Seven maximal horizontal material runs replace 160 independent row
-    painter calls. Pixel colors, cut lines and the horizon stay exact:
-    our full-width word-span painter writes each contiguous range once. */
+ /* Floor and walls jointly cover EVERY column in rows 80..139.
+    Never prefill their opaque region: 14,400 dead stores per frame.
+    Retain the historical full clear on the host comparison path. */
  hd_rect(p,0,0,HD_W,24,19);
  hd_rect(p,0,24,HD_W,30,17);
  hd_rect(p,0,54,HD_W,20,HD_GLASS);
- hd_rect(p,0,74,HD_W,10,HD_GLASS_LIT);
- hd_rect(p,0,84,HD_W,18,HD_ROAD_COOL);
- hd_rect(p,0,102,HD_W,23,HD_ROAD_LIGHT);
- hd_rect(p,0,125,HD_W,35,HD_ROAD);
+#if !defined(__arm__)
+ if(reference_floor){
+  hd_rect(p,0,74,HD_W,10,HD_GLASS_LIT);
+  hd_rect(p,0,84,HD_W,18,HD_ROAD_COOL);
+  hd_rect(p,0,102,HD_W,23,HD_ROAD_LIGHT);
+  hd_rect(p,0,125,HD_W,35,HD_ROAD);
+ }else
+#endif
+ {
+  hd_rect(p,0,74,HD_W,6,HD_GLASS_LIT);
+  hd_rect(p,0,140,HD_W,20,HD_ROAD);
+ }
  /* Layered, place-bound horizon. Neither buildings nor cloud positions
     randomly change when the shot cuts to a dialogue panel. */
  int pan=(facing*71+(cx+cy)/96)%53;
+ unsigned light_phase=(tick/180u)%5u;
  for(int i=-2;i<19;i++){
   int x=i*23-pan;
-  int ht=17+(int)(texel((unsigned)(i+33),23u)%22u);
+  if(x+25<0||x-2>=HD_W)continue;
+  const uint8_t *material=hd_skyline_material[i+2];
+  int ht=material[0];
   hd_rect(p,x,79-ht,23,ht,HD_STONE_DARK);
   hd_rect(p,x+3,79-ht-2,18,2,HD_ROAD);
   /* Sloped overlapping roofs add believable street silhouettes. */
@@ -113,9 +125,12 @@ static void set_sky(uint8_t *p,unsigned tick,int facing,int cx,int cy){
    hd_rect(p,x+14,69-ht,3,10,HD_ROAD_COOL);
    hd_rect(p,x+13,68-ht,6,2,HD_STONE_DARK);
   }
-  for(int w=3;w<21;w+=7)for(int h=7;h<ht-2;h+=9){
-   if((texel((unsigned)(i+41+w),(unsigned)h+35u)&3u)!=0u)
-    hd_rect(p,x+w,79-ht+h,2,3,(tick/180u+i+w)%5u==0u?HD_LAMP:HD_GLASS);
+  for(unsigned col=0;col<3u;col++){
+   unsigned bits=material[col+1u],mask=bits&15u;
+   unsigned ink=light_phase==(bits>>4)?HD_LAMP:HD_GLASS;
+   int xx=x+3+(int)col*7;
+   for(int h=7;mask;h+=9,mask>>=1)
+    if(mask&1u)hd_rect(p,xx,79-ht+h,2,3,ink);
   }
  }
  for(int k=0;k<4;k++){
@@ -364,7 +379,12 @@ static HD_CANVAS_CODE __attribute__((noinline)) void floor_render(uint8_t *p,con
   int origin=along_x?cx+fx*dist:cy+fy*dist;
   int ft=fixed>>8;
   unsigned sub=((unsigned)fixed>>4)&15u;
-  int step=y<98?2:1,dq=sign*unit*step;
+  int step=y<98?2:1,signed_unit=sign*unit,dq=signed_unit*step;
+  /* The run boundaries repeat every 16 world units. A real camera is
+     quarter-tile aligned; arbitrary external origins keep the exact
+     existing single-sample path. */
+  const uint8_t *runs=(origin&15)?0:hd_floor_run_next[sign<0][y-80];
+  const uint8_t *dither=hd_floor_dither_skip[step-1];
   uint8_t *row=p+y*HD_W;
   int begin=0;
   unsigned ray=0;
@@ -387,7 +407,28 @@ static HD_CANVAS_CODE __attribute__((noinline)) void floor_render(uint8_t *p,con
      unsigned word=along_x?read_packed_road_row(id,sub):hd_road_columns[id*16u+sub];
      do{
       int v=q>>8;
-      unsigned category=(word>>((((unsigned)v>>4)&15u)*2u))&3u;
+      unsigned cell=((unsigned)v>>4)&15u;
+      unsigned category=(word>>(cell*2u))&3u;
+      /* Road texel color stays constant within a run, except the
+         17-pixel dither and the narrow original tile seams. Batch long
+         non-seam spans through the existing aligned IWRAM painter.
+         The original floor sample parity is retained at odd ray edges. */
+      if(runs&&cell&&(fixed&255)>=5){
+       int next=runs[x];
+       if(next>end)next=(end+step-1)&~(step-1);
+       int left=x>begin?x:begin,right=next<end?next:end;
+       if(right-left>=5){
+        unsigned ink=category==0u?HD_REFLECT:category==1u?HD_ROAD_LIGHT:HD_ROAD;
+        hd_rect(row,left,0,right-left,1,ink);
+        if(category>=2u){
+         int mark=x+dither[x+y];
+         for(;mark<right;mark+=17*step)
+          floor_store(row,mark,left,right,step,HD_ROAD_COOL);
+        }
+        q+=signed_unit*(next-x);x=next;
+        continue;
+       }
+      }
       unsigned ink=road_shade_color(v,fixed,x,y,category);
       floor_store(row,x,begin,end,step,ink);
       x+=step;q+=dq;
