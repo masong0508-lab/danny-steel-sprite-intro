@@ -33,7 +33,7 @@ static void heading(uint8_t *p,const Story *s){
  }
  hd_rect(p,0,0,HD_W,18,HD_INK);
  hd_rect(p,0,17,HD_W,1,HD_COPPER);
- hd_text(p,8,5,"OLD QUARTER",HD_PAPER,1,1);
+ hd_text(p,8,5,story_district_name(s->x,s->y),HD_PAPER,1,1);
  hd_rect(p,84,3,1,11,HD_COPPER);
  /* Distinguish necessary story beats from optional legacy work. */
  hd_text(p,91,5,has?story_goal_kind(s):"FREE",HD_LAMP,1,0);

@@ -13,6 +13,7 @@
 #include "hd_stone_rain.h"
 #include "hd_background_cache.h"
 #include "hd_floor_revisit.h"
+#include "city_furniture.h"
 #if defined(GBA_PROFILE_RENDER) && defined(__arm__)
 #include "gba.h"
 /* Debug-build-only counters. Normal release builds allocate NONE of these.
@@ -50,7 +51,7 @@ static uint32_t gba_profile_clock(void){
    ray and wall shading work; every native column and depth entry remains. */
 static uint16_t wall_depth[HD_W];
 /* Sparse native-column depth/texture cache, not another framebuffer. */
-static uint8_t wall_type[HD_W],wall_u[HD_W],wall_tx[HD_W],wall_ty[HD_W];
+static uint8_t wall_type[HD_W],wall_u[HD_W],wall_tx[HD_W],wall_ty[HD_W],wall_top[HD_W];
 /* Fixed cartridge-town wall shade memo: only 45 sampled ray directions,
    at most 150 vertical palette entries per ray (6,750 EWRAM bytes).
    This is NOT another framebuffer and never caches moving sky or rain. */
@@ -213,6 +214,23 @@ static HD_CANVAS_CODE inline unsigned road_shade_color(
  if(category==1u)return HD_ROAD_LIGHT;
  return hd_floor_dither17[x+y]?HD_ROAD_COOL:HD_ROAD;
 }
+/* Original 24x18 material banks remain untouched. The new avenues use
+   four exact repeating asphalt and foliage textures, not an out-of-range
+   index or an expensive per-pixel hash. */
+static inline unsigned city_road_id(int tx,int ty){
+ if((unsigned)tx<STORY_CORE_W&&(unsigned)ty<STORY_CORE_H)
+  return hd_road_tile_index[(unsigned)ty*24u+(unsigned)tx];
+ return hd_road_tile_index[24u+1u+((unsigned)(tx+3*ty)&3u)];
+}
+static inline unsigned city_soft_x(int tx,int ty){
+ unsigned n=(unsigned)(tx+ty*3)&3u;
+ return n<2u?4u+n:16u+n;
+}
+static inline unsigned city_soft_id(int tx,int ty,char tile){
+ if(story_city_extension(tx,ty)&&(tile=='T'||tile=='g'||tile=='~'))
+  return hd_soft_floor_id((int)city_soft_x(tx,ty),2);
+ return hd_soft_floor_id(tx,ty);
+}
 #if !defined(__arm__)
 unsigned hd_debug_packed_road_column_category(int tx,int ty,unsigned cx,unsigned cy){
  if((unsigned)tx>=24u||(unsigned)ty>=18u||cx>=16u||cy>=16u)return 255u;
@@ -240,6 +258,10 @@ unsigned hd_debug_road_rom_category(int tx,int ty,unsigned cx,unsigned cy){
 #if !defined(__arm__)
 static inline unsigned floor_ink(char t,int wx,int wy,int x,int y,unsigned tick){
  int fx=wx&255,fy=wy&255;
+ if(story_city_extension(wx>>8,wy>>8)&&(t=='T'||t=='g'||t=='~')){
+  wx=(int)city_soft_x(wx>>8,wy>>8)*256+fx;
+  wy=2*256+fy;
+ }
  if(t=='~'){
   if(((fy+((int)tick*2))&63)<4)return HD_GLASS_LIT;
   return (texel((unsigned)wx>>5,(unsigned)wy>>5)&3u)==0u?HD_REFLECT:HD_GLASS;
@@ -296,7 +318,7 @@ static void floor_render_reference(uint8_t *p,const Story *s,int cx,int cy,
      if(tx!=last_tx||ty!=last_ty){
       last_tx=tx;last_ty=ty;tile=story_tile(tx,ty);
       if(tile=='.'){
-       road_tile=hd_road_tile_index[(unsigned)ty*24u+(unsigned)tx];
+       road_tile=city_road_id(tx,ty);
        material_row=16u;
       }
      }
@@ -438,7 +460,7 @@ static HD_CANVAS_CODE __attribute__((noinline)) void floor_render(uint8_t *p,con
         including the small patches beneath the letter, bus and NPCs. */
      unsigned word;
      if(tile=='.'){
-      unsigned id=hd_road_tile_index[(unsigned)ty*24u+(unsigned)tx];
+      unsigned id=city_road_id(tx,ty);
       word=along_x?read_packed_road_row(id,sub):hd_road_columns[id*16u+sub];
      }else word=hd_landmark_floor_word(landmark,along_x,sub);
      do{
@@ -470,7 +492,7 @@ static HD_CANVAS_CODE __attribute__((noinline)) void floor_render(uint8_t *p,con
       x+=step;q+=dq;
      }while(x<end&&(q>>16)==tv);
     }else{
-     unsigned soft=hd_soft_floor_id(tx,ty);
+     unsigned soft=city_soft_id(tx,ty,tile);
      if(soft!=255u){
       unsigned word=hd_soft_floor_word(soft,along_x,((unsigned)fixed>>5)&7u);
       /* Only the original four-pixel moving water glint depends on
@@ -682,6 +704,18 @@ static const uint8_t wall_half_height[72]={
  8,8,8,7,7,7,7,7,7,6,6,6,6,6,6,6,6,5,
  5,5,5,5,5,5,5,5,5,5,4,4,4,4,4,4,4,4,
 };
+/* Raise only the skyline-facing edge; the floor intersection remains
+   byte-for-byte identical. Use an existing valid height sample from the
+   ROM scale table, bounded to the original 150-row wall shade cache. */
+static inline int city_wall_top(int tx,int ty,char type,unsigned bucket,int bottom){
+ unsigned scaled=bucket;
+ if(!legacy_scenery&&type!='T'&&story_city_extension(tx,ty)){
+  unsigned height=hd_district(tx,ty,type).height;
+  scaled=height>=44u?bucket*2u/3u:bucket*4u/5u;
+  while(scaled<bucket&&2u*wall_half_height[scaled]>(unsigned)bottom)scaled++;
+ }
+ return bottom-2*(int)wall_half_height[scaled];
+}
 static HD_CANVAS_CODE __attribute__((noinline)) void cast_walls(uint8_t *p,int cx,int cy,int fx,int fy,int rx,int ry){
  int warm=wall_cache_valid&&wall_cam_x==cx&&wall_cam_y==cy&&
           wall_cam_fx==fx&&wall_cam_fy==fy;
@@ -693,7 +727,7 @@ static HD_CANVAS_CODE __attribute__((noinline)) void cast_walls(uint8_t *p,int c
    int end=ray_end[slot];
    if(wall_type[x]){
     int half=wall_half_height[wall_depth[x]>>5];
-    wall_cached_column(p,x,end-x,79-half,79+half,(char)wall_type[x],wall_shade_cache[slot]);
+    wall_cached_column(p,x,end-x,wall_top[x],79+half,(char)wall_type[x],wall_shade_cache[slot]);
    }
    x=end;
   }
@@ -721,7 +755,7 @@ static HD_CANVAS_CODE __attribute__((noinline)) void cast_walls(uint8_t *p,int c
   }
   if(!hit){x=end;slot++;continue;}
   int half=wall_half_height[(unsigned)hit_dist>>5];
-  int top=79-half,bottom=79+half;
+  int bottom=79+half,top=city_wall_top(tx,ty,hit,(unsigned)hit_dist>>5,bottom);
   unsigned face=abs_i(dx)>abs_i(dy)?1u:0u;
   int u=face?wy&255:wx&255;
   if(!legacy_scenery){
@@ -733,6 +767,7 @@ static HD_CANVAS_CODE __attribute__((noinline)) void cast_walls(uint8_t *p,int c
    wall_u[col]=(uint8_t)u;
    wall_tx[col]=(uint8_t)tx;
    wall_ty[col]=(uint8_t)ty;
+   wall_top[col]=(uint8_t)top;
   }
   wall_column(p,x,end-x,top,bottom,hit,u,hit_dist,tx,ty,face,
               wall_shade_cache[slot]);
@@ -743,6 +778,23 @@ static HD_CANVAS_CODE __attribute__((noinline)) void cast_walls(uint8_t *p,int c
 }
 static void actor(uint8_t *p,int sx,int ground,int h,char kind,unsigned tick,const Story *s){
  if(h<8)return;
+ if(kind=='j'){
+  int w=h/9+2;
+  hd_ellipse(p,sx,ground,w+2,2,HD_WET);
+  hd_rect(p,sx-1,ground-h,3,h,HD_INK);
+  hd_rect(p,sx-w,ground-h,w*2+1,2,HD_COPPER);
+  hd_rect(p,sx-w+1,ground-h+2,w*2-1,h/9+2,HD_LAMP);
+  return;
+ }
+ if(kind=='u'){
+  int w=h/4+2,seat=ground-h/6;
+  hd_ellipse(p,sx,ground,w+1,2,HD_SHADOW);
+  hd_rect(p,sx-w,seat-h/8,w*2,h/8+1,HD_BARK);
+  hd_rect(p,sx-w,seat,w*2,2,HD_COPPER);
+  hd_rect(p,sx-w+2,seat+2,2,ground-seat,HD_INK);
+  hd_rect(p,sx+w-3,seat+2,2,ground-seat,HD_INK);
+  return;
+ }
  if(!legacy_scenery&&(kind=='R'||kind=='M')){
   int w=h*4/11;if(w<5)w=5;
   if(kind=='R')hd_project_easel(p,sx,ground,w,h*3/4,s->art_steps,
@@ -857,7 +909,7 @@ static void restore_occluding_wall(uint8_t *p,int sx,int h,int depth){
   if(end>right)end=right;
   if(wall_type[x]&&wall_depth[x]<depth){
    int half=wall_half_height[wall_depth[x]>>5];
-   int top=79-half,bottom=79+half;
+   int top=wall_top[x],bottom=79+half;
    if(wall_cache_valid&&!reference_restore&&slot<WALL_RAYS)
     wall_cached_column(p,x,end-x,top,bottom,(char)wall_type[x],wall_shade_cache[slot]);
    else
@@ -872,10 +924,15 @@ static void restore_occluding_wall(uint8_t *p,int sx,int h,int depth){
 static void render_billboards(uint8_t *p,int cx,int cy,
                               int fx,int fy,int rx,int ry,unsigned tick,const Story *s){
  unsigned count=0;
- for(unsigned i=0;i<sizeof scene_anchors/sizeof scene_anchors[0];i++){
-  const SceneAnchor *a=&scene_anchors[i];
-  int x=(int)a->x,y=(int)a->y;
-  char kind=(char)a->kind;
+ unsigned original=(unsigned)(sizeof scene_anchors/sizeof scene_anchors[0]);
+ unsigned extras=legacy_scenery?0u:(unsigned)(sizeof city_furniture/sizeof city_furniture[0]);
+ for(unsigned i=0;i<original+extras;i++){
+  int x,y;char kind;
+  if(i<original){
+   const SceneAnchor *a=&scene_anchors[i];x=a->x;y=a->y;kind=(char)a->kind;
+  }else{
+   const CityFurniture *a=&city_furniture[i-original];x=a->x;y=a->y;kind=(char)a->kind;
+  }
   int dx=x*256+128-cx,dy=y*256+128-cy;
   int forward=dx*fx+dy*fy,side=dx*rx+dy*ry;
   if(forward<85||forward>2200||abs_i(side)>forward*4/3)continue;

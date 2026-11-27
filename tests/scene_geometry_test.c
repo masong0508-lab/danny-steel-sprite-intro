@@ -101,8 +101,9 @@ int main(void){
   char t=story_tile(x,y);
   unsigned height,variant;legacy_district(x,y,t,&height,&variant);
   HdDistrict d=hd_district(x,y,t);
-  assert(d.height==height&&d.variant==variant);
-  for(unsigned side=0;side<2u;side++)assert(hd_facade_at(x,y,t,side)==hd_facade_texture(variant,side));
+  if(!story_city_extension(x,y))assert(d.height==height&&d.variant==variant);
+  else assert(d.height>=32u&&d.height<=52u&&d.variant<8u);
+  for(unsigned side=0;side<2u;side++)assert(hd_facade_at(x,y,t,side)==hd_facade_texture(d.variant,side));
   districts++;
  }
  for(unsigned side=0;side<2u;side++)for(unsigned variant=0;variant<8u;variant++){

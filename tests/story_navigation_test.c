@@ -1,6 +1,7 @@
 #include "story.h"
 #include "story_draw.h"
 #include "story_checks.h"
+#include "city_furniture.h"
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -69,7 +70,54 @@ static void render_guarded(const Story *s){
  for(int i=0;i<32;i++)assert(a.guard[i]==0xB3&&a.tail[i]==0xB3);
  for(unsigned i=0;i<sizeof a.pixels;i++)assert(a.pixels[i]<32);
 }
+static void expanded_city(void){
+ Story s;story_new(&s,0);s.dialogue=0;s.cinema=CINE_NONE;story_draw_init();
+ static const unsigned key[]={16u,128u,32u,64u};
+ static const int places[][2]={{35,6},{31,15},{9,25},{22,26},{32,22}};
+ static const char *const district[]={"EAST AVENUE","CIVIC ROW","SOUTH PARK","CANAL WALK","RIVER PLAZA"};
+ /* All new destinations are genuinely connected to the Potheads spawn.
+    The two sealed archive rooms already existed in the old map. */
+ reference(20,11);unsigned count=0;
+ for(int y=0;y<STORY_H;y++)for(int x=0;x<STORY_W;x++){
+  if(story_solid(x,y))continue;
+  if(y==5&&(x==11||x==12))continue;
+  assert(distance[y][x]>=0);count++;
+ }
+ assert(count==759u);
+ assert(!story_solid(23,7)&&!story_solid(24,7));
+ assert(!story_solid(12,17)&&!story_solid(12,18));
+ assert(story_solid(39,10)&&story_solid(10,29)&&story_solid(-1,10)&&story_solid(40,10));
+ assert(story_tile(19,7)=='M'&&story_tile(8,11)=='F');
+ for(unsigned i=0;i<sizeof city_furniture/sizeof city_furniture[0];i++)
+  assert(!story_solid(city_furniture[i].x,city_furniture[i].y));
+ unsigned moved=0;
+ for(unsigned i=0;i<sizeof places/sizeof places[0];i++){
+  int tx=places[i][0],ty=places[i][1];reference(tx,ty);
+  for(unsigned n=0;n<STORY_W*STORY_H&&distance[s.y][s.x]>0;n++){
+   int before=distance[s.y][s.x],d=-1;
+   for(int j=0;j<4;j++){int x=s.x+dX[j],y=s.y+dY[j];
+    if(!story_solid(x,y)&&distance[y][x]==before-1){d=j;break;}}
+   assert(d>=0);s.cooldown=0;s.old_keys=0;
+   click(&s,key[d]);assert(distance[s.y][s.x]==before-1);moved++;
+  }
+  assert(s.x==tx&&s.y==ty&&!strcmp(story_district_name(tx,ty),district[i]));
+  click(&s,1u);assert(s.dialogue&&s.cinema==CINE_NONE);click(&s,2u);
+  assert(!s.dialogue);
+  for(int v=0;v<2;v++){s.view=(uint8_t)v;render_guarded(&s);}
+  s.view=0;
+ }
+ assert(moved>50u);
+ /* Core campaign routing still works after walking far outside the old city. */
+ s.flags=0;int dir,steps;
+ assert(story_route(&s,&dir,&steps)&&steps>30);
+ while(steps){
+  int before=steps;s.cooldown=0;s.old_keys=0;
+  click(&s,key[dir]);assert(story_route(&s,&dir,&steps)&&steps==before-1);
+ }
+ printf("city: %u connected tiles, five districts, live walking, return route and both render guards passed\n",count);
+}
 int main(void){
+ expanded_city();
  Story s;story_new(&s,0);s.dialogue=0;story_draw_init();
  /* The original main story, 24x18 world and optional days, with no new
     collision or hidden plot requirements. */

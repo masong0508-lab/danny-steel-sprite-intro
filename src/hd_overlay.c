@@ -354,7 +354,7 @@ void hd_game_overlay(uint8_t *p,const Story *s){
       (dir-(int)s->facing+4)%4==2?"BACK":"LEFT";
   hd_rect(p,0,0,240,18,HD_INK);
   hd_rect(p,0,17,240,1,HD_COPPER);
-  hd_text(p,8,5,"OLD QUARTER",HD_PAPER,1,1);
+  hd_text(p,8,5,story_district_name(s->x,s->y),HD_PAPER,1,1);
   hd_text(p,85,5,has?story_goal_kind(s):"",HD_STONE_LIT,1,0);
    hd_text(p,121,5,has?goal:"LOOK AROUND",HD_LAMP,1,0);
   hd_text(p,186,5,has?relative:"",HD_STONE_LIT,1,0);

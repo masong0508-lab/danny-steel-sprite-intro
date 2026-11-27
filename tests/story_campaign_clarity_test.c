@@ -64,7 +64,7 @@ int main(void){
  story_new(&s,0);
  const StoryPage *intro=pages(&s,7);
  assert(!strcmp(intro[4].line2,"Clinic called again."));
- assert(!strcmp(intro[6].line2,"Then clerk. Then Mara."));
+ assert(!strcmp(intro[6].line2,"Then BORE. Then Mara."));
  finish_talk(&s);
  check_quest(&s,"CORE","LETTER","LETTER / WEST OLD QUARTER");
  s.flags=STORY_HOME;

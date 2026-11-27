@@ -1,18 +1,18 @@
 {
-  "source_commit": "7eda6fb7f95b7a16f38f65e8cc046cb7be5a7285",
-  "source_rom_sha256": "89061b18ad2d4fe362d2a419616cd86f2cec1983efd088e82a68cc846ff4f2f5",
-  "source_elf_sha256": "0ccae59d372809b71148b93af00a0478dc03a972373dca23919422bf24cde7c8",
+  "source_commit": "071f9360d1e7024622e160f4df8a181790fa8eef",
+  "source_rom_sha256": "8014a142743f6cba34d77dd6b083d3187e66fbd2de6e7022825e90e0bbc952e6",
+  "source_elf_sha256": "92f75576b36679c5fa07e927322d9cbfbe306c83857885511c13f5add6813199",
   "arm_build_toolchain": {
     "file": "arm_build_toolchain.txt",
-    "sha256": "f28f29ad89bca45415f4ef534b0933e9eca88bd1c0b5e7386e0abf72ea7fa1fe",
-    "record": "Source commit: 7eda6fb7f95b7a16f38f65e8cc046cb7be5a7285\nDocker image reference: devkitpro/devkitarm\nImage ID: sha256:5850ea3193e95244827a1e38cf464a0e730d1b9cc7c276888ceed984cbe38912\nRepoDigests: [\"devkitpro/devkitarm@sha256:116afba8df8453961de2936ffab20dd441edf4d682856c1ec8b0e53d7ed0bbf5\"]\n\nARM compiler: /opt/devkitpro/devkitARM/bin/arm-none-eabi-gcc\narm-none-eabi-gcc (devkitARM) 16.1.0\nCopyright (C) 2026 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n"
+    "sha256": "d30286318d02d46ccf583d51a20331be3f8a7494a184a74dc3bac0349687893e",
+    "record": "Source commit: 071f9360d1e7024622e160f4df8a181790fa8eef\nDocker image reference: devkitpro/devkitarm\nImage ID: sha256:5850ea3193e95244827a1e38cf464a0e730d1b9cc7c276888ceed984cbe38912\nRepoDigests: [\"devkitpro/devkitarm@sha256:116afba8df8453961de2936ffab20dd441edf4d682856c1ec8b0e53d7ed0bbf5\"]\n\nARM compiler: /opt/devkitpro/devkitARM/bin/arm-none-eabi-gcc\narm-none-eabi-gcc (devkitARM) 16.1.0\nCopyright (C) 2026 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n"
   },
   "capture": {
     "source": "mGBA completed GBA video scanout",
     "emulator_version": "0.10.2",
-    "rom_crc32": "3921e7fd",
-    "elf_crc32": "fb5d49ac",
-    "elf_rom_bytes_verified": 3630592,
+    "rom_crc32": "d43ab28a",
+    "elf_crc32": "e90f5328",
+    "elf_rom_bytes_verified": 3633816,
     "elf_match_excludes_gbafix_header_bytes": [
       4,
       191

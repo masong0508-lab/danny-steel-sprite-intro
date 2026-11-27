@@ -8,6 +8,16 @@ typedef struct {
 } HdDistrict;
 static inline HdDistrict hd_district(int x,int y,char type){
  HdDistrict d;
+ if(story_city_extension(x,y)){
+  int east=x>=24&&y<14;
+  int civic=type=='A'||(x>=24&&y>=14&&y<20);
+  int park=x<15&&y>=18;
+  int block=(x/8+y/6)&1;
+  d.civic=civic;d.shops=east&&y>=9;d.waterfront=y>=20&&x>=20;
+  d.height=civic?46u:east?(block?52u:44u):park?32u:block?42u:36u;
+  d.variant=civic?6u:east?(y>=9?4u:block?0u:1u):park?3u:d.waterfront?2u:1u;
+  return d;
+ }
  d.civic=x>=10&&x<=13&&y>=3&&y<=6;
  d.shops=x>=21&&y>=10&&y<=12;
  d.waterfront=y>=14;

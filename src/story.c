@@ -2,8 +2,13 @@
 #include "story_checks.h"
 #include "studio.h"
 
-/* A quiet neighborhood, not a random maze. Every story anchor is reachable on foot. */
-static const char *const town[STORY_H] = {
+#include "city_layout.h"
+#if !defined(__arm__)
+/* Original immutable map retained for the original material generators
+   and independent shipped-image regression, never selected on cartridge. */
+static int core_map_reference;
+void story_debug_core_map(int enabled){core_map_reference=!!enabled;}
+static const char *const town[STORY_CORE_H] = {
 "########################",
 "#......................#",
 "#...TT.H..........TT...#",
@@ -23,14 +28,22 @@ static const char *const town[STORY_H] = {
 "#...............~~~~...#",
 "########################"
 };
+#endif
 
 char story_tile(int x, int y) {
+#if !defined(__arm__)
+    if(core_map_reference)return (unsigned)x<STORY_CORE_W&&(unsigned)y<STORY_CORE_H?town[y][x]:'#';
+#endif
     if ((unsigned)x >= STORY_W || (unsigned)y >= STORY_H) return '#';
-    /* All gameplay entities have fixed tile locations. Store the exact
-       original decorated grid directly: the old ten coordinate branches
-       ran once for EVERY wall ray and floor sample. Save RAM and cycles
-       while preserving the existing interaction and collision positions. */
-    return town[y][x];
+    return city_layout[y][x];
+}
+const char *story_district_name(int x,int y){
+    if(!story_city_extension(x,y))return "OLD QUARTER";
+    if(y<14)return "EAST AVENUE";
+    if(y<20&&x>=24)return "CIVIC ROW";
+    if(x<15)return "SOUTH PARK";
+    if(x<25)return "CANAL WALK";
+    return "RIVER PLAZA";
 }
 /* Fourteen optional, existing walkable sites; ordering matches ROM panels. */
 static const struct {uint8_t x,y;const char *name,*left,*right;}
@@ -251,76 +264,68 @@ int story_solid(int x, int y) {
     const char c = story_tile(x, y);
     return c == '#' || c == 'A' || c == 'T' || c == '~' || c == 'L' || c == 'C' || c == 'F' || c == 'B' || c == 'P' || c == 'V' || c == 'Q' || c == 'S' || c == 'W' || c == 'H' || c == 'R' || c == 'M' || c == 'K';
 }
-/* A tiny cached pathfinder follows the ORIGINAL 24x18 walkable town.
-   A direct compass bearing is useless when a building is in the way. The
-   shortest route ends at a walkable interaction square beside a solid
-   objective; it never tells Danny to walk INSIDE the counter or clinic.
-   Fixed ~1.3 KiB static scratch, no heap, no framebuffer, no save data.
-   Repeated HUD draws cost only a coordinate cache check; recalculate on
-   movement or changed objective, never once per pixel or ray. */
+/* Reverse flood from the current goal ONCE, not a new city search
+   every step. All four routes use walkable tiles; a solid goal seeds its
+   adjacent approaches. E/S/W/N tie order matches the original forward BFS.
+   4,800 bytes fixed scratch for 1,200 cells; zero heap or save growth. */
 int story_route(const Story *s, int *direction, int *steps){
-    static struct {
-        int sx,sy,gx,gy,dir,steps,valid,found;
-    } cache;
+    static uint16_t distance[STORY_W*STORY_H],queue[STORY_W*STORY_H];
+    static int last_x=-1,last_y=-1;
+#if !defined(__arm__)
+    static int last_reference=-1;
+#endif
+    static const int8_t dx[4]={1,0,-1,0},dy[4]={0,1,0,-1};
     int gx=0,gy=0;const char *name=0;
-    if(!story_goal(s,&gx,&gy,&name)){
-        if(direction)*direction=-1;
-        if(steps)*steps=-1;
-        return 0;
-    }
-    int sx=(int)s->x,sy=(int)s->y;
-    if(!cache.valid||cache.sx!=sx||cache.sy!=sy||
-       cache.gx!=gx||cache.gy!=gy){
-        cache.valid=1;cache.sx=sx;cache.sy=sy;
-        cache.gx=gx;cache.gy=gy;cache.found=0;
-        cache.dir=-1;cache.steps=-1;
-        if(!story_solid(sx,sy)){
-            int gxsolid=story_solid(gx,gy);
-            int distance=(sx>gx?sx-gx:gx-sx)+
-                         (sy>gy?sy-gy:gy-sy);
-            if((gxsolid&&distance==1)||(!gxsolid&&distance==0)){
-                cache.found=1;cache.steps=0;
-            }else{
-                static uint16_t queue[STORY_W*STORY_H];
-                static uint8_t first[STORY_W*STORY_H];
-                static const int8_t dx[4]={1,0,-1,0};
-                static const int8_t dy[4]={0,1,0,-1};
-                for(unsigned i=0;i<STORY_W*STORY_H;i++)first[i]=255u;
-                unsigned read=0,write=0,count=1,depth=0;
-                unsigned start=(unsigned)sy*STORY_W+(unsigned)sx;
-                first[start]=4u;queue[write++]=(uint16_t)start;
-                while(read<write && !cache.found){
-                    unsigned next_count=0;
-                    for(unsigned k=0;k<count&&!cache.found;k++){
-                        unsigned cell=queue[read++];
-                        int cx=(int)(cell%STORY_W),cy=(int)(cell/STORY_W);
-                        for(unsigned d=0;d<4u;d++){
-                            int nx=cx+dx[d],ny=cy+dy[d];
-                            if((unsigned)nx>=STORY_W||
-                               (unsigned)ny>=STORY_H||story_solid(nx,ny))
-                                continue;
-                            unsigned nid=(unsigned)ny*STORY_W+(unsigned)nx;
-                            if(first[nid]!=255u)continue;
-                            first[nid]=(uint8_t)(cell==start?d:first[cell]);
-                            queue[write++]=(uint16_t)nid;
-                            ++next_count;
-                            int near=(nx>gx?nx-gx:gx-nx)+
-                                     (ny>gy?ny-gy:gy-ny);
-                            if((gxsolid&&near==1)||(!gxsolid&&near==0)){
-                                cache.found=1;cache.dir=(int)first[nid];
-                                cache.steps=(int)depth+1;
-                                break;
-                            }
-                        }
-                    }
-                    count=next_count;++depth;
-                }
+    if(direction)*direction=-1;
+    if(steps)*steps=-1;
+    if(!story_goal(s,&gx,&gy,&name)||
+       (unsigned)gx>=STORY_W||(unsigned)gy>=STORY_H||
+       story_solid(s->x,s->y))return 0;
+    if(gx!=last_x||gy!=last_y
+#if !defined(__arm__)
+       ||last_reference!=core_map_reference
+#endif
+       ){
+        last_x=gx;last_y=gy;
+#if !defined(__arm__)
+        last_reference=core_map_reference;
+#endif
+        for(unsigned i=0;i<STORY_W*STORY_H;i++)distance[i]=UINT16_MAX;
+        unsigned read=0,write=0;
+        int solid=story_solid(gx,gy);
+        for(unsigned d=0;d<(solid?4u:1u);d++){
+            int x=gx+(solid?dx[d]:0),y=gy+(solid?dy[d]:0);
+            if(story_solid(x,y))continue;
+            unsigned id=(unsigned)y*STORY_W+(unsigned)x;
+            distance[id]=0;queue[write++]=(uint16_t)id;
+        }
+        while(read<write){
+            unsigned id=queue[read++];
+            int x=(int)(id%STORY_W),y=(int)(id/STORY_W);
+            for(unsigned d=0;d<4u;d++){
+                int nx=x+dx[d],ny=y+dy[d];
+                if(story_solid(nx,ny))continue;
+                unsigned next=(unsigned)ny*STORY_W+(unsigned)nx;
+                if(distance[next]!=UINT16_MAX)continue;
+                distance[next]=(uint16_t)(distance[id]+1u);
+                queue[write++]=(uint16_t)next;
             }
         }
     }
-    if(direction)*direction=cache.dir;
-    if(steps)*steps=cache.steps;
-    return cache.found;
+    unsigned id=(unsigned)s->y*STORY_W+s->x;
+    unsigned n=distance[id];
+    if(n==UINT16_MAX)return 0;
+    if(steps)*steps=(int)n;
+    if(n&&direction){
+        for(unsigned d=0;d<4u;d++){
+            int x=(int)s->x+dx[d],y=(int)s->y+dy[d];
+            if(story_solid(x,y))continue;
+            if(distance[(unsigned)y*STORY_W+(unsigned)x]+1u==n){
+                *direction=(int)d;break;
+            }
+        }
+    }
+    return 1;
 }
 const char *story_risk_action(const Story *s){
     switch(s->risk_menu){
@@ -515,8 +520,8 @@ enum { D_NONE, D_OPEN, D_LETTER, D_LETTER_AGAIN, D_CLERK_LOCKED, D_CLERK, D_CLER
        D_NB_RETURN_12_0,
        D_NB_RETURN_12_1,
        D_NB_RETURN_13_0,
-       D_NB_RETURN_13_1 };
-_Static_assert(D_NB_RETURN_13_1<256,"dialogue ID width");
+       D_NB_RETURN_13_1,D_CITY_EAST,D_CITY_CIVIC,D_CITY_PARK,D_CITY_CANAL,D_CITY_PLAZA };
+_Static_assert(D_CITY_PLAZA<256,"dialogue ID width");
 #define SCRIPT(name, ...) static const StoryPage name[] = { __VA_ARGS__ }
 /* The banana-sign shift is practical income, not Danny's calling. He is
    grateful for the stability without pretending to enjoy mascot work. */
@@ -1328,6 +1333,21 @@ SCRIPT(d_nb_return_13_1,
  {"DRIVER","The seat stayed clear.","Someone needed it."},
  {"DRIVER","Not every wait has","to be uncomfortable."},
  {"DRIVER","The repairman's radio","could fill the wait."});
+SCRIPT(d_city_east,
+ {"DANNY","These shops go on","for another block."},
+ {"DANNY","I used to rush past.","Today I can walk."});
+SCRIPT(d_city_civic,
+ {"DANNY","The old public hall.","Windows like a piano."},
+ {"DANNY","All those little rooms.","Everyone has a story."});
+SCRIPT(d_city_park,
+ {"DANNY","The park is quiet.","Rain on the benches."},
+ {"DANNY","A whole city outside.","A little room to think."});
+SCRIPT(d_city_canal,
+ {"DANNY","Two bridges over water.","The lights drift slowly."},
+ {"DANNY","I could paint this too.","Not every hour is work."});
+SCRIPT(d_city_plaza,
+ {"DANNY","The river plaza.","Room to see the sky."},
+ {"DANNY","Maybe I'll bring Mara","here another evening."});
 SCRIPT(d_mara_master_shared,
  {"MARA", "Your song is here.", "I kept the copy."},
  {"DANNY", "I can still change", "the arrangement."},
@@ -1508,9 +1528,9 @@ static const struct { const StoryPage *pages; uint8_t count; } scripts[] = {
   SEQ(d_nb_return_12_0),
   SEQ(d_nb_return_12_1),
   SEQ(d_nb_return_13_0),
-  SEQ(d_nb_return_13_1)
+  SEQ(d_nb_return_13_1),SEQ(d_city_east),SEQ(d_city_civic),SEQ(d_city_park),SEQ(d_city_canal),SEQ(d_city_plaza)
 };
-_Static_assert(sizeof(scripts)/sizeof(scripts[0])==D_NB_RETURN_13_1+1u,"script table order");
+_Static_assert(sizeof(scripts)/sizeof(scripts[0])==D_CITY_PLAZA+1u,"script table order");
 static int neighborhood_return_id(unsigned id){
  return id>=D_NB_RETURN_0_0&&id<=D_NB_RETURN_13_1?(int)(id-D_NB_RETURN_0_0):-1;
 }
@@ -2395,7 +2415,13 @@ static void interact(Story *s) {
     default:
         /* Standing still is an invitation to notice the neighborhood,
            not a dead control. Geography decides the short observation. */
-        if(s->x>=17u && s->y>=9u && s->y<=13u)
+        if(story_city_extension(s->x,s->y)){
+            if(s->y<14u)talk(s,D_CITY_EAST);
+            else if(s->y<20u&&s->x>=24u)talk(s,D_CITY_CIVIC);
+            else if(s->x<15u)talk(s,D_CITY_PARK);
+            else if(s->x<25u)talk(s,D_CITY_CANAL);
+            else talk(s,D_CITY_PLAZA);
+        }else if(s->x>=17u && s->y>=9u && s->y<=13u)
             talk(s,D_LOOK_POTHEADS);
         else if(s->x>=15u && s->y>=13u)
             talk(s,D_LOOK_CANAL);

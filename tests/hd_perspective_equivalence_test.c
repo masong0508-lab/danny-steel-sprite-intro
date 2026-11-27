@@ -14,7 +14,7 @@ static unsigned original_road_texel(unsigned x,unsigned y){
 }
 static void verify_original_road_material_rom(void){
  unsigned checks=0u,nonroad=0u;
- for(int ty=0;ty<STORY_H;ty++)for(int tx=0;tx<STORY_W;tx++){
+ for(int ty=0;ty<STORY_CORE_H;ty++)for(int tx=0;tx<STORY_CORE_W;tx++){
   int road=story_tile(tx,ty)=='.';
   for(unsigned cy=0;cy<16u;cy++)for(unsigned cx=0;cx<16u;cx++){
    unsigned got=hd_debug_road_rom_category(tx,ty,cx,cy);
@@ -151,7 +151,9 @@ static void verify_coherent_restore(void){
    for(unsigned i=0;i<32u;i++)assert(canvas.before[i]==0xA6u&&canvas.after[i]==0xA6u);
    cases++;
   }
- assert(cases==1152u);
+ /* Every walkable tile, including both legacy sealed-room samples,
+    has all four facings tested against the reference painter. */
+ assert(cases==3044u);
  printf("coherent scenery: %u exact new floor/cache versus reference restored frames\n",cases);
 }
 static void verify_background_replay(void){
@@ -247,6 +249,10 @@ int main(void){
  verify_halfword_wall_spans();
  verify_camera_shade_cache();
  verify_coherent_restore();
+ /* Keep the original independent 3,456 golden-image regression on
+    its original geography, after the expanded world reference checks. */
+ story_debug_core_map(1);
+ hd_debug_invalidate_wall_cache();
  hd_debug_legacy_scenery(1);
  hd_debug_reference_restore(1);
  verify_camera_shade_cache();
@@ -258,7 +264,7 @@ int main(void){
  for(unsigned facing=0;facing<4;facing++)
   for(unsigned mode=0;mode<3;mode++){
    uint32_t hash=2166136261u;
-   for(int y=1;y<STORY_H-1;y++)for(int x=1;x<STORY_W-1;x++){
+   for(int y=1;y<STORY_CORE_H-1;y++)for(int x=1;x<STORY_CORE_W-1;x++){
     if(story_solid(x,y))continue;
     s.x=(uint8_t)x;s.y=(uint8_t)y;s.facing=(uint8_t)facing;
     s.prev_x=(uint8_t)(x-dx[facing]);
@@ -280,6 +286,7 @@ int main(void){
  assert(cases==3456u);
  hd_debug_legacy_scenery(0);
  hd_debug_reference_restore(0);
+ story_debug_core_map(0);hd_debug_invalidate_wall_cache();
 
  /* Independently check the depth inequality at every possible sampled
     wall distance and floor row, including original height clamp edges. */

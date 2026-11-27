@@ -4,6 +4,7 @@
 #include "hd_facade_art.h"
 #include "hd_scene_geometry.h"
 #include "hd_project_props.h"
+#include "city_furniture.h"
 
 /* A real isometric projection of the ACTUAL 24x18 walkable town:
    x grows southeast and y southwest, so D-pad logic stays cardinal
@@ -459,7 +460,7 @@ void hd_isometric_draw(uint8_t *p,const Story *s,unsigned tick){
      successive X then advances exactly 32 screen pixels. This avoids
      traversing invisible map rows without touching the painter order. */
   int sy=72+8*(depth-(int)s->x-(int)s->y)-oy;
-  if(sy<=-55||sy>=166)continue;
+  if(sy<=-55||sy>=214)continue;
   int first=depth-STORY_H,last=depth+1;
   if(first< -1)first=-1;
   if(last>STORY_W)last=STORY_W;
@@ -469,6 +470,7 @@ void hd_isometric_draw(uint8_t *p,const Story *s,unsigned tick){
    if(sx>=256)break;
    int wy=depth-wx;
    char c=story_tile(wx,wy);
+   if(sy>=166&&(!story_city_extension(wx,wy)||(c!='#'&&c!='A')))continue;
    if(has_route&&wx==next_x&&wy==next_y)
     ground_route(p,sx,sy,tick);
    if(has_goal&&wx==gx&&wy==gy)
@@ -482,6 +484,23 @@ void hd_isometric_draw(uint8_t *p,const Story *s,unsigned tick){
        !(depth*8>=player_depth && sx<actor_x+12 && sx+32>actor_x-12 &&
          sy+16>actor_foot-32 && sy-22<actor_foot+2));
    if(wx==17&&wy==13)lamp(p,sx,sy,tick);
+   if(story_city_extension(wx,wy)&&sy<166&&!story_solid(wx,wy)){
+    for(unsigned j=0;j<sizeof city_furniture/sizeof city_furniture[0];j++){
+     const CityFurniture *prop=&city_furniture[j];
+     if(prop->x!=wx||prop->y!=wy)continue;
+     if((wx+wy)*8>=player_depth&&sx<actor_x+12&&sx+32>actor_x-12&&
+        sy+16>actor_foot-32&&sy-24<actor_foot+2)break;
+     if(prop->kind=='j')lamp(p,sx,sy,tick);
+     else{
+      hd_ellipse(p,sx+16,sy+12,11,3,HD_SHADOW);
+      hd_line(p,sx+7,sy+1,sx+23,sy+9,HD_BARK);
+      hd_line(p,sx+7,sy+3,sx+23,sy+11,HD_COPPER);
+      hd_rect(p,sx+8,sy+5,2,5,HD_INK);
+      hd_rect(p,sx+22,sy+11,2,3,HD_INK);
+     }
+     break;
+    }
+   }
   }
  }
  if(!drew_player)
