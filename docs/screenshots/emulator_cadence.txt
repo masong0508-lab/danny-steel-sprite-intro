@@ -1,13 +1,13 @@
-Source commit: de81e5a7eeb4e045f764817bb4edb043abe789b7
+Source commit: bcab0240e63924a748fcc00dd766a15e3fa9676e
 mGBA 0.10.2; emulated video 59.727500570 Hz (280896 cycles/frame, 16777216 Hz CPU)
 Cadence counts presented Mode4 page changes, including identical content. It does not measure host speed or certify all-scene 30 FPS.
 Stage names describe the scripted route; verify the accompanying cadence pictures before treating them as scene measurements.
 opening after New Game: video_frames=600, active_mode4_samples=600/600, page_flips=296, emulated_seconds=10.045624, observed_page_flips_per_second=29.466
   complete flip intervals: count=295, min=1, mean=2.007, max=3 video_frames (max 50.228 ms), over_two_frames=7
   window edges: 7 frames before first observed flip, 1 after last (partial intervals)
-town after B dismisses opening: video_frames=600, active_mode4_samples=600/600, page_flips=120, emulated_seconds=10.045624, observed_page_flips_per_second=11.946
-  complete flip intervals: count=119, min=5, mean=5.000, max=5 video_frames (max 83.714 ms), over_two_frames=119
-  window edges: 1 frames before first observed flip, 4 after last (partial intervals)
+town after B dismisses opening: video_frames=600, active_mode4_samples=600/600, page_flips=150, emulated_seconds=10.045624, observed_page_flips_per_second=14.932
+  complete flip intervals: count=149, min=4, mean=4.000, max=4 video_frames (max 66.971 ms), over_two_frames=149
+  window edges: 1 frames before first observed flip, 3 after last (partial intervals)
 first-person after L changes camera: video_frames=600, active_mode4_samples=600/600, page_flips=291, emulated_seconds=10.045624, observed_page_flips_per_second=28.968
   complete flip intervals: count=290, min=2, mean=2.062, max=3 video_frames (max 50.228 ms), over_two_frames=18
   window edges: 1 frames before first observed flip, 1 after last (partial intervals)
