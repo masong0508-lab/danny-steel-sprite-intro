@@ -1,4 +1,4 @@
-Source commit: be95c1d7455415c156bd1898e661d17386dea824
+Source commit: de81e5a7eeb4e045f764817bb4edb043abe789b7
 mGBA 0.10.2; read-only runtime verification, Story bytes=62
 PASS: built ROM exports its real input-queue counters
 PASS: New Game selects a valid generated layout
@@ -19,7 +19,7 @@ PASS: active Mode4 display survives the clock window
 PASS: one-frame A press advances exactly one dialogue page
 PASS: B reaches overhead town gameplay
 PASS: actual ROM capture saved
-town clock: video=600, processed=600, queue=3->3, accounted=600
+town clock: video=600, processed=600, queue=2->2, accounted=600
 PASS: clock window advances 600 emulated video frames
 PASS: input queue remains bounded
 PASS: processed plus queued ticks track video time
@@ -37,7 +37,7 @@ PASS: one-frame camera tap is captured once while drawing
 PASS: one-frame camera tap is captured once while drawing
 PASS: one-frame camera tap is captured once while drawing
 PASS: one-frame camera tap is captured once while drawing
-short camera taps: 12/12; observed response 1..5 video frames
+short camera taps: 12/12; observed response 1..4 video frames
 PASS: all tested one-frame camera presses are retained
 PASS: tested camera actions apply within twelve video frames
 held camera button: 1 observed toggle(s)
@@ -79,6 +79,7 @@ PASS: Konami code recognizes only the full pause-screen sequence
 PASS: Konami code recognizes only the full pause-screen sequence
 PASS: Konami code recognizes only the full pause-screen sequence
 PASS: regular cartridge opens hidden World Tools without regeneration
+PASS: actual ROM capture saved
 PASS: closing the secret menu relocks it without changing the world
 PASS: short pause press works after movement
 PASS: short back press returns through the pause menu
