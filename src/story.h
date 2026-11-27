@@ -28,6 +28,9 @@
 /* The pause debug menu uses the otherwise inactive detail bit; it never
    coexists with field-guide/journal/checklist flags. No new Story bytes. */
 #define STORY_DEBUG_MENU 0x10u
+/* In unpaused play the same bit authenticates an explicitly selected
+   terrain tool; ordinary walking and all save records leave it clear. */
+#define STORY_DEBUG_ACCESS STORY_DEBUG_MENU
 #define STORY_DEBUG_CONFIRM 0x08u
 #define STORY_DEBUG_SELECT_MASK 0x07u
 #define STORY_DEBUG_ROWS 5u
@@ -236,13 +239,6 @@ char story_world_tile_for_seed(unsigned seed,int x,int y);
 int story_world_solid_for_seed(unsigned seed,int x,int y);
 void story_new_seeded(Story *s,int slot,unsigned seed);
 void story_resume_seeded(Story *s,int slot,int x,int y,int facing,int view,int flags,int ended,int ending,unsigned seed);
-static inline int story_land_tools_enabled(void){
-#if defined(DANNY_TERRAIN_DEBUG)
- return 1;
-#else
- return 0;
-#endif
-}
 const char *story_district_name(int x,int y);
 int story_terrain_vertex(const Story *s,int x,int y);
 int story_terrain_height(const Story *s,int wx,int wy);

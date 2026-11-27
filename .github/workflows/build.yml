@@ -286,12 +286,12 @@ jobs:
         run: |
           node tools/build_landscape.js /tmp/danny_landscape_data.h
           cmp src/landscape_data.h /tmp/danny_landscape_data.h
-          gcc -std=c11 -O2 -Wall -Wextra -Werror -DDANNY_TERRAIN_DEBUG -Isrc \
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
             src/story.c src/studio.c src/hd_canvas.c src/hd_world_atlas.c \
             src/hd_isometric.c src/hd_isometric_atlas.c src/hd_facade_art.c \
             src/hd_perspective.c tests/landscape_test.c -o /tmp/danny_landscape
           /tmp/danny_landscape
-      - name: Verify every seeded city, relocated quests, save migration and release terrain lock
+      - name: Verify every seeded city, relocated quests, save migration and hidden terrain lock
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
             src/story.c src/studio.c src/hd_canvas.c src/hd_world_atlas.c \

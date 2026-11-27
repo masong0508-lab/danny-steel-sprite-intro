@@ -31,8 +31,8 @@ all possible grids. The cartridge build and native input/render tests must
 pass before distribution; outdoor FPS and actual emulator images still
 require inspection.
 
-**Updated control policy:** the terrain brush and survey grades are now
-available only via the hidden developer World Tools menu (START+SELECT in a
-`TERRAIN_DEBUG=1` build). SELECT never opens editing directly. Ordinary
-cartridges retain hiking, art, exploration and rest, with no manipulation
-controls. See SEEDED_CITY_AND_DEBUG_LAND.md.
+**Updated control policy:** normal ROMs include the secret World Tools menu.
+Pause during free roaming, then enter UP UP DOWN DOWN LEFT RIGHT LEFT RIGHT B A START.
+Use the menu to enter brush or survey mode. No ordinary interface exposes the tools,
+and the old START+SELECT shortcut is removed. Closing the menu or leaving editing
+requires entering the code again. See SEEDED_CITY_AND_DEBUG_LAND.md.

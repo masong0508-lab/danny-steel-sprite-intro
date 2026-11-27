@@ -177,15 +177,15 @@ int main(void){
   stand(&s,9,25,0);draw(&s,0);draw(&s,1);
  }
  assert(next==0u);
- /* Release lock: ordinary input can't modify either legacy plots or
-    the brush. Hiking, artwork and saved terrain data still exist. */
- assert(!story_land_tools_enabled());
+ /* Ordinary input cannot enter editing without the secret code.
+    Hiking, artwork and saved terrain data still exist. */
  story_new_seeded(&s,0,37u);done(&s);
  unsigned before=story_world_seed();tap(&s,12u);
  assert(!story_debug_menu(&s)&&s.paused&&story_world_seed()==before);
  tap(&s,8u);assert(!s.paused);
- s.choice=STORY_DEBUG_MENU|STORY_DEBUG_CONFIRM;s.paused=1;
- assert(!story_debug_menu(&s));s.choice=0;s.paused=0;
+ /* A partial Konami prefix followed by START just resumes. */
+ tap(&s,8u);tap(&s,64u);tap(&s,64u);tap(&s,8u);
+ assert(!s.paused&&!story_debug_menu(&s)&&story_world_seed()==before);
  static const int patches[][2]={{44,8},{54,24},{50,7}};
  for(unsigned i=0;i<3u;i++){
   stand(&s,patches[i][0],patches[i][1],0);
@@ -195,6 +195,6 @@ int main(void){
   assert(s.terrain_style==style&&story_brush_revision(0)==rev);
  }
  stand(&s,42,7,0);tap(&s,1u);done(&s);assert(story_hike_stage(0)==1u);
- printf("Generated city: %u unique arrangements, conserved tile inventory, reachable story and neighborhood sites, live quest routes, guarded two-camera draws, persistent seeds and release terrain lock\n",STORY_WORLD_LAYOUTS);
+ printf("Generated city: %u unique arrangements, conserved tile inventory, reachable story and neighborhood sites, live quest routes, guarded two-camera draws, persistent seeds and hidden terrain lock\n",STORY_WORLD_LAYOUTS);
  return 0;
 }

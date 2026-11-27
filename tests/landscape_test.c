@@ -35,10 +35,53 @@ static void walk_goal(Story *s,int x,int y,const char *name){
  }
  assert(s->x==x&&s->y==y);
 }
+static const unsigned konami[]={64u,64u,128u,128u,32u,16u,32u,16u,2u,1u,8u};
+static void unlock_world(Story *s){
+ if(!s->paused)press(s,8u);
+ assert(s->paused&&!story_debug_menu(s));
+ for(unsigned i=0;i<sizeof konami/sizeof konami[0];i++){
+  press(s,konami[i]);
+  assert(!!story_debug_menu(s)==(i+1u==sizeof konami/sizeof konami[0]));
+ }
+ assert(s->paused&&!s->quit);
+}
 static void debug_select(Story *s,unsigned row){
- press(s,12u);assert(story_debug_menu(s)&&s->paused);
+ unlock_world(s);
  for(unsigned i=0;i<row;i++)press(s,128u);
  press(s,1u);
+}
+static void verify_konami_lock(void){
+ Story s;story_new_seeded(&s,0,37u);done(&s);
+ unsigned seed=story_world_seed(),style=s.terrain_style,rev=story_brush_revision(s.slot);
+ /* Former shortcut is no longer an unlock, even in the regular ROM. */
+ press(&s,12u);assert(s.paused&&!story_debug_menu(&s));press(&s,8u);
+ assert(!s.paused);
+ /* A held direction counts once, never as the repeated UP press. */
+ press(&s,8u);story_tick(&s,64u);
+ for(unsigned n=0;n<60u;n++)story_tick(&s,64u);
+ story_tick(&s,0);
+ press(&s,128u);press(&s,128u);press(&s,32u);press(&s,16u);
+ press(&s,32u);press(&s,16u);
+ assert(!story_debug_menu(&s));
+ /* Wrong sequence does not swallow the normal A field-guide action. */
+ press(&s,1u);assert(s.paused&&!story_debug_menu(&s)&&(s.choice&0x40u));
+ press(&s,2u);assert(s.paused&&!story_debug_menu(&s));
+ /* Leaving the pause screen invalidates any partial code. */
+ press(&s,64u);press(&s,64u);press(&s,8u);assert(!s.paused);
+ press(&s,8u);for(unsigned i=2u;i<8u;i++)press(&s,konami[i]);
+ assert(!story_debug_menu(&s));
+ press(&s,8u);assert(!s.paused);
+ unlock_world(&s);press(&s,2u);
+ assert(!s.paused&&!story_debug_menu(&s)&&story_world_seed()==seed);
+ assert(s.terrain_style==style&&story_brush_revision(s.slot)==rev);
+ /* Loading a saved session does not retain the hidden UI or a prefix. */
+ press(&s,8u);press(&s,64u);press(&s,64u);
+ story_resume_seeded(&s,0,s.x,s.y,s.facing,s.view,s.flags,0,0,seed);done(&s);
+ assert(!story_debug_menu(&s)&&!story_brush_mode(&s)&&!story_debug_survey(&s));
+ press(&s,8u);for(unsigned i=2u;i<8u;i++)press(&s,konami[i]);
+ assert(!story_debug_menu(&s));press(&s,8u);assert(!s.paused);
+ unlock_world(&s);press(&s,2u);assert(!s.paused);
+ puts("Konami lock: exact released-key sequence only, old shortcut blocked, wrong/held keys and pause/load reset, relocks on exit");
 }
 static void verify_debug_menu(void){
  Story s;story_new_seeded(&s,0,37u);done(&s);s.flags=STORY_HOME;s.art_steps=2u;
@@ -76,10 +119,10 @@ static void verify_debug_menu(void){
 static void verify_brush(void){
  Story s,other,resumed;story_new(&s,0);done(&s);
  stand(&s,50,7);s.facing=0;
- assert(story_brush_editable(&s)&&story_brush_grade(&s)==1u);
+ assert(!story_brush_editable(&s)&&story_brush_grade(&s)==1u);
  int initial=elevation(&s,50,7),shore=story_terrain_vertex(&s,47,16);
  unsigned revision=story_brush_revision(0);
- debug_select(&s,1u);assert(story_brush_mode(&s)&&!s.dialogue&&!s.view);
+ debug_select(&s,1u);assert(story_brush_mode(&s)&&story_brush_editable(&s)&&!s.dialogue&&!s.view);
  paint(&s,0);memcpy(prior,frame.p,HD_BYTES);
  press(&s,1u);press(&s,1u);press(&s,1u);
  assert(story_brush_grade(&s)==3u&&elevation(&s,50,7)>initial);
@@ -215,5 +258,6 @@ int main(void){
  verify_brush();
  verify_hike();
  verify_debug_menu();
+ verify_konami_lock();
  return 0;
 }

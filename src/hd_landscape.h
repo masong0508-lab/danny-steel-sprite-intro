@@ -11,7 +11,7 @@ static inline unsigned hd_land_ink(char tile,int h,unsigned shade){
 }
 static inline unsigned hd_land_marker(const Story *s,int x,int y){
  /* The common floor sample path never pays for a debug predicate. */
- if(story_land_tools_enabled()&&((x==44&&y==8)||(x==54&&y==24))&&story_debug_survey(s))
+ if(((x==44&&y==8)||(x==54&&y==24))&&story_debug_survey(s))
   return x==44?1u:2u;
  return x==56&&y==11?3u:x==43&&y==22?4u:
         x==42&&y==7?5u:x==49&&y==6?6u:x==53&&y==13?7u:0u;

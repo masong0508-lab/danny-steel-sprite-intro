@@ -320,6 +320,24 @@ int main(int argc,char **argv){
               after.game.facing==expected.facing&&after.game.anim==expected.anim,
               "held movement matches its real video-frame duration");
         picture(core,directory,"after-walk");
+        /* Secret menu is present in the same ordinary ROM as all other
+           tests. Use real pad input, never a debug memory write. */
+        unsigned old_seed=read_word(core,symbols.world);
+        press(core,KEY_START,1u,48u);
+        static const unsigned code[]={64u,64u,128u,128u,32u,16u,32u,16u,2u,1u,8u};
+        for(unsigned i=0;i<sizeof code/sizeof code[0];i++){
+            press(core,code[i],1u,12u);
+            Sample k=sample(core,&symbols);
+            check(!!story_debug_menu(&k.game)==(i+1u==sizeof code/sizeof code[0]),
+                  "Konami code recognizes only the full pause-screen sequence");
+        }
+        Sample unlocked=sample(core,&symbols);
+        check(story_debug_menu(&unlocked.game)&&!unlocked.game.quit&&read_word(core,symbols.world)==old_seed,
+              "regular cartridge opens hidden World Tools without regeneration");
+        press(core,KEY_B,1u,48u);
+        Sample locked=sample(core,&symbols);
+        check(!locked.game.paused&&!story_debug_menu(&locked.game)&&read_word(core,symbols.world)==old_seed,
+              "closing the secret menu relocks it without changing the world");
         press(core,KEY_START,1u,48u);
         check(sample(core,&symbols).game.paused==1u,
               "short pause press works after movement");

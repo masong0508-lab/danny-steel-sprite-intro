@@ -236,6 +236,30 @@ static int outdoor_available(const Story *s){
     (s->rescue_stage==STORY_RESCUE_NONE||s->rescue_stage==STORY_RESCUE_SAVED);
 }
 static int land_safe(const Story *s){return outdoor_available(s)&&story_rural(s->x,s->y);}
+/* Transient input recognizer, deliberately outside the save codec.
+   Only the ordinary pause root can consume the full Konami sequence. */
+static uint8_t konami_step;
+static int konami_root(const Story *s){
+ return s->paused&&!(s->choice&~1u)&&outdoor_available(s)&&
+        !s->dialogue&&!s->cinema&&!s->activity&&!s->battle&&!s->risk_menu&&!s->choosing;
+}
+static int konami_input(Story *s,uint16_t keys,uint16_t pressed){
+ static const uint16_t sequence[]={64u,64u,128u,128u,32u,16u,32u,16u,2u,1u,8u};
+ if(!konami_root(s)){konami_step=0;return 0;}
+ if(!pressed)return 0;
+ if(keys==pressed&&pressed==sequence[konami_step]){
+  if(++konami_step==sizeof sequence/sizeof sequence[0]){
+   konami_step=0;s->choice=STORY_DEBUG_MENU;
+   s->studio_cursor=(uint8_t)((story_world_seed()+37u)%STORY_WORLD_LAYOUTS);
+  }
+  return 1;
+ }
+ konami_step=0;
+ if(keys==64u&&pressed==64u){konami_step=1;return 1;}
+ /* Wrong keys keep their normal pause-menu action. In particular,
+    B still exits from the root and A still opens the field guide. */
+ return 0;
+}
 static int hike_tracking(const Story *s){
  unsigned stage=story_hike_stage(s->slot);
  return outdoor_available(s)&&stage>=1u&&stage<=3u;
@@ -243,23 +267,28 @@ static int hike_tracking(const Story *s){
 static unsigned brush_x(const Story *s){return ((unsigned)s->x-STORY_CITY_W+1u)/2u;}
 static unsigned brush_y(const Story *s){return ((unsigned)s->y+1u)/2u;}
 int story_debug_menu(const Story *s){
- return story_land_tools_enabled()&&s->paused&&
-        (s->choice&(STORY_DEBUG_MENU|0xe0u))==STORY_DEBUG_MENU;
+ return outdoor_available(s)&&s->paused&&
+        (s->choice&(STORY_DEBUG_MENU|0xe0u))==STORY_DEBUG_MENU&&
+        (s->choice&STORY_DEBUG_SELECT_MASK)<STORY_DEBUG_ROWS;
 }
 int story_debug_survey(const Story *s){
- return story_land_tools_enabled()&&land_safe(s)&&!s->paused&&!s->dialogue&&!s->activity&&
-        !s->battle&&!s->risk_menu&&!s->choosing&&(s->choice&STORY_SURVEY_MODE);
+ return land_safe(s)&&!s->paused&&!s->dialogue&&!s->activity&&
+        !s->battle&&!s->risk_menu&&!s->choosing&&
+        (s->choice&(STORY_DEBUG_ACCESS|STORY_SURVEY_MODE|STORY_BRUSH_MODE))==(STORY_DEBUG_ACCESS|STORY_SURVEY_MODE);
 }
 int story_brush_mode(const Story *s){
- return story_land_tools_enabled()&&land_safe(s)&&!s->paused&&!s->dialogue&&!s->activity&&!s->battle&&!s->risk_menu&&
-        !s->choosing&&(s->choice&STORY_BRUSH_MODE);
+ return land_safe(s)&&!s->paused&&!s->dialogue&&!s->activity&&!s->battle&&!s->risk_menu&&
+        !s->choosing&&(s->choice&(STORY_DEBUG_ACCESS|STORY_SURVEY_MODE|STORY_BRUSH_MODE))==(STORY_DEBUG_ACCESS|STORY_BRUSH_MODE);
 }
-int story_brush_editable(const Story *s){
- if(!story_land_tools_enabled()||!land_safe(s)||story_solid(s->x,s->y))return 0;
+static int brush_site_valid(const Story *s){
+ if(!land_safe(s)||story_solid(s->x,s->y))return 0;
  return brush_weight(s->x,s->y)>0&&node_allowed(brush_x(s),brush_y(s));
 }
+int story_brush_editable(const Story *s){
+ return story_brush_mode(s)&&brush_site_valid(s);
+}
 unsigned story_brush_grade(const Story *s){
- if(!story_brush_editable(s))return 1u;
+ if(!brush_site_valid(s))return 1u;
  brush_init(s->slot);return node_grade(brush[s->slot],brush_x(s),brush_y(s));
 }
 static void brush_grade(Story *s,int delta){
@@ -2043,6 +2072,7 @@ static void talk(Story *s, uint8_t id) {
 }
 void story_new_seeded(Story *s,int slot,unsigned seed) {
     story_world_set(seed);
+    konami_step=0;
     *s = (Story){0};
     s->terrain_style=STORY_LAND_DEFAULT;
     brush_reset((unsigned)slot&1u);
@@ -2817,6 +2847,7 @@ void story_tick(Story *s, uint16_t keys) {
     enum { A=1, B=2, SELECT=4, START=8, RIGHT=16, LEFT=32, UP=64, DOWN=128, R=256, L=512 };
     uint16_t pressed = (uint16_t)(keys & ~s->old_keys);
     s->old_keys = keys;
+    if(!konami_root(s))konami_step=0;
     if (s->anim) --s->anim;
     /* The fourth violation after a SUCCESSFUL rescue retains its original
        immediate-bad-ending consequence. A failed rescue now has a playable,
@@ -3115,9 +3146,9 @@ void story_tick(Story *s, uint16_t keys) {
         }
         return;
     }
-    /* Debug operations are accessible only through this hidden modal.
-       A normal build compiles the entire input gate to false. */
-    if(story_land_tools_enabled()&&story_debug_menu(s)){
+    /* World tools are in the regular cartridge, but ordinary input
+       reaches this modal only after the complete Konami code. */
+    if(story_debug_menu(s)){
         unsigned selected=s->choice&STORY_DEBUG_SELECT_MASK;
         if(pressed&(B|START)){
             if((s->choice&STORY_DEBUG_CONFIRM)&&!(pressed&START))s->choice&=(uint8_t)~STORY_DEBUG_CONFIRM;
@@ -3159,18 +3190,13 @@ void story_tick(Story *s, uint16_t keys) {
             if(selected==0u||selected==3u)s->choice|=STORY_DEBUG_CONFIRM;
             else if(selected==4u){s->paused=0;s->choice=0;s->studio_cursor=0;}
             else if(land_safe(s)){
-                s->paused=0;s->choice=selected==1u?STORY_BRUSH_MODE:STORY_SURVEY_MODE;
+                s->paused=0;s->choice=(uint8_t)(STORY_DEBUG_ACCESS|(selected==1u?STORY_BRUSH_MODE:STORY_SURVEY_MODE));
                 s->studio_cursor=0;
             }
         }
         return;
     }
-    if(story_land_tools_enabled()&&outdoor_available(s)&&
-       (keys&(START|SELECT))==(START|SELECT)&&(pressed&(START|SELECT))){
-        s->paused=1;s->choice=STORY_DEBUG_MENU;
-        s->studio_cursor=(uint8_t)((story_world_seed()+37u)%STORY_WORLD_LAYOUTS);
-        return;
-    }
+    if(konami_input(s,keys,pressed))return;
     if(pressed&START){
         s->paused^=1u;
         /* The journal is transient UI, never part of a bus decision. */
@@ -3236,7 +3262,7 @@ void story_tick(Story *s, uint16_t keys) {
     }
     /* SELECT can only leave an editing mode, never enter it directly.
        All editing entry points are behind the debug menu. */
-    if(!story_land_tools_enabled()||!land_safe(s))s->choice&=(uint8_t)~(STORY_BRUSH_MODE|STORY_SURVEY_MODE);
+    if(!land_safe(s))s->choice&=(uint8_t)~(STORY_DEBUG_ACCESS|STORY_BRUSH_MODE|STORY_SURVEY_MODE);
     if((story_brush_mode(s)||story_debug_survey(s))&&(pressed&(SELECT|R))){
         s->choice=0;return;
     }
