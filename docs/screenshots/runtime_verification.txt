@@ -1,4 +1,4 @@
-Source commit: 187006f05afaa92244c02347b39032f7c7f4effd
+Source commit: be95c1d7455415c156bd1898e661d17386dea824
 mGBA 0.10.2; read-only runtime verification, Story bytes=62
 PASS: built ROM exports its real input-queue counters
 PASS: New Game selects a valid generated layout
@@ -67,6 +67,19 @@ timed walk: before=(20,11), expected=(17,11), ROM=(17,11)
 PASS: walk scenario actually moves through the original map
 PASS: held movement matches its real video-frame duration
 PASS: actual ROM capture saved
+PASS: Konami code recognizes only the full pause-screen sequence
+PASS: Konami code recognizes only the full pause-screen sequence
+PASS: Konami code recognizes only the full pause-screen sequence
+PASS: Konami code recognizes only the full pause-screen sequence
+PASS: Konami code recognizes only the full pause-screen sequence
+PASS: Konami code recognizes only the full pause-screen sequence
+PASS: Konami code recognizes only the full pause-screen sequence
+PASS: Konami code recognizes only the full pause-screen sequence
+PASS: Konami code recognizes only the full pause-screen sequence
+PASS: Konami code recognizes only the full pause-screen sequence
+PASS: Konami code recognizes only the full pause-screen sequence
+PASS: regular cartridge opens hidden World Tools without regeneration
+PASS: closing the secret menu relocks it without changing the world
 PASS: short pause press works after movement
 PASS: short back press returns through the pause menu
 PASS: gameplay input capture stops cleanly in the menu
