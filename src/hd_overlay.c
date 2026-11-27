@@ -26,15 +26,19 @@ static void field_guide(uint8_t *p,const Story *s){
   hd_line(p,21,44,217,44,HD_STONE_DARK);
   unsigned selected=story_track_selected(s);
   for(unsigned i=0;i<STORY_TRACK_COUNT;i++){
-   int y=49+(int)i*17,available=story_track_available(s,i);
+   int y=49+(int)i*13,available=story_track_available(s,i);
    if(i==selected)hd_rect(p,20,y-2,200,15,HD_ROAD_COOL);
    hd_text(p,25,y,story_track_name(i),available?HD_PAPER:HD_STONE_DARK,1,0);
-   if(i<3u&&s->neighborhood_target==STORY_TRACK_STUDIO+i)hd_text(p,177,y,"TRACK",HD_LAMP,1,0);
+   if(story_track_id(i)&&s->neighborhood_target==story_track_id(i))hd_text(p,177,y,"TRACK",HD_LAMP,1,0);
+   else if(i==STORY_TRACK_SHOW_INDEX&&story_show_stage(s)==STORY_SHOW_DONE)
+    hd_text(p,177,y,"DONE",HD_LAMP,1,0);
    else if(!available)hd_text(p,177,y,"LATER",HD_STONE_LIT,1,0);
+   if(i==STORY_TRACK_SHOW_INDEX){char progress[]="0/7";progress[0]=(char)('0'+story_show_stage(s));hd_text(p,145,y,progress,HD_GOLD,1,0);}
   }
   hd_text(p,22,119,selected==0u?"EAST PLAZA: EDIT AND SAVE TAKES":
        selected==1u?"PAINT THE CITY / FOUR LAYERS":
        selected==2u?"START AT THE EAST TERMINAL":
+       selected==STORY_TRACK_SHOW_INDEX?"MUSIC + ART / 7 SHOW STEPS":
        "LETTER, BORE, MARA, THEN BUS",HD_PAPER,1,0);
   hd_text(p,22,131,"UP/DOWN CHOOSE  A TRACK",HD_GOLD,1,0);
  }else{
@@ -192,6 +196,26 @@ void hd_game_overlay(uint8_t *p,const Story *s){
   selectable(p,23,121,91,s->risk_menu=='H'?"OPEN":"BACK",!s->risk_choice);
   selectable(p,122,121,92,s->risk_menu=='H'?"LEAVE":"DO IT",s->risk_choice);
   hd_text(p,28,146,"LEFT/RIGHT CHOOSE    B CANCEL",HD_PAPER,1,0);
+  return;
+ }
+ if(s->activity==STORY_ACT_REHEARSAL){
+  framebox(p,8,66,224,91);
+  char part[]="PART 1/4";part[5]=(char)('1'+(s->studio_tab&3u));
+  hd_text(p,18,74,"SET LIST REHEARSAL",HD_LAMP,1,0);
+  hd_text(p,170,74,part,HD_PAPER,1,0);
+  hd_text(p,18,86,s->studio_cursor?"TRY THE SHOWN PHRASE":"MATCH THE NEXT CUE",s->studio_cursor?HD_LAMP:HD_PAPER,1,0);
+  hd_text(p,18,98,"YOUR ORDER:",HD_STONE_LIT,1,0);
+  hd_text(p,100,98,story_show_phrase(story_show_expected(s)),HD_GOLD,1,0);
+  for(unsigned i=0;i<4u;i++)selectable(p,16+(int)i*53,111,50,story_show_phrase(i),s->activity_choice==i);
+  hd_text(p,18,145,"D-PAD CHOOSE  A CUE  B BACK",HD_PAPER,1,0);
+  return;
+ }
+ if(s->activity==STORY_ACT_SHOW){
+  framebox(p,12,104,216,53);
+  hd_text(p,21,111,story_show_title(s),HD_LAMP,1,0);
+  selectable(p,21,121,95,story_show_option(s,0),!s->activity_choice);
+  selectable(p,124,121,95,story_show_option(s,1),s->activity_choice);
+  hd_text(p,21,145,"D-PAD CHOOSE  A OK  B BACK",HD_PAPER,1,0);
   return;
  }
  if(s->activity==STORY_ACT_NEIGHBORHOOD){

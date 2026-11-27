@@ -598,6 +598,22 @@ void hd_cinema_draw(uint8_t *p,const Story *s,unsigned t){
   case CINE_MARA:
   case CINE_STAY:{
    cafe(p,t);
+   if(story_show_scene(s)){
+    /* Authored poster and framed city art appear in the actual cafe set. */
+    unsigned poster=(s->project_style&STORY_SHOW_WARM_POSTER)?HD_COPPER:HD_GLASS_LIT;
+    unsigned frame=(s->project_style&STORY_SHOW_WARM_FRAME)?HD_BARK:HD_INK;
+    hd_rect(p,18,34,51,39,HD_INK);hd_rect(p,20,36,47,35,HD_PAPER);
+    hd_rect(p,23,39,41,16,poster);
+    hd_text(p,24,43,"SHOW",HD_PAPER,1,0);
+    hd_text(p,24,59,"DANNY",HD_INK,1,0);
+    hd_rect(p,175,36,47,32,frame);hd_rect(p,178,39,41,26,HD_GLASS);
+    for(int i=0;i<5;i++){
+     int h=7+(i*9)%13,x=181+i*7;
+     hd_rect(p,x,61-h,6,h,HD_BRICK_DARK);
+     hd_rect(p,x+2,62-h,2,3,poster);
+    }
+    hd_line(p,179,62,217,62,HD_STONE_LIT);
+   }
    /* Background commuter: connected legs and depth BEFORE the actors. */
    int passer=235-(int)((t/5u)%80u);
    int stride=((t/8u)&1u)?2:-2;

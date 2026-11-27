@@ -247,6 +247,10 @@ jobs:
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c src/story_save.c src/hd_canvas.c src/hd_studio.c src/hd_overlay.c tests/studio_campaign_access_test.c -o /tmp/danny_studio_campaign
           /tmp/danny_studio_campaign
+      - name: Play the seven-stage cafe exhibition through live movement and creative sessions
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c src/story_save.c src/hd_canvas.c src/hd_cinema.c src/hd_actor.c src/hd_special.c src/hd_overlay.c tests/cafe_show_campaign_test.c -o /tmp/danny_cafe_show
+          /tmp/danny_cafe_show
       - name: Validate four-track mixer, all packed levels and legacy studio-save migration
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/studio.c tests/studio_mixer_test.c -o /tmp/danny_mixer

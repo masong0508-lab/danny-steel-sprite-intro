@@ -419,7 +419,7 @@ static void field_guide_120(uint8_t *p,const Story *s){
         text(p,8,14,"GUIDE / TRACK A GOAL",20,25);
         unsigned selected=story_track_selected(s);
         for(unsigned i=0;i<STORY_TRACK_COUNT;i++){
-            int y=26+(int)i*10;
+            int y=25+(int)i*8;
             if(i==selected)box(p,6,y-1,108,9,24);
             text(p,9,y,story_track_name(i),story_track_available(s,i)?20:7,25);
         }
@@ -523,7 +523,19 @@ static void activity_menu(uint8_t *p,const Story *s){
     const char *where="",*left="",*right="";
     const char *effect="";
     unsigned selected=s->activity_choice;
+    if(s->activity==STORY_ACT_REHEARSAL){
+        panel(p,40,80);
+        text(p,7,43,"SET LIST REHEARSAL",20,27);
+        text(p,7,51,s->studio_cursor?"TRY CUE:":"NEXT CUE:",18,11);
+        text(p,56,51,story_show_phrase(story_show_expected(s)),20,8);
+        for(unsigned i=0;i<4u;i++){
+            int x=5+(int)i*29;box(p,x,61,27,10,selected==i?24:3);
+            text(p,x+3,63,story_show_phrase(i),selected==i?20:10,6);
+        }
+        text(p,6,74,"D-PAD  A CUE  B BACK",20,26);return;
+    }
     switch(s->activity){
+    case STORY_ACT_SHOW:where=story_show_title(s);left=story_show_option(s,0);right=story_show_option(s,1);effect="YOUR SHOW / YOUR CHOICE";break;
     case STORY_ACT_NEIGHBORHOOD:{
         int id=story_neighborhood_at(s);
         where=id>=0?story_neighborhood_name((unsigned)id):"SIDE STORY";
