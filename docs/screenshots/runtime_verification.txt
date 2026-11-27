@@ -1,23 +1,25 @@
-Source commit: e1b26cc1684ac4b7252180454bc3a73d4d3ff439
+Source commit: 187006f05afaa92244c02347b39032f7c7f4effd
 mGBA 0.10.2; read-only runtime verification, Story bytes=62
 PASS: built ROM exports its real input-queue counters
+PASS: New Game selects a valid generated layout
+generated world seed: 8
 opening state: scene=1, dialogue=1, page=0, ticks=175
 PASS: New Game reaches the scripted opening
 PASS: held menu confirm does not skip opening dialogue
 PASS: actual ROM capture saved
-opening clock: video=600, processed=602, queue=2->0, accounted=600
+opening clock: video=600, processed=601, queue=1->0, accounted=600
 PASS: clock window advances 600 emulated video frames
 PASS: input queue remains bounded
 PASS: processed plus queued ticks track video time
 PASS: simulation keeps pace during painting
-  cinematic ticks advanced=602
+  cinematic ticks advanced=601
 PASS: opening route remains the actual Potheads scene
 PASS: cinematic clock advances with each simulation tick
 PASS: active Mode4 display survives the clock window
 PASS: one-frame A press advances exactly one dialogue page
 PASS: B reaches overhead town gameplay
 PASS: actual ROM capture saved
-town clock: video=600, processed=600, queue=4->4, accounted=600
+town clock: video=600, processed=600, queue=3->3, accounted=600
 PASS: clock window advances 600 emulated video frames
 PASS: input queue remains bounded
 PASS: processed plus queued ticks track video time
@@ -70,6 +72,7 @@ PASS: short back press returns through the pause menu
 PASS: gameplay input capture stops cleanly in the menu
 PASS: actual ROM capture saved
 PASS: New Game restarts the runtime without stale keys or pages
+PASS: another New Game automatically selects a different generated world
 input queue dropped samples: current=0, peak across sessions=0
 PASS: no captured input samples overflow during the tested routes
 PASS: emulator reports no fatal/error events
