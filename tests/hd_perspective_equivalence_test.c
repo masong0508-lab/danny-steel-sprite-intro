@@ -35,6 +35,7 @@ static void verify_original_road_material_rom(void){
 void hd_debug_wall_store_span(uint8_t *canvas,int x,int y,int width,uint8_t ink);
 void hd_debug_invalidate_wall_cache(void);
 unsigned hd_debug_background_hits(void);
+unsigned hd_debug_floor_replays(void);
 void hd_debug_legacy_scenery(int enabled);
 void hd_debug_reference_restore(int enabled);
 void hd_debug_reference_floor(int enabled);
@@ -193,7 +194,54 @@ static void verify_background_replay(void){
  printf("Static environment replay: %u exact dynamic/pose comparisons, %u actual cache hits\n",
         cases,hd_debug_background_hits()-start);
 }
+static void verify_floor_revisits(void){
+ static uint8_t prior[3][HD_BYTES];
+ const unsigned pos[][2]={{19,11},{20,11},{20,12}};
+ Story s;story_new(&s,0);s.dialogue=0;s.cinema=CINE_NONE;s.flags=STORY_FULL;s.anim=0;s.facing=3;
+ unsigned initial=hd_debug_floor_replays(),cases=0;
+ hd_debug_invalidate_wall_cache();
+ /* Each view occurs first cold, then is admitted on revisit, then must
+    be replayed. The clock and creative/relationship state keep moving. */
+ for(unsigned round=0;round<4u;round++){
+  for(unsigned i=0;i<3u;i++){
+   s.x=(uint8_t)pos[i][0];s.y=(uint8_t)pos[i][1];s.prev_x=s.x;s.prev_y=s.y;
+   assert(!story_solid(s.x,s.y));
+   unsigned tick=round*181u+i*43u;
+   s.art_steps=(uint8_t)((round+i)%5u);
+   s.song_steps=(uint8_t)((round+i+1u)%5u);
+   s.rescue_stage=(uint8_t)((round&1u)?STORY_RESCUE_MISSING:STORY_RESCUE_NONE);
+   memset(&canvas,0xA6,sizeof canvas);hd_first_person_draw(canvas.pixels,&s,tick);
+   memcpy(prior[i],canvas.pixels,HD_BYTES);
+   hd_debug_reference_floor(1);
+   memset(&canvas,0xA6,sizeof canvas);hd_first_person_draw(canvas.pixels,&s,tick);
+   assert(!memcmp(prior[i],canvas.pixels,HD_BYTES));
+   hd_debug_reference_floor(0);
+   cases++;
+  }
+ }
+ assert(hd_debug_floor_replays()>initial);
+ /* Wet views must be regenerated as their glint phase changes. */
+ hd_debug_invalidate_wall_cache();
+ unsigned dry_hits=hd_debug_floor_replays();
+ for(unsigned round=0;round<4u;round++){
+  for(unsigned i=0;i<2u;i++){
+   s.x=(uint8_t)(18u+i);s.y=13u;s.prev_x=s.x;s.prev_y=s.y;s.facing=1u;
+   assert(!story_solid(s.x,s.y));
+   unsigned tick=round*9u+i;
+   memset(&canvas,0xA6,sizeof canvas);hd_first_person_draw(canvas.pixels,&s,tick);
+   memcpy(prior[i],canvas.pixels,HD_BYTES);
+   hd_debug_reference_floor(1);
+   memset(&canvas,0xA6,sizeof canvas);hd_first_person_draw(canvas.pixels,&s,tick);
+   assert(!memcmp(prior[i],canvas.pixels,HD_BYTES));
+   hd_debug_reference_floor(0);cases++;
+  }
+ }
+ assert(hd_debug_floor_replays()==dry_hits);
+ printf("Floor revisits: %u exact changing-state frames, %u dry cache replays, no wet replays\n",
+        cases,dry_hits-initial);
+}
 int main(void){
+ verify_floor_revisits();
  verify_background_replay();
  verify_original_road_material_rom();
  verify_halfword_wall_spans();

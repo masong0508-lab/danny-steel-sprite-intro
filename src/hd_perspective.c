@@ -12,6 +12,7 @@
 #include "hd_extra_floor_atlas.h"
 #include "hd_stone_rain.h"
 #include "hd_background_cache.h"
+#include "hd_floor_revisit.h"
 #if defined(GBA_PROFILE_RENDER) && defined(__arm__)
 #include "gba.h"
 /* Debug-build-only counters. Normal release builds allocate NONE of these.
@@ -60,9 +61,12 @@ static uint8_t wall_shade_cache[WALL_RAYS][WALL_SHADE_ROWS]
 static int wall_cache_valid,wall_cam_x,wall_cam_y,wall_cam_fx,wall_cam_fy;
 #if !defined(__arm__)
 static int legacy_scenery,reference_restore,reference_floor,reference_ray,reference_shades;
-static unsigned debug_background_hits;
+static unsigned debug_background_hits,debug_floor_replays;
 unsigned hd_debug_background_hits(void){return debug_background_hits;}
-void hd_debug_invalidate_wall_cache(void){wall_cache_valid=0;background.valid=background.checked=0;}
+unsigned hd_debug_floor_replays(void){return debug_floor_replays;}
+void hd_debug_invalidate_wall_cache(void){
+ wall_cache_valid=0;background.valid=background.checked=0;hd_floor_revisit_reset();
+}
 /* Shipped art remains a host-only baseline; do not weaken the existing
    3,456 golden-frame regression to bless unrelated rendering changes. */
 void hd_debug_legacy_scenery(int enabled){legacy_scenery=!!enabled;wall_cache_valid=0;}
@@ -963,7 +967,25 @@ void hd_first_person_draw(uint8_t *p,const Story *s,unsigned tick){
  gba_profile_wall_cycles=profile_now-profile_last;profile_last=profile_now;
 #endif
  if(!reused){
-  floor_render(p,s,camx,camy,fx,fy,rx,ry,tick);
+  HdFloorKey key={camx,camy,(unsigned)s->facing&3u,1u};
+  int slot=allow?hd_floor_revisit_find(&key):-1;
+  if(slot>=0){
+   /* Recompute wall depths and upper pixels for the current camera
+      as usual, then restore the exact opaque lower region. This is
+      independent of sky phase and live foreground object state. */
+   hd_floor_revisit_restore(p,(unsigned)slot);
+   background.checked=1;background.wet=0;
+#if !defined(__arm__)
+   debug_floor_replays++;
+#endif
+  }else{
+   floor_render(p,s,camx,camy,fx,fy,rx,ry,tick);
+   if(allow&&!warm&&hd_floor_revisit_admit(&key)){
+    background.wet=(unsigned)background_may_see_water(camx,camy,fx,fy,rx,ry);
+    background.checked=1;
+    if(!background.wet)hd_floor_revisit_store(p,&key);
+   }
+  }
   if(allow&&warm){
    if(!background.checked){
     background.wet=(unsigned)background_may_see_water(camx,camy,fx,fy,rx,ry);
