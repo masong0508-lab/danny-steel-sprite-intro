@@ -1,4 +1,4 @@
-Source commit: 2e564f6330b01b15d65b367ed0c137bce69d2d29
+Source commit: c93059b27bc55b229118cd695c475dbfc2c16c42
 mGBA 0.10.2; emulated video 59.727500570 Hz (280896 cycles/frame, 16777216 Hz CPU)
 Cadence counts presented Mode4 page changes, including identical content. It does not measure host speed or certify all-scene 30 FPS.
 Stage names describe the scripted route; verify the accompanying cadence pictures before treating them as scene measurements.
@@ -8,9 +8,9 @@ opening after New Game: video_frames=600, active_mode4_samples=600/600, page_fli
 town after B dismisses opening: video_frames=600, active_mode4_samples=600/600, page_flips=150, emulated_seconds=10.045624, observed_page_flips_per_second=14.932
   complete flip intervals: count=149, min=4, mean=4.000, max=4 video_frames (max 66.971 ms), over_two_frames=149
   window edges: 3 frames before first observed flip, 1 after last (partial intervals)
-first-person after L changes camera: video_frames=600, active_mode4_samples=600/600, page_flips=200, emulated_seconds=10.045624, observed_page_flips_per_second=19.909
-  complete flip intervals: count=199, min=3, mean=3.000, max=3 video_frames (max 50.228 ms), over_two_frames=199
-  window edges: 1 frames before first observed flip, 2 after last (partial intervals)
-first-person held walking (48-frame back/forward): video_frames=600, active_mode4_samples=600/600, page_flips=114, emulated_seconds=10.045624, observed_page_flips_per_second=11.348
-  complete flip intervals: count=113, min=4, mean=5.301, max=7 video_frames (max 117.199 ms), over_two_frames=113
-  window edges: 1 frames before first observed flip, 0 after last (partial intervals)
+first-person after L changes camera: video_frames=600, active_mode4_samples=600/600, page_flips=291, emulated_seconds=10.045624, observed_page_flips_per_second=28.968
+  complete flip intervals: count=290, min=2, mean=2.059, max=3 video_frames (max 50.228 ms), over_two_frames=17
+  window edges: 2 frames before first observed flip, 1 after last (partial intervals)
+first-person held walking (48-frame back/forward): video_frames=600, active_mode4_samples=600/600, page_flips=126, emulated_seconds=10.045624, observed_page_flips_per_second=12.543
+  complete flip intervals: count=125, min=3, mean=4.768, max=6 video_frames (max 100.456 ms), over_two_frames=125
+  window edges: 1 frames before first observed flip, 3 after last (partial intervals)

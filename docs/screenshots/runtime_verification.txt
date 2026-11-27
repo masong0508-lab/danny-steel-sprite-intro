@@ -1,4 +1,4 @@
-Source commit: 2e564f6330b01b15d65b367ed0c137bce69d2d29
+Source commit: c93059b27bc55b229118cd695c475dbfc2c16c42
 mGBA 0.10.2; read-only runtime verification, Story bytes=62
 PASS: built ROM exports its real input-queue counters
 opening state: scene=1, dialogue=1, page=0, ticks=175
@@ -42,7 +42,7 @@ held camera button: 1 observed toggle(s)
 PASS: holding camera button produces one toggle without repeats
 PASS: first-person camera is active
 PASS: actual ROM capture saved
-first-person clock: video=600, processed=600, queue=1->1, accounted=600
+first-person clock: video=600, processed=600, queue=0->0, accounted=600
 PASS: clock window advances 600 emulated video frames
 PASS: input queue remains bounded
 PASS: processed plus queued ticks track video time
@@ -51,7 +51,7 @@ PASS: active Mode4 display survives the clock window
 first-person turn: 0->1, response=1 video frames
 PASS: single-frame turn is retained promptly in each facing
 PASS: actual ROM capture saved
-first-person turn: 1->2, response=1 video frames
+first-person turn: 1->2, response=2 video frames
 PASS: single-frame turn is retained promptly in each facing
 PASS: actual ROM capture saved
 first-person turn: 2->3, response=1 video frames
