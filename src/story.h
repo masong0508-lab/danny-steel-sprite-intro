@@ -1,8 +1,15 @@
 #pragma once
 #include <stdint.h>
 #include "cinema.h"
-#define STORY_W 24
-#define STORY_H 18
+#define STORY_CORE_W 24
+#define STORY_CORE_H 18
+#define STORY_W 40
+#define STORY_H 30
+/* The original material banks remain valid at their original coordinates. */
+static inline int story_city_extension(int x,int y){
+ return (unsigned)x<STORY_W&&(unsigned)y<STORY_H&&
+        (x>=STORY_CORE_W||y>=STORY_CORE_H);
+}
 #define STORY_HOME 1
 #define STORY_STAMP 2
 #define STORY_MARA 4
@@ -188,6 +195,11 @@ void story_new(Story *s, int slot);
 void story_resume(Story *s, int slot, int x, int y, int facing, int view, int flags, int ended, int ending);
 void story_tick(Story *s, uint16_t keys);
 char story_tile(int x, int y);
+const char *story_district_name(int x,int y);
+#if !defined(__arm__)
+/* Preserve the shipped map solely for historical golden-render checks. */
+void story_debug_core_map(int enabled);
+#endif
 int story_solid(int x, int y);
 /* World-space primary story objective. Returns zero only after an ending.
    Pure query: does not change the optional Mirror Orchard progression. */

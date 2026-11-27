@@ -6,7 +6,7 @@
 /* Reference artwork and geometry from the last shipped ROM. This test
    deliberately does not call the new fast paths to construct expected
    results; a changed tile, ellipse edge, or wall pitch fails. */
-static const char *const original_town[STORY_H]={
+static const char *const original_town[STORY_CORE_H]={
 "########################",
 "#......................#",
 "#...TT............TT...#",
@@ -27,7 +27,7 @@ static const char *const original_town[STORY_H]={
 "########################"
 };
 static char original_tile(int x,int y){
- if(x<0||y<0||x>=STORY_W||y>=STORY_H)return '#';
+ if(x<0||y<0||x>=STORY_CORE_W||y>=STORY_CORE_H)return '#';
  if(x==11&&y==7)return 'C';
  if(x==3&&y==7)return 'P';
  if(x==17&&y==7)return 'V';
@@ -81,9 +81,10 @@ static void guards(void){
  }
 }
 int main(void){
+ story_debug_core_map(1);
  unsigned cells=0;
- for(int y=-3;y<=STORY_H+3;y++)
-  for(int x=-3;x<=STORY_W+3;x++){
+ for(int y=-3;y<=STORY_CORE_H+3;y++)
+  for(int x=-3;x<=STORY_CORE_W+3;x++){
    assert(story_tile(x,y)==original_tile(x,y));
    cells++;
   }
