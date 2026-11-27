@@ -42,7 +42,10 @@ static const char *const town[STORY_CORE_H] = {
 /* Seeded construction preserves the original asset inventory. Core
    reflections carry the story anchors, while four identically sized lot
    envelopes exchange their complete building footprints. Gateways,
-   waterfront, outer bounds and countryside remain unchanged. */
+   waterfront, outer bounds and countryside remain unchanged. Seeds
+   96..191 additionally exchange two disjoint 6x9 neighborhood tracts,
+   moving the park, surrounding paths, facades and street furnishings
+   together rather than scattering individual trees. */
 static const uint8_t world_lots[4][2]={{25,2},{25,10},{15,18},{25,18}};
 typedef struct {unsigned seed;uint8_t order[4],inverse[4];} WorldLayout;
 static WorldLayout world={0,{0,1,2,3},{0,1,2,3}};
@@ -52,7 +55,7 @@ static void world_layout(WorldLayout *w,unsigned seed){
  static const uint8_t divisor[4]={6,2,1,1};
  uint8_t available[4]={0,1,2,3};
  w->seed=seed%STORY_WORLD_LAYOUTS;
- unsigned rank=w->seed>>2;
+ unsigned rank=(w->seed%STORY_WORLD_BASE_LAYOUTS)>>2;
  for(unsigned i=0;i<4u;i++){
   unsigned k=rank/divisor[i];rank%=divisor[i];
   w->order[i]=available[k];w->inverse[available[k]]=(uint8_t)i;
@@ -61,6 +64,12 @@ static void world_layout(WorldLayout *w,unsigned seed){
 }
 static void world_transform(const WorldLayout *w,int *x,int *y,int inverse){
  if(!w->seed)return;
+ /* Both 6x9 tracts are outside the original core and four small parcels.
+    The swap is its own inverse, so save/actor/material mapping agrees. */
+ if(w->seed>=STORY_WORLD_BASE_LAYOUTS&&*y>=19&&*y<=27){
+  if(*x>=8&&*x<=13){*x+=25;return;}
+  if(*x>=33&&*x<=38){*x-=25;return;}
+ }
  if(*x>=1&&*x<=22&&*y>=1&&*y<=16){
   if(w->seed&1u)*x=23-*x;
   if(w->seed&2u)*y=17-*y;
@@ -263,6 +272,8 @@ const char *story_district_name(int x,int y){
       return "MEADOWS";
     }
     if(!story_city_extension(x,y))return "OLD QUARTER";
+    /* Named neighborhoods move with their land, not with screen position. */
+    story_world_source(&x,&y);
     if(y<14)return "EAST AVENUE";
     if(y<20&&x>=24)return "CIVIC ROW";
     if(x<15)return "SOUTH PARK";
@@ -2761,21 +2772,20 @@ static void interact(Story *s) {
            not a dead control. Geography decides the short observation. */
         if(story_rural(s->x,s->y)){
             talk(s,s->x>=52u&&s->y<19u?D_LAND_RIDGE:s->y>=16u?D_LAND_SHORE:D_LAND_TRAIL);
-        }else if(story_city_extension(s->x,s->y)){
-            if(s->y<14u)talk(s,D_CITY_EAST);
-            else if(s->y<20u&&s->x>=24u)talk(s,D_CITY_CIVIC);
-            else if(s->x<15u)talk(s,D_CITY_PARK);
-            else if(s->x<25u)talk(s,D_CITY_CANAL);
-            else talk(s,D_CITY_PLAZA);
-        }else if(s->x>=17u && s->y>=9u && s->y<=13u)
-            talk(s,D_LOOK_POTHEADS);
-        else if(s->x>=15u && s->y>=13u)
-            talk(s,D_LOOK_CANAL);
-        else if(s->x<=7u && s->y>=8u)
-            talk(s,D_LOOK_MARKET);
-        else if(s->y<=7u)
-            talk(s,D_LOOK_NORTH);
-        else talk(s,D_LOOK_STREET);
+        }else{
+            int x=s->x,y=s->y;story_world_source(&x,&y);
+            if(story_city_extension(x,y)){
+                if(y<14)talk(s,D_CITY_EAST);
+                else if(y<20&&x>=24)talk(s,D_CITY_CIVIC);
+                else if(x<15)talk(s,D_CITY_PARK);
+                else if(x<25)talk(s,D_CITY_CANAL);
+                else talk(s,D_CITY_PLAZA);
+            }else if(x>=17&&y>=9&&y<=13)talk(s,D_LOOK_POTHEADS);
+            else if(x>=15&&y>=13)talk(s,D_LOOK_CANAL);
+            else if(x<=7&&y>=8)talk(s,D_LOOK_MARKET);
+            else if(y<=7)talk(s,D_LOOK_NORTH);
+            else talk(s,D_LOOK_STREET);
+        }
         break;
     }
 }

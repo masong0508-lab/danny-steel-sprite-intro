@@ -13,6 +13,26 @@ static uint16_t queue[STORY_W*STORY_H];
 static struct {uint8_t pre[32],p[HD_BYTES],post[32];} frame;
 static uint8_t prior[HD_BYTES];
 static unsigned canonical_count[256];
+/* Immutable layout hashes captured from the original 96 seed recipes.
+   A later generator must never silently relocate an existing save. */
+static const uint32_t legacy_hash[STORY_WORLD_BASE_LAYOUTS]={
+ 0x0a399113u,0xaf659447u,0xf8140befu,0xd2ebc3c7u,0x3ccdc95fu,0x23194643u,
+ 0x73a1cfabu,0x469f75c3u,0x7b00627fu,0x7f9ef4dbu,0x8266f667u,0xa353414bu,
+ 0xa5a25ebfu,0xdfd52b7bu,0x422ef8c7u,0x5745346bu,0xd5a7d8c3u,0x2bcce0a7u,
+ 0x72bba0bbu,0x0972a757u,0xa25863dfu,0x99b65933u,0x5a997477u,0x9df89563u,
+ 0xd25779efu,0x4c0202cfu,0xd289806bu,0xbdeb9ed3u,0x4de53dabu,0xfe93420bu,
+ 0x005d6837u,0xc495641fu,0xd4323f2bu,0x3d253193u,0xf727c53bu,0x8a72a863u,
+ 0xab7d4f8bu,0x367dd613u,0x4c2ec05bu,0xc03329e3u,0xe459af1fu,0xd5daba5fu,
+ 0x91d5951fu,0x98944ae7u,0xadcdb833u,0x4f636e73u,0x5b499e33u,0xd82b3d3bu,
+ 0xa52e35dbu,0x56686967u,0xa6c9ccc7u,0xc1dbefe7u,0x05646c7bu,0x16306bc7u,
+ 0x69f3eaa7u,0x81a3f247u,0x12958333u,0x3bc71aefu,0xcbaf4e7fu,0xdf85e853u,
+ 0xfdfa7bb3u,0xf33dcc4fu,0x9b79245fu,0x3a5c8bd3u,0xfddc74ffu,0x7c8c249bu,
+ 0xbda8474fu,0x4974fcf7u,0x75da416fu,0xdceb3fcbu,0xb35f3cffu,0xe1ab5fc7u,
+ 0x64aa3903u,0xcac87667u,0xf28390d3u,0xbc1a6303u,0xdaad951fu,0xf075aef3u,
+ 0xb7a5506fu,0x321dbf1fu,0x41a856bbu,0xb516dd6fu,0xbbc6cbbbu,0x47b6c4bfu,
+ 0x62120c7fu,0x4f8689c3u,0xdc30817fu,0x0e332ad3u,0x25939bcbu,0xf327bbd7u,
+ 0x7b1d6d0fu,0x486d3597u,0xed26fdbbu,0x7da0fca7u,0x8cac04bfu,0x0363b867u,
+};
 extern int hd_first_person_anchor_map_valid(void);
 static void tap(Story *s,unsigned key){
  story_tick(s,0);story_tick(s,(uint16_t)key);story_tick(s,0);
@@ -88,7 +108,13 @@ int main(void){
   }
   assert(!memcmp(tally,canonical_count,sizeof tally));
   hashes[seed]=layout_hash(seed);
+  if(seed<STORY_WORLD_BASE_LAYOUTS)assert(hashes[seed]==legacy_hash[seed]);
   for(unsigned i=0;i<seed;i++)assert(hashes[i]!=hashes[seed]);
+  int px=9,py=25;story_world_place(&px,&py);
+  assert(px==(seed>=STORY_WORLD_BASE_LAYOUTS?34:9)&&py==25);
+  assert(!strcmp(story_district_name(px,py),"SOUTH PARK"));
+  assert(!story_solid(px,py)&&reached[py][px]);
+  assert(story_tile(px,py)==story_world_tile_for_seed(0u,9,25));
   /* Verify the main path with actual movement and interactions on
      each generated arrangement, including the promise and bus gate. */
   goal_walk(&s,5,5,"LETTER");s.facing=(uint8_t)story_world_facing(2u);
@@ -123,6 +149,7 @@ int main(void){
   stand(&s,20,11,0);
   draw(&s,0);draw(&s,1);
   memcpy(prior,frame.p,HD_BYTES);draw(&s,1);assert(!memcmp(prior,frame.p,HD_BYTES));
+  stand(&s,9,25,0);draw(&s,0);draw(&s,1);
  }
  assert(next==0u);
  /* Release lock: ordinary input can't modify either legacy plots or

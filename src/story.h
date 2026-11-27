@@ -4,8 +4,10 @@
 #define STORY_CORE_W 24
 #define STORY_CORE_H 18
 #define STORY_CITY_W 40
-/* Four core orientations times 24 parcel arrangements, seed 0 is legacy. */
-#define STORY_WORLD_LAYOUTS 96u
+/* All original 96 layouts retain their IDs. A second bit of parcel
+   variation exchanges a whole park and built neighborhood. */
+#define STORY_WORLD_BASE_LAYOUTS 96u
+#define STORY_WORLD_LAYOUTS 192u
 #define STORY_W 64
 #define STORY_H 30
 #define STORY_LAND_PATCH0 1u
