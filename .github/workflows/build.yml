@@ -85,6 +85,12 @@ jobs:
             src/hd_actor.c src/hd_special.c src/hd_overlay.c \
             tests/hd_nextgen_test.c -o /tmp/danny_hd_nextgen
           /tmp/danny_hd_nextgen
+      - name: Verify shared district textures and continuous camera geometry
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
+            src/story.c src/studio.c src/hd_canvas.c src/hd_facade_art.c \
+            tests/scene_geometry_test.c -o /tmp/danny_scene_geometry
+          /tmp/danny_scene_geometry
       - name: Verify optimized first-person pixels and exact floor occlusion
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \

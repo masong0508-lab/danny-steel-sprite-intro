@@ -32,6 +32,8 @@ static void verify_original_road_material_rom(void){
 }
 void hd_debug_wall_store_span(uint8_t *canvas,int x,int y,int width,uint8_t ink);
 void hd_debug_invalidate_wall_cache(void);
+void hd_debug_legacy_scenery(int enabled);
+void hd_debug_reference_restore(int enabled);
 
 /* Captured from the original shipped PR14 painter before changing its
    ray reuse, floor ordering or instruction placement. Each value covers
@@ -121,9 +123,36 @@ static void verify_camera_shade_cache(void){
  assert(cases==120u);
  printf("camera wall-shade cache: %u cold/warm native full-frame matches\\n",cases);
 }
+static void verify_coherent_restore(void){
+ static uint8_t reference[HD_BYTES];
+ Story s;story_new(&s,0);s.dialogue=0;s.cinema=CINE_NONE;s.flags=STORY_FULL;
+ unsigned cases=0;
+ /* Every scene and direction, including the walk phases, must match
+    the independently repainted one-column occlusion path. */
+ for(unsigned facing=0;facing<4u;facing++)
+  for(int y=1;y<STORY_H-1;y++)for(int x=1;x<STORY_W-1;x++){
+   if(story_solid(x,y))continue;
+   s.x=(uint8_t)x;s.y=(uint8_t)y;s.facing=(uint8_t)facing;s.view=1;
+   s.prev_x=s.x;s.prev_y=s.y;s.anim=0;
+   hd_debug_reference_restore(1);hd_debug_invalidate_wall_cache();
+   memset(&canvas,0xA6,sizeof canvas);hd_first_person_draw(canvas.pixels,&s,71u);
+   memcpy(reference,canvas.pixels,HD_BYTES);
+   hd_debug_reference_restore(0);
+   memset(&canvas,0xA6,sizeof canvas);hd_first_person_draw(canvas.pixels,&s,71u);
+   assert(!memcmp(reference,canvas.pixels,HD_BYTES));
+   for(unsigned i=0;i<HD_BYTES;i++)assert(canvas.pixels[i]<64u);
+   for(unsigned i=0;i<32u;i++)assert(canvas.before[i]==0xA6u&&canvas.after[i]==0xA6u);
+   cases++;
+  }
+ assert(cases==1152u);
+ printf("coherent scenery: %u exact cached-versus-column restored frames\n",cases);
+}
 int main(void){
  verify_original_road_material_rom();
  verify_halfword_wall_spans();
+ verify_camera_shade_cache();
+ verify_coherent_restore();
+ hd_debug_legacy_scenery(1);
  verify_camera_shade_cache();
  assert(hd_first_person_anchor_map_valid());
  Story s;story_new(&s,0);
@@ -153,6 +182,7 @@ int main(void){
    assert(hash==original_hash[facing][mode]);
   }
  assert(cases==3456u);
+ hd_debug_legacy_scenery(0);
 
  /* Independently check the depth inequality at every possible sampled
     wall distance and floor row, including original height clamp edges. */

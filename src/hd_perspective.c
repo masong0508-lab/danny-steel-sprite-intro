@@ -1,6 +1,7 @@
 #include "hd_canvas.h"
 #include "hd_world_atlas.h"
 #include "hd_facade_art.h"
+#include "hd_scene_geometry.h"
 #include "hd_road_material_rom.inc"
 #if defined(GBA_PROFILE_RENDER) && defined(__arm__)
 #include "gba.h"
@@ -48,7 +49,15 @@ static uint8_t wall_shade_cache[WALL_RAYS][WALL_SHADE_ROWS]
  __attribute__((section(".ewram"),aligned(4)));
 static int wall_cache_valid,wall_cam_x,wall_cam_y,wall_cam_fx,wall_cam_fy;
 #if !defined(__arm__)
+static int legacy_scenery,reference_restore;
 void hd_debug_invalidate_wall_cache(void){wall_cache_valid=0;}
+/* Shipped art remains a host-only baseline; do not weaken the existing
+   3,456 golden-frame regression to bless unrelated rendering changes. */
+void hd_debug_legacy_scenery(int enabled){legacy_scenery=!!enabled;wall_cache_valid=0;}
+void hd_debug_reference_restore(int enabled){reference_restore=!!enabled;}
+#else
+#define legacy_scenery 0
+#define reference_restore 0
 #endif
 /* Ends of the exact original ((x-120)*3)/16 ray-direction runs. */
 static const uint8_t ray_end[45]={
@@ -273,7 +282,7 @@ void hd_debug_wall_store_span(uint8_t *canvas,int x,int y,int width,uint8_t ink)
 }
 #endif
 static HD_CANVAS_CODE void wall_column(uint8_t *p,int x,int width,int top,int bottom,char type,
-                        int u,int forward,int tx,int ty,uint8_t *save_ink){
+                        int u,int forward,int tx,int ty,unsigned face,uint8_t *save_ink){
 #if defined(GBA_PROFILE_RENDER) && defined(__arm__)
  uint32_t wallshade_start=gba_profile_clock();
 #endif
@@ -281,6 +290,18 @@ static HD_CANVAS_CODE void wall_column(uint8_t *p,int x,int width,int top,int bo
  int tree=type=='T';
  unsigned base=tree?HD_LEAF_DARK:type=='A'?HD_BRICK:HD_BRICK_DARK;
  if(forward>1200)base=tree?HD_LEAF_DARK:HD_STONE_DARK;
+ const uint8_t *surface=(!tree&&!legacy_scenery)?hd_facade_at(tx,ty,type,face):0;
+ unsigned column=(unsigned)u>>4;
+ /* The authored side lighting stays visible in the distance, without
+    turning the far windows and roof trim into bright noise. */
+ static const uint8_t distant[32]={
+  HD_ROAD,HD_ROAD,HD_ROAD_COOL,HD_WET,HD_MORTAR,HD_STONE,
+  HD_STONE,HD_STONE_DARK,HD_BRICK_DARK,HD_BRICK_DARK,HD_BRICK,
+  HD_STONE,HD_PLASTER,HD_SHADOW,HD_GOLD,HD_GLASS,HD_GLASS,
+  HD_ROAD_COOL,HD_BARK,HD_LEAF_DARK,HD_LEAF_DARK,HD_LEAF,
+  HD_BARK,HD_PLASTER,HD_INK,HD_STONE_LIT,HD_RED_SHADE,HD_RED_SHADE,
+  HD_SKIN,HD_SKIN,HD_HAIR,HD_COPPER
+ };
  /* The older painter performed a software integer division for EVERY
     wall pixel. ARM7TDMI has no hardware divider. Quotient/remainder
     DDA produces precisely floor((y-top)*256/height) per scanline, but
@@ -299,7 +320,14 @@ static HD_CANVAS_CODE void wall_column(uint8_t *p,int x,int width,int top,int bo
    else if((texel((unsigned)(u>>3),(unsigned)(v>>3))&3u)==0u)
     c=HD_LEAF_LIT;
    else c=HD_LEAF;
-  }else{
+  }else if(surface){
+   /* Native 16x40 atlas. The same exact facing and district appears in
+      overhead and street views. No newly decoded texture or framebuffer. */
+   c=surface[((unsigned)v*40u>>8)*16u+column];
+   if(forward>1200)c=distant[c-32u];
+  }
+#if !defined(__arm__)
+  else{
    /* Facade windows fixed to wall texture coordinates, not screen x.
       Floor breaks, mortar and stone relief persist as camera moves. */
    int window=u>=53&&u<=202&&v>=57&&v<=163;
@@ -325,7 +353,8 @@ static HD_CANVAS_CODE void wall_column(uint8_t *p,int x,int width,int top,int bo
                          (unsigned)(v>>4)+(unsigned)(ty+40))&7u)==0u)
     c=HD_BRICK_LIT;
   }
-  if(v>225&&(u&15)==1)c=HD_STONE;
+#endif
+  if(!surface&&v>225&&(u&15)==1)c=HD_STONE;
   /* Same Potheads shop, same town coordinate in both cameras. This is
      environmental branding, not the future handheld/dancing sign. */
   if(!tree && tx==21 && ty==11){
@@ -402,7 +431,10 @@ static HD_CANVAS_CODE __attribute__((noinline)) void cast_walls(uint8_t *p,int c
   if(height>150)height=150;
   if(height<3)height=3;
   int top=79-height/2,bottom=79+height/2;
-  int u=abs_i(dx)>abs_i(dy)?wy&255:wx&255;
+  unsigned face=abs_i(dx)>abs_i(dy)?1u:0u;
+  int u=face?wy&255:wx&255;
+  /* U increases to screen right, including opposite compass headings. */
+  if(!legacy_scenery&&(fx<0||fy>0))u=255-u;
   for(int col=x;col<end;col++){
    wall_u[col]=(uint8_t)u;
    wall_tx[col]=(uint8_t)tx;
@@ -411,7 +443,7 @@ static HD_CANVAS_CODE __attribute__((noinline)) void cast_walls(uint8_t *p,int c
   if(warm&&slot<WALL_RAYS)
    wall_cached_column(p,x,end-x,top,bottom,hit,wall_shade_cache[slot]);
   else
-   wall_column(p,x,end-x,top,bottom,hit,u,hit_dist,tx,ty,
+   wall_column(p,x,end-x,top,bottom,hit,u,hit_dist,tx,ty,face,
                slot<WALL_RAYS?wall_shade_cache[slot]:0);
   x=end;slot++;
  }
@@ -515,14 +547,28 @@ static SceneBillboard visible[MAX_VISIBLE_BILLBOARDS];
 static void restore_occluding_wall(uint8_t *p,int sx,int h,int depth){
  int radius=h*4/11+4;
  if(radius<8)radius=8;
- for(int x=sx-radius;x<=sx+radius;x++){
-  if((unsigned)x>=HD_W || !wall_type[x] || wall_depth[x]>=depth)
-   continue;
-  int wh=20800/((int)wall_depth[x]+60);
-  if(wh>150)wh=150;
-  if(wh<3)wh=3;
-  wall_column(p,x,1,79-wh/2,79+wh/2,(char)wall_type[x],wall_u[x],
-              wall_depth[x],wall_tx[x],wall_ty[x],0);
+ int left=sx-radius,right=sx+radius+1;
+ if(left<0)left=0;
+ if(right>HD_W)right=HD_W;
+ /* Restore the SAME shaded wall already drawn for this camera, clipped
+    to the billboard's extent. Each ray's equal columns are one span;
+    never redo texture math just because a person crossed a facade. */
+ for(int x=left;x<right;){
+  unsigned slot=(unsigned)(((x-120)*3)/16+22);
+  int end=wall_cache_valid&&!reference_restore&&slot<WALL_RAYS?ray_end[slot]:x+1;
+  if(end>right)end=right;
+  if(wall_type[x]&&wall_depth[x]<depth){
+   int wh=20800/((int)wall_depth[x]+60);
+   if(wh>150)wh=150;
+   if(wh<3)wh=3;
+   int top=79-wh/2,bottom=79+wh/2;
+   if(wall_cache_valid&&!reference_restore&&slot<WALL_RAYS)
+    wall_cached_column(p,x,end-x,top,bottom,(char)wall_type[x],wall_shade_cache[slot]);
+   else
+    wall_column(p,x,1,top,bottom,(char)wall_type[x],wall_u[x],
+                wall_depth[x],wall_tx[x],wall_ty[x],wall_cam_fx!=0,0);
+  }
+  x=end;
  }
 }
 static void render_billboards(uint8_t *p,int cx,int cy,
@@ -574,11 +620,8 @@ void hd_first_person_draw(uint8_t *p,const Story *s,unsigned tick){
 #endif
  int fx,fy,rx,ry;
  dirs(s,&fx,&fy,&rx,&ry);
- int camx=(int)s->x*256+128,camy=(int)s->y*256+128;
- if(s->anim){
-  camx+=(s->prev_x-(int)s->x)*s->anim*64;
-  camy+=(s->prev_y-(int)s->y)*s->anim*64;
- }
+ HdSceneCamera camera=hd_scene_camera(s);
+ int camx=camera.x,camy=camera.y;
  set_sky(p,tick,s->facing,camx,camy);
 #if defined(GBA_PROFILE_RENDER) && defined(__arm__)
  profile_now=gba_profile_clock();
