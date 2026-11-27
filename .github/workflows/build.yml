@@ -93,6 +93,8 @@ jobs:
           /tmp/danny_scene_geometry
       - name: Verify optimized first-person pixels and exact floor occlusion
         run: |
+          python3 tools/build_road_columns.py /tmp/danny_road_columns.inc
+          cmp src/hd_road_columns.inc /tmp/danny_road_columns.inc
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
             src/story.c src/studio.c src/hd_canvas.c src/hd_world_atlas.c \
             src/hd_facade_art.c src/hd_perspective.c \

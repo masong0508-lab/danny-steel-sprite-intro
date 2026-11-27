@@ -7,6 +7,7 @@
 int hd_first_person_anchor_map_valid(void);
 unsigned hd_debug_road_rom_category(int tx,int ty,unsigned cx,unsigned cy);
 unsigned hd_debug_packed_road_row_category(int tx,int ty,unsigned cx,unsigned cy);
+unsigned hd_debug_packed_road_column_category(int tx,int ty,unsigned cx,unsigned cy);
 static unsigned original_road_texel(unsigned x,unsigned y){
  uint32_t n=(x+31u)*1664525u+(y+79u)*1013904223u;
  n^=n>>13;n*=2246822519u;return (unsigned)(n^(n>>11));
@@ -18,22 +19,24 @@ static void verify_original_road_material_rom(void){
   for(unsigned cy=0;cy<16u;cy++)for(unsigned cx=0;cx<16u;cx++){
    unsigned got=hd_debug_road_rom_category(tx,ty,cx,cy);
    unsigned word=hd_debug_packed_road_row_category(tx,ty,cx,cy);
-   if(!road){assert(got==255u&&word==255u);nonroad++;continue;}
+   unsigned column=hd_debug_packed_road_column_category(tx,ty,cx,cy);
+   if(!road){assert(got==255u&&word==255u&&column==255u);nonroad++;continue;}
    unsigned n=original_road_texel((unsigned)tx*16u+cx,
                                   (unsigned)ty*16u+cy);
    unsigned want=(n&31u)==0u?0u:(n&7u)==1u?1u:2u;
-   assert(got==want&&word==want);checks++;
+   assert(got==want&&word==want&&column==want);checks++;
   }
  }
  assert(checks==240u*256u&&nonroad==192u*256u);
  assert(hd_debug_road_rom_category(-1,0,0,0)==255u);
  assert(hd_debug_road_rom_category(24,0,0,0)==255u);
- puts("packed road ROM: 61440 exact original shade categories, every map tile guarded");
+ puts("packed road ROM: 61440 exact row AND column shade categories, every map tile guarded");
 }
 void hd_debug_wall_store_span(uint8_t *canvas,int x,int y,int width,uint8_t ink);
 void hd_debug_invalidate_wall_cache(void);
 void hd_debug_legacy_scenery(int enabled);
 void hd_debug_reference_restore(int enabled);
+void hd_debug_reference_floor(int enabled);
 
 /* Captured from the original shipped PR14 painter before changing its
    ray reuse, floor ordering or instruction placement. Each value covers
@@ -134,10 +137,10 @@ static void verify_coherent_restore(void){
    if(story_solid(x,y))continue;
    s.x=(uint8_t)x;s.y=(uint8_t)y;s.facing=(uint8_t)facing;s.view=1;
    s.prev_x=s.x;s.prev_y=s.y;s.anim=0;
-   hd_debug_reference_restore(1);hd_debug_invalidate_wall_cache();
+   hd_debug_reference_restore(1);hd_debug_reference_floor(1);hd_debug_invalidate_wall_cache();
    memset(&canvas,0xA6,sizeof canvas);hd_first_person_draw(canvas.pixels,&s,71u);
    memcpy(reference,canvas.pixels,HD_BYTES);
-   hd_debug_reference_restore(0);
+   hd_debug_reference_restore(0);hd_debug_reference_floor(0);
    memset(&canvas,0xA6,sizeof canvas);hd_first_person_draw(canvas.pixels,&s,71u);
    assert(!memcmp(reference,canvas.pixels,HD_BYTES));
    for(unsigned i=0;i<HD_BYTES;i++)assert(canvas.pixels[i]<64u);
@@ -145,7 +148,7 @@ static void verify_coherent_restore(void){
    cases++;
   }
  assert(cases==1152u);
- printf("coherent scenery: %u exact cached-versus-column restored frames\n",cases);
+ printf("coherent scenery: %u exact new floor/cache versus reference restored frames\n",cases);
 }
 int main(void){
  verify_original_road_material_rom();

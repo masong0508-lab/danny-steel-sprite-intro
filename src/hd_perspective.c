@@ -4,6 +4,7 @@
 #include "hd_scene_geometry.h"
 #include "hd_project_props.h"
 #include "hd_road_material_rom.inc"
+#include "hd_road_columns.inc"
 #if defined(GBA_PROFILE_RENDER) && defined(__arm__)
 #include "gba.h"
 /* Debug-build-only counters. Normal release builds allocate NONE of these.
@@ -51,12 +52,13 @@ static uint8_t wall_shade_cache[WALL_RAYS][WALL_SHADE_ROWS]
  __attribute__((section(".ewram"),aligned(4)));
 static int wall_cache_valid,wall_cam_x,wall_cam_y,wall_cam_fx,wall_cam_fy;
 #if !defined(__arm__)
-static int legacy_scenery,reference_restore;
+static int legacy_scenery,reference_restore,reference_floor;
 void hd_debug_invalidate_wall_cache(void){wall_cache_valid=0;}
 /* Shipped art remains a host-only baseline; do not weaken the existing
    3,456 golden-frame regression to bless unrelated rendering changes. */
 void hd_debug_legacy_scenery(int enabled){legacy_scenery=!!enabled;wall_cache_valid=0;}
 void hd_debug_reference_restore(int enabled){reference_restore=!!enabled;}
+void hd_debug_reference_floor(int enabled){reference_floor=!!enabled;}
 #else
 #define legacy_scenery 0
 #define reference_restore 0
@@ -163,6 +165,12 @@ static HD_CANVAS_CODE inline unsigned road_shade_color(
  return hd_floor_dither17[x+y]?HD_ROAD_COOL:HD_ROAD;
 }
 #if !defined(__arm__)
+unsigned hd_debug_packed_road_column_category(int tx,int ty,unsigned cx,unsigned cy){
+ if((unsigned)tx>=24u||(unsigned)ty>=18u||cx>=16u||cy>=16u)return 255u;
+ unsigned id=hd_road_tile_index[(unsigned)ty*24u+(unsigned)tx];
+ if(id==255u)return 255u;
+ return (hd_road_columns[id*16u+cx]>>(cy*2u))&3u;
+}
 unsigned hd_debug_packed_road_row_category(int tx,int ty,unsigned cx,unsigned cy){
  if((unsigned)tx>=24u||(unsigned)ty>=18u||cx>=16u||cy>=16u)return 255u;
  unsigned id=hd_road_tile_index[(unsigned)ty*24u+(unsigned)tx];
@@ -205,7 +213,8 @@ static HD_CANVAS_CODE inline unsigned floor_ink(char t,int wx,int wy,int x,int y
 }
 /* Keep the measured pixel loops in ARM/IWRAM. noinline prevents the
    Thumb entry point from absorbing them back into cartridge code. */
-static HD_CANVAS_CODE __attribute__((noinline)) void floor_render(uint8_t *p,const Story *s,int cx,int cy,
+#if !defined(__arm__)
+static void floor_render_reference(uint8_t *p,const Story *s,int cx,int cy,
                          int fx,int fy,int rx,int ry,unsigned tick){
  (void)s;
  /* One projection calculation per scanline, and half-rate horizontal
@@ -255,6 +264,138 @@ static HD_CANVAS_CODE __attribute__((noinline)) void floor_render(uint8_t *p,con
         even sample x, then paint only this run's visible member(s). */
      if(x>=begin)p[y*HD_W+x]=(uint8_t)ink;
      if(step==2&&x+1<end)p[y*HD_W+x+1]=(uint8_t)ink;
+    }
+   }
+   begin=end;
+  }
+ }
+}
+#endif
+/* Fixed 60-row geometry removes three software divisions per row.
+   The table is exactly the previous projection and wall-bottom rule. */
+typedef struct {uint16_t distance,side;int16_t wall_limit;} FloorProjection;
+static const FloorProjection floor_projection[60]={
+ {2304,3686,5140},
+ {2250,3600,3406},
+ {1928,3084,2540},
+ {1687,2699,2020},
+ {1500,2400,1673},
+ {1350,2160,1425},
+ {1227,1963,1240},
+ {1125,1800,1095},
+ {1038,1660,980},
+ {964,1542,885},
+ {900,1440,806},
+ {843,1348,740},
+ {794,1270,682},
+ {750,1200,633},
+ {710,1136,590},
+ {675,1080,551},
+ {642,1027,517},
+ {613,980,487},
+ {586,937,460},
+ {562,899,435},
+ {540,864,412},
+ {519,830,392},
+ {500,800,373},
+ {482,771,356},
+ {465,744,340},
+ {450,720,325},
+ {435,696,311},
+ {421,673,298},
+ {409,654,286},
+ {397,635,275},
+ {385,616,265},
+ {375,600,255},
+ {364,582,245},
+ {355,568,237},
+ {346,553,228},
+ {337,539,221},
+ {329,526,213},
+ {321,513,206},
+ {313,500,200},
+ {306,489,193},
+ {300,480,187},
+ {293,468,181},
+ {287,459,176},
+ {281,449,171},
+ {275,440,166},
+ {270,432,161},
+ {264,422,156},
+ {259,414,152},
+ {254,406,148},
+ {250,400,143},
+ {245,392,140},
+ {241,385,136},
+ {236,377,132},
+ {232,371,129},
+ {228,364,125},
+ {225,360,122},
+ {221,353,119},
+ {217,347,116},
+ {214,342,113},
+ {210,336,110},
+};
+/* Paint the same even sample on both far pixels, without crossing
+   an occluded ray edge. Near samples retain every native column. */
+static inline __attribute__((always_inline)) void floor_store(uint8_t *row,int x,
+                                                 int begin,int end,int step,unsigned ink){
+ if(x>=begin)row[x]=(uint8_t)ink;
+ if(step==2&&x+1<end)row[x+1]=(uint8_t)ink;
+}
+static HD_CANVAS_CODE __attribute__((noinline)) void floor_render(uint8_t *p,const Story *s,int cx,int cy,
+                         int fx,int fy,int rx,int ry,unsigned tick){
+#if !defined(__arm__)
+ if(reference_floor){floor_render_reference(p,s,cx,cy,fx,fy,rx,ry,tick);return;}
+#endif
+ (void)s;
+ /* A cardinal camera has exactly ONE varying world coordinate per
+    scanline. Keep it in Q8, advancing by addition. Negative directions
+    add 255 before negation to preserve the original arithmetic shift. */
+ int along_x=rx!=0,sign=along_x?rx:ry;
+ for(int y=80;y<140;y++){
+  const FloorProjection *pr=&floor_projection[y-80];
+  int dist=pr->distance,unit=pr->side,limit=pr->wall_limit;
+  int fixed=along_x?cy+fy*dist:cx+fx*dist;
+  int origin=along_x?cx+fx*dist:cy+fy*dist;
+  int ft=fixed>>8;
+  unsigned sub=((unsigned)fixed>>4)&15u;
+  int step=y<98?2:1,dq=sign*unit*step;
+  uint8_t *row=p+y*HD_W;
+  int begin=0;
+  unsigned ray=0;
+  while(ray<WALL_RAYS){
+   int end=ray_end[ray++];
+   if(wall_type[begin]&&wall_depth[begin]<=limit){begin=end;continue;}
+   /* Adjacent uncovered rays are a continuous floor span, not a new
+      texture setup and duplicate odd half-sample for every ray. */
+   while(ray<WALL_RAYS&&(!wall_type[end]||wall_depth[end]>limit))
+    end=ray_end[ray++];
+   int x=begin&~(step-1);
+   int q=origin*256+sign*(x-120)*unit+(sign<0?255:0);
+   while(x<end){
+    int tv=q>>16,tx=along_x?tv:ft,ty=along_x?ft:tv;
+    char tile=story_tile(tx,ty);
+    if(tile=='.'){
+     unsigned id=hd_road_tile_index[(unsigned)ty*24u+(unsigned)tx];
+     /* Transposed columns make vertical scans just as cheap as horizontal
+        scans. Load one packed word for this entire run inside a tile. */
+     unsigned word=along_x?read_packed_road_row(id,sub):hd_road_columns[id*16u+sub];
+     do{
+      int v=q>>8;
+      unsigned category=(word>>((((unsigned)v>>4)&15u)*2u))&3u;
+      unsigned ink=road_shade_color(v,fixed,x,y,category);
+      floor_store(row,x,begin,end,step,ink);
+      x+=step;q+=dq;
+     }while(x<end&&(q>>16)==tv);
+    }else{
+     do{
+      int v=q>>8;
+      int wx=along_x?v:fixed,wy=along_x?fixed:v;
+      unsigned ink=floor_ink(tile,wx,wy,x,y,tick);
+      floor_store(row,x,begin,end,step,ink);
+      x+=step;q+=dq;
+     }while(x<end&&(q>>16)==tv);
     }
    }
    begin=end;
@@ -401,13 +542,27 @@ static HD_CANVAS_CODE void wall_cached_column(uint8_t *p,int x,int width,
 static HD_CANVAS_CODE __attribute__((noinline)) void cast_walls(uint8_t *p,int cx,int cy,int fx,int fy,int rx,int ry){
  int warm=wall_cache_valid&&wall_cam_x==cx&&wall_cam_y==cy&&
           wall_cam_fx==fx&&wall_cam_fy==fy;
+ if(warm){
+  /* Cache contains BOTH geometry and shade data for this exact pose.
+     Do not traverse the map or recompute UVs on a stationary frame. */
+  int x=0;
+  for(unsigned slot=0;slot<WALL_RAYS;slot++){
+   int end=ray_end[slot];
+   if(wall_type[x]){
+    int h=20800/((int)wall_depth[x]+60);
+    if(h>150)h=150;
+    if(h<3)h=3;
+    wall_cached_column(p,x,end-x,79-h/2,79+h/2,(char)wall_type[x],wall_shade_cache[slot]);
+   }
+   x=end;
+  }
+  return;
+ }
  unsigned slot=0;
  for(int x=0;x<HD_W;){
-  int side=((x-120)*3)/16; /* 0.75 FOV at each edge, fixed-point */
-  /* The original integer projection gives adjacent columns identical
-     directions. Reuse that exact result, without reducing sampling. */
-  int end=x+1;
-  while(end<HD_W && ((end-120)*3)/16==side)end++;
+  /* Exact, immutable original ray directions and column boundaries. */
+  int side=(int)slot-22;
+  int end=ray_end[slot];
   int dx=fx*32+rx*side,dy=fy*32+ry*side;
   int wx=cx,wy=cy,hit_dist=2400,tx=0,ty=0;
   int previous_tx=cx>>8,previous_ty=cy>>8;
@@ -448,11 +603,8 @@ static HD_CANVAS_CODE __attribute__((noinline)) void cast_walls(uint8_t *p,int c
    wall_tx[col]=(uint8_t)tx;
    wall_ty[col]=(uint8_t)ty;
   }
-  if(warm&&slot<WALL_RAYS)
-   wall_cached_column(p,x,end-x,top,bottom,hit,wall_shade_cache[slot]);
-  else
-   wall_column(p,x,end-x,top,bottom,hit,u,hit_dist,tx,ty,face,
-               slot<WALL_RAYS?wall_shade_cache[slot]:0);
+  wall_column(p,x,end-x,top,bottom,hit,u,hit_dist,tx,ty,face,
+              wall_shade_cache[slot]);
   x=end;slot++;
  }
  wall_cache_valid=slot==WALL_RAYS;
