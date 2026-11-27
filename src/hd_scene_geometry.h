@@ -8,6 +8,8 @@ typedef struct {
 } HdDistrict;
 static inline HdDistrict hd_district(int x,int y,char type){
  HdDistrict d;
+ /* Keep architectural identity attached to the moved lot. */
+ story_world_source(&x,&y);
  if(story_city_extension(x,y)){
   int east=x>=24&&y<14;
   int civic=type=='A'||(x>=24&&y>=14&&y<20);

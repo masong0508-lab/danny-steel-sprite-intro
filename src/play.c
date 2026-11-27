@@ -8,6 +8,7 @@
 #include "neighborhood_save.h"
 #include "terrain_save.h"
 #include "brush_save.h"
+#include "world_save.h"
 #include "studio.h"
 #include "hd_canvas.h"
 #include "frame_runtime.h"
@@ -71,23 +72,48 @@ static unsigned scene_music_cue(void){
 }
 
 
-static int read_slot(int slot,u8 *buf){
+static unsigned read_world_seed(unsigned slot){
+    uint8_t raw[WORLD_EXT_LEN];unsigned seed=0;
+    for(unsigned copy=0;copy<WORLD_EXT_COPIES;copy++){
+        unsigned off=WORLD_EXT_OFFSET+slot*WORLD_EXT_STRIDE+copy*WORLD_EXT_LEN;
+        for(unsigned i=0;i<WORLD_EXT_LEN;i++)raw[i]=save_ram[off+i];
+        if(world_save_decode(slot,raw,&seed))return seed;
+    }
+    return 0; /* old or damaged companion data; retain campaign data */
+}
+static unsigned new_world_seed(void){
+    uint8_t raw[WORLD_EXT_LEN];unsigned last,seed=0;
+    for(unsigned i=0;i<WORLD_EXT_LEN;i++)raw[i]=save_ram[WORLD_CURSOR_OFFSET+i];
+    if(world_save_decode(0x7fu,raw,&last))seed=world_seed_next(last);
+    else {
+        /* If a previous cursor is lost, avoid repeating a surviving slot. */
+        unsigned a=read_world_seed(0),b=read_world_seed(1);
+        if(a||b)seed=world_seed_next(a?a:b);
+    }
+    world_save_encode(0x7fu,seed,raw);
+    for(unsigned i=0;i<WORLD_EXT_LEN;i++)save_ram[WORLD_CURSOR_OFFSET+i]=raw[i];
+    return seed;
+}
+static int read_slot(int slot,u8 *buf,unsigned *world_seed){
     if((unsigned)slot>1u)return 0;
     u8 raw[SAVE_LEN];
     for(unsigned i=0;i<SAVE_LEN;i++)raw[i]=save_ram[slot*SAVE_STRIDE+i];
     if(!story_save_decode(raw,buf))return 0;
-    if(story_solid(buf[5],buf[6])){
-        /* Repair saves from a map before newer NPCs were introduced. */
-        char t=story_tile(buf[5],buf[6]);
-        if(t=='R') ++buf[6];
-        else if(t=='P'||t=='V'||t=='Q'||t=='S'||t=='W'||
-                t=='H'||t=='M'||t=='K') --buf[5];
-        else return 0;
-        if(story_solid(buf[5],buf[6]))return 0;
+    unsigned seed=read_world_seed((unsigned)slot);
+    if(world_seed)*world_seed=seed;
+    if(story_world_solid_for_seed(seed,buf[5],buf[6])){
+        /* A missing/corrupt layout record never discards story progress.
+           Resume's spawn fallback is used when the saved tile is invalid. */
+        if(!seed){
+            char t=story_world_tile_for_seed(seed,buf[5],buf[6]);
+            if(t=='R') ++buf[6];
+            else if(t=='P'||t=='V'||t=='Q'||t=='S'||t=='W'||
+                    t=='H'||t=='M'||t=='K') --buf[5];
+        }
     }
     return 1;
 }
-int play_slot_valid(int slot){u8 b[SAVE_LEN];return read_slot(slot,b);}
+int play_slot_valid(int slot){u8 b[SAVE_LEN];return read_slot(slot,b,0);}
 void play_erase_slot(int slot){
     if((unsigned)slot>1u)return;
     for(int i=0;i<SAVE_STRIDE;i++)save_ram[slot*SAVE_STRIDE+i]=0xFF;
@@ -100,8 +126,16 @@ void play_erase_slot(int slot){
     for(unsigned i=0;i<TERRAIN_EXT_LEN;i++)
         save_ram[TERRAIN_EXT_OFFSET+slot*TERRAIN_EXT_LEN+i]=0xFF;
     for(unsigned i=0;i<BRUSH_EXT_LEN;i++)save_ram[BRUSH_EXT_OFFSET+slot*BRUSH_EXT_LEN+i]=0xFF;
+    for(unsigned i=0;i<WORLD_EXT_STRIDE;i++)save_ram[WORLD_EXT_OFFSET+slot*WORLD_EXT_STRIDE+i]=0xFF;
+    /* The global layout cursor intentionally survives deleting a save. */
 }
 static void write_save(void){
+    uint8_t world_bytes[WORLD_EXT_LEN];
+    world_save_encode(game.slot,story_world_seed(),world_bytes);
+    for(unsigned copy=0;copy<WORLD_EXT_COPIES;copy++){
+        unsigned off=WORLD_EXT_OFFSET+game.slot*WORLD_EXT_STRIDE+copy*WORLD_EXT_LEN;
+        for(unsigned i=0;i<WORLD_EXT_LEN;i++)save_ram[off+i]=world_bytes[i];
+    }
     u8 b[SAVE_LEN];
     story_save_encode(&game,b);
     for(unsigned i=0;i<SAVE_LEN;i++)
@@ -192,8 +226,9 @@ void play_enter(int want_load,int slot){
     frame_runtime_stop();
     u8 b[SAVE_LEN];
     studio_reset();
-    if(want_load&&read_slot(slot,b)){
-        story_resume(&game,slot,b[5],b[6],b[7],b[8],b[9],b[10],b[11]);
+    unsigned seed=0;
+    if(want_load&&read_slot(slot,b,&seed)){
+        story_resume_seeded(&game,slot,b[5],b[6],b[7],b[8],b[9],b[10],b[11],seed);
         game.cult_stage=b[12]>CULT_RESOLVED?CULT_RESOLVED:b[12];
         game.cult_pre_wins=b[13]&7;
         game.cult_post_wins=b[14]&7;
@@ -259,7 +294,7 @@ void play_enter(int want_load,int slot){
         uint8_t brush_bytes[BRUSH_EXT_LEN];
         for(unsigned i=0;i<BRUSH_EXT_LEN;i++)brush_bytes[i]=save_ram[BRUSH_EXT_OFFSET+game.slot*BRUSH_EXT_LEN+i];
         (void)brush_save_decode(&game,brush_bytes);
-    } else {story_new(&game,slot);write_save();}
+    } else {story_new_seeded(&game,slot,new_world_seed());write_save();}
     story_draw_init();
     if(game.life_stage==STORY_LIFE_FINALE ||
        (game.ended && game.ending>=STORY_END_GOOD && game.ending<=STORY_END_BAD))

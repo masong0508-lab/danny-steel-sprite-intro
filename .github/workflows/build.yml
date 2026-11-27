@@ -101,7 +101,7 @@ jobs:
           /tmp/danny_ray_trace
           python3 tools/build_wall_shades.py /tmp/danny_wall_shades.inc
           cmp src/hd_wall_shades.inc /tmp/danny_wall_shades.inc
-          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/hd_canvas.c src/hd_facade_art.c tests/hd_wall_shades_test.c -o /tmp/danny_wall_shades
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c src/hd_canvas.c src/hd_facade_art.c tests/hd_wall_shades_test.c -o /tmp/danny_wall_shades
           /tmp/danny_wall_shades
           python3 tools/build_floor_runs.py /tmp/danny_floor_runs.inc
           cmp src/hd_floor_runs.inc /tmp/danny_floor_runs.inc
@@ -286,11 +286,18 @@ jobs:
         run: |
           node tools/build_landscape.js /tmp/danny_landscape_data.h
           cmp src/landscape_data.h /tmp/danny_landscape_data.h
-          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -DDANNY_TERRAIN_DEBUG -Isrc \
             src/story.c src/studio.c src/hd_canvas.c src/hd_world_atlas.c \
             src/hd_isometric.c src/hd_isometric_atlas.c src/hd_facade_art.c \
             src/hd_perspective.c tests/landscape_test.c -o /tmp/danny_landscape
           /tmp/danny_landscape
+      - name: Verify every seeded city, relocated quests, save migration and release terrain lock
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
+            src/story.c src/studio.c src/hd_canvas.c src/hd_world_atlas.c \
+            src/hd_isometric.c src/hd_isometric_atlas.c src/hd_facade_art.c \
+            src/hd_perspective.c tests/world_layout_test.c -o /tmp/danny_world_layout
+          /tmp/danny_world_layout
       - name: Play the seven-stage cafe exhibition through live movement and creative sessions
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c src/story_save.c src/hd_canvas.c src/hd_cinema.c src/hd_actor.c src/hd_special.c src/hd_overlay.c tests/cafe_show_campaign_test.c -o /tmp/danny_cafe_show

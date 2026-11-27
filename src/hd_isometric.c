@@ -103,7 +103,7 @@ static void building(uint8_t *p,int sx,int sy,int wx,int wy,
  int civic=d.civic,shops=d.shops,waterfront=d.waterfront;
  unsigned h=d.height,variant=d.variant;
  int front=exposed(wx,wy+1),side=exposed(wx+1,wy);
- int potheads=(wx==21&&wy==11);
+ int potheads=story_world_potheads(wx,wy);
  int sign_x=sx+31,sign_y=sy-(int)h-13;
  int sign_visible=!(potheads&&(wx+wy)*8>actor_depth &&
       sign_x<actor_x+12&&sign_x+53>actor_x-12&&
@@ -493,9 +493,10 @@ static void landscape_iso(uint8_t *p,const Story *s,unsigned tick){
       hd_pixel(p,mx,my-13,marker>=5u?HD_LEAF:HD_GOLD);
      }
     }else if(tall&&!story_solid(x,y)){
+     int px=x,py=y;story_world_source(&px,&py);
      for(unsigned j=0;j<sizeof city_furniture/sizeof city_furniture[0];j++){
       const CityFurniture *prop=&city_furniture[j];
-      if(prop->x!=x||prop->y!=y)continue;
+      if(prop->x!=px||prop->y!=py)continue;
       if(prop->kind=='j')lamp(p,sx,sy,tick);
       else{
        hd_ellipse(p,sx+16,sy+12,11,3,HD_SHADOW);
@@ -589,11 +590,13 @@ void hd_isometric_draw(uint8_t *p,const Story *s,unsigned tick){
     object(p,sx,sy,c,tick,wx,wy,s,
        !(depth*8>=player_depth && sx<actor_x+12 && sx+32>actor_x-12 &&
          sy+16>actor_foot-32 && sy-22<actor_foot+2));
-   if(wx==17&&wy==13)lamp(p,sx,sy,tick);
+   int lx=17,ly=13;story_world_place(&lx,&ly);
+   if(wx==lx&&wy==ly)lamp(p,sx,sy,tick);
    if(story_city_extension(wx,wy)&&sy<166&&!story_solid(wx,wy)){
+    int px=wx,py=wy;story_world_source(&px,&py);
     for(unsigned j=0;j<sizeof city_furniture/sizeof city_furniture[0];j++){
      const CityFurniture *prop=&city_furniture[j];
-     if(prop->x!=wx||prop->y!=wy)continue;
+     if(prop->x!=px||prop->y!=py)continue;
      if((wx+wy)*8>=player_depth&&sx<actor_x+12&&sx+32>actor_x-12&&
         sy+16>actor_foot-32&&sy-24<actor_foot+2)break;
      if(prop->kind=='j')lamp(p,sx,sy,tick);

@@ -5,7 +5,7 @@
 static inline const uint8_t *hd_wall_strip(char type,int tx,int ty,unsigned face,unsigned u,int far){
  unsigned index;
  if(type=='T')index=512u+u;
- else if(tx==21&&ty==11)index=768u+(face*2u+(unsigned)far)*256u+u;
+ else if(story_world_potheads(tx,ty))index=768u+(face*2u+(unsigned)far)*256u+u;
  else index=((face*8u+hd_district(tx,ty,type).variant)*2u+(unsigned)far)*16u+(u>>4);
  return hd_wall_shades[hd_wall_strip_index[index]];
 }
