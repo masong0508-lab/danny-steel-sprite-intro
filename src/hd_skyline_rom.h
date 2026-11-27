@@ -9,9 +9,10 @@ typedef uint32_t HdSkyWord __attribute__((may_alias));
 static HD_CANVAS_CODE __attribute__((noinline)) void hd_skyline_blit(uint8_t *p,int pan){
  unsigned offset=(unsigned)(pan+52);
  unsigned shift=(offset&3u)*8u;
- uint8_t *dst=p+HD_SKY_TOP*HD_W;
- const uint8_t *src=hd_sky_pixels+(offset&~3u);
- for(unsigned y=0;y<HD_SKY_ROWS;y++,dst+=HD_W,src+=HD_SKY_WIDTH){
+ const uint8_t *start=hd_sky_pixels+(offset&~3u);
+ for(unsigned y=0;y<HD_SKY_ROWS;y++){
+  uint8_t *dst=p+(HD_SKY_TOP+y)*HD_W;
+  const uint8_t *src=start+y*HD_SKY_WIDTH;
   if((uintptr_t)dst&3u){
    for(unsigned x=0;x<HD_W;x++)dst[x]=src[x+(offset&3u)];
    continue;
