@@ -70,8 +70,32 @@ static void verify_props(void){
   }
  printf("creative props: %u distinct stage rasters, grounded/clipped bounds\n",count);
 }
+static void verify_billboard_edges(void){
+ uint16_t depth[HD_W];uint8_t type[HD_W];
+ unsigned cases=0;
+ for(int x=0;x<HD_W;x++){depth[x]=200;type[x]=1;}
+ assert(!hd_billboard_visible(120,60,300,depth,type,HD_W));
+ depth[105]=350;
+ assert(hd_billboard_visible(120,60,300,depth,type,HD_W));
+ depth[105]=200;
+ type[0]=0;
+ assert(hd_billboard_visible(-3,60,300,depth,type,HD_W));
+ assert(!hd_billboard_visible(-100,60,300,depth,type,HD_W));
+ type[0]=1;
+ depth[239]=350;
+ assert(hd_billboard_visible(244,60,300,depth,type,HD_W));
+ for(int x=0;x<HD_W;x++){depth[x]=(uint16_t)(100+(x*67)%900);type[x]=(uint8_t)(x%11!=0);}
+ for(int centre=-48;centre<=288;centre++)for(int h=8;h<=115;h+=3)
+  for(int d=85;d<=2200;d+=37){
+   int want=0,radius=h*4/11+4;if(radius<8)radius=8;
+   for(int x=0;x<HD_W;x++)
+    if(x>=centre-radius&&x<=centre+radius&&(!type[x]||d<=depth[x])){want=1;break;}
+   assert(hd_billboard_visible(centre,h,d,depth,type,HD_W)==want);cases++;
+  }
+ printf("billboard occlusion: %u independent visible-interval checks including clipped screen edges\n",cases);
+}
 int main(void){
- verify_wall_samples();verify_props();
+ verify_wall_samples();verify_props();verify_billboard_edges();
  unsigned districts=0,steps=0,texels=0;
  for(int y=-1;y<=STORY_H;y++)for(int x=-1;x<=STORY_W;x++){
   char t=story_tile(x,y);

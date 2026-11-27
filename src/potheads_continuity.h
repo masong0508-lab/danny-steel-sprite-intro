@@ -96,8 +96,8 @@ static inline void pot_render_sample(unsigned tick,PotPose *out,int exact_matte)
  for(unsigned j=0;j<POT_JOINTS;j++){
   unsigned support=pot_motion_support(j);
   if(!pot_motion_compatible(a,b,j,support))continue;
-  unsigned before=lo&&pot_motion_compatible(prev,a,j,support)?a->tick-prev->tick:0u;
-  unsigned after=hi+1u<POT_TRACE_COUNT&&pot_motion_compatible(b,next,j,support)?next->tick-b->tick:0u;
+  unsigned before=lo&&pot_motion_compatible(prev,a,j,support)?(unsigned)a->tick-(unsigned)prev->tick:0u;
+  unsigned after=hi+1u<POT_TRACE_COUNT&&pot_motion_compatible(b,next,j,support)?(unsigned)next->tick-(unsigned)b->tick:0u;
   out->joint[j].x=pot_motion_curve(prev->joint[j][0],a->joint[j][0],b->joint[j][0],
                             next->joint[j][0],n,d,before,after);
   out->joint[j].y=pot_motion_curve(prev->joint[j][1],a->joint[j][1],b->joint[j][1],

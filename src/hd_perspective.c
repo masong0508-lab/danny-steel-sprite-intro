@@ -561,8 +561,7 @@ static SceneBillboard visible[MAX_VISIBLE_BILLBOARDS];
 /* Restore occluding wall columns AFTER a sprite is drawn.
    This preserves hidden-surface order without a 240x160 sprite buffer. */
 static void restore_occluding_wall(uint8_t *p,int sx,int h,int depth){
- int radius=h*4/11+4;
- if(radius<8)radius=8;
+ int radius=hd_billboard_radius(h);
  int left=sx-radius,right=sx+radius+1;
  if(left<0)left=0;
  if(right>HD_W)right=HD_W;
@@ -603,7 +602,9 @@ static void render_billboards(uint8_t *p,int cx,int cy,
   int height=24000/(forward+70);
   if(height>115)height=115;
   if(height<8)height=8;
-  if(sx<0||sx>=240||forward>wall_depth[sx])continue;
+  if(legacy_scenery){
+   if(sx<0||sx>=240||forward>wall_depth[sx])continue;
+  }else if(!hd_billboard_visible(sx,height,forward,wall_depth,wall_type,HD_W))continue;
   if(count>=MAX_VISIBLE_BILLBOARDS)continue;
   SceneBillboard item={(int16_t)sx,(int16_t)(80+height/2),
                        (int16_t)height,(int16_t)forward,(uint8_t)kind};

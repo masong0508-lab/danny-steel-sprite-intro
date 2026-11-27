@@ -58,3 +58,20 @@ static inline HdWallSample hd_wall_sample(int wx,int wy,int dx,int dy,
  if(face?dx<0:dy>0)along=255-along;
  return (HdWallSample){face,(unsigned)along};
 }
+
+/* A single radius contract for admission and restoring occluding wall
+   columns. Wide buses are the limiting existing billboard silhouette. */
+static inline int hd_billboard_radius(int height){
+ int r=height*4/11+4;return r<8?8:r;
+}
+static inline int hd_billboard_visible(int sx,int h,int depth,
+                                        const uint16_t *wall_depth,
+                                        const uint8_t *wall_type,int width){
+ int radius=hd_billboard_radius(h);
+ int left=sx-radius,right=sx+radius+1;
+ if(left<0)left=0;
+ if(right>width)right=width;
+ for(int x=left;x<right;x++)
+  if(!wall_type[x]||depth<=wall_depth[x])return 1;
+ return 0;
+}
