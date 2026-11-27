@@ -1,4 +1,4 @@
-Source commit: 071f9360d1e7024622e160f4df8a181790fa8eef
+Source commit: 6ea835644ce2c38c4831d3588d02513510d2b375
 mGBA 0.10.2; emulated video 59.727500570 Hz (280896 cycles/frame, 16777216 Hz CPU)
 Cadence counts presented Mode4 page changes, including identical content. It does not measure host speed or certify all-scene 30 FPS.
 Stage names describe the scripted route; verify the accompanying cadence pictures before treating them as scene measurements.
@@ -11,6 +11,6 @@ town after B dismisses opening: video_frames=600, active_mode4_samples=600/600, 
 first-person after L changes camera: video_frames=600, active_mode4_samples=600/600, page_flips=291, emulated_seconds=10.045624, observed_page_flips_per_second=28.968
   complete flip intervals: count=290, min=2, mean=2.059, max=3 video_frames (max 50.228 ms), over_two_frames=17
   window edges: 2 frames before first observed flip, 1 after last (partial intervals)
-first-person held walking (48-frame back/forward): video_frames=600, active_mode4_samples=600/600, page_flips=162, emulated_seconds=10.045624, observed_page_flips_per_second=16.126
-  complete flip intervals: count=161, min=2, mean=3.708, max=5 video_frames (max 83.714 ms), over_two_frames=143
-  window edges: 1 frames before first observed flip, 2 after last (partial intervals)
+first-person held walking (48-frame back/forward): video_frames=600, active_mode4_samples=600/600, page_flips=151, emulated_seconds=10.045624, observed_page_flips_per_second=15.031
+  complete flip intervals: count=150, min=2, mean=3.973, max=5 video_frames (max 83.714 ms), over_two_frames=137
+  window edges: 1 frames before first observed flip, 3 after last (partial intervals)
