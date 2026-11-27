@@ -68,6 +68,11 @@ int story_neighborhood_at(const Story *s){
   if(s->x==neighborhood[i].x&&s->y==neighborhood[i].y)return (int)i;
  return -1;
 }
+int story_neighborhood_revisit(const Story *s){
+ int at=story_neighborhood_at(s);
+ return at>=0&&s->rescue_stage==STORY_RESCUE_NONE&&
+        (s->neighborhood_seen&(1u<<(unsigned)at))?at:-1;
+}
 const char *story_neighborhood_name(unsigned id){
  return id<STORY_NEIGHBORHOOD_COUNT?neighborhood[id].name:"STORIES";
 }
@@ -472,8 +477,36 @@ enum { D_NONE, D_OPEN, D_LETTER, D_LETTER_AGAIN, D_CLERK_LOCKED, D_CLERK, D_CLER
        D_NB_13_LEFT,
        D_NB_13_RIGHT, D_MARA_MASTER_SHARED,
        D_SHOW_PLAN,D_SHOW_POSTER_BLUE,D_SHOW_POSTER_WARM,D_SHOW_REHEARSED,
-       D_SHOW_FRAME_BLACK,D_SHOW_FRAME_WOOD,D_SHOW_SETUP,D_SHOW_PLAY,D_SHOW_ARCHIVE };
-_Static_assert(D_SHOW_ARCHIVE<256,"dialogue ID width");
+       D_SHOW_FRAME_BLACK,D_SHOW_FRAME_WOOD,D_SHOW_SETUP,D_SHOW_PLAY,D_SHOW_ARCHIVE,
+       D_NB_RETURN_0_0,
+       D_NB_RETURN_0_1,
+       D_NB_RETURN_1_0,
+       D_NB_RETURN_1_1,
+       D_NB_RETURN_2_0,
+       D_NB_RETURN_2_1,
+       D_NB_RETURN_3_0,
+       D_NB_RETURN_3_1,
+       D_NB_RETURN_4_0,
+       D_NB_RETURN_4_1,
+       D_NB_RETURN_5_0,
+       D_NB_RETURN_5_1,
+       D_NB_RETURN_6_0,
+       D_NB_RETURN_6_1,
+       D_NB_RETURN_7_0,
+       D_NB_RETURN_7_1,
+       D_NB_RETURN_8_0,
+       D_NB_RETURN_8_1,
+       D_NB_RETURN_9_0,
+       D_NB_RETURN_9_1,
+       D_NB_RETURN_10_0,
+       D_NB_RETURN_10_1,
+       D_NB_RETURN_11_0,
+       D_NB_RETURN_11_1,
+       D_NB_RETURN_12_0,
+       D_NB_RETURN_12_1,
+       D_NB_RETURN_13_0,
+       D_NB_RETURN_13_1 };
+_Static_assert(D_NB_RETURN_13_1<256,"dialogue ID width");
 #define SCRIPT(name, ...) static const StoryPage name[] = { __VA_ARGS__ }
 /* The banana-sign shift is practical income, not Danny's calling. He is
    grateful for the stability without pretending to enjoy mascot work. */
@@ -1173,6 +1206,118 @@ SCRIPT(d_nb_13_left,
 SCRIPT(d_nb_13_right,
  {"DANNY", "Leave the seat clear.", "I'll stand a while."},
  {"DRIVER", "You don't have to go", "before you're ready."});
+SCRIPT(d_nb_return_0_0,
+ {"ELSIE","The seam held up.","Even in this rain."},
+ {"ELSIE","That coat has years","left if you mend it."},
+ {"ELSIE","You saw the work suit.","Both needed care."});
+SCRIPT(d_nb_return_0_1,
+ {"ELSIE","The towels went out.","The shop is stocked."},
+ {"ELSIE","You can stop here","without doing chores."},
+ {"ELSIE","The suit is dry too.","A small day's work."});
+SCRIPT(d_nb_return_1_0,
+ {"PHOTOGRAPHER","Your name is printed.","The date is legible."},
+ {"PHOTOGRAPHER","People remember you","without the costume."},
+ {"PHOTOGRAPHER","The annex has labels.","Names help us find art."});
+SCRIPT(d_nb_return_1_1,
+ {"PHOTOGRAPHER","The print stays blank.","Just as you asked."},
+ {"PHOTOGRAPHER","A stranger can see","their own story here."},
+ {"PHOTOGRAPHER","The annex keeps reels.","Not all have names."});
+SCRIPT(d_nb_return_2_0,
+ {"DANNY","I kept the roof study.","The slope was right."},
+ {"DANNY","Next time I paint","I'll leave more sky."},
+ {"DANNY","The canal sketch adds","a different horizon."});
+SCRIPT(d_nb_return_2_1,
+ {"DANNY","That rail had a tune.","I tapped it walking."},
+ {"DANNY","Maybe the pause is","the best part of it."},
+ {"DANNY","The canal has its own","rhythm in the rain."});
+SCRIPT(d_nb_return_3_0,
+ {"REPAIRMAN","The radio still works.","No more dead switch."},
+ {"REPAIRMAN","I left it on low.","Good for long shifts."},
+ {"REPAIRMAN","The shelter needs","a little care too."});
+SCRIPT(d_nb_return_3_1,
+ {"REPAIRMAN","I used the old knob.","Another set plays."},
+ {"REPAIRMAN","It didn't go to waste.","Thanks for the parts."},
+ {"REPAIRMAN","The shelter could use","a light like this."});
+SCRIPT(d_nb_return_4_0,
+ {"POST CLERK","Your note went out.","It's on the route."},
+ {"POST CLERK","You don't have to","send perfect words."},
+ {"POST CLERK","The phone is nearby.","A voice helps too."});
+SCRIPT(d_nb_return_4_1,
+ {"POST CLERK","The note is yours.","Keep it until ready."},
+ {"POST CLERK","No deadline here.","Come back any time."},
+ {"POST CLERK","The phone booth lets","you leave words too."});
+SCRIPT(d_nb_return_5_0,
+ {"NEIGHBOR","I told the family.","Danny came to visit."},
+ {"NEIGHBOR","Nobody asked for","a big explanation."},
+ {"NEIGHBOR","The park is quiet.","Go sit if you want."});
+SCRIPT(d_nb_return_5_1,
+ {"NEIGHBOR","I found your note.","It's by the kettle."},
+ {"NEIGHBOR","You didn't interrupt.","That was kind of you."},
+ {"NEIGHBOR","The park bench is","there for a pause."});
+SCRIPT(d_nb_return_6_0,
+ {"VENDOR","The crates stayed dry.","You saved the apples."},
+ {"VENDOR","I can close on time","for once this week."},
+ {"VENDOR","The clinic garden","has room to breathe."});
+SCRIPT(d_nb_return_6_1,
+ {"VENDOR","Did the apples last?","I kept a good crate."},
+ {"VENDOR","Next time take one","for the road."},
+ {"VENDOR","The garden would be","a nice lunch spot."});
+SCRIPT(d_nb_return_7_0,
+ {"ARCHIVIST","We found that reel.","Your label held."},
+ {"ARCHIVIST","It isn't famous yet.","But it can be heard."},
+ {"ARCHIVIST","The photo shop keeps","memories like these."});
+SCRIPT(d_nb_return_7_1,
+ {"ARCHIVIST","The sleeve is fixed.","The tape is safe."},
+ {"ARCHIVIST","Nobody sees the case","when the song plays."},
+ {"ARCHIVIST","The photo shop knows","how paper survives."});
+SCRIPT(d_nb_return_8_0,
+ {"DANNY","I kept my questions.","No need to guess."},
+ {"DANNY","I'll ask the doctor","when it's my turn."},
+ {"DANNY","The market is busy.","Here I can slow down."});
+SCRIPT(d_nb_return_8_1,
+ {"DANNY","The bench is still dry.","A little luck today."},
+ {"DANNY","It's all right to","have nothing to do."},
+ {"DANNY","The market can wait.","So can the errands."});
+SCRIPT(d_nb_return_9_0,
+ {"ELSIE","The suit is folded.","The next kid has it."},
+ {"ELSIE","You had a job here.","You have a life too."},
+ {"ELSIE","Your coat looks ready","for the next chapter."});
+SCRIPT(d_nb_return_9_1,
+ {"ELSIE","I kept your thanks.","Not every worker does."},
+ {"ELSIE","You made us laugh.","Don't forget that."},
+ {"ELSIE","Your coat survived.","Keep taking care."});
+SCRIPT(d_nb_return_10_0,
+ {"OLD MAN","The bread was good.","Better with company."},
+ {"OLD MAN","Come sit any time.","No need to bring food."},
+ {"OLD MAN","The folks at the stoop","keep a light on too."});
+SCRIPT(d_nb_return_10_1,
+ {"OLD MAN","The bench is dry now.","Sit if you like."},
+ {"OLD MAN","We can leave the","silence as it is."},
+ {"OLD MAN","The stoop is quiet.","Another good pause."});
+SCRIPT(d_nb_return_11_0,
+ {"DANNY","I made that call.","It wasn't perfect."},
+ {"DANNY","But they heard me.","That was enough."},
+ {"DANNY","The post has a place","for the slower words."});
+SCRIPT(d_nb_return_11_1,
+ {"DANNY","I left my message.","They can call later."},
+ {"DANNY","No need to wait here","for the bell to ring."},
+ {"DANNY","The letter can carry","what I couldn't say."});
+SCRIPT(d_nb_return_12_0,
+ {"DANNY","The sketch is safe.","The rail is too dark."},
+ {"DANNY","I'll lighten that line","when I get upstairs."},
+ {"DANNY","The stair study shows","where the sky goes."});
+SCRIPT(d_nb_return_12_1,
+ {"DANNY","The bank looks better.","Just a little cleaner."},
+ {"DANNY","I can see the water","between the lights."},
+ {"DANNY","The stair has another","view of this quarter."});
+SCRIPT(d_nb_return_13_0,
+ {"DRIVER","The map is still up.","People read it now."},
+ {"DRIVER","A few less questions","on the late route."},
+ {"DRIVER","The repair shop keeps","old things useful too."});
+SCRIPT(d_nb_return_13_1,
+ {"DRIVER","The seat stayed clear.","Someone needed it."},
+ {"DRIVER","Not every wait has","to be uncomfortable."},
+ {"DRIVER","The repairman's radio","could fill the wait."});
 SCRIPT(d_mara_master_shared,
  {"MARA", "Your song is here.", "I kept the copy."},
  {"DANNY", "I can still change", "the arrangement."},
@@ -1325,13 +1470,47 @@ static const struct { const StoryPage *pages; uint8_t count; } scripts[] = {
   SEQ(d_nb_13_left),
   SEQ(d_nb_13_right), SEQ(d_mara_master_shared),
   SEQ(d_show_plan),SEQ(d_show_poster_blue),SEQ(d_show_poster_warm),SEQ(d_show_rehearsed),
-  SEQ(d_show_frame_black),SEQ(d_show_frame_wood),SEQ(d_show_setup),SEQ(d_show_play),SEQ(d_show_archive)
+  SEQ(d_show_frame_black),SEQ(d_show_frame_wood),SEQ(d_show_setup),SEQ(d_show_play),SEQ(d_show_archive),
+  SEQ(d_nb_return_0_0),
+  SEQ(d_nb_return_0_1),
+  SEQ(d_nb_return_1_0),
+  SEQ(d_nb_return_1_1),
+  SEQ(d_nb_return_2_0),
+  SEQ(d_nb_return_2_1),
+  SEQ(d_nb_return_3_0),
+  SEQ(d_nb_return_3_1),
+  SEQ(d_nb_return_4_0),
+  SEQ(d_nb_return_4_1),
+  SEQ(d_nb_return_5_0),
+  SEQ(d_nb_return_5_1),
+  SEQ(d_nb_return_6_0),
+  SEQ(d_nb_return_6_1),
+  SEQ(d_nb_return_7_0),
+  SEQ(d_nb_return_7_1),
+  SEQ(d_nb_return_8_0),
+  SEQ(d_nb_return_8_1),
+  SEQ(d_nb_return_9_0),
+  SEQ(d_nb_return_9_1),
+  SEQ(d_nb_return_10_0),
+  SEQ(d_nb_return_10_1),
+  SEQ(d_nb_return_11_0),
+  SEQ(d_nb_return_11_1),
+  SEQ(d_nb_return_12_0),
+  SEQ(d_nb_return_12_1),
+  SEQ(d_nb_return_13_0),
+  SEQ(d_nb_return_13_1)
 };
-_Static_assert(sizeof(scripts)/sizeof(scripts[0])==D_SHOW_ARCHIVE+1u,"script table order");
+_Static_assert(sizeof(scripts)/sizeof(scripts[0])==D_NB_RETURN_13_1+1u,"script table order");
+static int neighborhood_return_id(unsigned id){
+ return id>=D_NB_RETURN_0_0&&id<=D_NB_RETURN_13_1?(int)(id-D_NB_RETURN_0_0):-1;
+}
+static const uint8_t neighborhood_pair[STORY_NEIGHBORHOOD_COUNT]={9,7,12,13,11,10,8,1,6,0,5,4,2,3};
 static int neighborhood_dialogue(unsigned id){
  return id>=D_NB_0_INTRO&&id<=D_NB_13_RIGHT?(int)(id-D_NB_0_INTRO):-1;
 }
 int story_neighborhood_panel(const Story *s){
+ int revisit=neighborhood_return_id(s->dialogue);
+ if(revisit>=0)return (revisit/2)*3+1+(revisit%2);
  if(s->dialogue==D_SHOW_POSTER_BLUE)return 4;
  if(s->dialogue==D_SHOW_POSTER_WARM)return 5;
  if(s->dialogue==D_SHOW_SETUP)return 22;
@@ -1361,6 +1540,11 @@ const StoryPage *story_pages(const Story *s, int *count) {
     unsigned id = s->dialogue;
     if (id >= sizeof(scripts) / sizeof(scripts[0])) id = 0;
     *count = scripts[id].count;
+    int revisit=neighborhood_return_id(id);
+    /* The third page connects the pair only after Danny has actually
+       completed the other encounter. Existing saves hold both bits. */
+    if(revisit>=0&&!(s->neighborhood_seen&(1u<<neighborhood_pair[revisit/2])))
+        *count=2;
     return scripts[id].pages;
 }
 /* Each major interaction receives a world-grounded, animated shot sequence.
@@ -1399,7 +1583,7 @@ static uint16_t dialogue_shot_beat(unsigned script,unsigned page){
  return beats&&page<length?beats[page]:0u;
 }
 static uint8_t cinematics_for_dialogue(uint8_t d){
-    if(neighborhood_dialogue(d)>=0)return CINE_DAY;
+    if(neighborhood_dialogue(d)>=0||neighborhood_return_id(d)>=0)return CINE_DAY;
     if(d==D_SHOW_POSTER_BLUE||d==D_SHOW_POSTER_WARM||d==D_SHOW_SETUP)return CINE_BORE;
     switch(d){
     case D_OPEN: case D_SHIFT_EARLY: case D_SHIFT_DONE:
@@ -2567,6 +2751,11 @@ void story_tick(Story *s, uint16_t keys) {
         }
         if(s->rescue_stage==STORY_RESCUE_SAVED){
             talk(s,D_RESCUE_NOTES_SAVED);return;
+        }
+        int revisit=story_neighborhood_revisit(s);
+        if(revisit>=0){
+            unsigned right=(s->neighborhood_right>>(unsigned)revisit)&1u;
+            talk(s,(uint8_t)(D_NB_RETURN_0_0+2u*(unsigned)revisit+right));return;
         }
         if (s->life_stage) {
             talk(s,s->life_stage==STORY_LIFE_CLINIC||s->life_stage==STORY_LIFE_FINAL_CLINIC?D_NOTE_VISIT:

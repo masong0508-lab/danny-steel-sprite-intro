@@ -446,7 +446,7 @@ static void field_guide_120(uint8_t *p,const Story *s){
     box(p,7,53,106,1,3);
     text(p,7,57,story_action_hint(s),20,16);
     text(p,57,57,story_risk_available(s)?"B RISK":"B NOT HERE",18,15);
-    text(p,7,65,"A ACT  L VIEW  R NOTES",20,27);
+    text(p,7,65,story_neighborhood_revisit(s)>=0?"A ACT L VIEW R REVISIT":"A ACT  L VIEW  R NOTES",20,27);
     text(p,7,73,"LEFT RIGHT PAGE B BACK",18,26);
 }
 static void consequence_board(uint8_t *p,const Story *s){
@@ -995,8 +995,9 @@ void story_draw(const Story *s,int frame,uint8_t *p) {
                  "THE LAST PAINTING",20,29);
         else{
             text(p,3,74,story_action_hint(s),20,12);
-            text(p,49,74,story_risk_available(s)?
-                 "B RISK L VIEW R NOTES":"L VIEW R NOTES",18,26);
+            text(p,49,74,story_neighborhood_revisit(s)>=0?
+                 (story_risk_available(s)?"B RISK R REVISIT":"L VIEW R REVISIT"):
+                 story_risk_available(s)?"B RISK L VIEW R NOTES":"L VIEW R NOTES",18,26);
         }
     }
 }
