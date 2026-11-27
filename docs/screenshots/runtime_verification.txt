@@ -1,4 +1,4 @@
-Source commit: 0d75e802a26d591c551c4c12666c22bf21303435
+Source commit: 7eda6fb7f95b7a16f38f65e8cc046cb7be5a7285
 mGBA 0.10.2; read-only runtime verification, Story bytes=62
 PASS: built ROM exports its real input-queue counters
 opening state: scene=1, dialogue=1, page=0, ticks=175
