@@ -120,6 +120,10 @@ static unsigned show_here(const Story *s){
  int distance=(dx<0?-dx:dx)+(dy<0?-dy:dy);
  return distance==(story_solid(x,y)?1:0)?story_show_stage(s)+1u:0u;
 }
+const char *story_paint_layer(const Story *s){
+ static const char *const names[]={"SKY WASH","CITY BLOCKS","WINDOW LIGHT","FINISH EDGES"};
+ return names[s->art_steps<4u?s->art_steps:3u];
+}
 const char *story_show_phrase(unsigned part){
  static const char *const names[]={"BASE","UP","LOW","FILL"};
  return names[part&3u];
@@ -1750,6 +1754,11 @@ static void finish_moment(Story *s){
         return;
     }
     if((station=='m'||station=='M')&&option==2u){enter_music_editor(s);return;}
+    if(story_paint_workshop_available(s)&&option==2u){
+        s->activity=STORY_ACT_PAINT;
+        s->activity_choice=(s->project_style&STORY_STYLE_ART_WARM)?STORY_PAINT_WARM:0u;
+        s->studio_tab=s->studio_cursor=0;s->cinema=CINE_ART;s->cinema_frame=0;return;
+    }
     if(station=='m'||station=='r'){
         s->activity=STORY_ACT_NONE;s->activity_choice=0;
         step_project(s,station,option);
@@ -2186,7 +2195,8 @@ void story_tick(Story *s, uint16_t keys) {
        clock. Day transitions never steal controls during a fight or textbox. */
     if (!s->ended && s->life_stage >= STORY_LIFE_WAIT &&
         s->life_stage <= STORY_LIFE_LAST_WORK && !s->paused &&
-        s->activity!=STORY_ACT_STUDIO&&s->activity!=STORY_ACT_REHEARSAL) {
+        s->activity!=STORY_ACT_STUDIO&&s->activity!=STORY_ACT_REHEARSAL&&
+        s->activity!=STORY_ACT_PAINT) {
         if (++s->day_frame >= STORY_DAY_FRAMES) {
             s->day_frame=0;
             if (s->day_number<99) ++s->day_number;
@@ -2322,6 +2332,36 @@ void story_tick(Story *s, uint16_t keys) {
         else if(pressed&A)resolve_risk(s);
         return;
     }
+    if(s->activity==STORY_ACT_PAINT){
+        /* Brush location and palette are transient. Only START on a
+           completed layer changes the saved artwork. No timed failure. */
+        if(pressed&B){
+            s->activity=0;s->activity_choice=0;s->studio_tab=s->studio_cursor=0;
+            s->cinema=CINE_NONE;return;
+        }
+        if(pressed&START){
+            if(!story_paint_ready(s)){s->studio_cursor=2u;return;}
+            unsigned warm=(unsigned)story_paint_warm(s);
+            s->activity=0;s->activity_choice=0;s->studio_tab=s->studio_cursor=0;
+            s->project_style=(uint8_t)((s->project_style&~STORY_STYLE_ART_WARM)|
+                                       (warm?STORY_STYLE_ART_WARM:0u));
+            remember(s,STORY_DAY_ART);step_project(s,'r',warm);return;
+        }
+        unsigned brush=story_paint_brush(s),tone=s->activity_choice&STORY_PAINT_WARM;
+        if(pressed&LEFT){if(brush&3u)brush--;}
+        else if(pressed&RIGHT){if((brush&3u)<3u)brush++;}
+        else if(pressed&UP){if(brush>=4u)brush-=4u;}
+        else if(pressed&DOWN){if(brush<4u)brush+=4u;}
+        if(pressed&(SELECT|L|R))tone^=STORY_PAINT_WARM;
+        s->activity_choice=(uint8_t)(tone|brush);
+        if(pressed&(LEFT|RIGHT|UP|DOWN|SELECT|L|R))s->studio_cursor=0;
+        if(pressed&A){
+            unsigned bit=1u<<brush;
+            if(story_paint_targets(s)&bit){s->studio_tab|=(uint8_t)bit;s->studio_cursor=0;}
+            else s->studio_cursor=1;
+        }
+        return;
+    }
     if(s->activity==STORY_ACT_REHEARSAL){
         /* Four untimed cue cards use the actual arrangement order.
            A wrong choice gives feedback; B cancels without a penalty. */
@@ -2384,7 +2424,7 @@ void story_tick(Story *s, uint16_t keys) {
         return;
     }
     if(s->activity){
-        if(s->activity=='m'||s->activity=='M'){
+        if(s->activity=='m'||s->activity=='M'||story_paint_workshop_available(s)){
             if(pressed&(LEFT|UP))s->activity_choice=(uint8_t)((s->activity_choice+2u)%3u);
             else if(pressed&(RIGHT|DOWN))s->activity_choice=(uint8_t)((s->activity_choice+1u)%3u);
         }else if(pressed&(LEFT|RIGHT|UP|DOWN))s->activity_choice^=1u;

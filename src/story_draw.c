@@ -523,6 +523,22 @@ static void activity_menu(uint8_t *p,const Story *s){
     const char *where="",*left="",*right="";
     const char *effect="";
     unsigned selected=s->activity_choice;
+    if(s->activity==STORY_ACT_PAINT){
+        panel(p,17,80);
+        text(p,6,20,story_paint_layer(s),20,21);
+        text(p,86,20,story_paint_warm(s)?"WARM":"COOL",18,6);
+        unsigned targets=story_paint_targets(s);
+        for(unsigned i=0;i<8u;i++){
+            int x=7+(int)(i&3u)*27,y=30+(int)(i>>2)*14;
+            unsigned bit=1u<<i;
+            box(p,x,y,25,12,story_paint_brush(s)==i?18:5);
+            box(p,x+1,y+1,23,10,(s->studio_tab&bit)?(story_paint_warm(s)?13:24):3);
+            if((targets&bit)&&!(s->studio_tab&bit))box(p,x+10,y+4,5,4,18);
+        }
+        text(p,7,59,story_paint_ready(s)?"READY: START SAVE":"PAINT FOUR MARKS",20,26);
+        text(p,7,67,"D-PAD A PAINT SEL TONE",18,27);
+        text(p,7,74,"START SAVE  B BACK",20,27);return;
+    }
     if(s->activity==STORY_ACT_REHEARSAL){
         panel(p,40,80);
         text(p,7,43,"SET LIST REHEARSAL",20,27);
@@ -573,12 +589,13 @@ static void activity_menu(uint8_t *p,const Story *s){
         progress[0]=(char)('0'+(phase>4u?4u:phase));
         text(p,91,45,progress,18,5);
     }
-    if(s->activity=='m'||s->activity=='M'){
-        text(p,8,53,selected==2u?"EDIT / PLAY / SAVE TAKE":effect,18,27);
+    int painting=story_paint_workshop_available(s);
+    if(s->activity=='m'||s->activity=='M'||painting){
+        text(p,8,53,selected==2u?(painting?"BRUSH / SAVE LAYER":"EDIT / PLAY / SAVE TAKE"):effect,18,27);
         for(unsigned i=0;i<3u;i++){
             int x=6+(int)i*37;
             box(p,x,61,35,10,selected==i?24:3);
-            text(p,x+3,64,i==0u?(s->activity=='M'?"MIX":left):i==1u?right:"STUDIO",selected==i?20:10,8);
+            text(p,x+3,64,i==0u?(s->activity=='M'?"MIX":left):i==1u?right:painting?"BRUSH":"STUDIO",selected==i?20:10,8);
         }
         text(p,7,74,"LEFT/RIGHT  A OK  B BACK",20,27);
         return;

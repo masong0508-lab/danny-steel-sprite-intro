@@ -50,6 +50,8 @@
 #define STORY_PROJECT_STYLE_MASK 0xffu
 #define STORY_ACT_SHOW 'Y'
 #define STORY_ACT_REHEARSAL 'U'
+#define STORY_ACT_PAINT 'T'
+#define STORY_PAINT_WARM 0x80u
 #define STORY_TRACK_STUDIO 15u
 #define STORY_TRACK_ROOF 16u
 #define STORY_TRACK_ORCHARD 17u
@@ -152,6 +154,20 @@ typedef struct {
     uint8_t neighborhood_cursor, neighborhood_target;
 } Story;
 static inline unsigned story_show_stage(const Story *s){return (s->project_style&STORY_SHOW_STAGE_MASK)>>3;}
+static inline int story_paint_workshop_available(const Story *s){
+ return (s->activity=='r'||s->activity=='R')&&s->art_steps<STORY_PROJECT_DONE;
+}
+static inline unsigned story_paint_targets(const Story *s){
+ static const uint8_t layers[4]={0x0fu,0xf0u,0x66u,0x99u};
+ return layers[s->art_steps<4u?s->art_steps:3u];
+}
+static inline int story_paint_ready(const Story *s){
+ unsigned targets=story_paint_targets(s);
+ return (s->studio_tab&targets)==targets;
+}
+static inline unsigned story_paint_brush(const Story *s){return s->activity_choice&7u;}
+static inline int story_paint_warm(const Story *s){return !!(s->activity_choice&STORY_PAINT_WARM);}
+const char *story_paint_layer(const Story *s);
 unsigned story_track_id(unsigned choice);
 const char *story_show_phrase(unsigned part);
 unsigned story_show_expected(const Story *s);

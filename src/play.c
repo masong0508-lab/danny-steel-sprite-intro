@@ -254,11 +254,11 @@ void play_enter(int want_load,int slot){
     music_set_volume(65);
 }
 static int play_tick(u16 keys){
-    int was_studio=game.activity==STORY_ACT_STUDIO;
+    int was_editor=game.activity==STORY_ACT_STUDIO||game.activity==STORY_ACT_PAINT;
     story_tick(&game,keys);
     /* Leaving the editor commits the edited arrangement immediately,
        instead of waiting two seconds for the periodic SRAM checkpoint. */
-    if(was_studio&&game.activity!=STORY_ACT_STUDIO&&game.dirty){
+    if(was_editor&&game.activity!=STORY_ACT_STUDIO&&game.activity!=STORY_ACT_PAINT&&game.dirty){
         write_save();save_cooldown=0;
     }
     if(game.quit){

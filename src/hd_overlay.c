@@ -198,6 +198,41 @@ void hd_game_overlay(uint8_t *p,const Story *s){
   hd_text(p,28,146,"LEFT/RIGHT CHOOSE    B CANCEL",HD_PAPER,1,0);
   return;
  }
+ if(s->activity==STORY_ACT_PAINT){
+  framebox(p,8,26,224,131);
+  char count[]="LAYER 1/4";count[6]=(char)('1'+s->art_steps);
+  hd_text(p,18,34,"ROOFTOP WORKSHOP",HD_LAMP,1,0);
+  hd_text(p,169,34,count,HD_PAPER,1,0);
+  hd_text(p,18,45,story_paint_layer(s),HD_PAPER,1,1);
+  hd_text(p,168,45,story_paint_warm(s)?"WARM":"COOL",HD_GOLD,1,0);
+  unsigned targets=story_paint_targets(s),brush=story_paint_brush(s);
+  unsigned sky=story_paint_warm(s)?HD_COPPER:HD_GLASS_LIT;
+  unsigned city=story_paint_warm(s)?HD_BRICK:HD_ROAD_COOL;
+  for(unsigned i=0;i<8u;i++){
+   int x=22+(int)(i&3u)*50,y=58+(int)(i>>2)*29;
+   unsigned bit=1u<<i,marked=targets&bit,filled=s->studio_tab&bit;
+   hd_rect(p,x,y,47,26,brush==i?HD_LAMP:HD_STONE_DARK);
+   hd_rect(p,x+1,y+1,45,24,HD_SHADOW);
+   if(filled||s->art_steps){
+    hd_rect(p,x+2,y+2,43,22,i<4u?sky:city);
+    if(i>=4u&&s->art_steps>=1u){
+     int h=6+(int)(i*7u%9u);hd_rect(p,x+6,y+24-h,29,h,HD_BRICK_DARK);
+     if(s->art_steps>=2u||filled){
+      for(int j=0;j<3;j++)hd_rect(p,x+9+j*9,y+19,3,3,HD_LAMP);
+     }
+    }
+    if(i<4u&&s->art_steps>=2u)hd_line(p,x+5,y+20,x+38,y+20,HD_PAPER);
+   }
+   if(marked&&!filled){hd_rect(p,x+18,y+10,11,5,HD_INK);hd_rect(p,x+21,y+11,5,3,HD_GOLD);}
+   if(filled){hd_rect(p,x+35,y+4,8,2,HD_LEAF_LIT);hd_pixel(p,x+42,y+3,HD_LEAF_LIT);}
+  }
+  hd_text(p,18,119,story_paint_ready(s)?"LAYER READY - START TO SAVE":
+       s->studio_cursor==2u?"FILL ALL FOUR GOLD MARKS":
+       s->studio_cursor==1u?"MOVE TO A GOLD MARK":"PAINT THE FOUR GOLD MARKS",HD_PAPER,1,0);
+  hd_text(p,18,133,"D-PAD BRUSH  A PAINT  SELECT TONE",HD_STONE_LIT,1,0);
+  hd_text(p,18,145,"START SAVE LAYER  B BACK",HD_PAPER,1,0);
+  return;
+ }
  if(s->activity==STORY_ACT_REHEARSAL){
   framebox(p,8,66,224,91);
   char part[]="PART 1/4";part[5]=(char)('1'+(s->studio_tab&3u));
@@ -274,13 +309,14 @@ void hd_game_overlay(uint8_t *p,const Story *s){
    }
   }
   hd_text(p,22,91,benefit,HD_PAPER,1,0);
-  int music=s->activity=='m'||s->activity=='M';
+  int music=s->activity=='m'||s->activity=='M',painting=story_paint_workshop_available(s);
   if(music&&s->activity_choice==2u)effect="BASIC: EDIT, PLAY, SAVE TAKE";
+  if(painting&&s->activity_choice==2u)effect="BRUSH, TONE AND SAVE A LAYER";
   hd_text(p,22,103,effect,HD_STONE_LIT,1,0);
-  if(music){
+  if(music||painting){
    selectable(p,20,115,66,left,s->activity_choice==0u);
    selectable(p,87,115,66,right,s->activity_choice==1u);
-   selectable(p,154,115,66,"STUDIO",s->activity_choice==2u);
+   selectable(p,154,115,66,painting?"BRUSH":"STUDIO",s->activity_choice==2u);
   }else{
    selectable(p,22,115,92,left,!s->activity_choice);
    selectable(p,123,115,93,right,s->activity_choice);
