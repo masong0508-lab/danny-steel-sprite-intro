@@ -56,5 +56,11 @@ static inline int pot_sign_face(const PotPoint q[5],unsigned flags,PotPoint out[
  int w=w0>w1?w0:w1;
  /* The short projected dimension must accommodate two readable rows;
     avoid turning hundreds of glyph pixels into random one-pixel flecks. */
- return w0>=43&&w1>=43&&area>=w*28;
+ if(w0<43||w1<43||area<w*56)return 0;
+ /* Both ends of the trapezoid must have enough height. Do not put
+    readable lettering on a nearly edge-on or folded fragment. */
+ return pot_sign_cross(out[0],out[1],out[2])>=w0*10&&
+        pot_sign_cross(out[0],out[1],out[3])>=w0*10&&
+        pot_sign_cross(out[2],out[3],out[0])>=w1*10&&
+        pot_sign_cross(out[2],out[3],out[1])>=w1*10;
 }

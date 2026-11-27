@@ -98,6 +98,9 @@ static void pot_jointed(uint8_t *p,PotPoint a,PotPoint b,PotPoint c,
  if(jl){jx=jx*256/(int)jl;jy=jy*256/(int)jl;}
  else {jx=nx;jy=ny;}
  PotPoint n[3]={{nx*wa/512,ny*wa/512},{jx*wb/512,jy*wb/512},{mx*wc/512,my*wc/512}};
+ /* A bounded fabric-colored bevel bridges raster rounding at the
+    shared elbow/knee. It is under both panels, never an outline cuff. */
+ if(wb>=3)hd_ellipse(p,b.x,b.y,wb/2,wb/2,body);
  PotPoint centers[3]={a,b,c},lo[3],hi[3];
  for(unsigned i=0;i<3u;i++){
   lo[i]=(PotPoint){centers[i].x-n[i].x,centers[i].y-n[i].y};
