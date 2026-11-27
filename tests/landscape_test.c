@@ -1,5 +1,6 @@
 #include "story.h"
 #include "terrain_save.h"
+#include "brush_save.h"
 #include "hd_canvas.h"
 #include <assert.h>
 #include <stdio.h>
@@ -20,6 +21,86 @@ static void paint(Story *s,int view){
  else hd_isometric_draw(frame.p,s,71u);
  for(unsigned i=0;i<32u;i++)assert(frame.before[i]==0xA5&&frame.after[i]==0xA5);
  for(unsigned i=0;i<HD_BYTES;i++)assert(frame.p[i]<64u);
+}
+static void walk_goal(Story *s,int x,int y,const char *name){
+ int gx,gy,dir,steps;const char *label=0;
+ assert(story_goal(s,&gx,&gy,&label)&&gx==x&&gy==y&&!strcmp(label,name));
+ assert(story_route(s,&dir,&steps));
+ static const unsigned key[]={16u,128u,32u,64u};
+ unsigned count=0;
+ while(steps){
+  int before=steps;assert(dir>=0&&dir<4&&count++<STORY_W*STORY_H);
+  s->cooldown=0;s->old_keys=0;
+  press(s,key[dir]);assert(story_route(s,&dir,&steps)&&steps==before-1);
+ }
+ assert(s->x==x&&s->y==y);
+}
+static void verify_brush(void){
+ Story s,other,resumed;story_new(&s,0);done(&s);
+ stand(&s,50,7);s.facing=0;
+ assert(story_brush_editable(&s)&&story_brush_grade(&s)==1u);
+ int initial=elevation(&s,50,7),shore=story_terrain_vertex(&s,47,16);
+ unsigned revision=story_brush_revision(0);
+ press(&s,4u);assert(story_brush_mode(&s)&&!s.dialogue&&!s.view);
+ paint(&s,0);memcpy(prior,frame.p,HD_BYTES);
+ press(&s,1u);press(&s,1u);press(&s,1u);
+ assert(story_brush_grade(&s)==3u&&elevation(&s,50,7)>initial);
+ assert(story_brush_revision(0)==revision+2u);
+ paint(&s,0);assert(memcmp(prior,frame.p,HD_BYTES)!=0);
+ paint(&s,1);memcpy(prior,frame.p,HD_BYTES);
+ press(&s,2u);press(&s,2u);
+ assert(story_brush_grade(&s)==1u&&elevation(&s,50,7)==initial);
+ paint(&s,1);assert(memcmp(prior,frame.p,HD_BYTES)!=0);
+ press(&s,3u);assert(story_brush_grade(&s)==1u);
+ press(&s,1u);press(&s,1u);
+ assert(story_terrain_vertex(&s,47,16)==shore);
+ int raised=elevation(&s,50,7);
+ press(&s,4u);assert(!story_brush_mode(&s));
+ uint8_t data[BRUSH_EXT_LEN];brush_save_encode(&s,data);
+ story_new(&other,1);done(&other);stand(&other,50,7);
+ assert(story_brush_grade(&other)==1u&&elevation(&other,50,7)==initial);
+ assert(story_brush_grade(&s)==3u&&elevation(&s,50,7)==raised);
+ story_new(&resumed,0);done(&resumed);stand(&resumed,50,7);
+ assert(story_brush_grade(&resumed)==1u&&brush_save_decode(&resumed,data));
+ assert(story_brush_grade(&resumed)==3u&&elevation(&resumed,50,7)==raised);
+ for(unsigned i=0;i<BRUSH_EXT_LEN;i++){
+  data[i]^=1u;assert(!brush_save_decode(&resumed,data));data[i]^=1u;
+ }
+ assert(!brush_save_decode(&other,data));
+ /* Even a valid CRC cannot authorize alteration of locked boundary nodes. */
+ data[4]^=1u;data[BRUSH_EXT_LEN-1u]=brush_save_crc(data);
+ assert(!brush_save_decode(&resumed,data)&&story_brush_grade(&resumed)==3u);
+ stand(&resumed,40,8);press(&resumed,4u);
+ assert(story_brush_mode(&resumed)&&!story_brush_editable(&resumed));
+ revision=story_brush_revision(0);press(&resumed,1u);press(&resumed,2u);
+ assert(story_brush_revision(0)==revision);
+ stand(&resumed,50,7);resumed.life_stage=STORY_LIFE_CLINIC;
+ press(&resumed,1u);done(&resumed);
+ assert(!story_brush_mode(&resumed)&&story_brush_revision(0)==revision);
+ puts("Landscape brush: live pad controls, both cameras, shore protection, locked-node validation, two independent saved worlds");
+}
+static void verify_hike(void){
+ Story s;story_new(&s,0);done(&s);
+ stand(&s,42,7);
+ press(&s,1u);done(&s);assert(story_hike_stage(0)==1u);
+ walk_goal(&s,49,6,"MEADOW PATH");
+ press(&s,1u);done(&s);assert(story_hike_stage(0)==2u);
+ uint8_t saved[BRUSH_EXT_LEN];brush_save_encode(&s,saved);
+ story_resume(&s,0,49,6,0,0,0,0,0);
+ s.dialogue=0;assert(brush_save_decode(&s,saved)&&story_hike_stage(0)==2u);
+ s.life_stage=STORY_LIFE_CLINIC;
+ int gx,gy;const char *label=0;
+ assert(story_goal(&s,&gx,&gy,&label)&&!strcmp(label,"CLINIC"));
+ s.life_stage=STORY_LIFE_NONE;
+ walk_goal(&s,53,13,"RIDGE TRAIL");
+ press(&s,1u);done(&s);assert(story_hike_stage(0)==3u);
+ walk_goal(&s,56,11,"SUMMIT");
+ s.spark=1u;press(&s,1u);done(&s);
+ assert(story_hike_stage(0)==4u&&s.spark==3u&&!s.art_steps);
+ assert(story_goal(&s,&gx,&gy,&label)&&!strcmp(label,"LETTER"));
+ stand(&s,42,7);press(&s,1u);done(&s);
+ assert(story_hike_stage(0)==4u&&s.spark==3u);
+ puts("Hike: physical trailhead, saved route progress, two intermediate checkpoints, summit reward and restored campaign routing");
 }
 int main(void){
  Story s;story_new(&s,0);done(&s);
@@ -92,5 +173,7 @@ int main(void){
   stand(&s,44,8);s.facing=0;
  }
  printf("Landscape: %u bounded slope samples, live uphill step, two editable plots, CRC save, art/rest and both native views\n",grades);
+ verify_brush();
+ verify_hike();
  return 0;
 }

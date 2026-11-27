@@ -10,25 +10,38 @@ static inline unsigned hd_land_ink(char tile,int h,unsigned shade){
  return shade?HD_LEAF_DARK:HD_LEAF;
 }
 static inline unsigned hd_land_marker(int x,int y){
- return x==44&&y==8?1u:x==54&&y==24?2u:x==56&&y==11?3u:x==43&&y==22?4u:0u;
+ return x==44&&y==8?1u:x==54&&y==24?2u:x==56&&y==11?3u:x==43&&y==22?4u:
+        x==42&&y==7?5u:x==49&&y==6?6u:x==53&&y==13?7u:0u;
 }
 static inline void hd_landscape_sky(uint8_t *p,const Story *s){
  hd_rect(p,0,0,HD_W,36,HD_ROAD_COOL);
  hd_rect(p,0,36,HD_W,28,HD_GLASS);
  hd_rect(p,0,64,HD_W,96,HD_LEAF_DARK);
- /* Continuous, nonrectangular distant silhouette, behind actual mesh. */
- for(int x=0;x<HD_W;x+=3){
-  int k=(x/3+(int)s->x*2+(int)s->facing*17)%80;
-  int a=k<40?k:80-k,b=(k+19)%39;
-  if(b>19)b=38-b;
-  int far=65-a/2-b/3,near=75-(40-a)/3-b/2;
-  hd_rect(p,x,far,3,76-far,HD_STONE_DARK);
-  hd_rect(p,x,near,3,82-near,HD_LEAF_DARK);
+ /* Smooth, asymmetrical distant ridge profiles. The terrain mesh
+    in front of these silhouettes is the actual walkable heightfield. */
+ static const uint8_t ridge[2][16]={
+  {9,13,18,27,34,30,21,15,12,19,25,32,24,16,11,7},
+  {16,22,29,25,15,10,8,13,20,31,37,30,23,17,12,9}
+ };
+ for(int x=0;x<HD_W;x+=4){
+  int heights[2];
+  for(unsigned layer=0;layer<2u;layer++){
+   unsigned k=(unsigned)(x+s->x*(layer?5:3)+s->y*2+s->facing*47+layer*113)&511u;
+   unsigned i=k>>5,t=k&31u;
+   heights[layer]=(ridge[layer][i]*(32u-t)+ridge[layer][(i+1u)&15u]*t)>>5;
+  }
+  int far=69-heights[0],near=83-heights[1];
+  hd_rect(p,x,far,4,76-far,HD_STONE_DARK);
+  hd_rect(p,x,near,4,84-near,HD_LEAF_DARK);
  }
 }
 static inline void hd_land_status(uint8_t *p,const Story *s){
  unsigned action=story_land_action(s);
- if(action==STORY_LAND_PATCH0||action==STORY_LAND_PATCH1){
+ if(story_brush_mode(s)){
+  char label[]="B LOWER  0/3";
+  label[9]=(char)('0'+story_brush_grade(s));
+  hd_text(p,16,152,story_brush_editable(s)?label:"PROTECTED SHORE / EDGE",HD_LAMP,1,0);
+ }else if(action==STORY_LAND_PATCH0||action==STORY_LAND_PATCH1){
   char label[]="B LOWER GRADE 0/3";
   label[14]=(char)('0'+story_land_level(s,action-1u));
   hd_text(p,16,152,label,HD_LAMP,1,0);
