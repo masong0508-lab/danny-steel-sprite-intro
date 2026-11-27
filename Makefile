@@ -21,6 +21,7 @@ CFLAGS  := $(ARCH) -O2 -Wall -std=gnu11 -fomit-frame-pointer -Isrc
 LDFLAGS := $(ARCH) -specs=gba.specs -Wl,-Map=$(TARGET).map
 SRC     := $(wildcard src/*.c)
 HDR     := $(wildcard src/*.h)
+INC     := $(wildcard src/*.inc)
 ART     := $(wildcard assets/neighborhood/*.bin)
 HOST_CC ?= cc
 OPENING_CACHE ?= 1
@@ -37,7 +38,7 @@ $(CACHE_BIN): tools/build_potheads_cache.c tools/build_potheads_cache.sh $(HDR) 
 	HOST_CC="$(HOST_CC)" sh tools/build_potheads_cache.sh
 endif
 
-$(TARGET).elf: $(SRC) $(HDR) $(ART) $(CACHE_BIN) $(CACHE_ASM) Makefile
+$(TARGET).elf: $(SRC) $(HDR) $(INC) $(ART) $(CACHE_BIN) $(CACHE_ASM) Makefile
 	$(CC) $(CFLAGS) $(SRC) $(CACHE_ASM) $(LDFLAGS) -o $@
 
 $(TARGET).gba: $(TARGET).elf

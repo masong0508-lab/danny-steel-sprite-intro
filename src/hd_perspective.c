@@ -1,7 +1,11 @@
 #include "hd_canvas.h"
 #include "hd_world_atlas.h"
 #include "hd_facade_art.h"
+#include "hd_scene_geometry.h"
+#include "hd_project_props.h"
 #include "hd_road_material_rom.inc"
+#include "hd_road_columns.inc"
+#include "hd_ray_trace.h"
 #if defined(GBA_PROFILE_RENDER) && defined(__arm__)
 #include "gba.h"
 /* Debug-build-only counters. Normal release builds allocate NONE of these.
@@ -44,11 +48,22 @@ static uint8_t wall_type[HD_W],wall_u[HD_W],wall_tx[HD_W],wall_ty[HD_W];
    at most 150 vertical palette entries per ray (6,750 EWRAM bytes).
    This is NOT another framebuffer and never caches moving sky or rain. */
 enum { WALL_RAYS=45, WALL_SHADE_ROWS=150 };
+static uint8_t wall_face[WALL_RAYS];
 static uint8_t wall_shade_cache[WALL_RAYS][WALL_SHADE_ROWS]
  __attribute__((section(".ewram"),aligned(4)));
 static int wall_cache_valid,wall_cam_x,wall_cam_y,wall_cam_fx,wall_cam_fy;
 #if !defined(__arm__)
+static int legacy_scenery,reference_restore,reference_floor,reference_ray;
 void hd_debug_invalidate_wall_cache(void){wall_cache_valid=0;}
+/* Shipped art remains a host-only baseline; do not weaken the existing
+   3,456 golden-frame regression to bless unrelated rendering changes. */
+void hd_debug_legacy_scenery(int enabled){legacy_scenery=!!enabled;wall_cache_valid=0;}
+void hd_debug_reference_restore(int enabled){reference_restore=!!enabled;}
+void hd_debug_reference_floor(int enabled){reference_floor=!!enabled;}
+void hd_debug_reference_ray(int enabled){reference_ray=!!enabled;wall_cache_valid=0;}
+#else
+#define legacy_scenery 0
+#define reference_restore 0
 #endif
 /* Ends of the exact original ((x-120)*3)/16 ray-direction runs. */
 static const uint8_t ray_end[45]={
@@ -152,6 +167,12 @@ static HD_CANVAS_CODE inline unsigned road_shade_color(
  return hd_floor_dither17[x+y]?HD_ROAD_COOL:HD_ROAD;
 }
 #if !defined(__arm__)
+unsigned hd_debug_packed_road_column_category(int tx,int ty,unsigned cx,unsigned cy){
+ if((unsigned)tx>=24u||(unsigned)ty>=18u||cx>=16u||cy>=16u)return 255u;
+ unsigned id=hd_road_tile_index[(unsigned)ty*24u+(unsigned)tx];
+ if(id==255u)return 255u;
+ return (hd_road_columns[id*16u+cx]>>(cy*2u))&3u;
+}
 unsigned hd_debug_packed_road_row_category(int tx,int ty,unsigned cx,unsigned cy){
  if((unsigned)tx>=24u||(unsigned)ty>=18u||cx>=16u||cy>=16u)return 255u;
  unsigned id=hd_road_tile_index[(unsigned)ty*24u+(unsigned)tx];
@@ -194,7 +215,8 @@ static HD_CANVAS_CODE inline unsigned floor_ink(char t,int wx,int wy,int x,int y
 }
 /* Keep the measured pixel loops in ARM/IWRAM. noinline prevents the
    Thumb entry point from absorbing them back into cartridge code. */
-static HD_CANVAS_CODE __attribute__((noinline)) void floor_render(uint8_t *p,const Story *s,int cx,int cy,
+#if !defined(__arm__)
+static void floor_render_reference(uint8_t *p,const Story *s,int cx,int cy,
                          int fx,int fy,int rx,int ry,unsigned tick){
  (void)s;
  /* One projection calculation per scanline, and half-rate horizontal
@@ -250,6 +272,138 @@ static HD_CANVAS_CODE __attribute__((noinline)) void floor_render(uint8_t *p,con
   }
  }
 }
+#endif
+/* Fixed 60-row geometry removes three software divisions per row.
+   The table is exactly the previous projection and wall-bottom rule. */
+typedef struct {uint16_t distance,side;int16_t wall_limit;} FloorProjection;
+static const FloorProjection floor_projection[60]={
+ {2304,3686,5140},
+ {2250,3600,3406},
+ {1928,3084,2540},
+ {1687,2699,2020},
+ {1500,2400,1673},
+ {1350,2160,1425},
+ {1227,1963,1240},
+ {1125,1800,1095},
+ {1038,1660,980},
+ {964,1542,885},
+ {900,1440,806},
+ {843,1348,740},
+ {794,1270,682},
+ {750,1200,633},
+ {710,1136,590},
+ {675,1080,551},
+ {642,1027,517},
+ {613,980,487},
+ {586,937,460},
+ {562,899,435},
+ {540,864,412},
+ {519,830,392},
+ {500,800,373},
+ {482,771,356},
+ {465,744,340},
+ {450,720,325},
+ {435,696,311},
+ {421,673,298},
+ {409,654,286},
+ {397,635,275},
+ {385,616,265},
+ {375,600,255},
+ {364,582,245},
+ {355,568,237},
+ {346,553,228},
+ {337,539,221},
+ {329,526,213},
+ {321,513,206},
+ {313,500,200},
+ {306,489,193},
+ {300,480,187},
+ {293,468,181},
+ {287,459,176},
+ {281,449,171},
+ {275,440,166},
+ {270,432,161},
+ {264,422,156},
+ {259,414,152},
+ {254,406,148},
+ {250,400,143},
+ {245,392,140},
+ {241,385,136},
+ {236,377,132},
+ {232,371,129},
+ {228,364,125},
+ {225,360,122},
+ {221,353,119},
+ {217,347,116},
+ {214,342,113},
+ {210,336,110},
+};
+/* Paint the same even sample on both far pixels, without crossing
+   an occluded ray edge. Near samples retain every native column. */
+static inline __attribute__((always_inline)) void floor_store(uint8_t *row,int x,
+                                                 int begin,int end,int step,unsigned ink){
+ if(x>=begin)row[x]=(uint8_t)ink;
+ if(step==2&&x+1<end)row[x+1]=(uint8_t)ink;
+}
+static HD_CANVAS_CODE __attribute__((noinline)) void floor_render(uint8_t *p,const Story *s,int cx,int cy,
+                         int fx,int fy,int rx,int ry,unsigned tick){
+#if !defined(__arm__)
+ if(reference_floor){floor_render_reference(p,s,cx,cy,fx,fy,rx,ry,tick);return;}
+#endif
+ (void)s;
+ /* A cardinal camera has exactly ONE varying world coordinate per
+    scanline. Keep it in Q8, advancing by addition. Negative directions
+    add 255 before negation to preserve the original arithmetic shift. */
+ int along_x=rx!=0,sign=along_x?rx:ry;
+ for(int y=80;y<140;y++){
+  const FloorProjection *pr=&floor_projection[y-80];
+  int dist=pr->distance,unit=pr->side,limit=pr->wall_limit;
+  int fixed=along_x?cy+fy*dist:cx+fx*dist;
+  int origin=along_x?cx+fx*dist:cy+fy*dist;
+  int ft=fixed>>8;
+  unsigned sub=((unsigned)fixed>>4)&15u;
+  int step=y<98?2:1,dq=sign*unit*step;
+  uint8_t *row=p+y*HD_W;
+  int begin=0;
+  unsigned ray=0;
+  while(ray<WALL_RAYS){
+   int end=ray_end[ray++];
+   if(wall_type[begin]&&wall_depth[begin]<=limit){begin=end;continue;}
+   /* Adjacent uncovered rays are a continuous floor span, not a new
+      texture setup and duplicate odd half-sample for every ray. */
+   while(ray<WALL_RAYS&&(!wall_type[end]||wall_depth[end]>limit))
+    end=ray_end[ray++];
+   int x=begin&~(step-1);
+   int q=origin*256+sign*(x-120)*unit+(sign<0?255:0);
+   while(x<end){
+    int tv=q>>16,tx=along_x?tv:ft,ty=along_x?ft:tv;
+    char tile=story_tile(tx,ty);
+    if(tile=='.'){
+     unsigned id=hd_road_tile_index[(unsigned)ty*24u+(unsigned)tx];
+     /* Transposed columns make vertical scans just as cheap as horizontal
+        scans. Load one packed word for this entire run inside a tile. */
+     unsigned word=along_x?read_packed_road_row(id,sub):hd_road_columns[id*16u+sub];
+     do{
+      int v=q>>8;
+      unsigned category=(word>>((((unsigned)v>>4)&15u)*2u))&3u;
+      unsigned ink=road_shade_color(v,fixed,x,y,category);
+      floor_store(row,x,begin,end,step,ink);
+      x+=step;q+=dq;
+     }while(x<end&&(q>>16)==tv);
+    }else{
+     do{
+      int v=q>>8;
+      int wx=along_x?v:fixed,wy=along_x?fixed:v;
+      unsigned ink=floor_ink(tile,wx,wy,x,y,tick);
+      floor_store(row,x,begin,end,step,ink);
+      x+=step;q+=dq;
+     }while(x<end&&(q>>16)==tv);
+    }
+   }
+   begin=end;
+  }
+ }
+}
 /* Width is constant for a ray, while each row has a palette shade. EWRAM
    supports aligned halfword stores: pack two identical pixels into one
    write instead of performing one byte store + loop branch per column.
@@ -273,7 +427,7 @@ void hd_debug_wall_store_span(uint8_t *canvas,int x,int y,int width,uint8_t ink)
 }
 #endif
 static HD_CANVAS_CODE void wall_column(uint8_t *p,int x,int width,int top,int bottom,char type,
-                        int u,int forward,int tx,int ty,uint8_t *save_ink){
+                        int u,int forward,int tx,int ty,unsigned face,uint8_t *save_ink){
 #if defined(GBA_PROFILE_RENDER) && defined(__arm__)
  uint32_t wallshade_start=gba_profile_clock();
 #endif
@@ -281,6 +435,18 @@ static HD_CANVAS_CODE void wall_column(uint8_t *p,int x,int width,int top,int bo
  int tree=type=='T';
  unsigned base=tree?HD_LEAF_DARK:type=='A'?HD_BRICK:HD_BRICK_DARK;
  if(forward>1200)base=tree?HD_LEAF_DARK:HD_STONE_DARK;
+ const uint8_t *surface=(!tree&&!legacy_scenery)?hd_facade_at(tx,ty,type,face):0;
+ unsigned column=(unsigned)u>>4;
+ /* The authored side lighting stays visible in the distance, without
+    turning the far windows and roof trim into bright noise. */
+ static const uint8_t distant[32]={
+  HD_ROAD,HD_ROAD,HD_ROAD_COOL,HD_WET,HD_MORTAR,HD_STONE,
+  HD_STONE,HD_STONE_DARK,HD_BRICK_DARK,HD_BRICK_DARK,HD_BRICK,
+  HD_STONE,HD_PLASTER,HD_SHADOW,HD_GOLD,HD_GLASS,HD_GLASS,
+  HD_ROAD_COOL,HD_BARK,HD_LEAF_DARK,HD_LEAF_DARK,HD_LEAF,
+  HD_BARK,HD_PLASTER,HD_INK,HD_STONE_LIT,HD_RED_SHADE,HD_RED_SHADE,
+  HD_SKIN,HD_SKIN,HD_HAIR,HD_COPPER
+ };
  /* The older painter performed a software integer division for EVERY
     wall pixel. ARM7TDMI has no hardware divider. Quotient/remainder
     DDA produces precisely floor((y-top)*256/height) per scanline, but
@@ -299,7 +465,14 @@ static HD_CANVAS_CODE void wall_column(uint8_t *p,int x,int width,int top,int bo
    else if((texel((unsigned)(u>>3),(unsigned)(v>>3))&3u)==0u)
     c=HD_LEAF_LIT;
    else c=HD_LEAF;
-  }else{
+  }else if(surface){
+   /* Native 16x40 atlas. The same exact facing and district appears in
+      overhead and street views. No newly decoded texture or framebuffer. */
+   c=surface[((unsigned)v*40u>>8)*16u+column];
+   if(forward>1200)c=distant[c-32u];
+  }
+#if !defined(__arm__)
+  else{
    /* Facade windows fixed to wall texture coordinates, not screen x.
       Floor breaks, mortar and stone relief persist as camera moves. */
    int window=u>=53&&u<=202&&v>=57&&v<=163;
@@ -325,7 +498,8 @@ static HD_CANVAS_CODE void wall_column(uint8_t *p,int x,int width,int top,int bo
                          (unsigned)(v>>4)+(unsigned)(ty+40))&7u)==0u)
     c=HD_BRICK_LIT;
   }
-  if(v>225&&(u&15)==1)c=HD_STONE;
+#endif
+  if(!surface&&v>225&&(u&15)==1)c=HD_STONE;
   /* Same Potheads shop, same town coordinate in both cameras. This is
      environmental branding, not the future handheld/dancing sign. */
   if(!tree && tx==21 && ty==11){
@@ -367,59 +541,84 @@ static HD_CANVAS_CODE void wall_cached_column(uint8_t *p,int x,int width,
  gba_profile_wallshade_cycles+=gba_profile_clock()-wallshade_start;
 #endif
 }
+/* 72 bytes replace the height division in cold rays, warm rays,
+   and restored occluding columns. Depth 2272 shares the last bucket
+   with 2300: both project to exactly four half-height pixels. */
+static const uint8_t wall_half_height[72]={
+ 75,75,75,66,55,47,41,36,32,29,27,25,23,21,20,19,18,17,
+ 16,15,14,14,13,13,12,12,11,11,10,10,10,9,9,9,9,8,
+ 8,8,8,7,7,7,7,7,7,6,6,6,6,6,6,6,6,5,
+ 5,5,5,5,5,5,5,5,5,5,4,4,4,4,4,4,4,4,
+};
 static HD_CANVAS_CODE __attribute__((noinline)) void cast_walls(uint8_t *p,int cx,int cy,int fx,int fy,int rx,int ry){
  int warm=wall_cache_valid&&wall_cam_x==cx&&wall_cam_y==cy&&
           wall_cam_fx==fx&&wall_cam_fy==fy;
+ if(warm){
+  /* Cache contains BOTH geometry and shade data for this exact pose.
+     Do not traverse the map or recompute UVs on a stationary frame. */
+  int x=0;
+  for(unsigned slot=0;slot<WALL_RAYS;slot++){
+   int end=ray_end[slot];
+   if(wall_type[x]){
+    int half=wall_half_height[wall_depth[x]>>5];
+    wall_cached_column(p,x,end-x,79-half,79+half,(char)wall_type[x],wall_shade_cache[slot]);
+   }
+   x=end;
+  }
+  return;
+ }
  unsigned slot=0;
  for(int x=0;x<HD_W;){
-  int side=((x-120)*3)/16; /* 0.75 FOV at each edge, fixed-point */
-  /* The original integer projection gives adjacent columns identical
-     directions. Reuse that exact result, without reducing sampling. */
-  int end=x+1;
-  while(end<HD_W && ((end-120)*3)/16==side)end++;
+  /* Exact, immutable original ray directions and column boundaries. */
+  int side=(int)slot-22;
+  int end=ray_end[slot];
   int dx=fx*32+rx*side,dy=fy*32+ry*side;
-  int wx=cx,wy=cy,hit_dist=2400,tx=0,ty=0;
-  int previous_tx=cx>>8,previous_ty=cy>>8;
-  char hit=0;
-  for(int step=1;step<76;step++){
-   wx+=dx;wy+=dy;
-   tx=wx>>8;ty=wy>>8;
-   /* 32-step ray samples often sit in the SAME town tile.
-      Only touch the story grid on cell crossings. Same collision set,
-      depth and view, but many fewer tile queries and branch chains. */
-   if(tx==previous_tx && ty==previous_ty)continue;
-   previous_tx=tx;previous_ty=ty;
-   char t=story_tile(tx,ty);
-   if(t=='#'||t=='A'||t=='T'){hit=t;hit_dist=step*32;break;}
-  }
-  if(hit_dist>2300)hit_dist=2300;
+  HdRayHit sample;
+#if !defined(__arm__)
+  if(reference_ray)hd_ray_reference(cx,cy,dx,dy,&sample);
+  else
+#endif
+  hd_ray_trace(cx,cy,dx,dy,&sample);
+  int wx=sample.wx,wy=sample.wy,tx=sample.tx,ty=sample.ty;
+  int hit_from_x=sample.from_x,hit_from_y=sample.from_y;
+  int hit_dist=sample.depth;
+  char hit=sample.type;
   for(int col=x;col<end;col++){
    wall_depth[col]=(uint16_t)hit_dist;
    wall_type[col]=(uint8_t)hit;
   }
   if(!hit){x=end;slot++;continue;}
-  int height=20800/(hit_dist+60);
-  if(height>150)height=150;
-  if(height<3)height=3;
-  int top=79-height/2,bottom=79+height/2;
-  int u=abs_i(dx)>abs_i(dy)?wy&255:wx&255;
+  int half=wall_half_height[(unsigned)hit_dist>>5];
+  int top=79-half,bottom=79+half;
+  unsigned face=abs_i(dx)>abs_i(dy)?1u:0u;
+  int u=face?wy&255:wx&255;
+  if(!legacy_scenery){
+   HdWallSample sample=hd_wall_sample(wx,wy,dx,dy,tx,ty,hit_from_x,hit_from_y);
+   face=sample.face;u=(int)sample.u;
+  }
+  if(slot<WALL_RAYS)wall_face[slot]=(uint8_t)face;
   for(int col=x;col<end;col++){
    wall_u[col]=(uint8_t)u;
    wall_tx[col]=(uint8_t)tx;
    wall_ty[col]=(uint8_t)ty;
   }
-  if(warm&&slot<WALL_RAYS)
-   wall_cached_column(p,x,end-x,top,bottom,hit,wall_shade_cache[slot]);
-  else
-   wall_column(p,x,end-x,top,bottom,hit,u,hit_dist,tx,ty,
-               slot<WALL_RAYS?wall_shade_cache[slot]:0);
+  wall_column(p,x,end-x,top,bottom,hit,u,hit_dist,tx,ty,face,
+              wall_shade_cache[slot]);
   x=end;slot++;
  }
  wall_cache_valid=slot==WALL_RAYS;
  wall_cam_x=cx;wall_cam_y=cy;wall_cam_fx=fx;wall_cam_fy=fy;
 }
-static void actor(uint8_t *p,int sx,int ground,int h,char kind,unsigned tick){
+static void actor(uint8_t *p,int sx,int ground,int h,char kind,unsigned tick,const Story *s){
  if(h<8)return;
+ if(!legacy_scenery&&(kind=='R'||kind=='M')){
+  int w=h*4/11;if(w<5)w=5;
+  if(kind=='R')hd_project_easel(p,sx,ground,w,h*3/4,s->art_steps,
+                               !!(s->project_style&STORY_STYLE_ART_WARM));
+  else hd_project_desk(p,sx,ground,w,h*3/4,s->song_steps,
+                       !!(s->project_style&STORY_STYLE_SONG_SOFT));
+  return;
+ }
  /* World-grounded people use the same authored 4-direction sprites in
     both views. The old rectangles stay only for physical shop markers. */
  if(kind=='F'||kind=='C'||kind=='P'||kind=='V'||kind=='Q'||kind=='W'){
@@ -513,16 +712,29 @@ static SceneBillboard visible[MAX_VISIBLE_BILLBOARDS];
 /* Restore occluding wall columns AFTER a sprite is drawn.
    This preserves hidden-surface order without a 240x160 sprite buffer. */
 static void restore_occluding_wall(uint8_t *p,int sx,int h,int depth){
- int radius=h*4/11+4;
- if(radius<8)radius=8;
- for(int x=sx-radius;x<=sx+radius;x++){
-  if((unsigned)x>=HD_W || !wall_type[x] || wall_depth[x]>=depth)
-   continue;
-  int wh=20800/((int)wall_depth[x]+60);
-  if(wh>150)wh=150;
-  if(wh<3)wh=3;
-  wall_column(p,x,1,79-wh/2,79+wh/2,(char)wall_type[x],wall_u[x],
-              wall_depth[x],wall_tx[x],wall_ty[x],0);
+ int radius=hd_billboard_radius(h);
+ int left=sx-radius,right=sx+radius+1;
+ if(left<0)left=0;
+ if(right>HD_W)right=HD_W;
+ /* Restore the SAME shaded wall already drawn for this camera, clipped
+    to the billboard's extent. Each ray's equal columns are one span;
+    never redo texture math just because a person crossed a facade. */
+ for(int x=left;x<right;){
+  unsigned slot=(unsigned)(((x-120)*3)/16+22);
+  int end=wall_cache_valid&&!reference_restore&&slot<WALL_RAYS?ray_end[slot]:x+1;
+  if(end>right)end=right;
+  if(wall_type[x]&&wall_depth[x]<depth){
+   int half=wall_half_height[wall_depth[x]>>5];
+   int top=79-half,bottom=79+half;
+   if(wall_cache_valid&&!reference_restore&&slot<WALL_RAYS)
+    wall_cached_column(p,x,end-x,top,bottom,(char)wall_type[x],wall_shade_cache[slot]);
+   else
+    wall_column(p,x,1,top,bottom,(char)wall_type[x],wall_u[x],
+                wall_depth[x],legacy_scenery?wall_tx[x]:(int)(int8_t)wall_tx[x],
+                legacy_scenery?wall_ty[x]:(int)(int8_t)wall_ty[x],
+                slot<WALL_RAYS?wall_face[slot]:(unsigned)(wall_cam_fx!=0),0);
+  }
+  x=end;
  }
 }
 static void render_billboards(uint8_t *p,int cx,int cy,
@@ -539,7 +751,9 @@ static void render_billboards(uint8_t *p,int cx,int cy,
   int height=24000/(forward+70);
   if(height>115)height=115;
   if(height<8)height=8;
-  if(sx<0||sx>=240||forward>wall_depth[sx])continue;
+  if(legacy_scenery){
+   if(sx<0||sx>=240||forward>wall_depth[sx])continue;
+  }else if(!hd_billboard_visible(sx,height,forward,wall_depth,wall_type,HD_W))continue;
   if(count>=MAX_VISIBLE_BILLBOARDS)continue;
   SceneBillboard item={(int16_t)sx,(int16_t)(80+height/2),
                        (int16_t)height,(int16_t)forward,(uint8_t)kind};
@@ -562,7 +776,7 @@ static void render_billboards(uint8_t *p,int cx,int cy,
    hd_rect(p,x+w/2-2,top+2,2,y-top-2,HD_BARK);
    hd_rect(p,x,top-h/10,w/3+1,h/10+1,HD_INK);
    hd_pixel(p,x+1,top-h/10,HD_GOLD);
-  }else actor(p,item->sx,item->ground,item->height,(char)item->kind,tick);
+  }else actor(p,item->sx,item->ground,item->height,(char)item->kind,tick,s);
   restore_occluding_wall(p,item->sx,item->height,item->depth);
  }
 }
@@ -574,11 +788,8 @@ void hd_first_person_draw(uint8_t *p,const Story *s,unsigned tick){
 #endif
  int fx,fy,rx,ry;
  dirs(s,&fx,&fy,&rx,&ry);
- int camx=(int)s->x*256+128,camy=(int)s->y*256+128;
- if(s->anim){
-  camx+=(s->prev_x-(int)s->x)*s->anim*64;
-  camy+=(s->prev_y-(int)s->y)*s->anim*64;
- }
+ HdSceneCamera camera=hd_scene_camera(s);
+ int camx=camera.x,camy=camera.y;
  set_sky(p,tick,s->facing,camx,camy);
 #if defined(GBA_PROFILE_RENDER) && defined(__arm__)
  profile_now=gba_profile_clock();

@@ -36,6 +36,17 @@ int main(void){
  assert(test_sound_regs[2]!=0u);
  assert(music_get_cue()==MUSIC_CUE_STUDIO);
  assert(note1!=0u);
+ /* Silence is a real transport state, not replacement background music. */
+ music_set_cue(MUSIC_CUE_STUDIO_IDLE);
+ for(unsigned i=0;i<16u;i++)advance();
+ assert(test_sound_regs[1]==0u&&test_sound_regs[3]==0u&&test_sound_regs[6]==0u&&test_sound_regs[8]==0u);
+ music_set_cue(MUSIC_CUE_STUDIO);music_poll();
+ /* Each independently muted track stays off at all sequencer steps. */
+ for(unsigned voice=0;voice<STUDIO_TRACK_COUNT;voice++)
+  if(studio_mix_level(studio_patch(),voice))studio_toggle(STUDIO_MIX,voice);
+ for(unsigned i=0;i<100u;i++)advance();
+ assert((test_sound_regs[1]&0xF000u)==0u&&test_sound_regs[3]==0u&&test_sound_regs[6]==0u&&test_sound_regs[8]==0u);
+ studio_reset();
  music_set_cue(MUSIC_CUE_STREETS);
  assert(music_get_cue()==MUSIC_CUE_STREETS); /* stop immediately */
  music_set_cue(MUSIC_CUE_STUDIO);

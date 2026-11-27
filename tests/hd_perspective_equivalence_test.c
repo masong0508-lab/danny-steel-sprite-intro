@@ -7,6 +7,7 @@
 int hd_first_person_anchor_map_valid(void);
 unsigned hd_debug_road_rom_category(int tx,int ty,unsigned cx,unsigned cy);
 unsigned hd_debug_packed_road_row_category(int tx,int ty,unsigned cx,unsigned cy);
+unsigned hd_debug_packed_road_column_category(int tx,int ty,unsigned cx,unsigned cy);
 static unsigned original_road_texel(unsigned x,unsigned y){
  uint32_t n=(x+31u)*1664525u+(y+79u)*1013904223u;
  n^=n>>13;n*=2246822519u;return (unsigned)(n^(n>>11));
@@ -18,20 +19,25 @@ static void verify_original_road_material_rom(void){
   for(unsigned cy=0;cy<16u;cy++)for(unsigned cx=0;cx<16u;cx++){
    unsigned got=hd_debug_road_rom_category(tx,ty,cx,cy);
    unsigned word=hd_debug_packed_road_row_category(tx,ty,cx,cy);
-   if(!road){assert(got==255u&&word==255u);nonroad++;continue;}
+   unsigned column=hd_debug_packed_road_column_category(tx,ty,cx,cy);
+   if(!road){assert(got==255u&&word==255u&&column==255u);nonroad++;continue;}
    unsigned n=original_road_texel((unsigned)tx*16u+cx,
                                   (unsigned)ty*16u+cy);
    unsigned want=(n&31u)==0u?0u:(n&7u)==1u?1u:2u;
-   assert(got==want&&word==want);checks++;
+   assert(got==want&&word==want&&column==want);checks++;
   }
  }
  assert(checks==240u*256u&&nonroad==192u*256u);
  assert(hd_debug_road_rom_category(-1,0,0,0)==255u);
  assert(hd_debug_road_rom_category(24,0,0,0)==255u);
- puts("packed road ROM: 61440 exact original shade categories, every map tile guarded");
+ puts("packed road ROM: 61440 exact row AND column shade categories, every map tile guarded");
 }
 void hd_debug_wall_store_span(uint8_t *canvas,int x,int y,int width,uint8_t ink);
 void hd_debug_invalidate_wall_cache(void);
+void hd_debug_legacy_scenery(int enabled);
+void hd_debug_reference_restore(int enabled);
+void hd_debug_reference_floor(int enabled);
+void hd_debug_reference_ray(int enabled);
 
 /* Captured from the original shipped PR14 painter before changing its
    ray reuse, floor ordering or instruction placement. Each value covers
@@ -121,9 +127,37 @@ static void verify_camera_shade_cache(void){
  assert(cases==120u);
  printf("camera wall-shade cache: %u cold/warm native full-frame matches\\n",cases);
 }
+static void verify_coherent_restore(void){
+ static uint8_t reference[HD_BYTES];
+ Story s;story_new(&s,0);s.dialogue=0;s.cinema=CINE_NONE;s.flags=STORY_FULL;
+ unsigned cases=0;
+ /* Every scene and direction, including the walk phases, must match
+    the independently repainted one-column occlusion path. */
+ for(unsigned facing=0;facing<4u;facing++)
+  for(int y=1;y<STORY_H-1;y++)for(int x=1;x<STORY_W-1;x++){
+   if(story_solid(x,y))continue;
+   s.x=(uint8_t)x;s.y=(uint8_t)y;s.facing=(uint8_t)facing;s.view=1;
+   s.prev_x=s.x;s.prev_y=s.y;s.anim=0;
+   hd_debug_reference_restore(1);hd_debug_reference_floor(1);hd_debug_reference_ray(1);hd_debug_invalidate_wall_cache();
+   memset(&canvas,0xA6,sizeof canvas);hd_first_person_draw(canvas.pixels,&s,71u);
+   memcpy(reference,canvas.pixels,HD_BYTES);
+   hd_debug_reference_restore(0);hd_debug_reference_floor(0);hd_debug_reference_ray(0);
+   memset(&canvas,0xA6,sizeof canvas);hd_first_person_draw(canvas.pixels,&s,71u);
+   assert(!memcmp(reference,canvas.pixels,HD_BYTES));
+   for(unsigned i=0;i<HD_BYTES;i++)assert(canvas.pixels[i]<64u);
+   for(unsigned i=0;i<32u;i++)assert(canvas.before[i]==0xA6u&&canvas.after[i]==0xA6u);
+   cases++;
+  }
+ assert(cases==1152u);
+ printf("coherent scenery: %u exact new floor/cache versus reference restored frames\n",cases);
+}
 int main(void){
  verify_original_road_material_rom();
  verify_halfword_wall_spans();
+ verify_camera_shade_cache();
+ verify_coherent_restore();
+ hd_debug_legacy_scenery(1);
+ hd_debug_reference_restore(1);
  verify_camera_shade_cache();
  assert(hd_first_person_anchor_map_valid());
  Story s;story_new(&s,0);
@@ -153,6 +187,8 @@ int main(void){
    assert(hash==original_hash[facing][mode]);
   }
  assert(cases==3456u);
+ hd_debug_legacy_scenery(0);
+ hd_debug_reference_restore(0);
 
  /* Independently check the depth inequality at every possible sampled
     wall distance and floor row, including original height clamp edges. */

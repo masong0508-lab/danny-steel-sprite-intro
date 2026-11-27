@@ -2,6 +2,8 @@
 #include "hd_isometric_atlas.h"
 #include "hd_world_atlas.h"
 #include "hd_facade_art.h"
+#include "hd_scene_geometry.h"
+#include "hd_project_props.h"
 
 /* A real isometric projection of the ACTUAL 24x18 walkable town:
    x grows southeast and y southwest, so D-pad logic stays cardinal
@@ -95,15 +97,9 @@ static void building(uint8_t *p,int sx,int sy,int wx,int wy,
  /* District-level masses and architecture: the central archive is one
     coherent masonry block; the east shop row uses one low roof line.
     Border neighborhoods vary at block boundaries, not tile by tile. */
- int civic=wx>=10&&wx<=13&&wy>=3&&wy<=6;
- int shops=wx>=21&&wy>=10&&wy<=12;
- int waterfront=wy>=14;
- unsigned h=civic?36u:shops?27u:waterfront?27u:
-            ((wx/6+wy/6)&1)?32u:27u;
- unsigned variant=civic?6u:shops?4u:waterfront?2u:
-                  ((wx/6+wy/6)&1)?0u:1u;
- if(!civic&&!shops&&!waterfront&&wx<5&&wy>=7)variant=3u;
- if(!civic&&!shops&&!waterfront&&wx>=17&&wy<=4)variant=5u;
+ HdDistrict d=hd_district(wx,wy,type);
+ int civic=d.civic,shops=d.shops,waterfront=d.waterfront;
+ unsigned h=d.height,variant=d.variant;
  int front=exposed(wx,wy+1),side=exposed(wx+1,wy);
  int potheads=(wx==21&&wy==11);
  int sign_x=sx+31,sign_y=sy-(int)h-13;
@@ -124,8 +120,6 @@ static void building(uint8_t *p,int sx,int sy,int wx,int wy,
   }
   return;
  }
- if(potheads)variant=7u;
- if(type=='A')variant=6u;
  if(front)hd_facade_wall(p,sx,sy,(int)h,variant,0u);
  if(side)hd_facade_wall(p,sx+16,sy,(int)h,variant,1u);
  unsigned roof=civic?24u:shops?25u:waterfront?22u:20u+((n>>9)&1u);
@@ -301,6 +295,8 @@ static void object(uint8_t *p,int sx,int sy,char kind,unsigned tick,
   hd_line(p,cx+6,foot-7,cx+1,foot-6,HD_PAPER);
   hd_rect(p,cx-14,foot-16,3,10,HD_SHADOW);
   hd_rect(p,cx+11,foot-16,3,10,HD_SHADOW);
+  hd_rect(p,cx-16,foot-30,33,8,HD_SHADOW);
+  hd_text(p,cx-15,foot-30,"STUDIO",HD_LAMP,1,0);
   /* A raised meter bridge leaves the stages legible even where
      another street object hides the desk's front edge. */
   unsigned phase=s->song_steps>4u?4u:s->song_steps;
@@ -311,33 +307,8 @@ static void object(uint8_t *p,int sx,int sy,char kind,unsigned tick,
   return;
  }
  if(kind=='R'){
-  /* Freestanding painting with visible three-legged wooden easel. */
-  hd_ellipse(p,cx,foot,10,3,HD_SHADOW);
-  hd_line(p,cx-7,foot,cx-2,foot-19,HD_BARK);
-  hd_line(p,cx+7,foot,cx+2,foot-19,HD_BARK);
-  hd_line(p,cx,foot,cx,foot-17,HD_COPPER);
-  hd_rect(p,cx-8,foot-19,16,14,HD_BARK);
-  hd_rect(p,cx-6,foot-17,12,10,HD_PAPER);
-  /* Small but recognizable framed evening skyline, with a canvas edge
-     and easel legs rather than an abstract zig-zag symbol. */
-  unsigned phase=s->art_steps,warm=s->project_style&STORY_STYLE_ART_WARM;
-  if(!phase){
-   hd_rect(p,cx-5,foot-16,10,7,HD_PLASTER);
-   hd_line(p,cx-5,foot-10,cx+4,foot-10,HD_STONE);
-   hd_line(p,cx-4,foot-12,cx,foot-14,HD_STONE);
-   hd_line(p,cx,foot-14,cx+4,foot-12,HD_STONE);
-  }else{
-   hd_rect(p,cx-5,foot-16,10,4,warm?HD_COPPER:HD_GLASS);
-   hd_rect(p,cx-5,foot-12,10,3,warm?HD_BRICK_LIT:HD_ROAD_COOL);
-   hd_pixel(p,cx+3,foot-15,HD_LAMP);
-   if(phase>=2u){
-    hd_rect(p,cx-4,foot-12,3,3,HD_STONE_DARK);
-    hd_rect(p,cx,foot-13,3,4,HD_BRICK_DARK);
-   }
-   if(phase>=3u)hd_pixel(p,cx+1,foot-11,HD_GOLD);
-   if(phase>=4u)hd_line(p,cx-5,foot-8,cx+4,foot-8,HD_GOLD);
-  }
-  hd_rect(p,cx-10,foot-5,20,2,HD_COPPER);
+  hd_project_easel(p,cx,foot,16,20,s->art_steps,
+                   !!(s->project_style&STORY_STYLE_ART_WARM));
   return;
  }
  if(kind=='K'){
@@ -439,14 +410,18 @@ static void rain(uint8_t *p,unsigned tick){
 }
 void hd_isometric_draw(uint8_t *p,const Story *s,unsigned tick){
  night(p);
+ HdSceneCamera camera=hd_scene_camera(s);
+ /* Translate every layer by the same fractional camera motion. The
+    actor remains centered, while architecture and ground move smoothly. */
+ int ox=camera.iso_x,oy=camera.iso_y;
  /* Terrain first. Occlusion and architectural depth sorted by world
     x+y, the exact order of isometric foot placement. */
  /* A tile row projects to two monotone screen coordinates. Keep the
     exact original draw order while avoiding per-tile projection and
     stopping as soon as the remainder of a row is off-screen. */
  for(int wy=-1;wy<=STORY_H;wy++){
-  int sx=104+16*(-1-wy-(int)s->x+(int)s->y);
-  int sy=72+8*(-1+wy-(int)s->x-(int)s->y);
+  int sx=104+16*(-1-wy-(int)s->x+(int)s->y)-ox;
+  int sy=72+8*(-1+wy-(int)s->x-(int)s->y)-oy;
   for(int wx=-1;wx<=STORY_W;wx++,sx+=16,sy+=8){
    if(sx<=-32||sy<=-18)continue;
    if(sx>=240||sy>=154)break;
@@ -469,15 +444,8 @@ void hd_isometric_draw(uint8_t *p,const Story *s,unsigned tick){
  if(has_route && route_steps>0 && route_dir>=0 && route_dir<4){
   next_x+=dx[route_dir];next_y+=dy[route_dir];
  }else has_route=0;
- int ox=0,oy=0;
- if(s->anim){
-  ox=((int)s->prev_x-(int)s->x -
-      ((int)s->prev_y-(int)s->y))*s->anim*4;
-  oy=((int)s->prev_x-(int)s->x +
-      ((int)s->prev_y-(int)s->y))*s->anim*2;
- }
- int actor_x=120+ox,actor_foot=88+oy;
- int player_depth=((int)s->x+(int)s->y)*8+oy;
+ int actor_x=120,actor_foot=88;
+ int player_depth=camera.depth;
  int drew_player=0;
  for(int depth=-2;depth<=STORY_W+STORY_H+1;depth++){
   /* Insert between the actual fractional depth planes while walking;
@@ -490,12 +458,12 @@ void hd_isometric_draw(uint8_t *p,const Story *s,unsigned tick){
   /* Depth slices share a screen Y. Clamp the world span first; each
      successive X then advances exactly 32 screen pixels. This avoids
      traversing invisible map rows without touching the painter order. */
-  int sy=72+8*(depth-(int)s->x-(int)s->y);
+  int sy=72+8*(depth-(int)s->x-(int)s->y)-oy;
   if(sy<=-55||sy>=166)continue;
   int first=depth-STORY_H,last=depth+1;
   if(first< -1)first=-1;
   if(last>STORY_W)last=STORY_W;
-  int sx=104+16*(2*first-depth-(int)s->x+(int)s->y);
+  int sx=104+16*(2*first-depth-(int)s->x+(int)s->y)-ox;
   for(int wx=first;wx<=last;wx++,sx+=32){
    if(sx<=-48)continue;
    if(sx>=256)break;

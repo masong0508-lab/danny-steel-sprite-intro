@@ -74,6 +74,8 @@ def pack_pose(pose, last_sign):
         last_sign = [quantize(point) for point in [*quad, tip]]
     facing = {"front": 0, "left": 1, "right": 2, "back": 3}[pose["facing"]]
     flags = ((1 if held else 2 if falling else 0)
+             | (256 if (held or falling) and known(sign.get("arrow_tip")) else 0)
+             | (512 if (held or falling) and sign.get("clipped_edges") else 0)
              | (4 if sign["layer"] in ("front", "front_torso", "in_front") else 0)
              | (8 if pose.get("near_arm") == "left" else 0)
              | (facing << 4) | (64 if pose.get("grounded") else 0)
@@ -139,7 +141,7 @@ enum {
 };
 enum { POT_SIGN_HELD=1,POT_SIGN_FALLING=2,POT_SIGN_FRONT=4,
        POT_NEAR_LEFT=8,POT_FACING_SHIFT=4,POT_GROUNDED=64,
-       POT_NEAR_LEFT_LEG=128 };
+       POT_NEAR_LEFT_LEG=128, POT_SIGN_TIP_VISIBLE=256, POT_SIGN_CLIPPED=512 };
 enum { POT_BAG_HIDDEN,POT_BAG_ATTACHED,POT_BAG_FALLING,POT_BAG_RESTING };
 enum { POT_LEFT_SOLE=1,POT_RIGHT_SOLE=2,POT_LEFT_PALM=4,POT_RIGHT_PALM=8 };
 typedef struct {

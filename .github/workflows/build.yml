@@ -85,8 +85,20 @@ jobs:
             src/hd_actor.c src/hd_special.c src/hd_overlay.c \
             tests/hd_nextgen_test.c -o /tmp/danny_hd_nextgen
           /tmp/danny_hd_nextgen
+      - name: Verify shared district textures and continuous camera geometry
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
+            src/story.c src/studio.c src/hd_canvas.c src/hd_facade_art.c \
+            tests/scene_geometry_test.c -o /tmp/danny_scene_geometry
+          /tmp/danny_scene_geometry
       - name: Verify optimized first-person pixels and exact floor occlusion
         run: |
+          python3 tools/build_road_columns.py /tmp/danny_road_columns.inc
+          cmp src/hd_road_columns.inc /tmp/danny_road_columns.inc
+          python3 tools/build_ray_paths.py /tmp/danny_ray_paths.inc
+          cmp src/hd_ray_paths.inc /tmp/danny_ray_paths.inc
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c tests/hd_ray_trace_test.c -o /tmp/danny_ray_trace
+          /tmp/danny_ray_trace
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
             src/story.c src/studio.c src/hd_canvas.c src/hd_world_atlas.c \
             src/hd_facade_art.c src/hd_perspective.c \
@@ -104,6 +116,18 @@ jobs:
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
             src/hd_canvas.c tests/potheads_set_test.c -o /tmp/danny_potheads_set
           /tmp/danny_potheads_set
+      - name: Verify bounded body interpolation and measured sign tip transitions
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc tests/potheads_continuity_test.c -o /tmp/danny_motion_continuity
+          /tmp/danny_motion_continuity
+      - name: Verify every sign silhouette, measured arrow tip and grip bounds
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Wno-unused-function -Isrc src/hd_canvas.c tests/potheads_sign_geometry_test.c -o /tmp/danny_sign_geometry
+          /tmp/danny_sign_geometry
+      - name: Verify sign raster and connected body joints throughout the source
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Wno-unused-function -Isrc src/hd_canvas.c tests/potheads_sign_body_raster_test.c -o /tmp/danny_sign_body_raster
+          /tmp/danny_sign_body_raster
       - name: Validate full Potheads dance, floor contacts, source crop and captions
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \
@@ -231,6 +255,22 @@ jobs:
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c src/story_draw.c src/cinema.c tests/studio_editor_test.c -o /tmp/danny_studio_editor_test
           /tmp/danny_studio_editor_test
+      - name: Walk to the studio, save four takes, share the master and track optional goals
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c src/story_save.c src/hd_canvas.c src/hd_studio.c src/hd_overlay.c tests/studio_campaign_access_test.c -o /tmp/danny_studio_campaign
+          /tmp/danny_studio_campaign
+      - name: Verify shared painting layers and collision-accurate map guide
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c src/hd_canvas.c tests/city_canvas_test.c -o /tmp/danny_city_canvas
+          /tmp/danny_city_canvas
+      - name: Play the seven-stage cafe exhibition through live movement and creative sessions
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/story.c src/studio.c src/story_save.c src/hd_canvas.c src/hd_cinema.c src/hd_actor.c src/hd_special.c src/hd_overlay.c tests/cafe_show_campaign_test.c -o /tmp/danny_cafe_show
+          /tmp/danny_cafe_show
+      - name: Validate four-track mixer, all packed levels and legacy studio-save migration
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc src/studio.c tests/studio_mixer_test.c -o /tmp/danny_mixer
+          /tmp/danny_mixer
       - name: Test actual GBA PSG playback of edited music without interrupting ending score
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Itests/stubs -Isrc -DHOST_MUSIC_TEST -include tests/stubs/gba.h src/music.c src/studio.c src/music_motifs.c tests/studio_audio_test.c -o /tmp/danny_studio_audio_test

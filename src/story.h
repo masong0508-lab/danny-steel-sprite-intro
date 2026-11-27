@@ -40,6 +40,27 @@
 #define STORY_PROJECT_DONE 4u
 #define STORY_STYLE_SONG_SOFT 1u
 #define STORY_STYLE_ART_WARM 2u
+#define STORY_STYLE_SONG_SHARED 4u
+/* Three persisted exhibition-stage bits and two aesthetic choices.
+   The story record remains the same 31 bytes, including old saves. */
+#define STORY_SHOW_STAGE_MASK 0x38u
+#define STORY_SHOW_WARM_POSTER 0x40u
+#define STORY_SHOW_WARM_FRAME 0x80u
+#define STORY_SHOW_DONE 7u
+#define STORY_PROJECT_STYLE_MASK 0xffu
+#define STORY_ACT_SHOW 'Y'
+#define STORY_ACT_REHEARSAL 'U'
+#define STORY_ACT_PAINT 'T'
+#define STORY_PAINT_WARM 0x80u
+#define STORY_TRACK_STUDIO 15u
+#define STORY_TRACK_ROOF 16u
+#define STORY_TRACK_ORCHARD 17u
+#define STORY_TRACK_SHOW 18u
+#define STORY_TRACK_MAX STORY_TRACK_SHOW
+#define STORY_TRACK_COUNT 5u
+#define STORY_TRACK_MAIN_INDEX 3u
+#define STORY_TRACK_SHOW_INDEX 4u
+#define STORY_TRACK_CHOICE_MASK 0x0eu
 /* 72.5-second source song, then the good-only 16-second reprise. */
 #define STORY_END_SCORE_FRAMES 4350u
 #define STORY_END_CODA_FRAMES 960u
@@ -129,10 +150,31 @@ typedef struct {
     uint8_t cinema;
     uint16_t cinema_frame;
     uint16_t old_keys;
-    /* Independent companion save; selection and tracking are transient. */
+    /* Independent companion save; tracked destination persists, cursor is transient. */
     uint16_t neighborhood_seen, neighborhood_right;
     uint8_t neighborhood_cursor, neighborhood_target;
 } Story;
+static inline unsigned story_show_stage(const Story *s){return (s->project_style&STORY_SHOW_STAGE_MASK)>>3;}
+static inline int story_paint_workshop_available(const Story *s){
+ return (s->activity=='r'||s->activity=='R')&&s->art_steps<STORY_PROJECT_DONE;
+}
+static inline unsigned story_paint_targets(const Story *s){
+ static const uint8_t layers[4]={0x0fu,0xf0u,0x66u,0x99u};
+ return layers[s->art_steps<4u?s->art_steps:3u];
+}
+static inline int story_paint_ready(const Story *s){
+ unsigned targets=story_paint_targets(s);
+ return (s->studio_tab&targets)==targets;
+}
+static inline unsigned story_paint_brush(const Story *s){return s->activity_choice&7u;}
+static inline int story_paint_warm(const Story *s){return !!(s->activity_choice&STORY_PAINT_WARM);}
+const char *story_paint_layer(const Story *s);
+unsigned story_track_id(unsigned choice);
+const char *story_show_phrase(unsigned part);
+unsigned story_show_expected(const Story *s);
+const char *story_show_title(const Story *s);
+const char *story_show_option(const Story *s,unsigned right);
+int story_show_scene(const Story *s);
 
 typedef struct { const char *speaker, *line1, *line2; } StoryPage;
 void story_new(Story *s, int slot);
@@ -154,6 +196,10 @@ const char *story_goal_kind(const Story *s);
 const char *story_action_hint(const Story *s);
 int story_risk_available(const Story *s); /* only at confirmed optional risk sites */
 const StoryPage *story_pages(const Story *s, int *count);
+int story_master_showcase(const Story *s);
+int story_track_available(const Story *s,unsigned choice);
+const char *story_track_name(unsigned choice);
+unsigned story_track_selected(const Story *s);
 int story_neighborhood_enabled(const Story *s);
 int story_neighborhood_at(const Story *s);
 int story_neighborhood_panel(const Story *s);

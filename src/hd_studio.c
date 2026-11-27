@@ -4,28 +4,33 @@
    Patterns, phrases and voice indicators use the saved patch and sequencer.
    Painting never advances or changes the sequencer. */
 static const char *const phrase_names[4]={"BASE","UP","LOW","FILL"};
-static const char *const voice_names[4]={"LEAD","HARM","BASS","BEAT"};
-static void title(uint8_t *p,unsigned tab,int playing){
+static const char *const voice_names[4]={"LEAD","KEYS","BASS","DRUMS"};
+static void title(uint8_t *p,unsigned tab,int playing,int basic,unsigned take){
  /* These three bands cover the page exactly once. The panel interior
     is already ink; paint its thin border without two full-panel fills. */
  hd_rect(p,0,23,HD_W,113,HD_INK);
  hd_rect(p,0,0,HD_W,23,HD_SHADOW);
  hd_rect(p,0,21,HD_W,2,HD_COPPER);
- hd_text(p,9,5,"BORE ARCHIVE",HD_LAMP,1,2);
- hd_text(p,9,13,"THE MASTER TAPE",HD_PAPER,1,1);
+ hd_text(p,9,5,basic?"BASIC STUDIO":"ADVANCED STUDIO",HD_LAMP,1,1);
+ if(basic){
+  char next[]="TAKE 1/4 - START SAVE";next[5]=(char)('1'+take);
+  hd_text(p,9,13,next,HD_PAPER,1,0);
+ }else hd_text(p,9,13,"YOUR MASTER TAPE",HD_PAPER,1,1);
  hd_rect(p,176,9,3,5,playing?HD_LEAF_LIT:HD_STONE_DARK);
  hd_text(p,184,8,playing?"PLAYING":"STOPPED",
          playing?HD_LEAF_LIT:HD_STONE_LIT,1,0);
  static const char *const names[STUDIO_TAB_COUNT]={
-  "SONG","NOTES","ORDER","LYRICS","CHOIR","LIVE"
+  "SONG","NOTES","ORDER","LYRICS","MIXER","LIVE"
  };
- for(unsigned i=0;i<STUDIO_TAB_COUNT;i++){
-  int x=4+(int)i*39,selected=i==tab;
-  hd_rect(p,x,27,37,20,selected?HD_ROAD_COOL:HD_SHADOW);
-  hd_rect(p,x,27,37,selected?3:1,selected?HD_LAMP:HD_STONE_DARK);
-  hd_rect(p,x,46,37,1,selected?HD_COPPER:HD_STONE_DARK);
+ for(unsigned j=0;j<(basic?4u:STUDIO_TAB_COUNT);j++){
+  static const uint8_t simple[4]={STUDIO_SONG,STUDIO_NOTES,STUDIO_MIX,STUDIO_PERFORM};
+  unsigned i=basic?simple[j]:j;
+  int w=basic?56:37,x=4+(int)j*(basic?59:39),selected=i==tab;
+  hd_rect(p,x,27,w,20,selected?HD_ROAD_COOL:HD_SHADOW);
+  hd_rect(p,x,27,w,selected?3:1,selected?HD_LAMP:HD_STONE_DARK);
+  hd_rect(p,x,46,w,1,selected?HD_COPPER:HD_STONE_DARK);
   int width=hd_text_width(names[i],1,0);
-  hd_text(p,x+(37-width)/2,35,names[i],
+  hd_text(p,x+(w-width)/2,35,names[i],
           selected?HD_PAPER:HD_STONE_LIT,1,0);
  }
  hd_rect(p,5,51,230,2,HD_STONE_DARK);
@@ -169,31 +174,25 @@ static void lyrics(uint8_t *p,const StudioPatch *a,int playing){
  }
 }
 static unsigned voice_events(const StudioPatch *a,unsigned step){
- return (a->notes[step&7u]?1u:0u)|
-        (a->choir&&!(step&1u)?2u:0u)|
-        (!(step&3u)?4u:0u)|
-        (a->mood==2u&&(step&1u)?8u:0u);
+ MotifBeat beat;studio_preview_step(a,step,&beat);
+ return (beat.lead>0?1u:0u)|(beat.comp?2u:0u)|(beat.bass?4u:0u)|(beat.noise?8u:0u);
 }
-static void choir(uint8_t *p,const StudioPatch *a,int playing){
- static const char *const harmony[4]={"OFF","FIFTH","OCTAVE","HIGH"};
- label(p,"CHOIR / HARMONY","SET THE HARMONY / SEE EACH VOICE");
- unsigned head=studio_playhead();
- for(unsigned i=0;i<4u;i++){
-  int x=18+(int)i*53,chosen=i==a->choir;
-  hd_rect(p,x,84,48,16,chosen?HD_ROAD_COOL:HD_SHADOW);
-  hd_rect(p,x,84,48,chosen?2:1,chosen?HD_LAMP:HD_STONE_DARK);
-  int w=hd_text_width(harmony[i],1,0);
-  hd_text(p,x+(48-w)/2,89,harmony[i],chosen?HD_PAPER:HD_STONE_LIT,1,0);
-  hd_text(p,x+4,106,voice_names[i],HD_STONE_LIT,1,0);
-  if(playing)hd_rect(p,x+1+(int)head*6,124,4,2,HD_LEAF_LIT);
- }
- for(unsigned step=0;step<8u;step++){
-  unsigned events=voice_events(a,step);
-  for(unsigned voice=0;voice<4u;voice++){
-   int active=(events&(1u<<voice))!=0;
-   hd_rect(p,19+(int)voice*53+(int)step*6,117,4,4,
-           active?HD_GOLD:HD_STONE_DARK);
-  }
+static void mixer(uint8_t *p,const StudioPatch *a,unsigned cursor,int playing){
+ static const char *const levels[4]={"OFF","LOW","MID","HIGH"};
+ label(p,"MIXER / FOUR CHANNELS","SET LEVELS / A MUTES THE TRACK");
+ unsigned head=studio_playhead(),part=studio_playpart();
+ unsigned active=playing?voice_events(a,part*8u+head):0u;
+ for(unsigned i=0;i<STUDIO_TRACK_COUNT;i++){
+  int x=18+(int)i*53,chosen=i==cursor;
+  unsigned level=studio_mix_level(a,i);
+  hd_rect(p,x,84,48,44,HD_SHADOW);
+  hd_rect(p,x,84,48,2,chosen?HD_LAMP:HD_STONE_DARK);
+  if(chosen)hd_rect(p,x,86,2,42,HD_LAMP);
+  hd_text(p,x+5,89,studio_mix_name(i),chosen?HD_PAPER:HD_STONE_LIT,1,0);
+  for(unsigned k=0;k<3u;k++)
+   hd_rect(p,x+5+(int)k*13,101,11,9,k<level?HD_GOLD:HD_STONE_DARK);
+  hd_text(p,x+5,114,levels[level],level?HD_PAPER:HD_STONE_LIT,1,0);
+  hd_rect(p,x+5,125,38,2,(active&(1u<<i))?HD_LEAF_LIT:HD_STONE_DARK);
  }
 }
 /* Four recognizable miniature instruments share one 48x21 stage module.
@@ -238,7 +237,7 @@ static void perform(uint8_t *p,const StudioPatch *a,int playing,
  position[5]=(char)('1'+playpart);
  position[16]=(char)('1'+head);
  label(p,"PERFORM / LIVE MIX",playing?position:"SELECT OR A TO PLAY YOUR MASTER");
- unsigned events=playing?voice_events(a,head):0u;
+ unsigned events=playing?voice_events(a,playpart*8u+head):0u;
  for(unsigned part=0;part<4u;part++){
   int x=18+(int)part*53;
   int current=playing&&part==playpart;
@@ -272,13 +271,14 @@ void hd_studio_draw(uint8_t *p,const Story *s,unsigned tick){
  unsigned tab=s->studio_tab<STUDIO_TAB_COUNT?s->studio_tab:0u;
  unsigned cursor=s->studio_cursor;
  int playing=s->activity_choice!=0;
- title(p,tab,playing);
+ int basic=s->song_steps<STORY_PROJECT_DONE;
+ title(p,tab,playing,basic,s->song_steps);
  switch(tab){
   case STUDIO_SONG:song(p,a,cursor,playing,tick);break;
   case STUDIO_NOTES:notes(p,a,cursor,playing);break;
   case STUDIO_ORDER:order(p,a,cursor,playing);break;
   case STUDIO_LYRICS:lyrics(p,a,playing);break;
-  case STUDIO_CHOIR:choir(p,a,playing);break;
+  case STUDIO_MIX:mixer(p,a,cursor,playing);break;
   default:perform(p,a,playing,tick);break;
  }
  /* Match story_tick: LEFT/RIGHT selects fields; UP/DOWN edits. Keep
@@ -292,6 +292,17 @@ void hd_studio_draw(uint8_t *p,const Story *s,unsigned tick){
   "UP/DOWN VARIANT A NEXT B EXIT":tab==STUDIO_PERFORM?
   (playing?"A STOP B EXIT":"A PLAY B EXIT"):
   "UP/DOWN CHANGE A NEXT B EXIT";
+ if(tab==STUDIO_MIX){
+  row1="L/R TABS LEFT/RIGHT TRACK SEL PLAY";
+  row2="UP/DOWN LEVEL A MUTE B EXIT";
+ }
+ if(basic){
+  row1=tab==STUDIO_MIX?"D-PAD LEVEL/TRACK A MUTE L/R TABS":
+       tab==STUDIO_NOTES?"L/R TABS D-PAD EDIT A REST":
+       tab==STUDIO_PERFORM?"L/R TABS A OR SELECT PLAY":
+       "L/R TABS D-PAD CHANGE TEMPO/FEEL";
+  row2="SELECT PLAY  START SAVE TAKE  B EXIT";
+ }
  hd_text(p,8,139,row1,HD_STONE_LIT,1,0);
  hd_text(p,8,150,row2,HD_PAPER,1,0);
 }

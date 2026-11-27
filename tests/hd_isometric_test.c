@@ -1,6 +1,7 @@
 #include "hd_canvas.h"
 #include "hd_isometric_atlas.h"
 #include "hd_world_atlas.h"
+#include "hd_scene_geometry.h"
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -238,9 +239,9 @@ int main(void){
    assert(views[f]!=views[g]); /* directions remain distinguishable */
  }
  assert(checks>=24u);
- /* Actual walkable steps into and out of the shop lane. Explicit screen
-    anchors cover both signs of fractional depth and all three gait
-    offsets, so a destination-only cutaway cannot regress moving actors. */
+ /* Actual walkable steps into and out of the shop lane. Every layer
+    now follows the fractional camera, and Danny remains centered. The
+    old anchors still describe the equivalent untranslated geometry. */
  const int walks[][8]={
   {20,11,19,11,3,108,82,0},{20,11,19,11,2,112,84,0},
   {20,11,19,11,1,116,86,0},{19,11,20,11,3,132,94,1},
@@ -255,8 +256,10 @@ int main(void){
   s.x=(uint8_t)w[0];s.y=(uint8_t)w[1];
   s.prev_x=(uint8_t)w[2];s.prev_y=(uint8_t)w[3];
   s.anim=(uint8_t)w[4];s.facing=(uint8_t)w[7];
-  readable_player(&s,100u,w[5],w[6]);
-  readable_player(&s,107u,w[5],w[6]);
+  HdSceneCamera camera=hd_scene_camera(&s);
+  assert(120+camera.iso_x==w[5]&&88+camera.iso_y==w[6]);
+  readable_player(&s,100u,120,88);
+  readable_player(&s,107u,120,88);
  }
  /* Route cues must be tied to the objective's real town tile. With
     identical weather and camera, changing story progress changes the

@@ -37,8 +37,9 @@ static unsigned scene_music_cue(void){
                (id==2u||id==12u)?MUSIC_CUE_ROOFTOP:
                (id==7u||id==9u)?MUSIC_CUE_FARCE:MUSIC_CUE_STREETS;
     }
-    if(game.activity==STORY_ACT_STUDIO && game.activity_choice)
-        return MUSIC_CUE_STUDIO; /* SELECT: hear actual edited pattern */
+    if(game.activity==STORY_ACT_STUDIO)
+        return game.activity_choice?MUSIC_CUE_STUDIO:MUSIC_CUE_STUDIO_IDLE;
+    if(story_master_showcase(&game))return MUSIC_CUE_STUDIO;
     if(game.ended && game.ending==STORY_END_GOOD)return MUSIC_CUE_LEGACY;
     if(game.life_stage==STORY_LIFE_FINALE ||
        (game.ended && game.ending==STORY_END_NEUTRAL) ||
@@ -188,7 +189,7 @@ void play_enter(int want_load,int slot){
         game.work=b[26]>99?99:b[26];
         game.song_steps=b[27]>STORY_PROJECT_DONE?STORY_PROJECT_DONE:b[27];
         game.art_steps=b[28]>STORY_PROJECT_DONE?STORY_PROJECT_DONE:b[28];
-        game.project_style=b[29]&(STORY_STYLE_SONG_SOFT|STORY_STYLE_ART_WARM);
+        game.project_style=b[29]&STORY_PROJECT_STYLE_MASK;
         if(b[4]==SAVE_VER){
             u8 extension[RESCUE_EXT_LEN],bad_mask=0,rescue_stage=0;
             for(unsigned i=0;i<RESCUE_EXT_LEN;i++)
@@ -253,7 +254,15 @@ void play_enter(int want_load,int slot){
     music_set_volume(65);
 }
 static int play_tick(u16 keys){
+    int was_editor=game.activity==STORY_ACT_STUDIO||game.activity==STORY_ACT_PAINT;
+    unsigned prior_show=story_show_stage(&game),prior_target=game.neighborhood_target;
     story_tick(&game,keys);
+    /* Leaving the editor commits the edited arrangement immediately,
+       instead of waiting two seconds for the periodic SRAM checkpoint. */
+    if(game.dirty&&((was_editor&&game.activity!=STORY_ACT_STUDIO&&game.activity!=STORY_ACT_PAINT)||
+       prior_show!=story_show_stage(&game)||prior_target!=game.neighborhood_target)){
+        write_save();save_cooldown=0;
+    }
     if(game.quit){
         roto_cache_begin_frame(0);
         frame_runtime_stop();

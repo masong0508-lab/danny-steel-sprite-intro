@@ -84,6 +84,84 @@ static int neighborhood_tracking(const Story *s){
  return story_neighborhood_enabled(s)&&s->neighborhood_target>0u&&
         s->neighborhood_target<=STORY_NEIGHBORHOOD_COUNT;
 }
+const char *story_track_name(unsigned choice){
+ static const char *const names[STORY_TRACK_COUNT]={"MUSIC STUDIO","ROOFTOP ART","MIRROR ORCHARD","MAIN STORY","CAFE SHOW"};
+ return choice<STORY_TRACK_COUNT?names[choice]:"MAIN STORY";
+}
+unsigned story_track_selected(const Story *s){
+ unsigned n=(s->choice&STORY_TRACK_CHOICE_MASK)>>1;
+ return n<STORY_TRACK_COUNT?n:0u;
+}
+unsigned story_track_id(unsigned choice){
+ return choice==STORY_TRACK_SHOW_INDEX?STORY_TRACK_SHOW:
+        choice<3u?STORY_TRACK_STUDIO+choice:0u;
+}
+static int show_available(const Story *s){
+ return story_neighborhood_enabled(s)&&!story_bad_count(s)&&story_show_stage(s)<STORY_SHOW_DONE;
+}
+static int show_tracking(const Story *s){
+ return s->neighborhood_target==STORY_TRACK_SHOW&&show_available(s);
+}
+static void show_goal(const Story *s,int *x,int *y,const char **label){
+ switch(story_show_stage(s)){
+ case 0:*x=8;*y=11;*label="PLAN SHOW";break;
+ case 1:*x=9;*y=2;*label="POSTER";break;
+ case 2:*x=19;*y=7;*label=s->song_steps<STORY_PROJECT_DONE?"MAKE TAPE":"REHEARSE";break;
+ case 3:*x=14;*y=6;*label=s->art_steps<STORY_PROJECT_DONE?"PAINT":"FRAME ART";break;
+ case 4:*x=13;*y=8;*label="SET UP";break;
+ case 5:*x=8;*y=11;*label="CAFE SHOW";break;
+ default:*x=11;*y=7;*label="ARCHIVE";break;
+ }
+}
+static unsigned show_here(const Story *s){
+ if(!show_tracking(s))return 0;
+ int x,y;const char *label;show_goal(s,&x,&y,&label);
+ int dx=x-(int)s->x,dy=y-(int)s->y;
+ int distance=(dx<0?-dx:dx)+(dy<0?-dy:dy);
+ return distance==(story_solid(x,y)?1:0)?story_show_stage(s)+1u:0u;
+}
+const char *story_paint_layer(const Story *s){
+ static const char *const names[]={"SKY WASH","CITY BLOCKS","WINDOW LIGHT","FINISH EDGES"};
+ return names[s->art_steps<4u?s->art_steps:3u];
+}
+const char *story_show_phrase(unsigned part){
+ static const char *const names[]={"BASE","UP","LOW","FILL"};
+ return names[part&3u];
+}
+unsigned story_show_expected(const Story *s){return studio_patch()->order[s->studio_tab&3u];}
+const char *story_show_title(const Story *s){
+ static const char *const names[]={"CAFE / PLAN","PHOTO / POSTER","STUDIO / REHEARSAL",
+  "ROOF / FRAME","ANNEX / SETUP","CAFE / LIVE SHOW","BORE / ARCHIVE","SHOW COMPLETE"};
+ return names[story_show_stage(s)];
+}
+const char *story_show_option(const Story *s,unsigned right){
+ switch(story_show_stage(s)){
+ case 0:return right?"LATER":"PLAN";
+ case 1:return right?"SUNSET":"BLUE HOUR";
+ case 3:return right?"WOOD":"BLACK";
+ case 4:return right?"LATER":"SET UP";
+ case 5:return right?"LATER":"PLAY";
+ case 6:return right?"LATER":"FILE";
+ default:return "BACK";
+ }
+}
+int story_track_available(const Story *s,unsigned choice){
+ if(choice==STORY_TRACK_MAIN_INDEX)return 1;
+ if(choice==STORY_TRACK_SHOW_INDEX)return show_available(s);
+ if(choice>=3u||s->ended||
+    !(s->life_stage==STORY_LIFE_NONE||s->life_stage==STORY_LIFE_WAIT||
+      s->life_stage==STORY_LIFE_FOLLOWUP_WAIT)||
+    !(s->rescue_stage==STORY_RESCUE_NONE||s->rescue_stage==STORY_RESCUE_SAVED))return 0;
+ return choice!=2u||(s->rescue_stage==STORY_RESCUE_NONE&&s->cult_stage<CULT_RESOLVED);
+}
+static int creative_tracking(const Story *s){
+ unsigned id=s->neighborhood_target;
+ return id>=STORY_TRACK_STUDIO&&id<=STORY_TRACK_ORCHARD&&story_track_available(s,id-STORY_TRACK_STUDIO);
+}
+static int share_pending(const Story *s){
+ return s->song_steps>=STORY_PROJECT_DONE&&(s->flags&STORY_MARA)&&
+        !story_bad_count(s)&&!(s->project_style&STORY_STYLE_SONG_SHARED);
+}
 int story_goal(const Story *s, int *x, int *y, const char **label) {
     if (s->ended || s->life_stage==STORY_LIFE_FINALE) return 0;
     if(s->rescue_stage==STORY_RESCUE_MISSING){
@@ -99,6 +177,21 @@ int story_goal(const Story *s, int *x, int *y, const char **label) {
         /* No rescue deadline remains, but the still-reachable cafe phone
            is the explicit center of Danny's two-day hope subplot. */
         *x=8;*y=11;*label="PHONE";return 1;
+    }
+    if(show_tracking(s)){show_goal(s,x,y,label);return 1;}
+    if(creative_tracking(s)){
+        switch(s->neighborhood_target){
+        case STORY_TRACK_STUDIO:
+            if(share_pending(s)){*x=8;*y=11;*label="SHARE SONG";}
+            else {*x=19;*y=7;*label="STUDIO";}
+            return 1;
+        case STORY_TRACK_ROOF:*x=14;*y=6;*label="PAINT";return 1;
+        default:
+            if(s->cult_stage==1u){*x=6;*y=11;*label="WITNESS";}
+            else if(s->cult_stage==2u){*x=7;*y=2;*label="SAFE HOUSE";}
+            else {*x=21;*y=7;*label="TERMINAL";}
+            return 1;
+        }
     }
     if(neighborhood_tracking(s)){
         unsigned id=s->neighborhood_target-1u;
@@ -234,6 +327,25 @@ const char *story_goal_reason(const Story *s){
     case STORY_RESCUE_LOST:return "NO VERIFIED RECOVERY YET";
     default:break;
     }
+    if(show_tracking(s)){
+        switch(story_show_stage(s)){
+        case 0:return "ASK MARA ABOUT A SHOW";
+        case 1:return "DESIGN A SHOW POSTER";
+        case 2:return s->song_steps<4u?"FINISH FOUR MUSIC TAKES":"MATCH YOUR FOUR PHRASES";
+        case 3:return s->art_steps<4u?"FINISH FOUR ART LAYERS":"CHOOSE THE FRAME";
+        case 4:return "INSTALL THE POSTER";
+        case 5:return "PLAY YOUR SAVED SONG";
+        default:return "LEAVE A COPY AT BORE";
+        }
+    }
+    if(creative_tracking(s)){
+        if(s->neighborhood_target==STORY_TRACK_STUDIO)
+            return share_pending(s)?"PLAY YOUR SONG FOR MARA":s->song_steps>=4u?
+                "ADVANCED / EDIT OR PLAY":"EAST PLAZA / SAVE A TAKE";
+        if(s->neighborhood_target==STORY_TRACK_ROOF)return "ROOFTOP / MAKE ART";
+        return s->cult_stage==1u?"LISTEN TO THE WITNESS":s->cult_stage==2u?
+            "VISIT THE SAFE HOUSE":"OPTIONAL SERVER STORY";
+    }
     if(neighborhood_tracking(s))return "OPTIONAL STORY / A ON ARRIVAL";
     switch(s->life_stage){
     case STORY_LIFE_CLINIC:case STORY_LIFE_FINAL_CLINIC:
@@ -261,7 +373,8 @@ const char *story_goal_kind(const Story *s){
     if(s->life_stage==STORY_LIFE_CLINIC ||
        s->life_stage==STORY_LIFE_FINAL_CLINIC)return "CARE";
     if(s->life_stage==STORY_LIFE_LAST_WORK)return "LAST";
-    if(neighborhood_tracking(s))return "SIDE";
+    if(show_tracking(s))return "SHOW";
+    if(creative_tracking(s)||neighborhood_tracking(s))return "SIDE";
     if(s->life_stage==STORY_LIFE_WAIT ||
        s->life_stage==STORY_LIFE_FOLLOWUP_WAIT)return "DAY";
     if((s->flags&STORY_ALL)!=STORY_ALL)return "CORE";
@@ -354,8 +467,10 @@ enum { D_NONE, D_OPEN, D_LETTER, D_LETTER_AGAIN, D_CLERK_LOCKED, D_CLERK, D_CLER
        D_NB_12_RIGHT,
        D_NB_13_INTRO,
        D_NB_13_LEFT,
-       D_NB_13_RIGHT };
-_Static_assert(D_NB_13_RIGHT<256,"dialogue ID width");
+       D_NB_13_RIGHT, D_MARA_MASTER_SHARED,
+       D_SHOW_PLAN,D_SHOW_POSTER_BLUE,D_SHOW_POSTER_WARM,D_SHOW_REHEARSED,
+       D_SHOW_FRAME_BLACK,D_SHOW_FRAME_WOOD,D_SHOW_SETUP,D_SHOW_PLAY,D_SHOW_ARCHIVE };
+_Static_assert(D_SHOW_ARCHIVE<256,"dialogue ID width");
 #define SCRIPT(name, ...) static const StoryPage name[] = { __VA_ARGS__ }
 /* The banana-sign shift is practical income, not Danny's calling. He is
    grateful for the stability without pretending to enjoy mascot work. */
@@ -382,7 +497,7 @@ SCRIPT(d_clerk,
  {"DANNY", "So I exist?", "That's a relief."},
  {"BORE CLERK", "STAMPED. Your name", "is on the record."},
  {"DANNY", "And the game music", "I left in storage?"},
- {"BORE CLERK", "Archive. East plaza.", "Make a copy tonight."});
+ {"BORE CLERK", "Music desk. East plaza.", "Try the basic studio."});
 SCRIPT(d_clerk_again,
  {"BORE CLERK", "Do not fold the", "universe in half."},
  {"BORE CLERK", "The warranty is", "very specific."});
@@ -436,7 +551,8 @@ SCRIPT(d_journal_2,
  {"POCKET NOTEBOOK", "STAMPED. NEXT:", "MARA / WEST CAFE"});
 SCRIPT(d_journal_3,
  {"POCKET NOTEBOOK", "BUS IS OPEN. EXTRAS:", "MUSIC / ROOF PAINT"},
- {"DANNY", "Revisit either place.", "Four steps per work."});
+ {"DANNY", "START then L for help.", "Right page tracks goals."},
+ {"DANNY", "East plaza: music desk.", "A again for BASIC."});
 SCRIPT(d_nothing,
  {"DANNY", "Nothing here for me.", "Where was I headed?"},
  {"POCKET NOTEBOOK", "Follow NEXT up top.", "R holds my notes."});
@@ -518,7 +634,9 @@ SCRIPT(d_music,
  {"DANNY", "I wrote this when", "I still called home."},
  {"DANNY", "Mara always liked", "this silly song."},
  {"ARCHIVE TAPE", "COPY REGISTERED.", "YOUR NAME IS ON IT."},
- {"ARCHIVE TAPE", "A HERE TO REVISIT.", "FOUR STEPS TO MASTER."});
+ {"ARCHIVE TAPE", "A AGAIN: MUSIC DESK.", "CHOOSE BASIC STUDIO."},
+ {"DANNY", "Edit notes. Hear them.", "START saves a take."},
+ {"ARCHIVE TAPE", "FOUR TAKES TO UNLOCK", "THE ADVANCED STUDIO."});
 SCRIPT(d_music_again,
  {"DANNY", "The tape survived.", "Not the cassette case."});
 SCRIPT(d_art,
@@ -668,7 +786,7 @@ SCRIPT(d_act_clerk_joke,
  {"BORE CLERK", "Wrong queue. That", "one has a bell."},
  {"DANNY", "You laughed. I'll", "file that under joy."});
 SCRIPT(d_act_music_listen,
- {"ARCHIVE TAPE", "An old BORE theme", "plays back softly."},
+ {"ARCHIVE TAPE", "An old BORE theme", "plays from your take."},
  {"DANNY", "The rest between", "notes is part of it."},
  {"DANNY", "Maybe I can just", "listen this time."});
 SCRIPT(d_act_art_rest,
@@ -691,16 +809,19 @@ SCRIPT(d_act_art_progress,
    a playable scene tied to the same physical workplace and BORE music. */
 SCRIPT(d_project_song_2,
  {"ARCHIVE TAPE", "The bass finds the", "old crooked melody."},
- {"DANNY", "Whistler Man comes", "back in the gaps."});
+ {"DANNY", "Whistler Man comes", "back in the gaps."},
+ {"DANNY", "Two takes down.", "Next, shape the rhythm."});
 SCRIPT(d_project_song_3,
  {"DANNY", "The rhythm is", "finally breathing."},
- {"ARCHIVE TAPE", "One final mix.", "Then it is ready."});
+ {"ARCHIVE TAPE", "One final mix.", "Then it is ready."},
+ {"DANNY", "Hear the whole take.", "Leave space to breathe."});
 SCRIPT(d_project_song_done,
  {"ARCHIVE TAPE", "MASTER COPY SAVED.", "THE LAST BORE REEL."},
  {"DANNY", "The quiet parts", "made it in too."},
  {"DANNY", "Let someone else", "hear the whole song."},
  {"BORE ARCHIVE", "ADVANCED UNLOCKED.", "A AT THE MUSIC DESK."},
- {"BORE ARCHIVE", "LISTEN IS EASY.", "EDIT WHEN YOU WANT."});
+ {"BORE ARCHIVE", "ORDER, LYRICS, MIXER.", "EDIT WHEN YOU WANT."},
+ {"DANNY", "I'll take it to Mara.", "She heard the rough one."});
 SCRIPT(d_project_art_2,
  {"ROOFTOP", "Buildings rise over", "the painted horizon."},
  {"DANNY", "I know those", "windows by heart."});
@@ -882,7 +1003,8 @@ SCRIPT(d_rescue_saved_art,
 SCRIPT(d_project_song_start,
  {"DANNY", "Here is the melody.", "It still sounds rough."},
  {"DANNY", "I'll build a version", "someone can keep."},
- {"ARCHIVE TAPE", "TAKE ONE SAVED.", "THREE STEPS REMAIN."});
+ {"ARCHIVE TAPE", "TAKE ONE SAVED.", "THREE STEPS REMAIN."},
+ {"DANNY", "I can try new notes", "at the basic studio."});
 SCRIPT(d_project_art_start,
  {"DANNY", "Start with the sky.", "The rest can wait."},
  {"DANNY", "The cafe lights will", "go in later."},
@@ -900,7 +1022,10 @@ SCRIPT(d_mara_prebus_talk,
 SCRIPT(d_mara_master,
  {"MARA", "You finished our song.", "Can I keep a copy?"},
  {"DANNY", "Yes. BORE has one.", "You should have one."},
- {"MARA", "Then I can play it", "when the cafe closes."});
+ {"MARA", "Then I can play it", "when the cafe closes."},
+ {"MARA", "Not another promise.", "Something you finished."},
+ {"DANNY", "I'll keep making songs.", "Even after tonight."},
+ {"MARA", "This one stays here.", "Thank you."});
 SCRIPT(d_mara_creations,
  {"MARA", "The tape and painting.", "You really did it."},
  {"DANNY", "I wanted you to have", "more than a goodbye."},
@@ -912,7 +1037,8 @@ SCRIPT(d_bus_ready_legacy,
 SCRIPT(d_bus_stay_open,
  {"DRIVER", "No rush to board.", "Come back when ready."},
  {"DANNY", "A little more time.", "I know where to go."},
- {"DANNY", "Mara, the reel,", "and the rooftop."});
+ {"DANNY", "Mara, the reel,", "and the rooftop."},
+ {"DANNY", "Maybe a little show.","START, A: CAFE SHOW."});
 SCRIPT(d_doctor_last_alone,
  {"DOCTOR", "These tests confirm", "advanced cancer."},
  {"DOCTOR", "We can plan care", "and ease the pain."},
@@ -1044,6 +1170,61 @@ SCRIPT(d_nb_13_left,
 SCRIPT(d_nb_13_right,
  {"DANNY", "Leave the seat clear.", "I'll stand a while."},
  {"DRIVER", "You don't have to go", "before you're ready."});
+SCRIPT(d_mara_master_shared,
+ {"MARA", "Your song is here.", "I kept the copy."},
+ {"DANNY", "I can still change", "the arrangement."},
+ {"MARA", "Make another version.", "The door is open."});
+SCRIPT(d_show_plan,
+ {"MARA","The cafe has a wall.","It has no good art."},
+ {"DANNY","You want me to paint","a bigger coffee cup?"},
+ {"MARA","Your painting. Your","song. One small show."},
+ {"DANNY","No costume this time?","I think I can do it."},
+ {"MARA","Ask the photo shop","for a poster first."},
+ {"DANNY","Then finish my tape","and frame the canvas."});
+SCRIPT(d_show_poster_blue,
+ {"PHOTOGRAPHER","Blue hour it is.","Rain and window light."},
+ {"DANNY","Put the street first.","Not my face this time."},
+ {"PHOTOGRAPHER","One copy for the cafe.","One for your archive."},
+ {"DANNY","Next, the music desk.","I need a real set."});
+SCRIPT(d_show_poster_warm,
+ {"PHOTOGRAPHER","Sunset it is.","A warmer little city."},
+ {"DANNY","Make it look inviting.","Not like a sales pitch."},
+ {"PHOTOGRAPHER","One copy for the cafe.","One for your archive."},
+ {"DANNY","Next, the music desk.","I need a real set."});
+SCRIPT(d_show_rehearsed,
+ {"ARCHIVE TAPE","ALL FOUR PARTS READY.","REHEARSAL COMPLETE."},
+ {"DANNY","I know what comes next.","I can play this now."},
+ {"DANNY","The song needs company.","Back to the rooftop."},
+ {"ARCHIVE TAPE","BRING YOUR PAINTING.","THEN VISIT THE ANNEX."});
+SCRIPT(d_show_frame_black,
+ {"DANNY","A black frame.","Let the colors speak."},
+ {"DANNY","These little windows","all belonged to someone."},
+ {"DANNY","I'll carry it down.","The annex has hooks."});
+SCRIPT(d_show_frame_wood,
+ {"DANNY","A wooden frame.","It feels more like home."},
+ {"DANNY","These little windows","all belonged to someone."},
+ {"DANNY","I'll carry it down.","The annex has hooks."});
+SCRIPT(d_show_setup,
+ {"ANNEX KEEPER","A poster, a painting,","and a tape. Good."},
+ {"DANNY","It's not quite a tour.","It's one room."},
+ {"ANNEX KEEPER","Every show starts","with one room."},
+ {"DANNY","I'll tell Mara we're","ready. No more excuses."});
+SCRIPT(d_show_play,
+ {"MARA","There. The chairs","are facing your art."},
+ {"DANNY","No stage lights?","No terrible banana?"},
+ {"MARA","Just neighbors.","Play what you made."},
+ {"DANNY","This is our street.","Every crooked window."},
+ {"MARA","I can hear the song","you kept working on."},
+ {"DANNY","I thought nobody","would ever hear it."},
+ {"MARA","We did. That's enough","for tonight."},
+ {"DANNY","One more thing.","BORE should have a copy."});
+SCRIPT(d_show_archive,
+ {"BORE CLERK","A live show record.","And the poster."},
+ {"DANNY","Please keep both.","Someone might want them."},
+ {"BORE CLERK","Filed under your name.","Not your work uniform."},
+ {"DANNY","For once, a record","I wanted to make."},
+ {"BORE CLERK","The original stays.","You can make another."},
+ {"DANNY","I still have choices.","That's a good feeling."});
 #undef SCRIPT
 #define SEQ(name) {name, (uint8_t)(sizeof(name) / sizeof((name)[0]))}
 static const struct { const StoryPage *pages; uint8_t count; } scripts[] = {
@@ -1139,13 +1320,22 @@ static const struct { const StoryPage *pages; uint8_t count; } scripts[] = {
   SEQ(d_nb_12_right),
   SEQ(d_nb_13_intro),
   SEQ(d_nb_13_left),
-  SEQ(d_nb_13_right)
+  SEQ(d_nb_13_right), SEQ(d_mara_master_shared),
+  SEQ(d_show_plan),SEQ(d_show_poster_blue),SEQ(d_show_poster_warm),SEQ(d_show_rehearsed),
+  SEQ(d_show_frame_black),SEQ(d_show_frame_wood),SEQ(d_show_setup),SEQ(d_show_play),SEQ(d_show_archive)
 };
-_Static_assert(sizeof(scripts)/sizeof(scripts[0])==D_NB_13_RIGHT+1u,"script table order");
+_Static_assert(sizeof(scripts)/sizeof(scripts[0])==D_SHOW_ARCHIVE+1u,"script table order");
 static int neighborhood_dialogue(unsigned id){
  return id>=D_NB_0_INTRO&&id<=D_NB_13_RIGHT?(int)(id-D_NB_0_INTRO):-1;
 }
 int story_neighborhood_panel(const Story *s){
+ if(s->dialogue==D_SHOW_POSTER_BLUE)return 4;
+ if(s->dialogue==D_SHOW_POSTER_WARM)return 5;
+ if(s->dialogue==D_SHOW_SETUP)return 22;
+ if(s->activity==STORY_ACT_SHOW){
+  if(story_show_stage(s)==1u)return 3;
+  if(story_show_stage(s)==4u)return 21;
+ }
  int id=neighborhood_dialogue(s->dialogue);
  if(id>=0)return id;
  if(s->activity==STORY_ACT_NEIGHBORHOOD){
@@ -1153,6 +1343,16 @@ int story_neighborhood_panel(const Story *s){
   return at>=0?at*3:-1;
  }
  return -1;
+}
+int story_show_scene(const Story *s){
+ return s->dialogue==D_SHOW_PLAY||
+        (s->activity==STORY_ACT_SHOW&&story_show_stage(s)==5u);
+}
+int story_master_showcase(const Story *s){
+ return s->song_steps>=STORY_PROJECT_DONE&&
+        (s->dialogue==D_MARA_MASTER||s->dialogue==D_MARA_MASTER_SHARED||
+         s->dialogue==D_MARA_CREATIONS||s->dialogue==D_ACT_MUSIC_LISTEN||
+         s->dialogue==D_SHOW_PLAY||s->activity==STORY_ACT_REHEARSAL);
 }
 const StoryPage *story_pages(const Story *s, int *count) {
     unsigned id = s->dialogue;
@@ -1197,6 +1397,7 @@ static uint16_t dialogue_shot_beat(unsigned script,unsigned page){
 }
 static uint8_t cinematics_for_dialogue(uint8_t d){
     if(neighborhood_dialogue(d)>=0)return CINE_DAY;
+    if(d==D_SHOW_POSTER_BLUE||d==D_SHOW_POSTER_WARM||d==D_SHOW_SETUP)return CINE_BORE;
     switch(d){
     case D_OPEN: case D_SHIFT_EARLY: case D_SHIFT_DONE:
     case D_SHIFT_REPEAT: case D_SHIFT_TIRED: return CINE_OPEN;
@@ -1246,7 +1447,11 @@ static uint8_t cinematics_for_dialogue(uint8_t d){
     case D_PROJECT_ART_DONE: return CINE_ART;
     case D_MARA_MORNING: case D_MARA_CLOSING:
     case D_MARA_GALLERY: case D_MARA_PREBUS_WALK: case D_MARA_PREBUS_TALK:
-    case D_MARA_MASTER: case D_MARA_CREATIONS: return CINE_MARA;
+    case D_MARA_MASTER: case D_MARA_CREATIONS: case D_MARA_MASTER_SHARED:
+    case D_SHOW_PLAN:case D_SHOW_PLAY:return CINE_MARA;
+    case D_SHOW_REHEARSED:return CINE_MUSIC;
+    case D_SHOW_FRAME_BLACK:case D_SHOW_FRAME_WOOD:return CINE_ART;
+    case D_SHOW_ARCHIVE:return CINE_BORE;
     case D_CLERK_CLOSING: return CINE_BORE;
     case D_BAD_LETTER: return CINE_LETTER;
     case D_BAD_CLERK: return CINE_BORE;
@@ -1454,8 +1659,46 @@ static void step_project(Story *s,unsigned station,unsigned soft){
         s->flags|=STORY_ART;
     }
 }
+static void enter_music_editor(Story *s){
+ s->activity=STORY_ACT_STUDIO;s->activity_choice=0;
+ s->studio_tab=STUDIO_SONG;s->studio_cursor=0;
+ s->cinema=CINE_MUSIC;s->cinema_frame=0;
+}
+static void show_advance(Story *s,unsigned stage){
+ s->project_style=(uint8_t)((s->project_style&~STORY_SHOW_STAGE_MASK)|(stage<<3));
+ s->dirty=1;
+}
+static void show_menu(Story *s,unsigned stage){
+ s->activity=STORY_ACT_SHOW;s->activity_choice=0;
+ s->cinema=(uint8_t)((stage==0u||stage==5u)?CINE_MARA:stage==3u?CINE_ART:CINE_BORE);
+ s->cinema_frame=0;
+}
+static void finish_show(Story *s,unsigned option){
+ unsigned stage=story_show_stage(s);
+ s->activity=0;s->activity_choice=0;s->cinema=CINE_NONE;
+ if(!show_available(s))return;
+ if(stage!=1u&&stage!=3u&&option)return;
+ switch(stage){
+ case 0:show_advance(s,1u);talk(s,D_SHOW_PLAN);break;
+ case 1:
+  s->project_style=(uint8_t)((s->project_style&~STORY_SHOW_WARM_POSTER)|(option?STORY_SHOW_WARM_POSTER:0));
+  show_advance(s,2u);talk(s,option?D_SHOW_POSTER_WARM:D_SHOW_POSTER_BLUE);break;
+ case 3:
+  if(s->art_steps<4u)return;
+  s->project_style=(uint8_t)((s->project_style&~STORY_SHOW_WARM_FRAME)|(option?STORY_SHOW_WARM_FRAME:0));
+  show_advance(s,4u);talk(s,option?D_SHOW_FRAME_WOOD:D_SHOW_FRAME_BLACK);break;
+ case 4:show_advance(s,5u);talk(s,D_SHOW_SETUP);break;
+ case 5:
+  if(s->song_steps>=4u&&s->art_steps>=4u)talk(s,D_SHOW_PLAY);
+  break;
+ case 6:show_advance(s,7u);s->neighborhood_target=0;
+  work_gain(s,3u);stat_gain(&s->spark,1u);talk(s,D_SHOW_ARCHIVE);break;
+ default:break;
+ }
+}
 static void finish_moment(Story *s){
     unsigned station=s->activity,option=s->activity_choice;
+    if(station==STORY_ACT_SHOW){finish_show(s,option);return;}
     if(station==STORY_ACT_NEIGHBORHOOD){
         int at=story_neighborhood_at(s);
         s->activity=0;s->activity_choice=0;
@@ -1509,6 +1752,12 @@ static void finish_moment(Story *s){
             talk(s,D_ACT_MUSIC_LISTEN);
         }
         return;
+    }
+    if((station=='m'||station=='M')&&option==2u){enter_music_editor(s);return;}
+    if(story_paint_workshop_available(s)&&option==2u){
+        s->activity=STORY_ACT_PAINT;
+        s->activity_choice=(s->project_style&STORY_STYLE_ART_WARM)?STORY_PAINT_WARM:0u;
+        s->studio_tab=s->studio_cursor=0;s->cinema=CINE_ART;s->cinema_frame=0;return;
     }
     if(station=='m'||station=='r'){
         s->activity=STORY_ACT_NONE;s->activity_choice=0;
@@ -1589,6 +1838,13 @@ static char nearby_actor(const Story *s){
     return c;
 }
 const char *story_action_hint(const Story *s){
+    unsigned show=show_here(s);
+    if(show){
+     static const char *const names[]={"A PLAN","A POSTER","A REHEARSE","A FRAME","A SET UP","A SHOW","A ARCHIVE"};
+     if(show==3u&&s->song_steps<4u)return (s->flags&STORY_MUSIC)?"A STUDIO":"A DEMO";
+     if(show==4u&&s->art_steps<4u)return "A CANVAS";
+     return names[show-1u];
+    }
     /* This special storefront interaction is checked BEFORE all actors. */
     if(s->x==20u&&s->y==11u&&s->facing==0u)return "A SHIFT";
     if(story_neighborhood_at(s)>=0)return "A STORY";
@@ -1599,7 +1855,7 @@ const char *story_action_hint(const Story *s){
           (s->rescue_stage>=STORY_RESCUE_MISSING&&
            s->rescue_stage<=STORY_RESCUE_TRACE)?"A EMPTY CAFE":"A MARA";
     case 'B':return "A BUS";
-    case 'M':return "A MUSIC";
+    case 'M':return (s->flags&STORY_MUSIC)?"A STUDIO":"A DEMO";
     case 'R':return "A CANVAS";
     case 'K':return "A CLINIC";
     case 'P':case 'V':case 'Q':return "A DUEL";
@@ -1676,6 +1932,18 @@ static void resolve_risk(Story *s){
     }else if(selected)commit_bad(s,target);
 }
 static void interact(Story *s) {
+    unsigned show=show_here(s);char forced=0;
+    if(show){
+     unsigned stage=show-1u;
+     if(stage==2u){
+      if(s->song_steps<4u)forced='M';
+      else{
+       s->activity=STORY_ACT_REHEARSAL;s->activity_choice=0;
+       s->studio_tab=s->studio_cursor=0;s->cinema=CINE_MUSIC;s->cinema_frame=0;return;
+      }
+     }else if(stage==3u&&s->art_steps<4u)forced='R';
+     else {show_menu(s,stage);return;}
+    }
     /* The isometric shop occupies the solid (21,11) facade. Facing it
        from its adjacent walkable tile opens an OPTIONAL work interaction.
        No collision changes, new flags in SRAM, or mandatory job gate. */
@@ -1693,9 +1961,9 @@ static void interact(Story *s) {
         s->cinema_frame=184u;
         return;
     }
-    int episode=story_neighborhood_at(s);
+    int episode=forced?-1:story_neighborhood_at(s);
     if(episode>=0){talk(s,(uint8_t)(D_NB_0_INTRO+episode*3));return;}
-    char c=nearby_actor(s);
+    char c=forced?forced:nearby_actor(s);
     switch (c) {
     case 'L':
         if(can_make_memory(s) && !(s->daily_mask&STORY_DAY_LETTER))moment_menu(s,'L');
@@ -1733,7 +2001,9 @@ static void interact(Story *s) {
                 /* The promise is not granted until the player actually
                    finishes and confirms Danny's answer with A. */
                 talk(s,D_MARA);
-            } else if(can_make_memory(s) &&
+            } else if(creative_tracking(s)&&s->neighborhood_target==STORY_TRACK_STUDIO&&share_pending(s))
+                talk(s,s->art_steps>=STORY_PROJECT_DONE?D_MARA_CREATIONS:D_MARA_MASTER);
+            else if(can_make_memory(s) &&
                       !(s->daily_mask&STORY_DAY_MARA))moment_menu(s,'F');
             else if(story_bad_count(s)>=2)talk(s,D_MARA_WARNING);
             else if(story_bad_count(s)==1)talk(s,D_MARA_CONCERN);
@@ -1743,8 +2013,8 @@ static void interact(Story *s) {
                     s->art_steps>=STORY_PROJECT_DONE)talk(s,D_MARA_CREATIONS);
             else if((!s->life_stage||can_make_memory(s)) &&
                     s->art_steps>=STORY_PROJECT_DONE)talk(s,D_MARA_GALLERY);
-            else if(!s->life_stage && s->song_steps>=STORY_PROJECT_DONE)
-                talk(s,D_MARA_MASTER);
+            else if((!s->life_stage||can_make_memory(s)) && s->song_steps>=STORY_PROJECT_DONE)
+                talk(s,(s->project_style&STORY_STYLE_SONG_SHARED)?D_MARA_MASTER_SHARED:D_MARA_MASTER);
             else if(can_make_memory(s) && s->bond>=4)talk(s,D_ACT_MARA_CLOSE);
             else if(can_make_memory(s) && day_period(s)==0u)talk(s,D_MARA_MORNING);
             else if(can_make_memory(s) && day_period(s)==2u)talk(s,D_MARA_CLOSING);
@@ -1925,7 +2195,8 @@ void story_tick(Story *s, uint16_t keys) {
        clock. Day transitions never steal controls during a fight or textbox. */
     if (!s->ended && s->life_stage >= STORY_LIFE_WAIT &&
         s->life_stage <= STORY_LIFE_LAST_WORK && !s->paused &&
-        s->activity!=STORY_ACT_STUDIO) {
+        s->activity!=STORY_ACT_STUDIO&&s->activity!=STORY_ACT_REHEARSAL&&
+        s->activity!=STORY_ACT_PAINT) {
         if (++s->day_frame >= STORY_DAY_FRAMES) {
             s->day_frame=0;
             if (s->day_number<99) ++s->day_number;
@@ -2031,6 +2302,18 @@ void story_tick(Story *s, uint16_t keys) {
                    !(s->flags&STORY_MARA)){
                     s->flags|=STORY_MARA;s->dirty=1;
                 }
+                if((s->dialogue==D_MARA_MASTER||s->dialogue==D_MARA_CREATIONS)&&
+                   (pressed&A)&&!(pressed&B)&&share_pending(s)){
+                    s->project_style|=STORY_STYLE_SONG_SHARED;
+                    stat_gain(&s->bond,1);s->dirty=1;
+                    if(s->neighborhood_target==STORY_TRACK_STUDIO)s->neighborhood_target=0;
+                }
+                if(s->dialogue==D_SHOW_PLAY&&(pressed&A)&&!(pressed&B)&&story_show_stage(s)==5u){
+                    show_advance(s,6u);
+                    if(!(s->project_style&STORY_STYLE_SONG_SHARED)){
+                     s->project_style|=STORY_STYLE_SONG_SHARED;stat_gain(&s->bond,1);
+                    }
+                }
                 s->dialogue = 0; s->page = 0; s->scene=STORY_SCENE_NONE;
                 if(!ready && !s->ended && s->life_stage!=STORY_LIFE_FINALE)s->cinema=CINE_NONE;
                 if (ready) { s->choosing = 1; s->choice = 0; }
@@ -2049,19 +2332,72 @@ void story_tick(Story *s, uint16_t keys) {
         else if(pressed&A)resolve_risk(s);
         return;
     }
+    if(s->activity==STORY_ACT_PAINT){
+        /* Brush location and palette are transient. Only START on a
+           completed layer changes the saved artwork. No timed failure. */
+        if(pressed&B){
+            s->activity=0;s->activity_choice=0;s->studio_tab=s->studio_cursor=0;
+            s->cinema=CINE_NONE;return;
+        }
+        if(pressed&START){
+            if(!story_paint_ready(s)){s->studio_cursor=2u;return;}
+            unsigned warm=(unsigned)story_paint_warm(s);
+            s->activity=0;s->activity_choice=0;s->studio_tab=s->studio_cursor=0;
+            s->project_style=(uint8_t)((s->project_style&~STORY_STYLE_ART_WARM)|
+                                       (warm?STORY_STYLE_ART_WARM:0u));
+            remember(s,STORY_DAY_ART);step_project(s,'r',warm);return;
+        }
+        unsigned brush=story_paint_brush(s),tone=s->activity_choice&STORY_PAINT_WARM;
+        if(pressed&LEFT){if(brush&3u)brush--;}
+        else if(pressed&RIGHT){if((brush&3u)<3u)brush++;}
+        else if(pressed&UP){if(brush>=4u)brush-=4u;}
+        else if(pressed&DOWN){if(brush<4u)brush+=4u;}
+        if(pressed&(SELECT|L|R))tone^=STORY_PAINT_WARM;
+        s->activity_choice=(uint8_t)(tone|brush);
+        if(pressed&(LEFT|RIGHT|UP|DOWN|SELECT|L|R))s->studio_cursor=0;
+        if(pressed&A){
+            unsigned bit=1u<<brush;
+            if(story_paint_targets(s)&bit){s->studio_tab|=(uint8_t)bit;s->studio_cursor=0;}
+            else s->studio_cursor=1;
+        }
+        return;
+    }
+    if(s->activity==STORY_ACT_REHEARSAL){
+        /* Four untimed cue cards use the actual arrangement order.
+           A wrong choice gives feedback; B cancels without a penalty. */
+        if(pressed&(B|START)){s->activity=0;s->activity_choice=0;s->cinema=CINE_NONE;return;}
+        if(pressed&(LEFT|UP)){s->activity_choice=(uint8_t)((s->activity_choice+3u)&3u);s->studio_cursor=0;}
+        else if(pressed&(RIGHT|DOWN)){s->activity_choice=(uint8_t)((s->activity_choice+1u)&3u);s->studio_cursor=0;}
+        if(pressed&A){
+         if(s->activity_choice!=story_show_expected(s))s->studio_cursor=1;
+         else if(++s->studio_tab>=4u){
+          s->activity=0;s->activity_choice=0;s->studio_tab=s->studio_cursor=0;
+          if(show_available(s)&&story_show_stage(s)==2u){
+           show_advance(s,3u);talk(s,D_SHOW_REHEARSED);
+          }else s->cinema=CINE_NONE;
+         }else {s->activity_choice=0;s->studio_cursor=0;}
+        }
+        return;
+    }
     if(s->activity==STORY_ACT_STUDIO){
         /* Easy enough to play entirely with the D-pad and face buttons.
            L/R switch pages, D-pad edits the current setting, SELECT
            previews the *actual* PSG notes, B exits without losing work. */
+        int basic=s->song_steps<STORY_PROJECT_DONE;
         if(pressed&(B|START)){
-            s->activity=STORY_ACT_NONE;s->activity_choice=0;
-            s->cinema=CINE_NONE;
-            if(pressed&START)s->paused=1;
+            s->activity=STORY_ACT_NONE;s->activity_choice=0;s->cinema=CINE_NONE;
+            if((pressed&START)&&!(pressed&B)){
+                if(basic){remember(s,STORY_DAY_MUSIC);step_project(s,'m',studio_patch()->mood==0u);}
+                else s->paused=1;
+            }
             return;
         }
         if(pressed&(L|R)){
-            s->studio_tab=(uint8_t)((s->studio_tab+
-                ((pressed&L)?STUDIO_TAB_COUNT-1u:1u))%STUDIO_TAB_COUNT);
+            if(basic){
+                static const uint8_t tabs[4]={STUDIO_SONG,STUDIO_NOTES,STUDIO_MIX,STUDIO_PERFORM};
+                unsigned pos=s->studio_tab==STUDIO_NOTES?1u:s->studio_tab==STUDIO_MIX?2u:s->studio_tab==STUDIO_PERFORM?3u:0u;
+                s->studio_tab=tabs[(pos+((pressed&L)?3u:1u))%4u];
+            }else s->studio_tab=(uint8_t)((s->studio_tab+((pressed&L)?STUDIO_TAB_COUNT-1u:1u))%STUDIO_TAB_COUNT);
             s->studio_cursor=0;
         }
         unsigned count=studio_cursor_count(s->studio_tab);
@@ -2088,7 +2424,10 @@ void story_tick(Story *s, uint16_t keys) {
         return;
     }
     if(s->activity){
-        if(pressed&(LEFT|RIGHT|UP|DOWN))s->activity_choice^=1u;
+        if(s->activity=='m'||s->activity=='M'||story_paint_workshop_available(s)){
+            if(pressed&(LEFT|UP))s->activity_choice=(uint8_t)((s->activity_choice+2u)%3u);
+            else if(pressed&(RIGHT|DOWN))s->activity_choice=(uint8_t)((s->activity_choice+1u)%3u);
+        }else if(pressed&(LEFT|RIGHT|UP|DOWN))s->activity_choice^=1u;
         if(pressed&B){
             s->activity=STORY_ACT_NONE;s->activity_choice=0;
             s->cinema=CINE_NONE;
@@ -2150,8 +2489,13 @@ void story_tick(Story *s, uint16_t keys) {
             else if((pressed&A)&&story_neighborhood_enabled(s)){
                 unsigned target=s->neighborhood_cursor+1u;
                 s->neighborhood_target=(uint8_t)(s->neighborhood_target==target?0u:target);
-                s->paused=0;s->choice&=1u;
+                s->dirty=1;s->paused=0;s->choice&=1u;
             }
+            return;
+        }
+        /* A directly opens destinations from the pause root. */
+        if((pressed&A)&&!(s->choice&(STORY_CHECK_PAGE_ACTIVE|STORY_FIELD_GUIDE_ACTIVE))){
+            s->choice=(uint8_t)((s->choice&1u)|STORY_FIELD_GUIDE_ACTIVE|STORY_FIELD_GUIDE_DETAIL);
             return;
         }
         /* L is a direct two-page help guide. R remains the four-page
@@ -2163,6 +2507,18 @@ void story_tick(Story *s, uint16_t keys) {
         }else if((pressed&(LEFT|RIGHT)) &&
                  (s->choice&STORY_FIELD_GUIDE_ACTIVE)){
             s->choice^=STORY_FIELD_GUIDE_DETAIL;
+        }else if((s->choice&(STORY_FIELD_GUIDE_ACTIVE|STORY_FIELD_GUIDE_DETAIL))==
+                 (STORY_FIELD_GUIDE_ACTIVE|STORY_FIELD_GUIDE_DETAIL)){
+            unsigned selected=story_track_selected(s);
+            if(pressed&B)s->choice&=1u;
+            else if(pressed&R)s->choice=(uint8_t)((s->choice&1u)|STORY_CHECK_PAGE_ACTIVE);
+            else if(pressed&(UP|DOWN)){
+                selected=(selected+((pressed&UP)?STORY_TRACK_COUNT-1u:1u))%STORY_TRACK_COUNT;
+                s->choice=(uint8_t)((s->choice&~STORY_TRACK_CHOICE_MASK)|(selected<<1));
+            }else if((pressed&A)&&story_track_available(s,selected)){
+                s->neighborhood_target=(uint8_t)story_track_id(selected);
+                s->dirty=1;s->paused=0;s->choice&=1u;
+            }
         }else if(pressed&R){
             unsigned page=(s->choice&STORY_CHECK_PAGE_ACTIVE)?
                 (story_check_page(s)+1u)%STORY_CHECK_PAGE_COUNT:0u;

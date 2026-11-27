@@ -1,4 +1,5 @@
 #include "hd_facade_art.h"
+#include "hd_scene_geometry.h"
 /* Original pre-painted ROM art: eight real district frontage types, each
    with two facing light treatments. No heap, extra palette or framebuffer.
    Pixels are existing GBA palette slots 32..63, never a transparent key. */
@@ -680,6 +681,13 @@ static const uint8_t fronts[2][8][640] __attribute__((aligned(4)))={
   },
  },
 };
+const uint8_t *hd_facade_texture(unsigned variant,unsigned side){
+ return fronts[side&1u][variant&7u];
+}
+const uint8_t *hd_facade_at(int wx,int wy,char type,unsigned side){
+ return hd_facade_texture(hd_district(wx,wy,type).variant,side);
+}
+
 /* A sheared facade has identical vertical sampling in adjacent pairs
    of columns. Clip each pair once and copy its original two ROM pixels
    together where alignment permits. No raster/texture cache is added. */
@@ -687,7 +695,7 @@ typedef uint16_t FacadeHalf __attribute__((may_alias));
 void hd_facade_wall(uint8_t *p,int sx,int sy,int height,
                     unsigned variant,unsigned side){
  if(height<=0||sx<=-16||sx>=HD_W)return;
- const uint8_t *a=fronts[side&1u][variant&7u];
+ const uint8_t *a=hd_facade_texture(variant,side);
  int x0=sx<0?-sx:0,x1=sx+16>HD_W?HD_W-sx:16;
  int major=40/height,minor=40%height;
  for(int pair=0;pair<16;pair+=2){

@@ -1,5 +1,7 @@
 #include "hd_canvas.h"
 #include "story_checks.h"
+#include "hd_city_canvas.h"
+#include "hd_guide_map.h"
 
 /* Native-pixel film subtitles, menus and prompts shared by the painted map
    and legacy cinematic/raycast frames. Narrative text is never removed. */
@@ -22,50 +24,49 @@ static void field_guide(uint8_t *p,const Story *s){
  framebox(p,12,20,216,135);
  hd_rect(p,19,30,3,11,HD_GOLD);
  if(s->choice&STORY_FIELD_GUIDE_DETAIL){
-  hd_text(p,27,31,"FIELD GUIDE / HOW TO PLAY",HD_LAMP,1,0);
+  hd_text(p,27,31,"FIELD GUIDE / CHOOSE A GOAL",HD_LAMP,1,0);
   hd_line(p,21,44,217,44,HD_STONE_DARK);
-  hd_text(p,22,52,"CORE: LETTER > BORE > MARA",HD_PAPER,1,0);
-  hd_text(p,22,63,"AFTER CORE THE BUS IS OPEN",HD_PAPER,1,0);
-  hd_text(p,22,74,"EXTRAS: TAPE + ROOF CHANGE END",HD_STONE_LIT,1,0);
-  hd_line(p,21,85,217,85,HD_STONE_DARK);
-  hd_text(p,22,91,"TRY TO LEAVE: CLINIC STOPS TRIP",HD_PAPER,1,0);
-  hd_text(p,22,102,"A INTERACT / L CAMERA / R NOTES",HD_PAPER,1,0);
-  hd_text(p,22,113,"B RISK IS OPTIONAL + CONFIRMED",HD_STONE_LIT,1,0);
-  hd_text(p,22,124,"REST = ENERGY / BOND = TRUST",HD_PAPER,1,0);
-  hd_text(p,22,135,"SPARK = ART / NO DEADLINE",HD_STONE_LIT,1,0);
+  unsigned selected=story_track_selected(s);
+  for(unsigned i=0;i<STORY_TRACK_COUNT;i++){
+   int y=49+(int)i*13,available=story_track_available(s,i);
+   if(i==selected)hd_rect(p,20,y-2,200,15,HD_ROAD_COOL);
+   hd_text(p,25,y,story_track_name(i),available?HD_PAPER:HD_STONE_DARK,1,0);
+   if(story_track_id(i)&&s->neighborhood_target==story_track_id(i))hd_text(p,177,y,"TRACK",HD_LAMP,1,0);
+   else if(i==STORY_TRACK_SHOW_INDEX&&story_show_stage(s)==STORY_SHOW_DONE)
+    hd_text(p,177,y,"DONE",HD_LAMP,1,0);
+   else if(!available)hd_text(p,177,y,"LATER",HD_STONE_LIT,1,0);
+   if(i==STORY_TRACK_SHOW_INDEX){char progress[]="0/7";progress[0]=(char)('0'+story_show_stage(s));hd_text(p,145,y,progress,HD_GOLD,1,0);}
+  }
+  hd_text(p,22,119,selected==0u?"EAST PLAZA: EDIT AND SAVE TAKES":
+       selected==1u?"PAINT THE CITY / FOUR LAYERS":
+       selected==2u?"START AT THE EAST TERMINAL":
+       selected==STORY_TRACK_SHOW_INDEX?"MUSIC + ART / 7 SHOW STEPS":
+       "LETTER, BORE, MARA, THEN BUS",HD_PAPER,1,0);
+  hd_text(p,22,131,"UP/DOWN CHOOSE  A TRACK",HD_GOLD,1,0);
  }else{
   hd_text(p,27,31,"FIELD GUIDE / OLD QUARTER",HD_LAMP,1,0);
   hd_line(p,21,44,217,44,HD_STONE_DARK);
   int gx=0,gy=0;const char *goal=0;
   int has=story_goal(s,&gx,&gy,&goal);
-  hd_text(p,22,51,has?story_goal_kind(s):"NO URGENT ERRAND",
-          HD_STONE_LIT,1,0);
+  hd_guide_map(p,s,144,50);
+  hd_text(p,22,51,has?story_goal_kind(s):"FREE TIME",HD_STONE_LIT,1,0);
   if(has){
-   hd_text(p,22,63,goal,HD_PAPER,1,0);
+   hd_text(p,22,62,goal,HD_PAPER,1,0);
    int dir=-1,steps=-1;
    if(story_route(s,&dir,&steps)){
-    static const char *const compass[]={"AHEAD","RIGHT","BACK","LEFT"};
-    const char *heading=dir<0?"HERE":compass[(dir-(int)s->facing+4)&3];
-    char count[]="00 STEPS";
-    unsigned number=steps<0?0u:steps>99?99u:(unsigned)steps;
-    count[0]=(char)('0'+number/10u);
-    count[1]=(char)('0'+number%10u);
-    hd_text(p,139,63,heading,HD_GOLD,1,0);
-    hd_text(p,178,63,steps==0?"ACT NOW":count,HD_LAMP,1,0);
-   }else hd_text(p,121,63,"NO SAFE ROUTE",HD_RED,1,0);
-   hd_text(p,22,75,story_goal_reason(s),HD_PAPER,1,0);
-  }else hd_text(p,22,75,"EXPLORE AND MAKE SOMETHING",HD_PAPER,1,0);
-  hd_line(p,21,86,217,86,HD_STONE_DARK);
-  hd_text(p,22,93,story_action_hint(s),HD_LAMP,1,0);
-  hd_text(p,108,93,story_risk_available(s)?"B RISK / OPTIONAL":
-          "B NO RISK HERE",HD_STONE_LIT,1,0);
-  hd_text(p,22,105,"A TALK / WORK / INTERACT",HD_PAPER,1,0);
-  hd_text(p,22,117,"L CAMERA / R NOTES WHILE PLAYING",HD_PAPER,1,0);
-  char stats[]="ENERGY 0  SPARK 0  BOND 0";
-  stats[7]=(char)('0'+(s->energy>5u?5u:s->energy));
-  stats[16]=(char)('0'+(s->spark>5u?5u:s->spark));
-  stats[24]=(char)('0'+(s->bond>5u?5u:s->bond));
-  hd_text(p,22,132,stats,HD_GOLD,1,0);
+    static const char *const compass[]={"EAST","SOUTH","WEST","NORTH"};
+    static const char *const relative[]={"AHEAD","RIGHT","BACK","LEFT"};
+    const char *heading=dir<0?"HERE":s->view?relative[(dir-(int)s->facing+4)&3]:compass[dir];
+    char count[]="000 STEPS";unsigned n=steps<0?0u:steps>999?999u:(unsigned)steps;
+    count[0]=(char)('0'+n/100u);count[1]=(char)('0'+n/10u%10u);count[2]=(char)('0'+n%10u);
+    hd_text(p,22,75,heading,HD_GOLD,1,0);
+    hd_text(p,22,86,steps?count:"A TO INTERACT",HD_PAPER,1,0);
+   }else hd_text(p,22,75,"NO SAFE ROUTE",HD_RED,1,0);
+  }
+  hd_text(p,22,98,story_action_hint(s),HD_LAMP,1,0);
+  hd_text(p,22,111,has?story_goal_reason(s):"EXPLORE AND CREATE",HD_PAPER,1,0);
+  hd_text(p,22,125,"WHITE YOU / GOLD GOAL",HD_STONE_LIT,1,0);
+  hd_text(p,22,135,"GREEN NEXT STEP / R CHECKS",HD_STONE_LIT,1,0);
  }
  hd_rect(p,19,143,202,1,HD_STONE_DARK);
  hd_text(p,22,147,"LEFT/RIGHT PAGE  B BACK  R CHECKS",HD_STONE_LIT,1,0);
@@ -161,7 +162,7 @@ void hd_game_overlay(uint8_t *p,const Story *s){
   hd_text(p,29,77,"A MOMENT TO BREATHE",HD_PAPER,1,0);
   hd_line(p,29,91,210,91,HD_STONE_DARK);
   hd_text(p,30,96,"START  RETURN TO STREET",HD_PAPER,1,0);
-  hd_text(p,30,107,"L  FIELD GUIDE / WHERE NEXT",HD_LAMP,1,0);
+  hd_text(p,30,107,"A  GOALS / L FIELD GUIDE",HD_LAMP,1,0);
   hd_text(p,30,119,"R  JOURNAL / CONSEQUENCES",HD_STONE_LIT,1,0);
   hd_text(p,30,128,"SELECT  SIDE STORIES",HD_LAMP,1,0);
   hd_text(p,30,139,"B  SAVE AND LEAVE",HD_PAPER,1,0);
@@ -190,6 +191,62 @@ void hd_game_overlay(uint8_t *p,const Story *s){
   hd_text(p,28,146,"LEFT/RIGHT CHOOSE    B CANCEL",HD_PAPER,1,0);
   return;
  }
+ if(s->activity==STORY_ACT_PAINT){
+  framebox(p,8,26,224,131);
+  char count[]="LAYER 1/4";count[6]=(char)('1'+s->art_steps);
+  hd_text(p,18,34,"ROOFTOP WORKSHOP",HD_LAMP,1,0);
+  hd_text(p,169,34,count,HD_PAPER,1,0);
+  hd_text(p,18,45,story_paint_layer(s),HD_PAPER,1,1);
+  hd_text(p,168,45,story_paint_warm(s)?"WARM":"COOL",HD_GOLD,1,0);
+  unsigned targets=story_paint_targets(s),brush=story_paint_brush(s);
+  unsigned done=0;
+  hd_rect(p,63,53,114,66,HD_BARK);
+  hd_city_painting(p,68,54,104,64,s->art_steps,story_paint_warm(s),s->studio_tab);
+  for(unsigned i=0;i<8u;i++){
+   int x=68+(int)(i&3u)*26,y=54+(int)(i>>2)*32;
+   unsigned bit=1u<<i,marked=targets&bit,filled=s->studio_tab&bit;
+   if(marked&&filled)done++;
+   /* Corner indicators keep the composition visible, including filled cells. */
+   if(brush==i){
+    hd_rect(p,x,y,7,1,HD_LAMP);hd_rect(p,x,y,1,7,HD_LAMP);
+    hd_rect(p,x+19,y+31,7,1,HD_LAMP);hd_rect(p,x+25,y+25,1,7,HD_LAMP);
+   }
+   if(marked&&!filled){hd_rect(p,x+10,y+14,6,5,HD_INK);hd_rect(p,x+11,y+15,4,3,HD_GOLD);}
+  }
+  hd_text(p,18,59,"STROKES",HD_STONE_LIT,1,0);
+  char marks[]="0/4";marks[0]=(char)('0'+done);
+  hd_text(p,20,72,marks,HD_PAPER,1,1);
+  for(unsigned j=0;j<4u;j++)hd_rect(p,18+(int)j*10,86,8,5,j<done?HD_GOLD:HD_STONE_DARK);
+  hd_text(p,183,60,"TONE",HD_STONE_LIT,1,0);
+  hd_rect(p,184,73,29,14,story_paint_warm(s)?HD_COPPER:HD_GLASS_LIT);
+  hd_text(p,182,94,story_paint_warm(s)?"WARM":"COOL",HD_PAPER,1,0);
+  hd_text(p,18,119,story_paint_ready(s)?"LAYER READY - START TO SAVE":
+       s->studio_cursor==2u?"FILL ALL FOUR GOLD MARKS":
+       s->studio_cursor==1u?"MOVE TO A GOLD MARK":"PAINT THE FOUR GOLD MARKS",HD_PAPER,1,0);
+  hd_text(p,18,133,"D-PAD BRUSH  A PAINT  SELECT TONE",HD_STONE_LIT,1,0);
+  hd_text(p,18,145,"START SAVE LAYER  B BACK",HD_PAPER,1,0);
+  return;
+ }
+ if(s->activity==STORY_ACT_REHEARSAL){
+  framebox(p,8,66,224,91);
+  char part[]="PART 1/4";part[5]=(char)('1'+(s->studio_tab&3u));
+  hd_text(p,18,74,"SET LIST REHEARSAL",HD_LAMP,1,0);
+  hd_text(p,170,74,part,HD_PAPER,1,0);
+  hd_text(p,18,86,s->studio_cursor?"TRY THE SHOWN PHRASE":"MATCH THE NEXT CUE",s->studio_cursor?HD_LAMP:HD_PAPER,1,0);
+  hd_text(p,18,98,"YOUR ORDER:",HD_STONE_LIT,1,0);
+  hd_text(p,100,98,story_show_phrase(story_show_expected(s)),HD_GOLD,1,0);
+  for(unsigned i=0;i<4u;i++)selectable(p,16+(int)i*53,111,50,story_show_phrase(i),s->activity_choice==i);
+  hd_text(p,18,145,"D-PAD CHOOSE  A CUE  B BACK",HD_PAPER,1,0);
+  return;
+ }
+ if(s->activity==STORY_ACT_SHOW){
+  framebox(p,12,104,216,53);
+  hd_text(p,21,111,story_show_title(s),HD_LAMP,1,0);
+  selectable(p,21,121,95,story_show_option(s,0),!s->activity_choice);
+  selectable(p,124,121,95,story_show_option(s,1),s->activity_choice);
+  hd_text(p,21,145,"D-PAD CHOOSE  A OK  B BACK",HD_PAPER,1,0);
+  return;
+ }
  if(s->activity==STORY_ACT_NEIGHBORHOOD){
   int id=story_neighborhood_at(s);
   framebox(p,8,103,224,54);
@@ -209,10 +266,10 @@ void hd_game_overlay(uint8_t *p,const Story *s){
   case 'F':where="MARA / AFTERNOON";left="WALK";right="TALK";benefit="TIME TOGETHER";break;
   case 'L':where="LETTER / MEMORY";left="WRITE";right="KEEP";benefit="A MEMORY OF HOME";break;
   case 'C':where="BORE / ARCHIVE";left="FILE";right="JOKE";benefit="ANOTHER SMALL FORM";break;
-  case 'M':where="BORE / MUSIC";left="ARRANGE";right="LISTEN";benefit="ONE MORE SONG";break;
-  case 'E':where="MUSIC / MASTER";left="LISTEN";right="STUDIO";benefit="YOUR FINISHED MUSIC";break;
+  case 'M':where="MUSIC DESK";left="MIX";right="LISTEN";benefit="MAKE A SONG OR EDIT IT";break;
+  case 'E':where="MUSIC DESK";left="LISTEN";right="EDIT";benefit="ADVANCED STUDIO UNLOCKED";break;
   case 'J':where="POTHEADS / SHIFT";left="WORK";right="LEAVE";benefit="PAID HOURS, NOT HIS DREAM";break;
-  case 'm':where="MUSIC / TAKE";left="BUILD";right="SOFTEN";benefit="THE WORK CONTINUES";break;
+  case 'm':where="MUSIC DESK";left="MIX";right="SOFT";benefit="MAKE A SONG OR EDIT IT";break;
   case 'r':where="ROOFTOP / ART";left="LAYER";right="LIGHT";benefit="MAKE THE CITY YOURS";break;
   default:where="ROOFTOP / THE SKY";left="PAINT";right="REST";benefit="A QUIET AFTERNOON";break;
   }
@@ -246,9 +303,18 @@ void hd_game_overlay(uint8_t *p,const Story *s){
    }
   }
   hd_text(p,22,91,benefit,HD_PAPER,1,0);
+  int music=s->activity=='m'||s->activity=='M',painting=story_paint_workshop_available(s);
+  if(music&&s->activity_choice==2u)effect="BASIC: EDIT, PLAY, SAVE TAKE";
+  if(painting&&s->activity_choice==2u)effect="BRUSH, TONE AND SAVE A LAYER";
   hd_text(p,22,103,effect,HD_STONE_LIT,1,0);
-  selectable(p,22,115,92,left,!s->activity_choice);
-  selectable(p,123,115,93,right,s->activity_choice);
+  if(music||painting){
+   selectable(p,20,115,66,left,s->activity_choice==0u);
+   selectable(p,87,115,66,right,s->activity_choice==1u);
+   selectable(p,154,115,66,painting?"BRUSH":"STUDIO",s->activity_choice==2u);
+  }else{
+   selectable(p,22,115,92,left,!s->activity_choice);
+   selectable(p,123,115,93,right,s->activity_choice);
+  }
   hd_text(p,25,145,"LEFT/RIGHT CHOOSE  A OK  B BACK",HD_STONE_LIT,1,0);
   return;
  }
@@ -289,7 +355,7 @@ void hd_game_overlay(uint8_t *p,const Story *s){
   hd_rect(p,8,143,3,7,HD_GOLD);
   hd_text(p,16,143,story_action_hint(s),HD_PAPER,1,0);
   hd_rect(p,92,143,1,14,HD_STONE_DARK);
-  hd_text(p,100,143,"L MAP  R NOTES",HD_STONE_LIT,1,0);
+  hd_text(p,100,143,"L MAP  START HELP",HD_STONE_LIT,1,0);
   int risk=story_risk_available(s);
   hd_text(p,16,152,risk?
           "B RISK  CONFIRM FIRST":"B NO RISK AT THIS LOCATION",
