@@ -40,8 +40,8 @@ int main(void){
  assert(!story_save_decode(b,guard));
  for(unsigned i=0;i<STORY_SAVE_BYTES;i++)assert(guard[i]==0xC9);
  b[20]^=4u;
- s.x=35;s.y=22;story_save_encode(&s,b);
- assert(story_save_decode(b,decoded)&&decoded[5]==35u&&decoded[6]==22u);
+ s.x=56;s.y=11;story_save_encode(&s,b);
+ assert(story_save_decode(b,decoded)&&decoded[5]==56u&&decoded[6]==11u);
  const unsigned lengths[4]={13,16,24,28};
  for(unsigned v=1;v<=4;v++){
     make_old(v,lengths[v-1],b);

@@ -39,10 +39,10 @@ int main(void){
  Story s;story_new(&s,0);s.dialogue=0;s.cinema=CINE_NONE;
  for(unsigned v=0;v<2u;v++){
   s.view=(uint8_t)v;Story snapshot=s;reset();hd_guide_map(f.pixels,&s,144,50);
-  bounds(142,48,76,58);assert(!memcmp(&s,&snapshot,sizeof s));
+  bounds(142,48,STORY_W+4,STORY_H+4);assert(!memcmp(&s,&snapshot,sizeof s));
   int gx,gy;const char *label;assert(story_goal(&s,&gx,&gy,&label));
-  assert(f.pixels[(50+gy*3)*HD_W+144+gx*3]==HD_GOLD);
-  assert(f.pixels[(50+s.y*3)*HD_W+144+s.x*3]==HD_PAPER);
+  assert(f.pixels[(50+gy)*HD_W+144+gx]==HD_GOLD);
+  assert(f.pixels[(50+s.y)*HD_W+144+s.x]==HD_PAPER);
   checks++;
  }
  printf("Shared painting and guide: %u raster/commit/clip cases, exact progress, three real scales and read-only map\n",checks);

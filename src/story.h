@@ -3,8 +3,17 @@
 #include "cinema.h"
 #define STORY_CORE_W 24
 #define STORY_CORE_H 18
-#define STORY_W 40
+#define STORY_CITY_W 40
+#define STORY_W 64
 #define STORY_H 30
+#define STORY_LAND_PATCH0 1u
+#define STORY_LAND_PATCH1 2u
+#define STORY_LAND_SUMMIT 3u
+#define STORY_LAND_SHORE 4u
+#define STORY_LAND_DEFAULT 5u
+static inline int story_rural(int x,int y){
+ return x>=STORY_CITY_W&&x<STORY_W&&(unsigned)y<STORY_H;
+}
 /* The original material banks remain valid at their original coordinates. */
 static inline int story_city_extension(int x,int y){
  return (unsigned)x<STORY_W&&(unsigned)y<STORY_H&&
@@ -160,7 +169,8 @@ typedef struct {
     uint16_t old_keys;
     /* Independent companion save; tracked destination persists, cursor is transient. */
     uint16_t neighborhood_seen, neighborhood_right;
-    uint8_t neighborhood_cursor, neighborhood_target;
+    uint8_t neighborhood_cursor:4, terrain_style:4;
+    uint8_t neighborhood_target;
 } Story;
 /* Shared menu and gameplay predicate: an ordinary visit may earn a daily
    memory exactly once, regardless of whether a creative project is finished. */
@@ -196,6 +206,10 @@ void story_resume(Story *s, int slot, int x, int y, int facing, int view, int fl
 void story_tick(Story *s, uint16_t keys);
 char story_tile(int x, int y);
 const char *story_district_name(int x,int y);
+int story_terrain_vertex(const Story *s,int x,int y);
+int story_terrain_height(const Story *s,int wx,int wy);
+unsigned story_land_action(const Story *s);
+unsigned story_land_level(const Story *s,unsigned patch);
 #if !defined(__arm__)
 /* Preserve the shipped map solely for historical golden-render checks. */
 void story_debug_core_map(int enabled);

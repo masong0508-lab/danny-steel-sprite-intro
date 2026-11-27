@@ -6,6 +6,7 @@
 #include "story_save.h"
 #include "rescue_save.h"
 #include "neighborhood_save.h"
+#include "terrain_save.h"
 #include "studio.h"
 #include "hd_canvas.h"
 #include "frame_runtime.h"
@@ -95,6 +96,8 @@ void play_erase_slot(int slot){
         save_ram[STUDIO_EXT_OFFSET+slot*STUDIO_EXT_LEN+i]=0xFF;
     for(unsigned i=0;i<NEIGHBORHOOD_EXT_LEN;i++)
         save_ram[NEIGHBORHOOD_EXT_OFFSET+slot*NEIGHBORHOOD_EXT_LEN+i]=0xFF;
+    for(unsigned i=0;i<TERRAIN_EXT_LEN;i++)
+        save_ram[TERRAIN_EXT_OFFSET+slot*TERRAIN_EXT_LEN+i]=0xFF;
 }
 static void write_save(void){
     u8 b[SAVE_LEN];
@@ -113,6 +116,9 @@ static void write_save(void){
     neighborhood_save_encode(&game,neighborhood_bytes);
     for(unsigned i=0;i<NEIGHBORHOOD_EXT_LEN;i++)
         save_ram[NEIGHBORHOOD_EXT_OFFSET+game.slot*NEIGHBORHOOD_EXT_LEN+i]=neighborhood_bytes[i];
+    uint8_t terrain_bytes[TERRAIN_EXT_LEN];
+    terrain_save_encode(&game,terrain_bytes);
+    for(unsigned i=0;i<TERRAIN_EXT_LEN;i++)save_ram[TERRAIN_EXT_OFFSET+game.slot*TERRAIN_EXT_LEN+i]=terrain_bytes[i];
     game.dirty=0;
 }
 static void draw_hidden(int page){
@@ -242,6 +248,9 @@ void play_enter(int want_load,int slot){
         }
         /* Upgrade old slots with the new checksum and version on next autosave. */
         if(b[4]!=SAVE_VER)game.dirty=1;
+        uint8_t terrain_bytes[TERRAIN_EXT_LEN];
+        for(unsigned i=0;i<TERRAIN_EXT_LEN;i++)terrain_bytes[i]=save_ram[TERRAIN_EXT_OFFSET+game.slot*TERRAIN_EXT_LEN+i];
+        (void)terrain_save_decode(&game,terrain_bytes);
     } else {story_new(&game,slot);write_save();}
     story_draw_init();
     if(game.life_stage==STORY_LIFE_FINALE ||
@@ -266,12 +275,12 @@ void play_enter(int want_load,int slot){
 }
 static int play_tick(u16 keys){
     int was_editor=game.activity==STORY_ACT_STUDIO||game.activity==STORY_ACT_PAINT;
-    unsigned prior_show=story_show_stage(&game),prior_target=game.neighborhood_target;
+    unsigned prior_show=story_show_stage(&game),prior_target=game.neighborhood_target,prior_land=game.terrain_style;
     story_tick(&game,keys);
     /* Leaving the editor commits the edited arrangement immediately,
        instead of waiting two seconds for the periodic SRAM checkpoint. */
     if(game.dirty&&((was_editor&&game.activity!=STORY_ACT_STUDIO&&game.activity!=STORY_ACT_PAINT)||
-       prior_show!=story_show_stage(&game)||prior_target!=game.neighborhood_target)){
+       prior_show!=story_show_stage(&game)||prior_target!=game.neighborhood_target||prior_land!=game.terrain_style)){
         write_save();save_cooldown=0;
     }
     if(game.quit){
