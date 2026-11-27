@@ -1,18 +1,18 @@
 {
-  "source_commit": "071f9360d1e7024622e160f4df8a181790fa8eef",
-  "source_rom_sha256": "8014a142743f6cba34d77dd6b083d3187e66fbd2de6e7022825e90e0bbc952e6",
-  "source_elf_sha256": "92f75576b36679c5fa07e927322d9cbfbe306c83857885511c13f5add6813199",
+  "source_commit": "297a534859d37b8dfe5ac3e587bbd79e1ab64cb7",
+  "source_rom_sha256": "433a41378f022a1c681f37a58a4bb7043bbe6bbf2449f6a8c4a1e058dde1787d",
+  "source_elf_sha256": "953e442de2bf9bd9dc5f71a6feae46efca001130ee54de6f35302b977e2061e3",
   "arm_build_toolchain": {
     "file": "arm_build_toolchain.txt",
-    "sha256": "d30286318d02d46ccf583d51a20331be3f8a7494a184a74dc3bac0349687893e",
-    "record": "Source commit: 071f9360d1e7024622e160f4df8a181790fa8eef\nDocker image reference: devkitpro/devkitarm\nImage ID: sha256:5850ea3193e95244827a1e38cf464a0e730d1b9cc7c276888ceed984cbe38912\nRepoDigests: [\"devkitpro/devkitarm@sha256:116afba8df8453961de2936ffab20dd441edf4d682856c1ec8b0e53d7ed0bbf5\"]\n\nARM compiler: /opt/devkitpro/devkitARM/bin/arm-none-eabi-gcc\narm-none-eabi-gcc (devkitARM) 16.1.0\nCopyright (C) 2026 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n"
+    "sha256": "39525488399b878c99a5c0351eb860b9d4a4ceadee1c6df080c877c7e8d7eab0",
+    "record": "Source commit: 297a534859d37b8dfe5ac3e587bbd79e1ab64cb7\nDocker image reference: devkitpro/devkitarm\nImage ID: sha256:5850ea3193e95244827a1e38cf464a0e730d1b9cc7c276888ceed984cbe38912\nRepoDigests: [\"devkitpro/devkitarm@sha256:116afba8df8453961de2936ffab20dd441edf4d682856c1ec8b0e53d7ed0bbf5\"]\n\nARM compiler: /opt/devkitpro/devkitARM/bin/arm-none-eabi-gcc\narm-none-eabi-gcc (devkitARM) 16.1.0\nCopyright (C) 2026 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n"
   },
   "capture": {
     "source": "mGBA completed GBA video scanout",
     "emulator_version": "0.10.2",
-    "rom_crc32": "d43ab28a",
-    "elf_crc32": "e90f5328",
-    "elf_rom_bytes_verified": 3633816,
+    "rom_crc32": "68f05495",
+    "elf_crc32": "bf39cc88",
+    "elf_rom_bytes_verified": 3647608,
     "elf_match_excludes_gbafix_header_bytes": [
       4,
       191
@@ -29,8 +29,8 @@
     "last_video_frame": 3407,
     "first_cinema_frame": 0,
     "last_cinema_frame": 1433,
-    "displayed_page_flips": 658,
-    "changed_video_frames": 575,
+    "displayed_page_flips": 14,
+    "changed_video_frames": 10,
     "first_dialogue_page": 0,
     "last_dialogue_page": 6,
     "read_dialogue": true,
@@ -43,7 +43,7 @@
       1020,
       1200
     ],
-    "max_cinema_clock_error_ticks": 1,
+    "max_cinema_clock_error_ticks": 0,
     "input_samples_dropped": 0,
     "game_memory_writes": false,
     "audio_included": false,
@@ -186,11 +186,11 @@
         180
       ],
       "range_end_exclusive": true,
-      "video_frames": 183,
-      "page_flips": 33,
-      "seconds": 3.0639152526855384,
-      "page_flips_per_second": 10.770532889601082,
-      "max_complete_flip_interval": 8
+      "video_frames": 180,
+      "page_flips": 14,
+      "seconds": 3.013687133789054,
+      "page_flips_per_second": 4.645472266524911,
+      "max_complete_flip_interval": 5
     },
     {
       "phase": "standing",
@@ -199,11 +199,11 @@
         750
       ],
       "range_end_exclusive": true,
-      "video_frames": 567,
-      "page_flips": 283,
-      "seconds": 9.49311447143552,
-      "page_flips_per_second": 29.811080531214284,
-      "max_complete_flip_interval": 3
+      "video_frames": 570,
+      "page_flips": 0,
+      "seconds": 9.543342590332005,
+      "page_flips_per_second": 0.0,
+      "max_complete_flip_interval": null
     },
     {
       "phase": "floor",
@@ -213,10 +213,10 @@
       ],
       "range_end_exclusive": true,
       "video_frames": 524,
-      "page_flips": 262,
+      "page_flips": 0,
       "seconds": 8.773178100585913,
-      "page_flips_per_second": 29.863750284803,
-      "max_complete_flip_interval": 3
+      "page_flips_per_second": 0.0,
+      "max_complete_flip_interval": null
     },
     {
       "phase": "final_hold",
@@ -226,10 +226,10 @@
       ],
       "range_end_exclusive": true,
       "video_frames": 160,
-      "page_flips": 80,
+      "page_flips": 0,
       "seconds": 2.6788330078124925,
-      "page_flips_per_second": 29.863750284803,
-      "max_complete_flip_interval": 2
+      "page_flips_per_second": 0.0,
+      "max_complete_flip_interval": null
     }
   ],
   "display_scale": 3,
@@ -237,7 +237,7 @@
   "sampling_note": "20/30 FPS derivatives sample source timestamps; their final hold can round by less than one output interval",
   "mp4": {
     "file": "opening.mp4",
-    "sha256": "cb94441e90a063e4f1054a90c9b623b4de5e22e02278ddf2f794f25b5448c0b5",
+    "sha256": "e6ab3020464158d82ecd902908e5eff4d431140a3e8a08a9c5750cda6b98862f",
     "requested_rate": "native",
     "video": {
       "codec_name": "h264",
@@ -251,7 +251,7 @@
   },
   "gif": {
     "file": "opening.gif",
-    "sha256": "14e0b5600029adc005734215ec20953e130cfe6378c7631029292367684e8cb4",
+    "sha256": "fd126c961b0736ece5df9a4f6eea2b0203d047bad003ba4a6a7d381e64b8687f",
     "requested_rate": "20",
     "video": {
       "codec_name": "gif",
