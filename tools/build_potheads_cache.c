@@ -14,12 +14,12 @@ static const unsigned anchors[]={45,90,128,225,256,384,390,495,512,594,POT_CACHE
 #define SEEK_COUNT (sizeof anchors/sizeof anchors[0])
 static uint32_t header[6u+POT_CACHE_SAMPLES+2u*SEEK_COUNT];
 static unsigned max_packet,raw_packets;
-static unsigned patch(const uint32_t *a,const uint32_t *b,uint32_t *out){
+static unsigned patch(const uint32_t *a,const uint32_t *b,uint32_t *out,unsigned gap){
  unsigned at=0,i=0;
  while(i<ROTO_WORDS){
   if(a[i]==b[i]){i++;continue;}
   unsigned start=i,end=++i;
-  while(i<ROTO_WORDS&&i-end<5u){if(a[i]!=b[i])end=i+1u;i++;}
+  while(i<ROTO_WORDS&&i-end<gap){if(a[i]!=b[i])end=i+1u;i++;}
   unsigned n=end-start;
   if(at+1u+n>ROTO_PACKET_MAX/4u)return UINT32_MAX;
   out[at++]=start|(n<<16);memcpy(out+at,b+start,n*4u);at+=n;
@@ -28,10 +28,22 @@ static unsigned patch(const uint32_t *a,const uint32_t *b,uint32_t *out){
 }
 static int put(FILE *out,const void *p,unsigned n){return fwrite(p,1,n,out)==n;}
 static int encode(FILE *out,const uint32_t *from,const uint32_t *to,unsigned *at){
- unsigned n=patch(from,to,packet);
- if(n>ROTO_PACKET_MAX)return 0;
+ /* Choose the smallest real encoded packet, without lowering resolution,
+    dropping pictures or changing the decoder. Host CPU only. */
+ static const unsigned gaps[]={2u,3u,5u,8u,12u};
+ unsigned best=UINT32_MAX,best_gap=0;
+ for(unsigned j=0;j<sizeof gaps/sizeof gaps[0];j++){
+  unsigned n=patch(from,to,packet,gaps[j]);
+  if(n>ROTO_PACKET_MAX)continue;
+  int z=n?LZ4_compress_HC((const char *)packet,compressed,(int)n,sizeof compressed,9):0;
+  if(n&&z<=0)continue;
+  unsigned stored=(z>0&&(unsigned)z<n)?(unsigned)z:n;
+  if(stored<best){best=stored;best_gap=gaps[j];}
+ }
+ if(!best_gap)return 0;
+ unsigned n=patch(from,to,packet,best_gap);
  if(n>max_packet)max_packet=n;
- int z=n?LZ4_compress_HC((const char *)packet,compressed,(int)n,sizeof compressed,5):0;
+ int z=n?LZ4_compress_HC((const char *)packet,compressed,(int)n,sizeof compressed,9):0;
  if(n&&z<=0)return 0;
  if((unsigned)z>=n)z=0;
  decoded[0]=decoded[ROTO_PACKET_MAX/4u+1u]=0xAFAFAFAFu;

@@ -8,7 +8,6 @@
 /* Source-timed articulated cutout. The anatomy and motion use measured
    landmarks; material planes and pixel lighting are authored native art.
    The final projection maps the complete source camera to 240x135. */
-static int pot_abs(int value){return value<0?-value:value;}
 static unsigned pot_sqrt(unsigned value){
  unsigned root=0,bit=value<256u?1u<<6:value<65536u?1u<<14:
                        value<16777216u?1u<<22:1u<<30;
@@ -77,6 +76,47 @@ static void pot_stroke(uint8_t *p,PotPoint a,PotPoint b,int width,
  }
  hd_line(p,a.x+xx/2,a.y+yy/2,b.x+xx/2,b.y+yy/2,light);
 }
+/* Taper a connected two-bone fabric ribbon. The bend uses one shared
+   cross-section; no circular black cuff at the elbow or knee. For a
+   nearly reversing limb, preserve both measured segments and use a
+   rounded material joint rather than a long self-crossing miter. */
+static void pot_jointed(uint8_t *p,PotPoint a,PotPoint b,PotPoint c,
+                         int wa,int wb,int wc,unsigned body,unsigned lit,
+                         unsigned shade,unsigned caps){
+ int dx=b.x-a.x,dy=b.y-a.y,ex=c.x-b.x,ey=c.y-b.y;
+ unsigned l=pot_sqrt((unsigned)(dx*dx+dy*dy)),m=pot_sqrt((unsigned)(ex*ex+ey*ey));
+ if(!l||!m||dx*ex+dy*ey<-(int)(l*m/2u)){
+  pot_stroke(p,a,b,wa,body,lit,caps&1u);
+  pot_stroke(p,b,c,wb,body,shade,caps&2u);
+  if(wb>=3)hd_ellipse(p,b.x,b.y,wb/2,wb/2,body);
+  return;
+ }
+ int nx=dy*256/(int)l,ny=-dx*256/(int)l;
+ int mx=ey*256/(int)m,my=-ex*256/(int)m;
+ int jx=(nx+mx)/2,jy=(ny+my)/2;
+ unsigned jl=pot_sqrt((unsigned)(jx*jx+jy*jy));
+ if(jl){jx=jx*256/(int)jl;jy=jy*256/(int)jl;}
+ else {jx=nx;jy=ny;}
+ PotPoint n[3]={{nx*wa/512,ny*wa/512},{jx*wb/512,jy*wb/512},{mx*wc/512,my*wc/512}};
+ PotPoint centers[3]={a,b,c},lo[3],hi[3];
+ for(unsigned i=0;i<3u;i++){
+  lo[i]=(PotPoint){centers[i].x-n[i].x,centers[i].y-n[i].y};
+  hi[i]=(PotPoint){centers[i].x+n[i].x,centers[i].y+n[i].y};
+ }
+ for(unsigned i=0;i<2u;i++){
+  PotPoint quad[4]={lo[i],hi[i],hi[i+1u],lo[i+1u]};
+  pot_shape(p,quad,4u,body);
+  PotPoint panel[4]={centers[i],hi[i],hi[i+1u],centers[i+1u]};
+  pot_shape(p,panel,4u,shade);
+  hd_line(p,lo[i].x,lo[i].y,lo[i+1u].x,lo[i+1u].y,HD_INK);
+  hd_line(p,hi[i].x,hi[i].y,hi[i+1u].x,hi[i+1u].y,HD_INK);
+  PotPoint x={centers[i].x-n[i].x/2,centers[i].y-n[i].y/2};
+  PotPoint y={centers[i+1u].x-n[i+1u].x/2,centers[i+1u].y-n[i+1u].y/2};
+  hd_line(p,x.x,x.y,y.x,y.y,lit);
+ }
+ if((caps&1u)&&wa>=4)hd_ellipse(p,a.x,a.y,wa/2,wa/2,body);
+ if((caps&2u)&&wc>=4)hd_ellipse(p,c.x,c.y,wc/2,wc/2,body);
+}
 static unsigned pot_caps(const PotPose *pose,unsigned a,unsigned b){
  return ((pose->boundary&(1u<<a))?0u:1u)|((pose->boundary&(1u<<b))?0u:2u);
 }
@@ -85,12 +125,19 @@ static void pot_arm(uint8_t *p,const PotCamera *c,const PotPose *pose,unsigned s
  unsigned elbow=side?POT_RELBOW:POT_LELBOW;
  unsigned wrist=side?POT_RWRIST:POT_LWRIST;
  int width=pot_actor_size(c,pose->head_size.x+1);
- if(pot_has(pose,shoulder)&&pot_has(pose,elbow))
-  pot_stroke(p,pot_actor_point(c,pose->joint[shoulder]),
-   pot_actor_point(c,pose->joint[elbow]),width,HD_ROAD,HD_ROAD_COOL,pot_caps(pose,shoulder,elbow));
- if(pot_has(pose,elbow)&&pot_has(pose,wrist))
-  pot_stroke(p,pot_actor_point(c,pose->joint[elbow]),
-   pot_actor_point(c,pose->joint[wrist]),width-1,HD_ROAD,HD_STONE_DARK,pot_caps(pose,elbow,wrist)&(pot_has(pose,shoulder)?2u:3u));
+ if(pot_has(pose,shoulder)&&pot_has(pose,elbow)&&pot_has(pose,wrist)&&
+    !(pose->boundary&(1u<<elbow))){
+  pot_jointed(p,pot_actor_point(c,pose->joint[shoulder]),pot_actor_point(c,pose->joint[elbow]),
+              pot_actor_point(c,pose->joint[wrist]),width+1,width,width>3?width-2:2,
+              HD_ROAD,HD_ROAD_COOL,HD_STONE_DARK,pot_caps(pose,shoulder,wrist));
+ }else{
+  if(pot_has(pose,shoulder)&&pot_has(pose,elbow))
+   pot_stroke(p,pot_actor_point(c,pose->joint[shoulder]),
+    pot_actor_point(c,pose->joint[elbow]),width,HD_ROAD,HD_ROAD_COOL,pot_caps(pose,shoulder,elbow));
+  if(pot_has(pose,elbow)&&pot_has(pose,wrist))
+   pot_stroke(p,pot_actor_point(c,pose->joint[elbow]),
+    pot_actor_point(c,pose->joint[wrist]),width-1,HD_ROAD,HD_STONE_DARK,pot_caps(pose,elbow,wrist)&(pot_has(pose,shoulder)?2u:3u));
+ }
  if((pose->visible&(1u<<wrist))!=0u){
   PotPoint hand=pot_actor_point(c,pose->joint[wrist]);
   int r=pot_actor_size(c,3);
@@ -117,14 +164,21 @@ static void pot_leg(uint8_t *p,const PotCamera *c,const PotPose *pose,unsigned s
     turns. Inverted airborne legs retain the standing proportions. */
  if(side==near&&(pose->contact_mask&12u)&&pot_has(pose,POT_NECK)&&
     pot_has(pose,hip)&&pose->joint[hip].y>pose->joint[POT_NECK].y)
-  thick=pose->head_size.x*3+2;
+  thick=pose->head_size.x*2+3;
  int width=pot_actor_size(c,thick);
- if(pot_has(pose,hip)&&pot_has(pose,knee))
-  pot_stroke(p,pot_actor_point(c,pose->joint[hip]),pot_actor_point(c,pose->joint[knee]),
-   width,HD_INK,HD_ROAD,pot_caps(pose,hip,knee));
- if(pot_has(pose,knee)&&pot_has(pose,ankle))
-  pot_stroke(p,pot_actor_point(c,pose->joint[knee]),pot_actor_point(c,pose->joint[ankle]),
-   width-2,HD_INK,HD_STONE_DARK,pot_caps(pose,knee,ankle)&(pot_has(pose,hip)?2u:3u));
+ if(pot_has(pose,hip)&&pot_has(pose,knee)&&pot_has(pose,ankle)&&
+    !(pose->boundary&(1u<<knee))){
+  pot_jointed(p,pot_actor_point(c,pose->joint[hip]),pot_actor_point(c,pose->joint[knee]),
+              pot_actor_point(c,pose->joint[ankle]),width+1,width>3?width-1:2,width>5?width-3:2,
+              HD_INK,HD_ROAD_COOL,HD_ROAD,pot_caps(pose,hip,ankle));
+ }else{
+  if(pot_has(pose,hip)&&pot_has(pose,knee))
+   pot_stroke(p,pot_actor_point(c,pose->joint[hip]),pot_actor_point(c,pose->joint[knee]),
+    width,HD_INK,HD_ROAD,pot_caps(pose,hip,knee));
+  if(pot_has(pose,knee)&&pot_has(pose,ankle))
+   pot_stroke(p,pot_actor_point(c,pose->joint[knee]),pot_actor_point(c,pose->joint[ankle]),
+    width-2,HD_INK,HD_STONE_DARK,pot_caps(pose,knee,ankle)&(pot_has(pose,hip)?2u:3u));
+ }
  if(pot_has(pose,ankle)&&pot_has(pose,toe)&&
     !(pose->boundary&((1u<<ankle)|(1u<<toe)))){
   PotPoint foot=pot_actor_point(c,pose->joint[ankle]);
@@ -141,70 +195,7 @@ static void pot_leg(uint8_t *p,const PotCamera *c,const PotPose *pose,unsigned s
   hd_line(p,foot.x+sx,foot.y+sy,tip.x+sx,tip.y+sy,HD_STONE_LIT);
  }
 }
-static HD_CANVAS_CODE PotPoint pot_sign_point(const PotPoint *q,int u,int v){
- /* Two measured edges retain the board's bend instead of assuming an
-    upright HUD rectangle. Rows of lettering share the board's perspective. */
- int tx=q[0].x+(q[1].x-q[0].x)*u/64;
- int ty=q[0].y+(q[1].y-q[0].y)*u/64;
- int bx=q[3].x+(q[2].x-q[3].x)*u/64;
- int by=q[3].y+(q[2].y-q[3].y)*u/64;
- return (PotPoint){tx+(bx-tx)*v/26,ty+(by-ty)*v/26};
-}
-static const uint8_t *pot_sign_glyph(char ch){
- /* Ten tiny 5x7 ink forms, 70 bytes of ROM. They are drawn as strokes on
-    the measured board, never into a second bitmap or decoded image. */
- static const uint8_t glyph[10][7]={
-  {31,16,16,30,16,16,16},{30,17,17,30,20,18,17},
-  {31,16,16,30,16,16,31},{17,17,17,21,21,27,17},
-  {30,17,17,17,17,17,30},{14,17,1,2,4,8,31},
-  {4,12,4,4,4,4,14},{12,18,20,8,21,18,13},
-  {17,17,17,17,17,17,14},{30,17,17,30,16,16,16}
- };
- const char *letters="FREWD21&UP";
- for(unsigned i=0;i<10u;i++)if(ch==letters[i])return glyph[i];
- return 0;
-}
-static void pot_sign_word(uint8_t *p,const PotPoint *q,const char *word,int x,int y){
- for(unsigned i=0;word[i];i++){
-  const uint8_t *glyph=pot_sign_glyph(word[i]);
-  if(!glyph)continue;
-  for(unsigned row=0;row<7u;row++){
-   unsigned bits=glyph[row];
-   for(unsigned col=0;col<5u;){
-    if(!(bits&(16u>>col))){col++;continue;}
-    unsigned start=col;
-    while(col<5u&&(bits&(16u>>col)))col++;
-    PotPoint a=pot_sign_point(q,x+(int)i*6+(int)start,y+(int)row);
-    PotPoint b=pot_sign_point(q,x+(int)i*6+(int)col-1,y+(int)row);
-    hd_line(p,a.x,a.y,b.x,b.y,HD_INK);
-   }
-  }
- }
-}
-static void pot_sign_draw(uint8_t *p,const PotCamera *c,const PotPose *pose){
- PotPoint q[5],outline[5],shadow[5];
- for(unsigned i=0;i<5u;i++)q[i]=pot_actor_point(c,pose->sign[i]);
- outline[0]=q[0];outline[1]=q[1];outline[2]=q[4];
- outline[3]=q[2];outline[4]=q[3];
- for(unsigned i=0;i<5u;i++)shadow[i]=(PotPoint){outline[i].x+2,outline[i].y+2};
- pot_shape(p,shadow,5u,HD_SHADOW);
- pot_shape(p,outline,5u,HD_PAPER);
- pot_shape_edge(p,outline,5u,HD_STONE_DARK);
- PotPoint a=pot_sign_point(q,2,2),b=pot_sign_point(q,61,2);
- hd_line(p,a.x,a.y,b.x,b.y,HD_PLASTER_LIT);
- a=pot_sign_point(q,46,1);b=pot_sign_point(q,46,25);
- hd_line(p,a.x,a.y,b.x,b.y,HD_STONE_LIT);
- if(c->rise>=128&&pot_abs(q[1].x-q[0].x)+pot_abs(q[1].y-q[0].y)>35){
-  pot_sign_word(p,q,"FREE WEED",5,4);
-  pot_sign_word(p,q,"21 & UP",11,15);
-  /* Small hand-painted leaf marks sit on the arrow and lower corner. */
-  PotPoint stem=pot_sign_point(q,4,23);
-  for(int i=-2;i<=2;i++){
-   PotPoint leaf=pot_sign_point(q,4+i*2,19+pot_abs(i));
-   hd_line(p,stem.x,stem.y,leaf.x,leaf.y,HD_LEAF_DARK);
-  }
- }
-}
+#include "potheads_sign_render.h"
 static void pot_bag_draw(uint8_t *p,const PotCamera *c,const PotPose *pose){
  if(pose->bag_state==POT_BAG_HIDDEN)return;
  PotPoint bag=pot_actor_point(c,pose->bag);
@@ -399,6 +390,11 @@ static void pot_tunic(uint8_t *p,const PotCamera *c,const PotPose *pose,int sour
  PotJoint fold[3]={pot_local(ls,across,down,0,5),
   pot_local(low_left,across,down,0,2),pot_local(hem,across,down,-2,-2)};
  pot_cloth(p,c,fold,3u,HD_GOLD,0);
+ /* A central folded seam follows the torso and its gravity-driven hem,
+    rather than a static yellow block. Keep source matte builds intact. */
+ PotPoint seam0=pot_actor_point(c,pot_local(shoulder,across,down,-2,5));
+ PotPoint seam1=pot_actor_point(c,pot_local(hem,across,down,-1,-3));
+ hd_line(p,seam0.x,seam0.y,seam1.x,seam1.y,HD_GOLD);
  if(pot_has(pose,POT_NECK)){
   PotJoint hood[3]={pose->joint[POT_NECK],pot_local(rs,across,down,-7,-6),
                     pot_local(rs,across,down,-1,7)};
@@ -463,12 +459,16 @@ static void pot_dancer(uint8_t *p,const PotCamera *c,unsigned t){
   pot_source_upper_draw(p,c,upper_frame);
   if(!front_sign&&pose.bag_state!=POT_BAG_RESTING)pot_bag_draw(p,c,&pose);
  }
- if(sign==POT_SIGN_HELD&&upper_frame<0){
+ if(sign==POT_SIGN_HELD&&front_sign&&upper_frame<0){
+  PotPoint q[5],h[5];unsigned n=pot_sign_projected(c,&pose,q,h);
   for(unsigned i=0;i<2u;i++){
    unsigned wrist=i?POT_RWRIST:POT_LWRIST;
    if(!(pose.visible&(1u<<wrist)))continue;
    PotPoint hand=pot_actor_point(c,pose.joint[wrist]);
-   hd_ellipse(p,hand.x,hand.y,pot_actor_size(c,3),pot_actor_size(c,2),HD_SKIN);
+   int radius=pot_actor_size(c,3);
+   if(!pot_sign_near(h,n,hand,radius))continue;
+   hd_ellipse(p,hand.x,hand.y,radius,pot_actor_size(c,2),HD_SKIN);
+   hd_line(p,hand.x-1,hand.y-1,hand.x+1,hand.y-1,HD_SKIN_LIT);
   }
  }
 }
