@@ -14,6 +14,8 @@
 #include "hd_background_cache.h"
 #include "hd_floor_revisit.h"
 #include "city_furniture.h"
+#include "hd_landscape.h"
+#include <string.h>
 #if defined(GBA_PROFILE_RENDER) && defined(__arm__)
 #include "gba.h"
 /* Debug-build-only counters. Normal release builds allocate NONE of these.
@@ -987,7 +989,58 @@ static int background_may_see_water(int cx,int cy,int fx,int fy,int rx,int ry){
  }
  return 0;
 }
+/* Near-to-far heightfield projection: a 3-pixel column stops as soon
+   as nearer terrain covers its lower pixels. Elevation determines eye
+   height, silhouettes, and occlusion. The old city raycaster stays in
+   place for its original area and the new outdoor path uses no full
+   z-buffer or additional framebuffer. */
+static void landscape_perspective(uint8_t *p,const Story *s,unsigned tick){
+ hd_landscape_sky(p,s);
+ HdSceneCamera cam=hd_scene_camera(s);
+ int fx,fy,rx,ry;dirs(s,&fx,&fy,&rx,&ry);
+ int eye=story_terrain_height(s,cam.x,cam.y)+21;
+ uint8_t ceiling[80],prior_height[80];memset(ceiling,HD_H,sizeof ceiling);
+ memset(prior_height,(unsigned)(eye-21),sizeof prior_height);
+ for(int dist=96;dist<=4608;dist+=dist<768?64:dist<2048?128:256){
+  int scale=102400/dist;
+  int wx0=cam.x+fx*dist,wy0=cam.y+fy*dist;
+  for(unsigned col=0;col<80u;col++){
+   int bottom=ceiling[col];if(bottom<=0)continue;
+   int sx=(int)col*3+1,side=(sx-120)*dist/160;
+   int wx=wx0+rx*side,wy=wy0+ry*side,tx=wx>>8,ty=wy>>8;
+   if((unsigned)tx>=STORY_W||(unsigned)ty>=STORY_H)continue;
+   char tile=story_tile(tx,ty);
+   int h=story_terrain_height(s,wx,wy);
+   /* The light follows actual rising/falling ground rather than a
+      screen-space checkerboard pattern. */
+   unsigned shade=h>(int)prior_height[col]+1;
+   prior_height[col]=(uint8_t)h;
+   unsigned ink=hd_land_ink(tile,h,shade);
+   if(tile=='T'){
+    int ox=(wx&255)-128,oy=(wy&255)-128;
+    int radius=(ox<0?-ox:ox)+(oy<0?-oy:oy);
+    if(radius<150){h+=(150-radius)*27/150;ink=shade?HD_LEAF_DARK:HD_LEAF_LIT;}
+   }else if(!story_rural(tx,ty)&&(tile=='#'||tile=='A')){
+    h+=(int)hd_district(tx,ty,tile).height;
+    ink=shade?HD_STONE_DARK:HD_BRICK_DARK;
+   }else if(story_rural(tx,ty)&&tile=='#'){
+    ink=HD_STONE_DARK;
+   }
+   unsigned marker=hd_land_marker(tx,ty);
+   if(marker&&(wx&255)>144&&(wx&255)<208&&(wy&255)>144&&(wy&255)<208){
+    h+=12;ink=HD_COPPER;
+   }
+   if(tile=='~'&&((wy+(int)(tick&255u)*2)&127)<7)ink=HD_REFLECT;
+   int top=76+((eye-h)*scale>>8);
+   if(top<0)top=0;
+   if(top>=bottom)continue;
+   hd_rect(p,(int)col*3,top,3,bottom-top,ink);
+   ceiling[col]=(uint8_t)top;
+  }
+ }
+}
 void hd_first_person_draw(uint8_t *p,const Story *s,unsigned tick){
+ if(story_rural(s->x,s->y)){landscape_perspective(p,s,tick);return;}
 #if defined(GBA_PROFILE_RENDER) && defined(__arm__)
  gba_profile_begin();
  gba_profile_wallshade_cycles=0u;

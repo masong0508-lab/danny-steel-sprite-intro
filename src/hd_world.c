@@ -1,4 +1,5 @@
 #include "hd_canvas.h"
+#include "hd_landscape.h"
 
 /* On GBA the navigable Old Quarter is now a genuine 2.5D projection
    of its unchanged 24x18 story grid. HUD and quest guidance remain
@@ -48,7 +49,8 @@ static void heading(uint8_t *p,const Story *s){
  hd_text(p,16,143,story_action_hint(s),HD_PAPER,1,0);
  hd_rect(p,92,143,1,14,HD_STONE_DARK);
  hd_text(p,100,143,"L CAMERA  START HELP",HD_STONE_LIT,1,0);
- if(story_risk_available(s))hd_text(p,16,152,"B RISK OPTIONS",HD_STONE_LIT,1,0);
+ if(story_rural(s->x,s->y))hd_land_status(p,s);
+ else if(story_risk_available(s))hd_text(p,16,152,"B RISK OPTIONS",HD_STONE_LIT,1,0);
  hd_text(p,158,152,story_neighborhood_revisit(s)>=0?"R REVISIT":"R NOTES",HD_STONE_LIT,1,0);
 }
 void hd_world_draw(uint8_t *p,const Story *s,unsigned frame){

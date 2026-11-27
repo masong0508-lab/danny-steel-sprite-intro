@@ -137,7 +137,7 @@ static void verify_coherent_restore(void){
  /* Every scene and direction, including the walk phases, must match
     the independently repainted one-column occlusion path. */
  for(unsigned facing=0;facing<4u;facing++)
-  for(int y=1;y<STORY_H-1;y++)for(int x=1;x<STORY_W-1;x++){
+  for(int y=1;y<STORY_H-1;y++)for(int x=1;x<STORY_CITY_W;x++){
    if(story_solid(x,y))continue;
    s.x=(uint8_t)x;s.y=(uint8_t)y;s.facing=(uint8_t)facing;s.view=1;
    s.prev_x=s.x;s.prev_y=s.y;s.anim=0;
@@ -153,7 +153,7 @@ static void verify_coherent_restore(void){
   }
  /* Every walkable tile, including both legacy sealed-room samples,
     has all four facings tested against the reference painter. */
- assert(cases==3044u);
+ assert(cases==3068u);
  printf("coherent scenery: %u exact new floor/cache versus reference restored frames\n",cases);
 }
 static void verify_background_replay(void){

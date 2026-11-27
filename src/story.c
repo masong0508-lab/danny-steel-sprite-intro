@@ -3,6 +3,7 @@
 #include "studio.h"
 
 #include "city_layout.h"
+#include "landscape_data.h"
 #if !defined(__arm__)
 /* Original immutable map retained for the original material generators
    and independent shipped-image regression, never selected on cartridge. */
@@ -35,9 +36,48 @@ char story_tile(int x, int y) {
     if(core_map_reference)return (unsigned)x<STORY_CORE_W&&(unsigned)y<STORY_CORE_H?town[y][x]:'#';
 #endif
     if ((unsigned)x >= STORY_W || (unsigned)y >= STORY_H) return '#';
+    if(x>=STORY_CITY_W)return landscape_tiles[y][x-STORY_CITY_W];
     return city_layout[y][x];
 }
+unsigned story_land_level(const Story *s,unsigned patch){
+ return patch<2u?(s->terrain_style>>(patch*2u))&3u:0u;
+}
+int story_terrain_vertex(const Story *s,int x,int y){
+ if(x<STORY_CITY_W||x>STORY_W||(unsigned)y>STORY_H)return 0;
+ int h=landscape_height[y][x-STORY_CITY_W];
+ static const uint8_t px[2]={44,54},py[2]={8,24};
+ /* A bounded graded falloff; edited land does not change collision. */
+ for(unsigned i=0;i<2u;i++){
+    int dx=x-px[i],dy=y-py[i];
+    int d=(dx<0?-dx:dx)+(dy<0?-dy:dy);
+    if(d<4)h+=((int)story_land_level(s,i)-1)*6*(4-d)/4;
+ }
+ return h<0?0:h;
+}
+int story_terrain_height(const Story *s,int wx,int wy){
+ int x=wx>>8,y=wy>>8,fx=wx&255,fy=wy&255;
+ if(x<STORY_CITY_W||x>=STORY_W||(unsigned)y>=STORY_H)return 0;
+ int a=story_terrain_vertex(s,x,y),b=story_terrain_vertex(s,x+1,y);
+ int c=story_terrain_vertex(s,x,y+1),d=story_terrain_vertex(s,x+1,y+1);
+ return ((a*(256-fx)+b*fx)*(256-fy)+(c*(256-fx)+d*fx)*fy)>>16;
+}
+unsigned story_land_action(const Story *s){
+ if(s->ended||!story_rural(s->x,s->y)||
+    !(s->life_stage==STORY_LIFE_NONE||s->life_stage==STORY_LIFE_WAIT||s->life_stage==STORY_LIFE_FOLLOWUP_WAIT)||
+    !(s->rescue_stage==STORY_RESCUE_NONE||s->rescue_stage==STORY_RESCUE_SAVED))return 0;
+ if(s->x==44&&s->y==8)return STORY_LAND_PATCH0;
+ if(s->x==54&&s->y==24)return STORY_LAND_PATCH1;
+ if(s->x==56&&s->y==11)return STORY_LAND_SUMMIT;
+ if(s->x==43&&s->y==22)return STORY_LAND_SHORE;
+ return 0;
+}
 const char *story_district_name(int x,int y){
+    if(story_rural(x,y)){
+      if(x>=52&&y<19)return "HIGH RIDGE";
+      if(y>=19&&x>=52)return "FOOTHILLS";
+      if(y>=16)return "LAKE WALK";
+      return "MEADOWS";
+    }
     if(!story_city_extension(x,y))return "OLD QUARTER";
     if(y<14)return "EAST AVENUE";
     if(y<20&&x>=24)return "CIVIC ROW";
@@ -520,8 +560,9 @@ enum { D_NONE, D_OPEN, D_LETTER, D_LETTER_AGAIN, D_CLERK_LOCKED, D_CLERK, D_CLER
        D_NB_RETURN_12_0,
        D_NB_RETURN_12_1,
        D_NB_RETURN_13_0,
-       D_NB_RETURN_13_1,D_CITY_EAST,D_CITY_CIVIC,D_CITY_PARK,D_CITY_CANAL,D_CITY_PLAZA };
-_Static_assert(D_CITY_PLAZA<256,"dialogue ID width");
+       D_NB_RETURN_13_1,D_CITY_EAST,D_CITY_CIVIC,D_CITY_PARK,D_CITY_CANAL,D_CITY_PLAZA,
+       D_LAND_TRAIL,D_LAND_RIDGE,D_LAND_SHORE,D_LAND_SKETCH,D_LAND_SKETCH_DONE,D_LAND_REST };
+_Static_assert(D_LAND_REST<256,"dialogue ID width");
 #define SCRIPT(name, ...) static const StoryPage name[] = { __VA_ARGS__ }
 /* The banana-sign shift is practical income, not Danny's calling. He is
    grateful for the stability without pretending to enjoy mascot work. */
@@ -1348,6 +1389,24 @@ SCRIPT(d_city_canal,
 SCRIPT(d_city_plaza,
  {"DANNY","The river plaza.","Room to see the sky."},
  {"DANNY","Maybe I'll bring Mara","here another evening."});
+SCRIPT(d_land_trail,
+ {"DANNY","A winding trail leads","toward the high ridge."},
+ {"DANNY","There's room to walk","without rushing."});
+SCRIPT(d_land_ridge,
+ {"DANNY","The streets are below.","The view keeps going."},
+ {"DANNY","The climb was worth it.","I can see the city."});
+SCRIPT(d_land_shore,
+ {"DANNY","A path around the lake.","The water's so quiet."},
+ {"DANNY","I'll take the long way.","No rush to get home."});
+SCRIPT(d_land_sketch,
+ {"DANNY","I sketched the ridge.","This goes in my art."},
+ {"DANNY","One more layer for","the painting back home."});
+SCRIPT(d_land_sketch_done,
+ {"DANNY","My canvas is finished.","I can still enjoy this."},
+ {"DANNY","Not everything needs","to become a project."});
+SCRIPT(d_land_rest,
+ {"DANNY","A moment by the lake.","Time to breathe."},
+ {"DANNY","I feel a little better.","I can keep walking."});
 SCRIPT(d_mara_master_shared,
  {"MARA", "Your song is here.", "I kept the copy."},
  {"DANNY", "I can still change", "the arrangement."},
@@ -1528,9 +1587,10 @@ static const struct { const StoryPage *pages; uint8_t count; } scripts[] = {
   SEQ(d_nb_return_12_0),
   SEQ(d_nb_return_12_1),
   SEQ(d_nb_return_13_0),
-  SEQ(d_nb_return_13_1),SEQ(d_city_east),SEQ(d_city_civic),SEQ(d_city_park),SEQ(d_city_canal),SEQ(d_city_plaza)
+  SEQ(d_nb_return_13_1),SEQ(d_city_east),SEQ(d_city_civic),SEQ(d_city_park),SEQ(d_city_canal),SEQ(d_city_plaza),
+  SEQ(d_land_trail),SEQ(d_land_ridge),SEQ(d_land_shore),SEQ(d_land_sketch),SEQ(d_land_sketch_done),SEQ(d_land_rest)
 };
-_Static_assert(sizeof(scripts)/sizeof(scripts[0])==D_CITY_PLAZA+1u,"script table order");
+_Static_assert(sizeof(scripts)/sizeof(scripts[0])==D_LAND_REST+1u,"script table order");
 static int neighborhood_return_id(unsigned id){
  return id>=D_NB_RETURN_0_0&&id<=D_NB_RETURN_13_1?(int)(id-D_NB_RETURN_0_0):-1;
 }
@@ -1726,6 +1786,7 @@ static void talk(Story *s, uint8_t id) {
 }
 void story_new(Story *s, int slot) {
     *s = (Story){0};
+    s->terrain_style=STORY_LAND_DEFAULT;
     studio_reset(); /* a new game starts with a clean optional tune */
     /* The Potheads opening now lands at its ACTUAL storefront; the first
        controllable frame starts beside the same facade seen in the film.
@@ -2100,6 +2161,10 @@ static char nearby_actor(const Story *s){
     return c;
 }
 const char *story_action_hint(const Story *s){
+    unsigned land=story_land_action(s);
+    if(land==STORY_LAND_PATCH0||land==STORY_LAND_PATCH1)return "A RAISE";
+    if(land==STORY_LAND_SUMMIT)return s->art_steps<STORY_PROJECT_DONE?"A SKETCH":"A VIEW";
+    if(land==STORY_LAND_SHORE)return "A REST";
     unsigned show=show_here(s);
     if(show){
      static const char *const names[]={"A PLAN","A POSTER","A REHEARSE","A FRAME","A SET UP","A SHOW","A ARCHIVE"};
@@ -2193,7 +2258,30 @@ static void resolve_risk(Story *s){
         }
     }else if(selected)commit_bad(s,target);
 }
+static void land_grade(Story *s,unsigned patch,int delta){
+    unsigned old=story_land_level(s,patch);
+    int next=(int)old+delta;
+    if(next<0||next>3)return;
+    unsigned shift=patch*2u;
+    s->terrain_style=(uint8_t)((s->terrain_style&~(3u<<shift))|((unsigned)next<<shift));
+    s->dirty=1;
+}
 static void interact(Story *s) {
+    unsigned land=story_land_action(s);
+    if(land==STORY_LAND_SUMMIT){
+        if(s->art_steps>=STORY_PROJECT_DONE)talk(s,D_LAND_SKETCH_DONE);
+        else{
+            remember(s,STORY_DAY_ART);exert(s);
+            ++s->art_steps;s->flags|=STORY_ART;
+            stat_gain(&s->spark,1);work_gain(s,1);s->dirty=1;
+            talk(s,D_LAND_SKETCH);
+        }
+        return;
+    }
+    if(land==STORY_LAND_SHORE){
+        if(s->energy<STORY_STAT_MAX){stat_gain(&s->energy,1);s->dirty=1;}
+        talk(s,D_LAND_REST);return;
+    }
     unsigned show=show_here(s);char forced=0;
     if(show){
      unsigned stage=show-1u;
@@ -2415,7 +2503,9 @@ static void interact(Story *s) {
     default:
         /* Standing still is an invitation to notice the neighborhood,
            not a dead control. Geography decides the short observation. */
-        if(story_city_extension(s->x,s->y)){
+        if(story_rural(s->x,s->y)){
+            talk(s,s->x>=52u&&s->y<19u?D_LAND_RIDGE:s->y>=16u?D_LAND_SHORE:D_LAND_TRAIL);
+        }else if(story_city_extension(s->x,s->y)){
             if(s->y<14u)talk(s,D_CITY_EAST);
             else if(s->y<20u&&s->x>=24u)talk(s,D_CITY_CIVIC);
             else if(s->x<15u)talk(s,D_CITY_PARK);
@@ -2837,6 +2927,14 @@ void story_tick(Story *s, uint16_t keys) {
              (s->flags & STORY_HOME) ? D_JOURNAL_1 : D_JOURNAL_0);
         return;
     }
+    unsigned land=story_land_action(s);
+    if(land==STORY_LAND_PATCH0||land==STORY_LAND_PATCH1){
+        if(pressed&(A|B)){
+            if((pressed&(A|B))==A)land_grade(s,land-1u,1);
+            else if((pressed&(A|B))==B)land_grade(s,land-1u,-1);
+            return;
+        }
+    }
     if (pressed & A) { interact(s); return; }
     if(pressed&B){
         char target=nearby_actor(s);
@@ -2871,11 +2969,18 @@ void story_tick(Story *s, uint16_t keys) {
         if (d >= 0) {
             static const int dx[4] = {1,0,-1,0}, dy[4]={0,1,0,-1};
             int x = s->x + dx[d], y = s->y + dy[d];
+            unsigned climb=0;
             if (!story_solid(x,y)) {
+                if(story_rural(x,y)||story_rural(s->x,s->y)){
+                    int from=story_terrain_height(s,s->x*256+128,s->y*256+128);
+                    int to=story_terrain_height(s,x*256+128,y*256+128);
+                    if(to>from)climb=(unsigned)(to-from)/2u;
+                    if(climb>8u)climb=8u;
+                }
                 s->prev_x=s->x; s->prev_y=s->y; s->x=(uint8_t)x; s->y=(uint8_t)y;
                 s->anim=4; s->dirty=1;
             }
-            s->cooldown=6;
+            s->cooldown=(uint8_t)(6u+climb);
         }
     }
 }

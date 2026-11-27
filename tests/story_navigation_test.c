@@ -73,8 +73,8 @@ static void render_guarded(const Story *s){
 static void expanded_city(void){
  Story s;story_new(&s,0);s.dialogue=0;s.cinema=CINE_NONE;story_draw_init();
  static const unsigned key[]={16u,128u,32u,64u};
- static const int places[][2]={{35,6},{31,15},{9,25},{22,26},{32,22}};
- static const char *const district[]={"EAST AVENUE","CIVIC ROW","SOUTH PARK","CANAL WALK","RIVER PLAZA"};
+ static const int places[][2]={{35,6},{31,15},{9,25},{22,26},{32,22},{42,13},{56,11},{57,25}};
+ static const char *const district[]={"EAST AVENUE","CIVIC ROW","SOUTH PARK","CANAL WALK","RIVER PLAZA","MEADOWS","HIGH RIDGE","FOOTHILLS"};
  /* All new destinations are genuinely connected to the Potheads spawn.
     The two sealed archive rooms already existed in the old map. */
  reference(20,11);unsigned count=0;
@@ -83,10 +83,11 @@ static void expanded_city(void){
   if(y==5&&(x==11||x==12))continue;
   assert(distance[y][x]>=0);count++;
  }
- assert(count==759u);
+ assert(count==1351u);
  assert(!story_solid(23,7)&&!story_solid(24,7));
  assert(!story_solid(12,17)&&!story_solid(12,18));
- assert(story_solid(39,10)&&story_solid(10,29)&&story_solid(-1,10)&&story_solid(40,10));
+ assert(story_solid(39,10)&&story_solid(10,29)&&story_solid(-1,10)&&story_solid(64,10));
+ assert(!story_solid(39,8)&&!story_solid(40,8));
  assert(story_tile(19,7)=='M'&&story_tile(8,11)=='F');
  for(unsigned i=0;i<sizeof city_furniture/sizeof city_furniture[0];i++)
   assert(!story_solid(city_furniture[i].x,city_furniture[i].y));
@@ -114,7 +115,7 @@ static void expanded_city(void){
   int before=steps;s.cooldown=0;s.old_keys=0;
   click(&s,key[dir]);assert(story_route(&s,&dir,&steps)&&steps==before-1);
  }
- printf("city: %u connected tiles, five districts, live walking, return route and both render guards passed\n",count);
+ printf("city: %u connected tiles, eight districts, live walking, return route and both render guards passed\n",count);
 }
 int main(void){
  expanded_city();
