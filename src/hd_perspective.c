@@ -1041,7 +1041,7 @@ static void landscape_perspective(uint8_t *p,const Story *s,unsigned tick){
    }else if(story_rural(tx,ty)&&tile=='#'){
     ink=HD_STONE_DARK;
    }
-   unsigned marker=hd_land_marker(tx,ty);
+   unsigned marker=hd_land_marker(s,tx,ty);
    if(marker&&(wx&255)>144&&(wx&255)<208&&(wy&255)>144&&(wy&255)<208){
     h+=12;ink=HD_COPPER;
    }

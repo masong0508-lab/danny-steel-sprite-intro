@@ -98,7 +98,36 @@ static void neighborhood_journal(uint8_t *p,const Story *s){
      "FINISH CORE / URGENT TASK FIRST",HD_PAPER,1,0);
  hd_text(p,18,142,"D-PAD SELECT   B BACK",HD_STONE_LIT,1,0);
 }
+/* Hidden developer-only world panel. Previewing a seed changes no
+   geometry; A must be pressed twice before any destructive operation. */
+static void debug_world_panel(uint8_t *p,const Story *s){
+ static const char *const names[STORY_DEBUG_ROWS]={
+  "GENERATE NEW WORLD","TERRAIN BRUSH","SURVEY GRADES","RESET TERRAIN","RESUME GAME"
+ };
+ unsigned selection=s->choice&STORY_DEBUG_SELECT_MASK;
+ unsigned current=story_world_seed(),proposed=s->studio_cursor;
+ char seed[]="WORLD 000  NEW 000";
+ seed[6]=(char)('0'+current/100u);seed[7]=(char)('0'+current/10u%10u);seed[8]=(char)('0'+current%10u);
+ seed[15]=(char)('0'+proposed/100u);seed[16]=(char)('0'+proposed/10u%10u);seed[17]=(char)('0'+proposed%10u);
+ framebox(p,10,16,220,137);
+ hd_text(p,20,24,"DEVELOPER / WORLD TOOLS",HD_GOLD,1,1);
+ hd_text(p,20,37,seed,HD_PAPER,1,0);
+ for(unsigned i=0;i<STORY_DEBUG_ROWS;i++){
+  int y=53+(int)i*12;
+  if(i==selection)hd_rect(p,18,y-2,204,11,HD_ROAD_COOL);
+  unsigned ink=(i==1u||i==2u)&&!story_rural(s->x,s->y)?HD_STONE_DARK:HD_PAPER;
+  hd_text(p,22,y,names[i],ink,1,0);
+ }
+ if(s->choice&STORY_DEBUG_CONFIRM){
+  hd_text(p,20,119,selection==0u?"RELOCATE WORLD; KEEP PROGRESS?":"RESTORE ORIGINAL LAND GRADES?",HD_LAMP,1,0);
+  hd_text(p,20,135,"A CONFIRM   B CANCEL",HD_GOLD,1,0);
+ }else{
+  hd_text(p,20,119,selection==0u?"LEFT/RIGHT SEED  R NEXT":(selection==1u||selection==2u)&&!story_rural(s->x,s->y)?"ENTER COUNTRYSIDE FIRST":"UP/DOWN SELECT",HD_PAPER,1,0);
+  hd_text(p,20,135,"A SELECT   B/START CLOSE",HD_GOLD,1,0);
+ }
+}
 void hd_game_overlay(uint8_t *p,const Story *s){
+ if(story_debug_menu(s)){debug_world_panel(p,s);return;}
  if(s->activity==STORY_ACT_STUDIO||s->battle||
     s->life_stage==STORY_LIFE_FINALE||s->ended)return;
  if(s->dialogue){
@@ -366,7 +395,7 @@ void hd_game_overlay(uint8_t *p,const Story *s){
   hd_rect(p,8,143,3,7,HD_GOLD);
   hd_text(p,16,143,story_action_hint(s),HD_PAPER,1,0);
   hd_rect(p,92,143,1,14,HD_STONE_DARK);
-  hd_text(p,100,143,story_brush_mode(s)?"L CAMERA SELECT EXIT":story_land_tools_enabled()&&story_rural(s->x,s->y)?"L CAMERA SELECT LAND":"L CAMERA  START HELP",HD_STONE_LIT,1,0);
+  hd_text(p,100,143,(story_brush_mode(s)||story_debug_survey(s))?"L CAMERA SELECT EXIT":"L CAMERA  START HELP",HD_STONE_LIT,1,0);
   if(story_rural(s->x,s->y))hd_land_status(p,s);
   else if(story_risk_available(s))hd_text(p,16,152,"B RISK OPTIONS",HD_STONE_LIT,1,0);
   hd_text(p,158,152,story_neighborhood_revisit(s)>=0?"R REVISIT":"R NOTES",HD_STONE_LIT,1,0);

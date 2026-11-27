@@ -484,7 +484,7 @@ static void landscape_iso(uint8_t *p,const Story *s,unsigned tick){
      object(p,sx,sy,tile,tick,x,y,s,tall);
     }
     if(rural){
-     unsigned marker=hd_land_marker(x,y);
+     unsigned marker=hd_land_marker(s,x,y);
      if(marker){
       int mx=sx+23,my=sy+10;
       hd_rect(p,mx-1,my-12,2,12,HD_BARK);

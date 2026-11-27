@@ -25,7 +25,7 @@
 enum { KEY_A=1, KEY_B=2, KEY_START=8, KEY_RIGHT=16, KEY_LEFT=32, KEY_L=512 };
 typedef struct { uint32_t address, size; } Symbol;
 typedef struct {
-    Symbol game, ticks, read, write, dropped;
+    Symbol game, ticks, read, write, dropped, world;
 } Symbols;
 typedef struct { uint32_t ticks, depth; Story game; } Sample;
 static unsigned failures, emulator_errors;
@@ -108,8 +108,9 @@ static int load_symbols(const char *path,Symbols *s){
         s->read=find_symbol(data,(size_t)length,&header,"frame_runtime_read");
         s->write=find_symbol(data,(size_t)length,&header,"frame_runtime_write");
         s->dropped=find_symbol(data,(size_t)length,&header,"frame_runtime_dropped");
+        s->world=find_symbol(data,(size_t)length,&header,"world");
         ok=s->game.address&&s->game.size==sizeof(Story)&&
-           s->ticks.address&&s->ticks.size==4u;
+           s->ticks.address&&s->ticks.size==4u&&s->world.address&&s->world.size>=4u;
     }
     free(data);
     if(!ok)fputs("ELF must be a matching ARM build with game/clock_ticks symbols\n",stderr);
@@ -216,6 +217,10 @@ int main(int argc,char **argv){
     press(core,KEY_A,32u,152u);
     const char *directory=argc==4?argv[3]:NULL;
     Sample initial=sample(core,&symbols);
+    unsigned seed=read_word(core,symbols.world);
+    if(!check(seed<STORY_WORLD_LAYOUTS,"New Game selects a valid generated layout"))goto finish;
+    story_world_set(seed);
+    printf("generated world seed: %u\n",seed);
     printf("opening state: scene=%u, dialogue=%u, page=%u, ticks=%u\n",
            initial.game.cinema,initial.game.dialogue,initial.game.page,initial.ticks);
     if(!check(initial.game.cinema==CINE_OPEN&&initial.game.dialogue,
@@ -300,9 +305,12 @@ int main(int argc,char **argv){
     if(check(sample(core,&symbols).game.view==0u,"camera returns to overhead")){
         before=sample(core,&symbols);
         Story expected=before.game;
-        for(unsigned i=0;i<18u;i++)story_tick(&expected,KEY_LEFT);
+        /* The actual generated storefront may face either east or west.
+           Walk away from it along the same relocated street. */
+        unsigned walk=story_world_facing(2u)==2u?KEY_LEFT:KEY_RIGHT;
+        for(unsigned i=0;i<18u;i++)story_tick(&expected,walk);
         for(unsigned i=0;i<48u;i++)story_tick(&expected,0u);
-        press(core,KEY_LEFT,18u,48u);
+        press(core,walk,18u,48u);
         after=sample(core,&symbols);
         printf("timed walk: before=(%u,%u), expected=(%u,%u), ROM=(%u,%u)\n",
                before.game.x,before.game.y,expected.x,expected.y,after.game.x,after.game.y);
@@ -329,6 +337,9 @@ int main(int argc,char **argv){
         check(restarted.game.cinema==CINE_OPEN&&restarted.game.page==0u&&
               !restarted.game.quit&&read_word(core,symbols.write)>0u,
               "New Game restarts the runtime without stale keys or pages");
+        unsigned restarted_seed=read_word(core,symbols.world);
+        check(restarted_seed<STORY_WORLD_LAYOUTS&&restarted_seed!=seed,
+              "another New Game automatically selects a different generated world");
     }
 finish:
     printf("input queue dropped samples: current=%u, peak across sessions=%u\n",

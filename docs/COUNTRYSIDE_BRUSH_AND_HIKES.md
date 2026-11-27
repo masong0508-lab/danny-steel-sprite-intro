@@ -30,3 +30,9 @@ protected vertices were unchanged. This is not an exhaustive proof over
 all possible grids. The cartridge build and native input/render tests must
 pass before distribution; outdoor FPS and actual emulator images still
 require inspection.
+
+**Updated control policy:** the terrain brush and survey grades are now
+available only via the hidden developer World Tools menu (START+SELECT in a
+`TERRAIN_DEBUG=1` build). SELECT never opens editing directly. Ordinary
+cartridges retain hiking, art, exploration and rest, with no manipulation
+controls. See SEEDED_CITY_AND_DEBUG_LAND.md.

@@ -51,6 +51,10 @@ typedef struct {unsigned seed;uint8_t order[4],inverse[4];} WorldLayout;
 static WorldLayout world={0,{0,1,2,3},{0,1,2,3}};
 static unsigned world_revision;
 static char world_city[STORY_H][STORY_CITY_W] STORY_WORLD_RAM;
+/* Coordinate transforms are built once with the map. The hot renderer,
+   actor queries and material lookups no longer scan parcel envelopes. */
+static uint16_t city_origin[STORY_H][STORY_CITY_W] STORY_WORLD_RAM;
+static uint16_t city_destination[STORY_H][STORY_CITY_W] STORY_WORLD_RAM;
 static void world_layout(WorldLayout *w,unsigned seed){
  static const uint8_t divisor[4]={6,2,1,1};
  uint8_t available[4]={0,1,2,3};
@@ -84,8 +88,14 @@ static void world_transform(const WorldLayout *w,int *x,int *y,int inverse){
 }
 unsigned story_world_seed(void){return world.seed;}
 unsigned story_world_revision(void){return world_revision;}
-void story_world_source(int *x,int *y){world_transform(&world,x,y,0);}
-void story_world_place(int *x,int *y){world_transform(&world,x,y,1);}
+void story_world_source(int *x,int *y){
+ if(!world.seed||(unsigned)*x>=STORY_CITY_W||(unsigned)*y>=STORY_H)return;
+ unsigned id=city_origin[*y][*x];*x=(int)(id&63u);*y=(int)(id>>6);
+}
+void story_world_place(int *x,int *y){
+ if(!world.seed||(unsigned)*x>=STORY_CITY_W||(unsigned)*y>=STORY_H)return;
+ unsigned id=city_destination[*y][*x];*x=(int)(id&63u);*y=(int)(id>>6);
+}
 unsigned story_world_facing(unsigned facing){
  facing&=3u;
  if((facing&1u)?(world.seed&2u):(world.seed&1u))facing^=2u;
@@ -107,8 +117,12 @@ void story_world_set(unsigned seed){
  seed%=STORY_WORLD_LAYOUTS;
  if(world.seed==seed)return;
  world_layout(&world,seed);
- if(seed)for(int y=0;y<STORY_H;y++)for(int x=0;x<STORY_CITY_W;x++)
-  world_city[y][x]=world_tile(&world,x,y);
+ if(seed)for(int y=0;y<STORY_H;y++)for(int x=0;x<STORY_CITY_W;x++){
+  int sx=x,sy=y;world_transform(&world,&sx,&sy,0);
+  city_origin[y][x]=(uint16_t)(sy*64+sx);
+  city_destination[sy][sx]=(uint16_t)(y*64+x);
+  world_city[y][x]=city_layout[sy][sx];
+ }
  ++world_revision;
 }
 char story_tile(int x, int y) {
@@ -228,6 +242,14 @@ static int hike_tracking(const Story *s){
 }
 static unsigned brush_x(const Story *s){return ((unsigned)s->x-STORY_CITY_W+1u)/2u;}
 static unsigned brush_y(const Story *s){return ((unsigned)s->y+1u)/2u;}
+int story_debug_menu(const Story *s){
+ return story_land_tools_enabled()&&s->paused&&
+        (s->choice&(STORY_DEBUG_MENU|0xe0u))==STORY_DEBUG_MENU;
+}
+int story_debug_survey(const Story *s){
+ return story_land_tools_enabled()&&land_safe(s)&&!s->paused&&!s->dialogue&&!s->activity&&
+        !s->battle&&!s->risk_menu&&!s->choosing&&(s->choice&STORY_SURVEY_MODE);
+}
 int story_brush_mode(const Story *s){
  return story_land_tools_enabled()&&land_safe(s)&&!s->paused&&!s->dialogue&&!s->activity&&!s->battle&&!s->risk_menu&&
         !s->choosing&&(s->choice&STORY_BRUSH_MODE);
@@ -256,7 +278,7 @@ unsigned story_land_action(const Story *s){
  if((hike==1u&&s->x==49&&s->y==6)||(hike==2u&&s->x==53&&s->y==13))
     return STORY_LAND_WAYPOINT;
  if(hike==3u&&s->x==56&&s->y==11)return STORY_LAND_FINISH;
- if(story_land_tools_enabled()){
+ if(story_debug_survey(s)){
   if(s->x==44&&s->y==8)return STORY_LAND_PATCH0;
   if(s->x==54&&s->y==24)return STORY_LAND_PATCH1;
  }
@@ -2510,6 +2532,7 @@ static void resolve_risk(Story *s){
     }else if(selected)commit_bad(s,target);
 }
 static void land_grade(Story *s,unsigned patch,int delta){
+    if(!story_debug_survey(s))return;
     unsigned old=story_land_level(s,patch);
     int next=(int)old+delta;
     if(next<0||next>3)return;
@@ -3092,6 +3115,62 @@ void story_tick(Story *s, uint16_t keys) {
         }
         return;
     }
+    /* Debug operations are accessible only through this hidden modal.
+       A normal build compiles the entire input gate to false. */
+    if(story_land_tools_enabled()&&story_debug_menu(s)){
+        unsigned selected=s->choice&STORY_DEBUG_SELECT_MASK;
+        if(pressed&(B|START)){
+            if((s->choice&STORY_DEBUG_CONFIRM)&&!(pressed&START))s->choice&=(uint8_t)~STORY_DEBUG_CONFIRM;
+            else{s->paused=0;s->choice=0;s->studio_cursor=0;}
+            return;
+        }
+        if(s->choice&STORY_DEBUG_CONFIRM){
+            if(pressed&A){
+                if(selected==0u){
+                    unsigned next=s->studio_cursor%STORY_WORLD_LAYOUTS;
+                    if(next!=story_world_seed()){
+                        int x=s->x,y=s->y;
+                        int in_core=x>=1&&x<=22&&y>=1&&y<=16;
+                        unsigned face=in_core?story_world_facing(s->facing):s->facing;
+                        story_world_source(&x,&y);
+                        story_world_set(next);story_world_place(&x,&y);
+                        s->x=s->prev_x=(uint8_t)x;s->y=s->prev_y=(uint8_t)y;
+                        s->facing=(uint8_t)(in_core?story_world_facing(face):face);
+                        s->anim=s->cooldown=0;s->dirty=1;
+                    }
+                }else if(selected==3u){
+                    /* Keep the hike, story flags and creative work intact. */
+                    s->terrain_style=STORY_LAND_DEFAULT;
+                    brush_init(s->slot);memset(brush[s->slot],0x55,STORY_BRUSH_BYTES);
+                    ++brush_revision[s->slot];s->dirty=1;
+                }
+                s->choice&=(uint8_t)~STORY_DEBUG_CONFIRM;
+            }
+            return;
+        }
+        if(pressed&(UP|DOWN)){
+            selected=(selected+((pressed&UP)?STORY_DEBUG_ROWS-1u:1u))%STORY_DEBUG_ROWS;
+            s->choice=(uint8_t)(STORY_DEBUG_MENU|selected);
+        }else if(selected==0u&&(pressed&(LEFT|RIGHT))){
+            s->studio_cursor=(uint8_t)((s->studio_cursor+((pressed&LEFT)?STORY_WORLD_LAYOUTS-1u:1u))%STORY_WORLD_LAYOUTS);
+        }else if(selected==0u&&(pressed&R)){
+            s->studio_cursor=(uint8_t)((s->studio_cursor+37u)%STORY_WORLD_LAYOUTS);
+        }else if(pressed&A){
+            if(selected==0u||selected==3u)s->choice|=STORY_DEBUG_CONFIRM;
+            else if(selected==4u){s->paused=0;s->choice=0;s->studio_cursor=0;}
+            else if(land_safe(s)){
+                s->paused=0;s->choice=selected==1u?STORY_BRUSH_MODE:STORY_SURVEY_MODE;
+                s->studio_cursor=0;
+            }
+        }
+        return;
+    }
+    if(story_land_tools_enabled()&&outdoor_available(s)&&
+       (keys&(START|SELECT))==(START|SELECT)&&(pressed&(START|SELECT))){
+        s->paused=1;s->choice=STORY_DEBUG_MENU;
+        s->studio_cursor=(uint8_t)((story_world_seed()+37u)%STORY_WORLD_LAYOUTS);
+        return;
+    }
     if(pressed&START){
         s->paused^=1u;
         /* The journal is transient UI, never part of a bus decision. */
@@ -3155,15 +3234,14 @@ void story_tick(Story *s, uint16_t keys) {
         }
         return;
     }
-    /* SELECT switches the countryside brush on/off. L still switches
-       cameras; outside the countryside SELECT retains its old alias. */
-    if(!story_land_tools_enabled()||!land_safe(s))s->choice&=(uint8_t)~STORY_BRUSH_MODE;
-    if(story_land_tools_enabled()&&(pressed&SELECT)&&land_safe(s)){
-        s->choice^=STORY_BRUSH_MODE;return;
+    /* SELECT can only leave an editing mode, never enter it directly.
+       All editing entry points are behind the debug menu. */
+    if(!story_land_tools_enabled()||!land_safe(s))s->choice&=(uint8_t)~(STORY_BRUSH_MODE|STORY_SURVEY_MODE);
+    if((story_brush_mode(s)||story_debug_survey(s))&&(pressed&(SELECT|R))){
+        s->choice=0;return;
     }
     if(story_brush_mode(s)){
-        if(pressed&R)s->choice&=(uint8_t)~STORY_BRUSH_MODE;
-        else if(pressed&(A|B)){
+        if(pressed&(A|B)){
             if((pressed&(A|B))==A)brush_grade(s,1);
             else if((pressed&(A|B))==B)brush_grade(s,-1);
             return;

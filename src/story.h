@@ -24,6 +24,13 @@
 #define STORY_BRUSH_ROWS 16u
 #define STORY_BRUSH_BYTES 52u
 #define STORY_BRUSH_MODE 0x08u
+#define STORY_SURVEY_MODE 0x04u
+/* The pause debug menu uses the otherwise inactive detail bit; it never
+   coexists with field-guide/journal/checklist flags. No new Story bytes. */
+#define STORY_DEBUG_MENU 0x10u
+#define STORY_DEBUG_CONFIRM 0x08u
+#define STORY_DEBUG_SELECT_MASK 0x07u
+#define STORY_DEBUG_ROWS 5u
 static inline int story_rural(int x,int y){
  return x>=STORY_CITY_W&&x<STORY_W&&(unsigned)y<STORY_H;
 }
@@ -242,6 +249,8 @@ int story_terrain_height(const Story *s,int wx,int wy);
 unsigned story_land_action(const Story *s);
 unsigned story_land_level(const Story *s,unsigned patch);
 int story_brush_mode(const Story *s);
+int story_debug_menu(const Story *s);
+int story_debug_survey(const Story *s);
 int story_brush_editable(const Story *s);
 unsigned story_brush_grade(const Story *s);
 unsigned story_brush_revision(unsigned slot);

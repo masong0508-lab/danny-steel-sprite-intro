@@ -35,13 +35,51 @@ static void walk_goal(Story *s,int x,int y,const char *name){
  }
  assert(s->x==x&&s->y==y);
 }
+static void debug_select(Story *s,unsigned row){
+ press(s,12u);assert(story_debug_menu(s)&&s->paused);
+ for(unsigned i=0;i<row;i++)press(s,128u);
+ press(s,1u);
+}
+static void verify_debug_menu(void){
+ Story s;story_new_seeded(&s,0,37u);done(&s);s.flags=STORY_HOME;s.art_steps=2u;
+ stand(&s,50,7);
+ unsigned seed=story_world_seed(),style=s.terrain_style;
+ press(&s,4u);assert(!story_brush_mode(&s)&&!story_debug_menu(&s));
+ s.view=0;
+ debug_select(&s,0u);
+ assert(story_debug_menu(&s)&&(s.choice&STORY_DEBUG_CONFIRM));
+ unsigned proposed=s.studio_cursor;
+ assert(story_world_seed()==seed&&proposed!=seed);
+ press(&s,2u);assert(story_world_seed()==seed&&story_debug_menu(&s));
+ press(&s,16u);assert(s.studio_cursor!=proposed);
+ proposed=s.studio_cursor;press(&s,1u);press(&s,1u);
+ assert(story_world_seed()==proposed&&story_debug_menu(&s));
+ assert(s.x==50&&s.y==7&&s.flags==STORY_HOME&&s.art_steps==2u&&s.terrain_style==style);
+ press(&s,2u);assert(!s.paused&&!story_debug_menu(&s));
+ int x=20,y=11;story_world_place(&x,&y);stand(&s,x,y);s.facing=(uint8_t)story_world_facing(0u);
+ debug_select(&s,0u);proposed=s.studio_cursor;press(&s,1u);press(&s,2u);
+ int sx=20,sy=11;story_world_place(&sx,&sy);
+ assert(story_world_seed()==proposed&&s.x==sx&&s.y==sy&&!strcmp(story_action_hint(&s),"A SHIFT"));
+ stand(&s,44,8);s.view=0;
+ press(&s,1u);done(&s);assert(s.terrain_style==style);
+ debug_select(&s,2u);assert(story_debug_survey(&s));press(&s,1u);
+ assert(story_land_level(&s,0)==2u);
+ press(&s,4u);assert(!story_debug_survey(&s));
+ debug_select(&s,1u);assert(story_brush_mode(&s));press(&s,1u);
+ assert(story_brush_grade(&s)==2u);press(&s,4u);
+ story_hike_restore(0,2u);
+ debug_select(&s,3u);assert(story_debug_menu(&s));press(&s,1u);press(&s,2u);
+ assert(s.terrain_style==STORY_LAND_DEFAULT&&story_brush_grade(&s)==1u&&story_hike_stage(0)==2u);
+ assert(s.flags==STORY_HOME&&s.art_steps==2u);
+ puts("Debug menu: preview/cancel/confirm, relocated spawn and facing, protected normal inputs, survey/brush/reset and preserved story");
+}
 static void verify_brush(void){
  Story s,other,resumed;story_new(&s,0);done(&s);
  stand(&s,50,7);s.facing=0;
  assert(story_brush_editable(&s)&&story_brush_grade(&s)==1u);
  int initial=elevation(&s,50,7),shore=story_terrain_vertex(&s,47,16);
  unsigned revision=story_brush_revision(0);
- press(&s,4u);assert(story_brush_mode(&s)&&!s.dialogue&&!s.view);
+ debug_select(&s,1u);assert(story_brush_mode(&s)&&!s.dialogue&&!s.view);
  paint(&s,0);memcpy(prior,frame.p,HD_BYTES);
  press(&s,1u);press(&s,1u);press(&s,1u);
  assert(story_brush_grade(&s)==3u&&elevation(&s,50,7)>initial);
@@ -70,7 +108,7 @@ static void verify_brush(void){
  /* Even a valid CRC cannot authorize alteration of locked boundary nodes. */
  data[4]^=1u;data[BRUSH_EXT_LEN-1u]=brush_save_crc(data);
  assert(!brush_save_decode(&resumed,data)&&story_brush_grade(&resumed)==3u);
- stand(&resumed,40,8);press(&resumed,4u);
+ stand(&resumed,40,8);debug_select(&resumed,1u);
  assert(story_brush_mode(&resumed)&&!story_brush_editable(&resumed));
  revision=story_brush_revision(0);press(&resumed,1u);press(&resumed,2u);
  assert(story_brush_revision(0)==revision);
@@ -135,6 +173,7 @@ int main(void){
  /* Real pad input modifies only its patch. B lowers, A+B cancels,
     cap prevents wrap, and a clinic appointment overrides optional work. */
  stand(&s,44,8);s.facing=0;
+ debug_select(&s,2u);assert(story_debug_survey(&s));
  int h=elevation(&s,44,8),other=elevation(&s,54,24);
  press(&s,1u);assert(story_land_level(&s,0)==2u&&elevation(&s,44,8)>h);
  assert(story_land_level(&s,1)==1u&&elevation(&s,54,24)==other);
@@ -175,5 +214,6 @@ int main(void){
  printf("Landscape: %u bounded slope samples, live uphill step, two editable plots, CRC save, art/rest and both native views\n",grades);
  verify_brush();
  verify_hike();
+ verify_debug_menu();
  return 0;
 }

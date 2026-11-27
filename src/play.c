@@ -82,16 +82,23 @@ static unsigned read_world_seed(unsigned slot){
     return 0; /* old or damaged companion data; retain campaign data */
 }
 static unsigned new_world_seed(void){
-    uint8_t raw[WORLD_EXT_LEN];unsigned last,seed=0;
-    for(unsigned i=0;i<WORLD_EXT_LEN;i++)raw[i]=save_ram[WORLD_CURSOR_OFFSET+i];
-    if(world_save_decode(0x7fu,raw,&last))seed=world_seed_next(last);
-    else {
-        /* If a previous cursor is lost, avoid repeating a surviving slot. */
-        unsigned a=read_world_seed(0),b=read_world_seed(1);
-        if(a||b)seed=world_seed_next(a?a:b);
+    /* VBlank/menu timing and the live audio timer vary naturally with
+       player input; the saved generator state prevents repeated cycles
+       even on deterministic emulator boots. Selection is automatic. */
+    uint32_t entropy=frame_runtime_video_frames^((uint32_t)REG_TM3CNT_L<<16)^REG_VCOUNT;
+    uint8_t raw[WORLD_POOL_LEN];WorldPool pool;
+    for(unsigned i=0;i<WORLD_POOL_LEN;i++)raw[i]=save_ram[WORLD_POOL_OFFSET+i];
+    if(!world_pool_decode(&pool,raw)){
+        uint8_t old[WORLD_EXT_LEN];unsigned last=255u;
+        for(unsigned i=0;i<WORLD_EXT_LEN;i++)old[i]=save_ram[WORLD_CURSOR_OFFSET+i];
+        (void)world_save_decode(0x7fu,old,&last);
+        world_pool_init(&pool,entropy,last);
     }
-    world_save_encode(0x7fu,seed,raw);
-    for(unsigned i=0;i<WORLD_EXT_LEN;i++)save_ram[WORLD_CURSOR_OFFSET+i]=raw[i];
+    unsigned seed=world_pool_pick(&pool,entropy);
+    world_pool_encode(&pool,raw);
+    for(unsigned i=0;i<WORLD_POOL_LEN;i++)save_ram[WORLD_POOL_OFFSET+i]=raw[i];
+    uint8_t cursor[WORLD_EXT_LEN];world_save_encode(0x7fu,seed,cursor);
+    for(unsigned i=0;i<WORLD_EXT_LEN;i++)save_ram[WORLD_CURSOR_OFFSET+i]=cursor[i];
     return seed;
 }
 static int read_slot(int slot,u8 *buf,unsigned *world_seed){
@@ -320,11 +327,12 @@ static int play_tick(u16 keys){
     int was_editor=game.activity==STORY_ACT_STUDIO||game.activity==STORY_ACT_PAINT;
     unsigned prior_show=story_show_stage(&game),prior_target=game.neighborhood_target,prior_land=game.terrain_style;
     unsigned prior_brush=story_brush_revision(game.slot),prior_hike=story_hike_stage(game.slot);
+    unsigned prior_seed=story_world_seed();
     story_tick(&game,keys);
     /* Leaving the editor commits the edited arrangement immediately,
        instead of waiting two seconds for the periodic SRAM checkpoint. */
     if(game.dirty&&((was_editor&&game.activity!=STORY_ACT_STUDIO&&game.activity!=STORY_ACT_PAINT)||
-       prior_show!=story_show_stage(&game)||prior_target!=game.neighborhood_target||prior_land!=game.terrain_style||prior_brush!=story_brush_revision(game.slot)||prior_hike!=story_hike_stage(game.slot))){
+       prior_show!=story_show_stage(&game)||prior_target!=game.neighborhood_target||prior_land!=game.terrain_style||prior_brush!=story_brush_revision(game.slot)||prior_hike!=story_hike_stage(game.slot)||prior_seed!=story_world_seed())){
         write_save();save_cooldown=0;
     }
     if(game.quit){
