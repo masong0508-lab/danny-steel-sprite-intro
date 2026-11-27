@@ -24,6 +24,6 @@ static inline int world_save_decode(unsigned tag,const uint8_t *p,unsigned *seed
     p[5]!=world_save_crc(p))return 0;
  *seed=p[4];return 1;
 }
-/* 37 and 96 are coprime: every new game visits a different layout until
+/* 37 and 192 are coprime: every new game visits a different layout until
    the full set is exhausted, even if emulator timing is identical. */
 static inline unsigned world_seed_next(unsigned seed){return (seed+37u)%STORY_WORLD_LAYOUTS;}
