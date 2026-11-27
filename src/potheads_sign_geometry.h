@@ -56,11 +56,16 @@ static inline int pot_sign_face(const PotPoint q[5],unsigned flags,PotPoint out[
  int w=w0>w1?w0:w1;
  /* The short projected dimension must accommodate two readable rows;
     avoid turning hundreds of glyph pixels into random one-pixel flecks. */
- if(w0<43||w1<43||area<w*56)return 0;
- /* Both ends of the trapezoid must have enough height. Do not put
-    readable lettering on a nearly edge-on or folded fragment. */
- return pot_sign_cross(out[0],out[1],out[2])>=w0*10&&
-        pot_sign_cross(out[0],out[1],out[3])>=w0*10&&
-        pot_sign_cross(out[2],out[3],out[0])>=w1*10&&
-        pot_sign_cross(out[2],out[3],out[1])>=w1*10;
+ int h0=pot_sign_cross(out[0],out[1],out[2]);
+ int h1=pot_sign_cross(out[0],out[1],out[3]);
+ int h2=pot_sign_cross(out[2],out[3],out[0]);
+ int h3=pot_sign_cross(out[2],out[3],out[1]);
+ /* Full print, muted print, or material only. The lower detail level
+    avoids an abrupt white slab when the board turns through a readable
+    but foreshortened angle. Never map a full logo onto a cropped fragment. */
+ if(w0>=43&&w1>=43&&area>=w*56&&h0>=w0*10&&h1>=w0*10&&
+    h2>=w1*10&&h3>=w1*10)return 2;
+ if(w0>=34&&w1>=34&&area>=w*32&&h0>=w0*6&&h1>=w0*6&&
+    h2>=w1*6&&h3>=w1*6)return 1;
+ return 0;
 }

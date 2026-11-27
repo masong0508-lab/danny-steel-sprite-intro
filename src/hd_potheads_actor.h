@@ -43,6 +43,7 @@ static int pot_has(const PotPose *pose,unsigned joint){
  return (pose->located&(1u<<joint))!=0u;
 }
 #include "potheads_shape.h"
+#include "potheads_sign_geometry.h"
 static void pot_shape_edge(uint8_t *p,const PotPoint *v,unsigned n,unsigned ink){
  for(unsigned i=0;i<n;i++){
   unsigned j=i+1u==n?0u:i+1u;
@@ -123,6 +124,26 @@ static void pot_jointed(uint8_t *p,PotPoint a,PotPoint b,PotPoint c,
 static unsigned pot_caps(const PotPose *pose,unsigned a,unsigned b){
  return ((pose->boundary&(1u<<a))?0u:1u)|((pose->boundary&(1u<<b))?0u:2u);
 }
+/* Paint contact anatomy as a short, tapered shape between the
+   measured wrist and palm. A palm plant lies on its measured contact
+   even when the wrist is inferred; no extra limb is created. */
+static void pot_support_palm(uint8_t *p,PotPoint wrist,PotPoint palm,int radius,int connected){
+ int dx=palm.x-wrist.x,dy=palm.y-wrist.y;
+ unsigned len=pot_sqrt((unsigned)(dx*dx+dy*dy));
+ int half=radius>1?radius-1:1;
+ if(connected&&len&&len<=(unsigned)(radius*4)){
+  int nx=dy*half/(int)len,ny=-dx*half/(int)len;
+  PotPoint q[4]={{wrist.x+nx,wrist.y+ny},{palm.x+nx,palm.y+ny},
+                 {palm.x-nx,palm.y-ny},{wrist.x-nx,wrist.y-ny}};
+  pot_shape(p,q,4u,HD_SKIN);
+  hd_line(p,wrist.x,wrist.y,palm.x,palm.y,HD_SKIN);
+ }
+ /* Flatten the visible palm against the observed support instead
+    of making a large spherical cap. The centre never moves. */
+ hd_ellipse(p,palm.x,palm.y,radius+1,half,HD_SKIN);
+ hd_line(p,palm.x-half,palm.y,palm.x+half,palm.y,HD_SKIN_LIT);
+ hd_pixel(p,palm.x,palm.y+half,HD_BARK);
+}
 static void pot_arm(uint8_t *p,const PotCamera *c,const PotPose *pose,unsigned side){
  unsigned shoulder=side?POT_RSHOULDER:POT_LSHOULDER;
  unsigned elbow=side?POT_RELBOW:POT_LELBOW;
@@ -141,22 +162,37 @@ static void pot_arm(uint8_t *p,const PotCamera *c,const PotPose *pose,unsigned s
    pot_stroke(p,pot_actor_point(c,pose->joint[elbow]),
     pot_actor_point(c,pose->joint[wrist]),width-1,HD_ROAD,HD_STONE_DARK,pot_caps(pose,elbow,wrist)&(pot_has(pose,shoulder)?2u:3u));
  }
- if((pose->visible&(1u<<wrist))!=0u){
+ unsigned contact=side+2u;
+ int r=pot_actor_size(c,3);
+ if(pose->contact_mask&(1u<<contact)){
+  PotPoint palm=pot_actor_point(c,pose->contact[contact]);
+  int linked=pot_has(pose,wrist)&&!(pose->boundary&(1u<<wrist));
+  PotPoint hand=linked?pot_actor_point(c,pose->joint[wrist]):palm;
+  pot_support_palm(p,hand,palm,r,linked);
+ }else if(pose->visible&(1u<<wrist)){
   PotPoint hand=pot_actor_point(c,pose->joint[wrist]);
-  int r=pot_actor_size(c,3);
-  unsigned contact=side+2u;
-  if(pose->contact_mask&(1u<<contact)){
-   PotPoint palm=pot_actor_point(c,pose->contact[contact]);
-   int dx=palm.x-hand.x,dy=palm.y-hand.y;
-   if(dx*dx+dy*dy<=r*r*16){
-    pot_stroke(p,hand,palm,r*2,HD_SKIN,HD_SKIN_LIT,3u);
-    hd_ellipse(p,palm.x,palm.y,r+1,r>1?r-1:1,HD_SKIN);
-   }else hd_ellipse(p,hand.x,hand.y,r,r>1?r-1:1,HD_SKIN);
-  }else{
-   hd_ellipse(p,hand.x,hand.y,r,r>1?r-1:1,HD_SKIN);
-   hd_line(p,hand.x-1,hand.y-1,hand.x+1,hand.y-1,HD_SKIN_LIT);
-  }
+  hd_ellipse(p,hand.x,hand.y,r,r>1?r-1:1,HD_SKIN);
+  hd_line(p,hand.x-1,hand.y-1,hand.x+1,hand.y-1,HD_SKIN_LIT);
  }
+}
+/* Grounded shoe: the actual measured sole contact is the bottom
+   anchor, while the ankle and toe retain their tracked positions.
+   Use a compact wedge rather than an inflated circular tube. */
+static void pot_ground_shoe(uint8_t *p,PotPoint ankle,PotPoint toe,PotPoint sole,int r){
+ int dx=toe.x-sole.x,dy=toe.y-sole.y;
+ if(dx*dx+dy*dy>(r*3)*(r*3)){
+  /* Badly separated source landmarks must not stretch a new shoe. */
+  pot_stroke(p,ankle,toe,r*2,HD_STONE_DARK,HD_STONE,3u);
+  hd_line(p,sole.x-r,sole.y,sole.x+r,sole.y,HD_STONE_LIT);
+  return;
+ }
+ PotPoint q[5]={{ankle.x-r,ankle.y},{ankle.x+r,ankle.y},
+                 toe,{sole.x+r,sole.y},{sole.x-r,sole.y}};
+ PotPoint h[5];unsigned n=pot_sign_hull(q,5u,h);
+ if(n>=3u){pot_shape(p,h,n,HD_STONE_DARK);pot_shape_edge(p,h,n,HD_INK);}
+ else pot_stroke(p,ankle,toe,r*2,HD_STONE_DARK,HD_STONE,3u);
+ hd_line(p,ankle.x,ankle.y,toe.x,toe.y,HD_STONE);
+ hd_line(p,sole.x-r,sole.y,sole.x+r,sole.y,HD_STONE_LIT);
 }
 static void pot_leg(uint8_t *p,const PotCamera *c,const PotPose *pose,unsigned side){
  unsigned hip=side?POT_RHIP:POT_LHIP,knee=side?POT_RKNEE:POT_LKNEE;
@@ -186,6 +222,11 @@ static void pot_leg(uint8_t *p,const PotCamera *c,const PotPose *pose,unsigned s
     !(pose->boundary&((1u<<ankle)|(1u<<toe)))){
   PotPoint foot=pot_actor_point(c,pose->joint[ankle]);
   PotPoint tip=pot_actor_point(c,pose->joint[toe]);
+  if(pose->contact_mask&(1u<<side)){
+   PotPoint sole=pot_actor_point(c,pose->contact[side]);
+   pot_ground_shoe(p,foot,tip,sole,pot_actor_size(c,3));
+   return;
+  }
   pot_stroke(p,foot,tip,pot_actor_size(c,7),HD_STONE_DARK,HD_STONE,3u);
   int sx=0,sy=1;
   if(!(pose->contact_mask&(1u<<side))&&pot_has(pose,knee)){

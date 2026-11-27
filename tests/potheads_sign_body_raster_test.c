@@ -27,7 +27,7 @@ int main(void){
   {POT_LSHOULDER,POT_LELBOW,POT_LWRIST},{POT_RSHOULDER,POT_RELBOW,POT_RWRIST},
   {POT_LHIP,POT_LKNEE,POT_LANKLE},{POT_RHIP,POT_RKNEE,POT_RANKLE}
  };
- unsigned signs=0,limbs=0,joints=0;
+ unsigned signs=0,limbs=0,joints=0,palms=0,soles=0,muted=0;
  for(unsigned t=0;t<=POT_TRACE_LAST_TICK;t+=2u){
   PotPose pose;pot_trace_sample(t,&pose);
   for(unsigned camera=90;camera<=180;camera+=90){
@@ -37,12 +37,32 @@ int main(void){
     unsigned n=pot_sign_projected(&c,&pose,q,h);
     int readable=pot_sign_face(q,pose.flags,face);
     reset();pot_sign_draw(frame.pixels,&c,&pose);guards();signs++;
+    muted+=(readable==1);
     for(int y=0;y<135;y++)for(int x=0;x<HD_W;x++){
      unsigned color=frame.pixels[y*HD_W+x];
      if(color==HD_WET)continue;
      /* The integer edge rasterizer can round at a contour by a pixel. */
      if(n>=3u)assert(pot_sign_near(h,n,(PotPoint){x,y},2));
-     if(!readable)assert(color==HD_PAPER||color==HD_STONE_DARK);
+     if(!readable)assert(color==HD_PAPER||color==HD_STONE_DARK||
+                         color==HD_PLASTER_LIT||color==HD_STONE_LIT);
+     if(readable<2)assert(color!=HD_INK&&color!=HD_LEAF_DARK);
+    }
+   }
+   for(unsigned side=0;side<2u;side++){
+    unsigned wrist=side?POT_RWRIST:POT_LWRIST;
+    if(pose.contact_mask&(1u<<(side+2u))){
+     PotPoint contact=pot_actor_point(&c,pose.contact[side+2u]);
+     PotPoint start=pot_has(&pose,wrist)?pot_actor_point(&c,pose.joint[wrist]):contact;
+     reset();pot_support_palm(frame.pixels,start,contact,pot_actor_size(&c,3),pot_has(&pose,wrist));guards();
+     if(inside(contact)){assert(painted_near(contact));palms++;}
+    }
+    unsigned ankle=side?POT_RANKLE:POT_LANKLE,toe=side?POT_RTOE:POT_LTOE;
+    if((pose.contact_mask&(1u<<side))&&pot_has(&pose,ankle)&&pot_has(&pose,toe)&&
+       !(pose.boundary&((1u<<ankle)|(1u<<toe)))){
+     PotPoint contact=pot_actor_point(&c,pose.contact[side]);
+     reset();pot_ground_shoe(frame.pixels,pot_actor_point(&c,pose.joint[ankle]),
+        pot_actor_point(&c,pose.joint[toe]),contact,pot_actor_size(&c,3));guards();
+     if(inside(contact)){assert(painted_near(contact));soles++;}
     }
    }
    for(unsigned k=0;k<4u;k++){
@@ -73,7 +93,7 @@ int main(void){
    }
   }
  }
- assert(signs>400u&&limbs>1000u&&joints>1000u);
- printf("Sign/body raster: %u real sign poses, %u connected limbs, %u visible bend checks; crop, bounded miter and palette guards OK\n",signs,limbs,joints);
+ assert(signs>400u&&limbs>1000u&&joints>1000u&&palms>100u&&soles>100u&&muted>0u);
+ printf("Sign/body raster: %u sign poses, %u muted-print angles, %u connected limbs, %u bends, %u palms, %u soles; crop, contact and guards OK\n",signs,muted,limbs,joints,palms,soles);
  return 0;
 }

@@ -39,7 +39,12 @@ int main(void){
  assert(pot_sign_hull(square,5u,h)==5u);
  assert(pot_sign_near(h,5u,(PotPoint){50,20},0));
  assert(!pot_sign_near(h,5u,(PotPoint){120,20},2));
- assert(pot_sign_face(square,POT_SIGN_TIP_VISIBLE,face));
+ assert(pot_sign_face(square,POT_SIGN_TIP_VISIBLE,face)==2);
+ PotPoint mid[5]={{0,0},{40,0},{40,12},{0,12},{50,6}};
+ assert(pot_sign_face(mid,POT_SIGN_TIP_VISIBLE,face)==1);
+ assert(!pot_sign_face(mid,POT_SIGN_CLIPPED|POT_SIGN_TIP_VISIBLE,face));
+ PotPoint thin[5]={{0,0},{40,0},{40,3},{0,3},{50,1}};
+ assert(!pot_sign_face(thin,POT_SIGN_TIP_VISIBLE,face));
  assert(held==428u&&falling==24u&&hidden>0&&clipped>0&&readable>0);
  printf("Sign: %u held ticks, %u falling ticks, %u clipped ticks, %u readable camera projections; envelope, observed tip, crop and grip bounds OK\n",held,falling,clipped,readable);
  return 0;
