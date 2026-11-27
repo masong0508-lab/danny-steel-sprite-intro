@@ -10,6 +10,8 @@
 #include "hd_floor_runs.inc"
 #include "hd_skyline_rom.h"
 #include "hd_extra_floor_atlas.h"
+#include "hd_stone_rain.h"
+#include "hd_background_cache.h"
 #if defined(GBA_PROFILE_RENDER) && defined(__arm__)
 #include "gba.h"
 /* Debug-build-only counters. Normal release builds allocate NONE of these.
@@ -58,7 +60,9 @@ static uint8_t wall_shade_cache[WALL_RAYS][WALL_SHADE_ROWS]
 static int wall_cache_valid,wall_cam_x,wall_cam_y,wall_cam_fx,wall_cam_fy;
 #if !defined(__arm__)
 static int legacy_scenery,reference_restore,reference_floor,reference_ray,reference_shades;
-void hd_debug_invalidate_wall_cache(void){wall_cache_valid=0;}
+static unsigned debug_background_hits;
+unsigned hd_debug_background_hits(void){return debug_background_hits;}
+void hd_debug_invalidate_wall_cache(void){wall_cache_valid=0;background.valid=background.checked=0;}
 /* Shipped art remains a host-only baseline; do not weaken the existing
    3,456 golden-frame regression to bless unrelated rendering changes. */
 void hd_debug_legacy_scenery(int enabled){legacy_scenery=!!enabled;wall_cache_valid=0;}
@@ -229,7 +233,8 @@ unsigned hd_debug_road_rom_category(int tx,int ty,unsigned cx,unsigned cy){
  return (byte>>((cx&3u)*2u))&3u;
 }
 #endif
-static HD_CANVAS_CODE inline unsigned floor_ink(char t,int wx,int wy,int x,int y,unsigned tick){
+#if !defined(__arm__)
+static inline unsigned floor_ink(char t,int wx,int wy,int x,int y,unsigned tick){
  int fx=wx&255,fy=wy&255;
  if(t=='~'){
   if(((fy+((int)tick*2))&63)<4)return HD_GLASS_LIT;
@@ -252,6 +257,7 @@ static HD_CANVAS_CODE inline unsigned floor_ink(char t,int wx,int wy,int x,int y
  if((n&7u)==1u)return HD_ROAD_LIGHT;
  return (x+y)%17==0?HD_ROAD_COOL:HD_ROAD;
 }
+#endif
 /* Keep the measured pixel loops in ARM/IWRAM. noinline prevents the
    Thumb entry point from absorbing them back into cartridge code. */
 #if !defined(__arm__)
@@ -476,11 +482,17 @@ static HD_CANVAS_CODE __attribute__((noinline)) void floor_render(uint8_t *p,con
        floor_store(row,x,begin,end,step,ink);
        x+=step;q+=dq;
       }while(x<end&&(q>>16)==tv);
-     }else{
+     }else if(tile=='#'||tile=='A'){
       do{
-       int v=q>>8;
-       int wx=along_x?v:fixed,wy=along_x?fixed:v;
-       unsigned ink=floor_ink(tile,wx,wy,x,y,tick);
+       floor_store(row,x,begin,end,step,HD_BRICK_DARK);
+       x+=step;q+=dq;
+      }while(x<end&&(q>>16)==tv);
+     }else{
+      /* The only remaining map material is flagstone. Its exact seam,
+         curb and checker colors are selected once per fixed scanline. */
+      const uint8_t *strip=hd_stone_strip(along_x,(unsigned)fixed&255u);
+      do{
+       unsigned ink=strip[((unsigned)q>>8)&255u];
        floor_store(row,x,begin,end,step,ink);
        x+=step;q+=dq;
       }while(x<end&&(q>>16)==tv);
@@ -896,6 +908,24 @@ static void render_billboards(uint8_t *p,int cx,int cy,
   restore_occluding_wall(p,item->sx,item->height,item->depth);
  }
 }
+/* Conservative dry-view proof: inspect every tile intersected by each
+   full projected floor row, even if a wall would hide that tile. A view
+   with any possible moving water is never cached. No hot-loop state or
+   water animation is altered. Computed only on the second equal pose. */
+static int background_may_see_water(int cx,int cy,int fx,int fy,int rx,int ry){
+ int along_x=rx!=0,sign=along_x?rx:ry;
+ for(unsigned row=0;row<60u;row++){
+  int d=floor_projection[row].distance,u=floor_projection[row].side;
+  int fixed=(along_x?cy+fy*d:cx+fx*d)>>8;
+  int origin=along_x?cx+fx*d:cy+fy*d;
+  int a=(origin+sign*((-120*u)>>8))>>8;
+  int b=(origin+sign*((119*u)>>8))>>8;
+  int lo=a<b?a:b,hi=a>b?a:b;
+  for(int v=lo;v<=hi;v++)
+   if(story_tile(along_x?v:fixed,along_x?fixed:v)=='~')return 1;
+ }
+ return 0;
+}
 void hd_first_person_draw(uint8_t *p,const Story *s,unsigned tick){
 #if defined(GBA_PROFILE_RENDER) && defined(__arm__)
  gba_profile_begin();
@@ -906,19 +936,45 @@ void hd_first_person_draw(uint8_t *p,const Story *s,unsigned tick){
  dirs(s,&fx,&fy,&rx,&ry);
  HdSceneCamera camera=hd_scene_camera(s);
  int camx=camera.x,camy=camera.y;
- set_sky(p,tick,s->facing,camx,camy);
+ int warm=wall_cache_valid&&wall_cam_x==camx&&wall_cam_y==camy&&
+          wall_cam_fx==fx&&wall_cam_fy==fy;
+ int allow=1;
+#if !defined(__arm__)
+ allow=!(legacy_scenery||reference_restore||reference_floor||reference_ray||reference_shades);
+#endif
+ if(!warm||!allow)background.valid=background.checked=0;
+ unsigned sky_key=hd_background_sky_key(tick);
+ int reused=allow&&warm&&background.valid&&background.sky_key==sky_key;
+ if(reused){
+  hd_background_copy(p,background.pixels);
+#if !defined(__arm__)
+  debug_background_hits++;
+#endif
+ }else set_sky(p,tick,s->facing,camx,camy);
 #if defined(GBA_PROFILE_RENDER) && defined(__arm__)
  profile_now=gba_profile_clock();
  gba_profile_sky_cycles=profile_now-profile_last;profile_last=profile_now;
 #endif
  /* Walls use no destination reads. Paint them first so the floor can
     omit only pixels those same opaque columns already cover. */
- cast_walls(p,camx,camy,fx,fy,rx,ry);
+ if(!reused)cast_walls(p,camx,camy,fx,fy,rx,ry);
 #if defined(GBA_PROFILE_RENDER) && defined(__arm__)
  profile_now=gba_profile_clock();
  gba_profile_wall_cycles=profile_now-profile_last;profile_last=profile_now;
 #endif
- floor_render(p,s,camx,camy,fx,fy,rx,ry,tick);
+ if(!reused){
+  floor_render(p,s,camx,camy,fx,fy,rx,ry,tick);
+  if(allow&&warm){
+   if(!background.checked){
+    background.wet=(unsigned)background_may_see_water(camx,camy,fx,fy,rx,ry);
+    background.checked=1;
+   }
+   if(!background.wet){
+    hd_background_copy(background.pixels,p);
+    background.sky_key=sky_key;background.valid=1;
+   }
+  }
+ }
 #if defined(GBA_PROFILE_RENDER) && defined(__arm__)
  profile_now=gba_profile_clock();
  gba_profile_floor_cycles=profile_now-profile_last;profile_last=profile_now;
@@ -928,14 +984,19 @@ void hd_first_person_draw(uint8_t *p,const Story *s,unsigned tick){
  profile_now=gba_profile_clock();
  gba_profile_billboard_cycles=profile_now-profile_last;profile_last=profile_now;
 #endif
- /* Sparse rain, never an extra framebuffer or effect allocation. */
- for(unsigned i=0;i<24u;i++){
-  unsigned v=texel(i+31u,i*7u+41u);
-  int x=(int)((v+tick*2u)%252u)-8;
-  int y=20+(int)(((v>>9)+tick*3u)%116u);
-  hd_line(p,x,y,x-2,y+4+(int)(i&3u),
-          (i&3u)==0u?HD_STONE_LIT:HD_GLASS_LIT);
- }
+ /* Dynamic weather is always painted after the cached environment. */
+#if !defined(__arm__)
+ if(reference_floor||legacy_scenery){
+  for(unsigned i=0;i<24u;i++){
+   unsigned v=texel(i+31u,i*7u+41u);
+   int x=(int)((v+tick*2u)%252u)-8;
+   int y=20+(int)(((v>>9)+tick*3u)%116u);
+   hd_line(p,x,y,x-2,y+4+(int)(i&3u),
+           (i&3u)==0u?HD_STONE_LIT:HD_GLASS_LIT);
+  }
+ }else
+#endif
+ hd_rain_draw(p,tick);
 #if defined(GBA_PROFILE_RENDER) && defined(__arm__)
  profile_now=gba_profile_clock();
  gba_profile_weather_cycles=profile_now-profile_last;

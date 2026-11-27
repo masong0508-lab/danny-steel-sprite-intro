@@ -34,6 +34,7 @@ static void verify_original_road_material_rom(void){
 }
 void hd_debug_wall_store_span(uint8_t *canvas,int x,int y,int width,uint8_t ink);
 void hd_debug_invalidate_wall_cache(void);
+unsigned hd_debug_background_hits(void);
 void hd_debug_legacy_scenery(int enabled);
 void hd_debug_reference_restore(int enabled);
 void hd_debug_reference_floor(int enabled);
@@ -152,7 +153,48 @@ static void verify_coherent_restore(void){
  assert(cases==1152u);
  printf("coherent scenery: %u exact new floor/cache versus reference restored frames\n",cases);
 }
+static void verify_background_replay(void){
+ static uint8_t reference[HD_BYTES];
+ const int sites[][2]={{20,11},{12,13},{18,13},{14,15},{8,12},{11,8}};
+ const unsigned ticks[]={2u,5u,13u,22u,39u,42u,43u,179u,180u,181u,216u,217u,UINT32_MAX-4u,UINT32_MAX};
+ Story s;story_new(&s,0);s.dialogue=0;s.cinema=CINE_NONE;s.flags=STORY_FULL;s.anim=0;
+ unsigned start=hd_debug_background_hits(),cases=0;
+ for(unsigned place=0;place<sizeof sites/sizeof sites[0];place++){
+  s.x=(uint8_t)sites[place][0];s.y=(uint8_t)sites[place][1];s.prev_x=s.x;s.prev_y=s.y;
+  assert(!story_solid(s.x,s.y));
+  for(unsigned f=0;f<4u;f++){
+   s.facing=(uint8_t)f;
+   hd_debug_invalidate_wall_cache();
+   /* Cache must survive changes to the live foreground, but not camera
+      or sky changes; water animation always remains exact. */
+   for(unsigned k=0;k<sizeof ticks/sizeof ticks[0];k++){
+    unsigned t=ticks[k];s.art_steps=(uint8_t)(k%5u);s.song_steps=(uint8_t)((k+2u)%5u);
+    s.rescue_stage=(uint8_t)((k&1u)?STORY_RESCUE_MISSING:STORY_RESCUE_NONE);
+    memset(&canvas,0xA6,sizeof canvas);hd_first_person_draw(canvas.pixels,&s,t);
+    memcpy(reference,canvas.pixels,HD_BYTES);
+    hd_debug_reference_floor(1);
+    memset(&canvas,0xA6,sizeof canvas);hd_first_person_draw(canvas.pixels,&s,t);
+    assert(!memcmp(reference,canvas.pixels,HD_BYTES));
+    hd_debug_reference_floor(0);
+    for(unsigned i=0;i<32u;i++)assert(canvas.before[i]==0xA6u&&canvas.after[i]==0xA6u);
+    cases++;
+   }
+   /* A sequence of truly consecutive renders exercises actual hits. */
+   hd_debug_invalidate_wall_cache();
+   for(unsigned t=1;t<=13u;t++){
+    memset(&canvas,0xA6,sizeof canvas);hd_first_person_draw(canvas.pixels,&s,t);
+   }
+   memcpy(reference,canvas.pixels,HD_BYTES);
+   hd_debug_invalidate_wall_cache();hd_first_person_draw(canvas.pixels,&s,13u);
+   assert(!memcmp(reference,canvas.pixels,HD_BYTES));cases++;
+  }
+ }
+ assert(hd_debug_background_hits()>start);
+ printf("Static environment replay: %u exact dynamic/pose comparisons, %u actual cache hits\n",
+        cases,hd_debug_background_hits()-start);
+}
 int main(void){
+ verify_background_replay();
  verify_original_road_material_rom();
  verify_halfword_wall_spans();
  verify_camera_shade_cache();
