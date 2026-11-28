@@ -27,9 +27,20 @@ int main(void){
   {POT_LSHOULDER,POT_LELBOW,POT_LWRIST},{POT_RSHOULDER,POT_RELBOW,POT_RWRIST},
   {POT_LHIP,POT_LKNEE,POT_LANKLE},{POT_RHIP,POT_RKNEE,POT_RANKLE}
  };
- unsigned signs=0,limbs=0,joints=0,palms=0,soles=0,muted=0;
+ unsigned signs=0,limbs=0,joints=0,palms=0,soles=0,muted=0,torsos=0;
  for(unsigned t=0;t<=POT_TRACE_LAST_TICK;t+=2u){
-  PotPose pose;pot_trace_sample(t,&pose);
+  PotPose pose;pot_render_sample(t,&pose,0);
+  PotJoint ls=pose.joint[POT_LSHOULDER],rs=pose.joint[POT_RSHOULDER];
+  PotJoint lh=pose.joint[POT_LHIP],rh=pose.joint[POT_RHIP];
+  PotJoint s=pot_mid(ls,rs),h=pot_mid(lh,rh);
+  if(pot_torso_sections(&pose,&ls,&rs,&lh,&rh)){
+   PotJoint ns=pot_mid(ls,rs),nh=pot_mid(lh,rh);
+   assert(ns.x==s.x&&ns.y==s.y&&nh.x==h.x&&nh.y==h.y);
+   int ax=ls.x-rs.x,ay=ls.y-rs.y,bx=lh.x-rh.x,by=lh.y-rh.y;
+   assert(ax*bx+ay*by>0); /* same side ordering, never a bow tie */
+   assert(ax*ax+ay*ay<=4*(pose.head_size.x*2+4)*(pose.head_size.x*2+4));
+   torsos++;
+  }
   for(unsigned camera=90;camera<=180;camera+=90){
    PotCamera c=pot_camera(camera);
    if(pose.flags&3u){
@@ -93,7 +104,8 @@ int main(void){
    }
   }
  }
- assert(signs>400u&&limbs>1000u&&joints>1000u&&palms>100u&&soles>100u&&muted>0u);
+ assert(signs>400u&&limbs>1000u&&joints>1000u&&palms>100u&&soles>100u&&muted>0u&&torsos>200u);
+ printf("Body contours: %u normalized torso sections preserve measured centres and consistent side ordering\n",torsos);
  printf("Sign/body raster: %u sign poses, %u muted-print angles, %u connected limbs, %u bends, %u palms, %u soles; crop, contact and guards OK\n",signs,muted,limbs,joints,palms,soles);
  return 0;
 }

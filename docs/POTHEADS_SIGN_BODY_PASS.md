@@ -8,3 +8,24 @@ The verified 9e00f05 cartridge measured 29.366 page flips/s, and its ROT3 clip w
 
 ## Motion continuity
 Verified 2c1bf791: 29.565 page flips/s over the 600-frame opening benchmark; no dropped inputs and at most one tick of film/clock error over the 24-second capture. The next pass uses bounded, signed monotonic cubic interpolation between compatible joint keys, with secant-limited tangents and exact measured endpoints. Changes of joint visibility, support, facing and depth retain the original interpolation; private matte frames use the original pose unchanged. No new reference measurements. The visible-to-unobserved arrow-tip transition now converges on the corresponding measured envelope edge rather than the generator's placeholder coordinate; the four measured sign corners are unchanged. An arithmetic and full-timeline regression checks endpoints, monotonicity, support invariance, matte equality, and tip bounds. The original clip limit, cache equality and emulator gates remain mandatory.
+
+## Projective sign and anatomical silhouette pass (November 27)
+The source-only render now applies a single planar inverse mapping to the
+sign's print. It no longer has two independently affine halves with a
+diagonal change in lettering scale. Extremely skewed/singular faces remain
+paper-only. Well-supported unclipped near-parallelogram faces can receive a
+one-pixel-per-axis corner correction, preserving centre and observed arrow
+tip; private-matte builds bypass that correction. No measured key, crop,
+contact, visibility flag or sign-release timing is modified.
+
+Torso cross-sections use the measured shoulder and hip centres, a shared
+perpendicular body axis and bounded width, preventing a twisted bow-tie
+shirt when estimated hip ordering reverses. The fallback costume hem is
+scaled to the measured torso, and tight elbow/knee reversals now taper
+both bones to their actual distal widths rather than inflate forearms and
+ankles. These are authored contour improvements, not a fresh video trace.
+The original reference and private matte assets were not found in the
+accessible file library. Re-review the actual opening film before claiming
+visual approval. The host cache builder evaluates ten span-gap options,
+choosing by padded size then raw packet length; existing ROT3 format,
+30-Hz sampling, scene limit and runtime RAM allocation are unchanged.

@@ -1,7 +1,7 @@
 #pragma once
 #include "potheads_sign_geometry.h"
 /* Native sign artwork. Each texel is attached to the measured face;
-   whitespace leaves the underlying paper alone. No per-pixel division. */
+   whitespace leaves the underlying paper alone. Playback uses baked frames. */
 static const char pot_sign_art[26][65]={
  "                                                                ",
  "  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++  ",
@@ -30,49 +30,48 @@ static const char pot_sign_art[26][65]={
  "  ............................................................  ",
  "                                                                ",
 };
-static void pot_sign_triangle(uint8_t *p,PotPoint a,PotPoint b,PotPoint c,
-                              int ua,int va,int ub,int vb,int uc,int vc,unsigned detail){
- int area=pot_sign_cross(a,b,c);
- if(area<=0)return;
- int left=a.x,right=a.x,top=a.y,bottom=a.y;
- if(b.x<left)left=b.x;
- if(c.x<left)left=c.x;
- if(b.x>right)right=b.x;
- if(c.x>right)right=c.x;
- if(b.y<top)top=b.y;
- if(c.y<top)top=c.y;
- if(b.y>bottom)bottom=b.y;
- if(c.y>bottom)bottom=c.y;
+/* All samples come from the same projective face, without a diagonal
+   seam. The released ROM plays lossless precomputed frames; this
+   source painter adds no playback scratch. */
+static unsigned pot_sign_print(uint8_t *p,const PotPoint q[4],unsigned detail){
+ PotSignMap map;
+ if(!pot_sign_map_init(q,&map))return 0;
+ int left=q[0].x,right=left,top=q[0].y,bottom=top,step[4];
+ for(unsigned i=0;i<4u;i++){
+  if(q[i].x<left)left=q[i].x;
+  if(q[i].x>right)right=q[i].x;
+  if(q[i].y<top)top=q[i].y;
+  if(q[i].y>bottom)bottom=q[i].y;
+  step[i]=q[i].y-q[(i+1u)&3u].y;
+ }
  if(left<0)left=0;
  if(right>=HD_W)right=HD_W-1;
  if(top<0)top=0;
  if(bottom>=135)bottom=134;
- if(left>right||top>bottom)return;
- int ux=((ub-ua)*(c.y-a.y)-(uc-ua)*(b.y-a.y))*4096/area;
- int uy=((uc-ua)*(b.x-a.x)-(ub-ua)*(c.x-a.x))*4096/area;
- int vx=((vb-va)*(c.y-a.y)-(vc-va)*(b.y-a.y))*4096/area;
- int vy=((vc-va)*(b.x-a.x)-(vb-va)*(c.x-a.x))*4096/area;
+ if(left>right||top>bottom)return detail;
  for(int y=top;y<=bottom;y++){
-  PotPoint start={left,y};
-  int ea=pot_sign_cross(b,c,start),eb=pot_sign_cross(c,a,start),ec=pot_sign_cross(a,b,start);
-  int u=ua*4096+ux*(left-a.x)+uy*(y-a.y);
-  int v=va*4096+vx*(left-a.x)+vy*(y-a.y);
-  for(int x=left;x<=right;x++){
-   if(ea>=0&&eb>=0&&ec>=0){
-    int ix=(u+2048)>>12,iy=(v+2048)>>12;
-    if(ix>=0&&ix<64&&iy>=0&&iy<26){
-     char ink=pot_sign_art[iy][ix];
-     if(ink=='X')hd_pixel(p,x,y,detail==2u?HD_INK:HD_STONE_DARK);
-     else if(ink=='g'&&detail==2u)hd_pixel(p,x,y,HD_LEAF_DARK);
-     else if(ink=='+'||ink=='.')hd_pixel(p,x,y,ink=='+'?HD_PLASTER_LIT:HD_STONE_LIT);
-    }
+  int e[4];PotPoint start={left,y};
+  for(unsigned i=0;i<4u;i++)e[i]=pot_sign_cross(q[i],q[(i+1u)&3u],start);
+  uint8_t *out=p+y*HD_W+left;
+  for(int x=left;x<=right;x++,out++){
+   unsigned u,v;
+   if(pot_sign_map_uv(&map,e,&u,&v)){
+    char ink=pot_sign_art[v][u];
+    if(ink=='X')*out=detail==2u?HD_INK:HD_STONE_DARK;
+    else if(ink=='g'&&detail==2u)*out=HD_LEAF_DARK;
+    else if(ink=='+'||ink=='.')*out=ink=='+'?HD_PLASTER_LIT:HD_STONE_LIT;
    }
-   u+=ux;v+=vx;ea-=c.y-b.y;eb-=a.y-c.y;ec-=b.y-a.y;
+   for(unsigned i=0;i<4u;i++)e[i]+=step[i];
   }
  }
+ return detail;
 }
 static unsigned pot_sign_projected(const PotCamera *c,const PotPose *pose,PotPoint q[5],PotPoint hull[5]){
  for(unsigned i=0;i<5u;i++)q[i]=pot_actor_point(c,pose->sign[i]);
+ /* Private mattes remain aligned to the original measured envelope. */
+#if !POTHEADS_CLOTH_ENABLED && !POTHEADS_LEG_ENABLED && !POTHEADS_UPPER_ENABLED
+ (void)pot_sign_stabilize(q,pose->flags);
+#endif
  return pot_sign_hull(q,(pose->flags&POT_SIGN_TIP_VISIBLE)?5u:4u,hull);
 }
 /* A measured crop intersection is not a physical cardboard edge.
@@ -96,10 +95,7 @@ static void pot_sign_draw(uint8_t *p,const PotCamera *c,const PotPose *pose){
  if(n==2u){hd_line(p,h[0].x,h[0].y,h[1].x,h[1].y,HD_PAPER);return;}
  pot_shape(p,h,n,HD_PAPER);
  unsigned detail=(unsigned)pot_sign_face(q,pose->flags,face);
- if(detail){
-  pot_sign_triangle(p,face[0],face[1],face[2],0,0,63,0,63,25,detail);
-  pot_sign_triangle(p,face[0],face[2],face[3],0,0,63,25,0,25,detail);
- }
+ if(detail)detail=pot_sign_print(p,face,detail);
  /* Give the visible board a thin paper/card edge even when print is
     too foreshortened or cropped to reconstruct. Inset toward the
     measured envelope, never outside it or across a source crop edge. */

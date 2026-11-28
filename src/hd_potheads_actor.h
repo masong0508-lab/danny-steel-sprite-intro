@@ -78,6 +78,24 @@ static void pot_stroke(uint8_t *p,PotPoint a,PotPoint b,int width,
  }
  hd_line(p,a.x+xx/2,a.y+yy/2,b.x+xx/2,b.y+yy/2,light);
 }
+/* Taper both ends even in tightly folded limbs, instead of using the
+   knee/elbow width for the entire lower segment. */
+static void pot_taper_panel(uint8_t *p,PotPoint a,PotPoint b,int wa,int wb,
+                             unsigned body,unsigned lit,unsigned caps){
+ int dx=b.x-a.x,dy=b.y-a.y;
+ unsigned l=pot_sqrt((unsigned)(dx*dx+dy*dy));
+ if(!l){pot_stroke(p,a,b,wa>wb?wa:wb,body,lit,caps);return;}
+ PotPoint na={dy*wa/(2*(int)l),-dx*wa/(2*(int)l)};
+ PotPoint nb={dy*wb/(2*(int)l),-dx*wb/(2*(int)l)};
+ PotPoint q[4]={{a.x+na.x,a.y+na.y},{b.x+nb.x,b.y+nb.y},
+                {b.x-nb.x,b.y-nb.y},{a.x-na.x,a.y-na.y}};
+ pot_shape(p,q,4u,body);
+ hd_line(p,q[0].x,q[0].y,q[1].x,q[1].y,HD_INK);
+ hd_line(p,q[3].x,q[3].y,q[2].x,q[2].y,HD_INK);
+ hd_line(p,a.x+na.x/2,a.y+na.y/2,b.x+nb.x/2,b.y+nb.y/2,lit);
+ if((caps&1u)&&wa>=4)hd_ellipse(p,a.x,a.y,wa/2,wa/2,body);
+ if((caps&2u)&&wb>=4)hd_ellipse(p,b.x,b.y,wb/2,wb/2,body);
+}
 /* Taper a connected two-bone fabric ribbon. The bend uses one shared
    cross-section; no circular black cuff at the elbow or knee. For a
    nearly reversing limb, preserve both measured segments and use a
@@ -88,8 +106,8 @@ static void pot_jointed(uint8_t *p,PotPoint a,PotPoint b,PotPoint c,
  int dx=b.x-a.x,dy=b.y-a.y,ex=c.x-b.x,ey=c.y-b.y;
  unsigned l=pot_sqrt((unsigned)(dx*dx+dy*dy)),m=pot_sqrt((unsigned)(ex*ex+ey*ey));
  if(!l||!m||dx*ex+dy*ey<-(int)(l*m/2u)){
-  pot_stroke(p,a,b,wa,body,lit,caps&1u);
-  pot_stroke(p,b,c,wb,body,shade,caps&2u);
+  pot_taper_panel(p,a,b,wa,wb,body,lit,caps&1u);
+  pot_taper_panel(p,b,c,wb,wc,body,shade,caps&2u);
   if(wb>=3)hd_ellipse(p,b.x,b.y,wb/2,wb/2,body);
   return;
  }
@@ -198,13 +216,13 @@ static void pot_ground_shoe(uint8_t *p,PotPoint ankle,PotPoint toe,PotPoint sole
 static void pot_leg(uint8_t *p,const PotCamera *c,const PotPose *pose,unsigned side){
  unsigned hip=side?POT_RHIP:POT_LHIP,knee=side?POT_RKNEE:POT_LKNEE;
  unsigned ankle=side?POT_RANKLE:POT_LANKLE,toe=side?POT_RTOE:POT_LTOE;
- int thick=pose->head_size.x*2;
+ int thick=(pose->head_size.x*3+1)/2+2;
  unsigned near=(pose->flags&POT_NEAR_LEFT_LEG)?0u:1u;
  /* Foreshortened foreground thighs broaden during the supported floor
     turns. Inverted airborne legs retain the standing proportions. */
  if(side==near&&(pose->contact_mask&12u)&&pot_has(pose,POT_NECK)&&
     pot_has(pose,hip)&&pose->joint[hip].y>pose->joint[POT_NECK].y)
-  thick=pose->head_size.x*2+3;
+  thick+=2;
  int width=pot_actor_size(c,thick);
  if(pot_has(pose,hip)&&pot_has(pose,knee)&&pot_has(pose,ankle)&&
     !(pose->boundary&(1u<<knee))){
@@ -404,11 +422,37 @@ static void pot_source_upper_draw(uint8_t *p,const PotCamera *c,int frame){
  (void)p;(void)c;(void)frame;
 #endif
 }
+/* Shared anatomical torso axis: render-only cloth cross-sections
+   prevent hip/shoulder ordering from forming a crossed bow tie.
+   Do not move joints, contact points, cropped or private matte data. */
+static int pot_torso_width(PotJoint a,PotJoint b,PotJoint across,int low,int high){
+ int v=(a.x-b.x)*across.x+(a.y-b.y)*across.y;
+ if(v<0)v=-v;
+ v=(v+256)/512;
+ return v<low?low:v>high?high:v;
+}
+static int pot_torso_sections(const PotPose *pose,PotJoint *ls,PotJoint *rs,PotJoint *lh,PotJoint *rh){
+ const unsigned mask=(1u<<POT_LSHOULDER)|(1u<<POT_RSHOULDER)|(1u<<POT_LHIP)|(1u<<POT_RHIP);
+ if((pose->located&mask)!=mask||(pose->boundary&mask))return 0;
+ PotJoint s=pot_mid(*ls,*rs),h=pot_mid(*lh,*rh);
+ int dx=h.x-s.x,dy=h.y-s.y;
+ if(dx*dx+dy*dy<9)return 0;
+ PotJoint down=pot_direction(s,h),across={down.y,-down.x};
+ if((ls->x-rs->x)*across.x+(ls->y-rs->y)*across.y<0){across.x=-across.x;across.y=-across.y;}
+ int rx=pose->head_size.x,min=rx/2;
+ if(min<2)min=2;
+ int sw=pot_torso_width(*ls,*rs,across,min,rx*2+2);
+ int hw=pot_torso_width(*lh,*rh,across,min,(rx*3+1)/2+2);
+ *ls=pot_local(s,across,down,sw,0);*rs=pot_local(s,across,down,-sw,0);
+ *lh=pot_local(h,across,down,hw,0);*rh=pot_local(h,across,down,-hw,0);
+ return 1;
+}
 static void pot_tunic(uint8_t *p,const PotCamera *c,const PotPose *pose,int source_cloth){
  unsigned body=(1u<<POT_LSHOULDER)|(1u<<POT_RSHOULDER)|(1u<<POT_LHIP)|(1u<<POT_RHIP);
  if((pose->located&body)!=body)return;
  PotJoint ls=pose->joint[POT_LSHOULDER],rs=pose->joint[POT_RSHOULDER];
  PotJoint lh=pose->joint[POT_LHIP],rh=pose->joint[POT_RHIP];
+ if(source_cloth<0)(void)pot_torso_sections(pose,&ls,&rs,&lh,&rh);
  PotJoint shoulder=pot_mid(ls,rs),hip=pot_mid(lh,rh);
  PotJoint down=pot_direction(shoulder,hip),across={down.y,-down.x};
  if((ls.x-rs.x)*across.x+(ls.y-rs.y)*across.y<0){across.x=-across.x;across.y=-across.y;}
@@ -422,12 +466,19 @@ static void pot_tunic(uint8_t *p,const PotCamera *c,const PotPose *pose,int sour
  PotJoint low_left={pot_drape_mix(lh.x,ml.x,drape),pot_drape_mix(lh.y,ml.y,drape)};
  PotJoint low_right={pot_drape_mix(rh.x,mr.x,drape),pot_drape_mix(rh.y,mr.y,drape)};
  PotJoint hem=pot_mid(low_left,low_right);
- hem=pot_local(hem,across,down,2,pot_drape_mix(9,-4,drape));
- hem.y+=pot_drape_mix(4,13,drape);
- PotJoint suit[7]={pot_local(ls,across,down,3,-2),
-  pot_local(rs,across,down,-3,-2),pot_local(rs,across,down,-5,6),
-  pot_local(low_right,across,down,-4,3),hem,
-  pot_local(low_left,across,down,4,4),pot_local(ls,across,down,5,6)};
+ int dx=hip.x-shoulder.x,dy=hip.y-shoulder.y;
+ int tail=(int)pot_sqrt((unsigned)(dx*dx+dy*dy))/3;
+ if(tail<3)tail=3;
+ if(tail>9)tail=9;
+ int fold_width=pose->head_size.x/2;
+ if(fold_width<2)fold_width=2;
+ if(fold_width>4)fold_width=4;
+ hem=pot_local(hem,across,down,1,pot_drape_mix(tail,-3,drape));
+ hem.y+=pot_drape_mix(3,10,drape);
+ PotJoint suit[7]={pot_local(ls,across,down,fold_width,-2),
+  pot_local(rs,across,down,-fold_width,-2),pot_local(rs,across,down,-fold_width-1,5),
+  pot_local(low_right,across,down,-fold_width,3),hem,
+  pot_local(low_left,across,down,fold_width,3),pot_local(ls,across,down,fold_width+1,5)};
  pot_cloth(p,c,suit,7u,HD_GOLD,0);
  PotJoint light[5]={pot_local(ls,across,down,1,-1),pot_local(rs,across,down,0,0),
   pot_local(low_right,across,down,1,2),hem,pot_local(low_left,across,down,0,2)};

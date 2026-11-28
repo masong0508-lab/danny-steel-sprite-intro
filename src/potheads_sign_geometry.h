@@ -69,3 +69,64 @@ static inline int pot_sign_face(const PotPoint q[5],unsigned flags,PotPoint out[
     h2>=w1*6&&h3>=w1*6)return 1;
  return 0;
 }
+
+/* Modest display-only correction of the measured face. Preserve centre,
+   genuine folds, crops and observed arrow tip. At most one pixel per
+   axis per corner; only full-print, near-parallelogram poses qualify. */
+static inline int pot_sign_small_shift(int v){
+ int a=v<0?-v:v;
+ return a<4?0:v<0?-1:1;
+}
+static inline int pot_sign_stabilize(PotPoint q[5],unsigned flags){
+ PotPoint face[4];int detail=pot_sign_face(q,flags,face);
+ if(detail!=2||!(flags&POT_SIGN_TIP_VISIBLE))return 0;
+ int dx=q[0].x+q[2].x-q[1].x-q[3].x;
+ int dy=q[0].y+q[2].y-q[1].y-q[3].y;
+ if(dx<-16||dx>16||dy<-16||dy>16)return 0;
+ int x=pot_sign_small_shift(dx),y=pot_sign_small_shift(dy);
+ if(!x&&!y)return 0;
+ PotPoint next[5];
+ for(unsigned i=0;i<5u;i++)next[i]=q[i];
+ for(unsigned i=0;i<4u;i++){
+  int s=(i&1u)?1:-1;
+  next[i].x+=s*x;next[i].y+=s*y;
+ }
+ if(pot_sign_face(next,flags,face)!=detail)return 0;
+ for(unsigned i=0;i<4u;i++)q[i]=next[i];
+ return 1;
+}
+/* Single planar inverse projective map, replacing the two incompatible
+   affine triangles. Edge weights derive from opposite corner areas.
+   Normalize once to Q8 and reject extreme perspective; in-face cross
+   products are bounded to 65535, so texel numerators fit uint32_t. */
+typedef struct {uint16_t weight[4];} PotSignMap;
+static inline int pot_sign_map_init(const PotPoint q[4],PotSignMap *map){
+ uint32_t a[4];
+ for(unsigned i=0;i<4u;i++){
+  int v=pot_sign_cross(q[i],q[(i+1u)&3u],q[(i+2u)&3u]);
+  if(v<=0||v>65535)return 0;
+  a[i]=(uint32_t)v;
+ }
+ /* Edge order top,right,bottom,left. a = ABC,BCD,CDA,DAB. */
+ uint32_t w[4]={a[1]*a[2],a[3]*a[2],a[0]*a[3],a[0]*a[1]};
+ uint32_t max=0,min=UINT32_MAX;
+ for(unsigned i=0;i<4u;i++){
+  if(w[i]>max)max=w[i];
+  if(w[i]<min)min=w[i];
+ }
+ if(!max||(uint64_t)min*16u<max)return 0;
+ for(unsigned i=0;i<4u;i++)map->weight[i]=(uint16_t)(((uint64_t)w[i]*256u+max/2u)/max);
+ return 1;
+}
+static inline int pot_sign_map_uv(const PotSignMap *map,const int edge[4],unsigned *u,unsigned *v){
+ uint32_t e[4];
+ for(unsigned i=0;i<4u;i++){
+  if(edge[i]<0||edge[i]>65535)return 0;
+  e[i]=(uint32_t)edge[i]*map->weight[i];
+ }
+ uint32_t du=e[1]+e[3],dv=e[0]+e[2];
+ if(!du||!dv)return 0;
+ *u=(e[3]*63u+du/2u)/du;
+ *v=(e[0]*25u+dv/2u)/dv;
+ return 1;
+}

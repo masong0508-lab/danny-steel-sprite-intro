@@ -1,5 +1,7 @@
 # THE LAST DAYS of danny steel
 
+**Continuing development:** read [the active development handoff](docs/DEVELOPMENT_HANDOFF.md) for the verified baseline, current cutscene work, build gates and next steps before making further changes.
+
 A small, original bittersweet comedy-adventure, with a BORE-universe continuity-office cameo. The GBA build preserves the existing DippInn logo, animated sprite introduction, drifting-painting title and bossa-nova audio. The GBA menu and overhead Old Quarter now use native 240x160 artwork with a rainy-city, record-sleeve design instead of low-resolution placeholder swipes. **NEW GAME** now enters a playable opening chapter instead of returning to the title.
 
 ## Campaign, narrative and route clarity (November 23 pass)
