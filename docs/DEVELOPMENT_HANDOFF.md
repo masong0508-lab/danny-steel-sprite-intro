@@ -145,3 +145,27 @@ The independent geometry model checked 3,164 sign camera projections,
 1,292 readable projective faces, 572 bounded corner corrections and
 19,729 UV samples without any orientation flips caused by the corrections.
 This supplements rather than replaces the C and emulator checks.
+
+## Checkpoint: cadence recovery and secondary art pass
+
+Source `9732d5593aa5ac9ecdc8e092b75089ca6c0c74ce` passed the dedicated
+rotoscope and emulator capture workflows (46095145651, 46095145534).
+Opening presentation recovered to 28.968 page flips/s (prior 26.579,
+verified baseline 29.466); 638 exact pictures, 11 seeks and 1,139,980
+cache bytes retained. Emulator runtime verification: zero failures.
+Full build 46095145491 failed at the sign test because GCC reported a
+possibly uninitialized test output `v`, not a geometry assertion. The
+follow-up initializes both test outputs and adds both sign/body tests to
+the dedicated workflow. Do not suppress compiler warnings or ship that
+failed build. Screenshot-only head `b0fb7bdc10f3fb007462237e398a8778d743ff66`
+is the parent of this correction.
+
+Visual follow-up: a 36x13 compact native wordmark at moderately readable
+angles; a convex bounded shade strip on material-only sign faces, never
+across a source crop edge; bevelled costume hem, inset light plane and
+proportional folded collar replacing angular shoulder spikes. The existing
+120 keys, measured silhouette envelope, contacts, timing and optional
+private assets remain unchanged. Added explicit texture/contour and
+material-strip bounds tests. New ROM and performance are pending fresh
+workflow results. Original footage/mattes are still unavailable in this
+session; this is authored source-guided art, not a new manual trace.

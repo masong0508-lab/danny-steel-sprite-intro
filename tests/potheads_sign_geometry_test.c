@@ -94,7 +94,7 @@ int main(void){
       unsigned prev_u=0,prev_v=0;int seeded=0;
       for(int x=0;x<240;x++){
        int e[4];for(unsigned j=0;j<4u;j++)e[j]=pot_sign_cross(face[j],face[(j+1u)&3u],(PotPoint){x,y});
-       unsigned u,v;
+       unsigned u=0,v=0;
        int ok=pot_sign_map_uv(&map,e,&u,&v);
        assert(pot_sign_map_uv_next(&map,e,&prev_u,&prev_v,seeded)==ok);
        if(ok){assert(u<64u&&v<26u&&prev_u==u&&prev_v==v);seeded=1;uv_samples++;}

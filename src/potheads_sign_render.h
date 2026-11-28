@@ -30,6 +30,30 @@ static const char pot_sign_art[26][65]={
  "  ............................................................  ",
  "                                                                ",
 };
+/* Separate compact hand-lettering for narrow readable faces. It keeps
+   the same words but uses a shorter, heavier raster font rather than
+   letting the full-resolution glyphs collapse to disconnected flecks.
+   No full logo is reconstructed on genuinely cropped/edge-on boards. */
+static const char pot_sign_compact[13][37]={
+ "                                    ",
+ " XXX XX  XXX XXX    X X XXX XXX XX  ",
+ " X   X X X   X      X X X   X   X X ",
+ " XX  XX  XX  XX     X X XX  XX  X X ",
+ " X   X X X   X      XXX X   X   X X ",
+ " X   X X XXX XXX    X X XXX XXX XX  ",
+ "                                    ",
+ "       XX   X      X     X X XX     ",
+ "         X XX     X X    X X X X    ",
+ "        X   X      X     X X XX     ",
+ "       X    X     X X    X X X      ",
+ "       XXX XXX     XX    XXX X      ",
+ "                                    ",
+};
+static inline char pot_sign_texel(unsigned u,unsigned v,unsigned detail){
+ if(u>=64u||v>=26u)return ' ';
+ if(detail==1u)return pot_sign_compact[v>>1][u*36u>>6];
+ return detail==2u?pot_sign_art[v][u]:' ';
+}
 /* All samples come from the same projective face, without a diagonal
    seam. The released ROM plays lossless precomputed frames; this
    source painter adds no playback scratch. */
@@ -57,7 +81,7 @@ static unsigned pot_sign_print(uint8_t *p,const PotPoint q[4],unsigned detail){
   for(int x=left;x<=right;x++,out++){
    if(pot_sign_map_uv_next(&map,e,&u,&v,seeded)){
     seeded=1;
-    char ink=pot_sign_art[v][u];
+    char ink=pot_sign_texel(u,v,detail);
     if(ink=='X')*out=detail==2u?HD_INK:HD_STONE_DARK;
     else if(ink=='g'&&detail==2u)*out=HD_LEAF_DARK;
     else if(ink=='+'||ink=='.')*out=ink=='+'?HD_PLASTER_LIT:HD_STONE_LIT;
@@ -88,6 +112,37 @@ static int pot_sign_crop_edge(const PotPose *pose,const PotPoint q[5],PotPoint a
   }
  return 0;
 }
+/* A narrow, low-contrast folded-card plane on an unprinted face.
+   Anchor it only to a real measured long edge, not a screen crop.
+   The convex interpolation guarantees the shade cannot spill off
+   the silhouette. No guessed lettering or invented hidden corners. */
+static PotPoint pot_sign_inset(PotPoint a,PotPoint b,unsigned q){
+ return (PotPoint){a.x+pot_set_round((b.x-a.x)*(int)q,16),
+                   a.y+pot_set_round((b.y-a.y)*(int)q,16)};
+}
+static int pot_sign_material_plane(const PotPose *pose,const PotPoint q[5],
+                                   const PotPoint *h,unsigned n,PotPoint strip[4]){
+ if(n<3u)return 0;
+ PotPoint centre={0,0};
+ for(unsigned i=0;i<n;i++){centre.x+=h[i].x;centre.y+=h[i].y;}
+ centre.x/=(int)n;centre.y/=(int)n;
+ int longest=0;unsigned edge=0;
+ for(unsigned i=0;i<n;i++){
+  PotPoint a=h[i],b=h[(i+1u)%n];
+  int length=pot_sign_dist(a,b);
+  if(length>longest&&!pot_sign_crop_edge(pose,q,a,b)){longest=length;edge=i;}
+ }
+ if(longest<22)return 0;
+ PotPoint a=h[edge],b=h[(edge+1u)%n];
+ if(pot_sign_cross(a,b,centre)<longest*4)return 0;
+ PotPoint start=pot_sign_inset(a,b,1u),end=pot_sign_inset(b,a,1u);
+ strip[0]=pot_sign_inset(start,centre,1u);
+ strip[1]=pot_sign_inset(end,centre,1u);
+ strip[2]=pot_sign_inset(end,centre,3u);
+ strip[3]=pot_sign_inset(start,centre,3u);
+ for(unsigned i=0;i<4u;i++)if(!pot_sign_near(h,n,strip[i],0))return 0;
+ return pot_sign_cross(strip[0],strip[1],strip[2])>0;
+}
 static void pot_sign_draw(uint8_t *p,const PotCamera *c,const PotPose *pose){
  PotPoint q[5],h[5],face[4];
  unsigned n=pot_sign_projected(c,pose,q,h);
@@ -97,6 +152,10 @@ static void pot_sign_draw(uint8_t *p,const PotCamera *c,const PotPose *pose){
  pot_shape(p,h,n,HD_PAPER);
  unsigned detail=(unsigned)pot_sign_face(q,pose->flags,face);
  if(detail)detail=pot_sign_print(p,face,detail);
+ if(!detail){
+  PotPoint strip[4];
+  if(pot_sign_material_plane(pose,q,h,n,strip))pot_shape(p,strip,4u,HD_PLASTER_LIT);
+ }
  /* Give the visible board a thin paper/card edge even when print is
     too foreshortened or cropped to reconstruct. Inset toward the
     measured envelope, never outside it or across a source crop edge. */

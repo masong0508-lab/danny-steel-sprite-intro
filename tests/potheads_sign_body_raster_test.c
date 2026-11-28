@@ -23,11 +23,25 @@ static int painted_near(PotPoint p){
  return 0;
 }
 int main(void){
+ unsigned compact_ink=0,full_ink=0;
+ for(unsigned v=0;v<26u;v++)for(unsigned u=0;u<64u;u++){
+  char a=pot_sign_texel(u,v,1u),b=pot_sign_texel(u,v,2u);
+  assert(a=='X'||a==' ');assert(b==pot_sign_art[v][u]);
+  compact_ink+=(a=='X');full_ink+=(b=='X');
+  assert(pot_sign_texel(u,v,0u)==' ');
+ }
+ assert(compact_ink>full_ink&&compact_ink<64u*26u/2u);
+ assert(pot_sign_texel(64u,0u,2u)==' '&&pot_sign_texel(0u,26u,1u)==' ');
+ const PotJoint raw[7]={{0,0},{20,0},{23,4},{17,20},{10,30},{3,20},{-3,4}};
+ PotJoint rounded[8];pot_costume_bevel(raw,rounded);
+ assert(rounded[4].y<raw[4].y&&rounded[5].y<raw[4].y);
+ assert(rounded[4].x>rounded[5].x);
+ for(unsigned i=0;i<8u;i++)assert(rounded[i].x>=-3&&rounded[i].x<=23&&rounded[i].y>=0&&rounded[i].y<=30);
  static const unsigned bone[4][3]={
   {POT_LSHOULDER,POT_LELBOW,POT_LWRIST},{POT_RSHOULDER,POT_RELBOW,POT_RWRIST},
   {POT_LHIP,POT_LKNEE,POT_LANKLE},{POT_RHIP,POT_RKNEE,POT_RANKLE}
  };
- unsigned signs=0,limbs=0,joints=0,palms=0,soles=0,muted=0,torsos=0;
+ unsigned signs=0,limbs=0,joints=0,palms=0,soles=0,muted=0,torsos=0,material=0;
  for(unsigned t=0;t<=POT_TRACE_LAST_TICK;t+=2u){
   PotPose pose;pot_render_sample(t,&pose,0);
   PotJoint ls=pose.joint[POT_LSHOULDER],rs=pose.joint[POT_RSHOULDER];
@@ -47,6 +61,11 @@ int main(void){
     PotPoint q[5],h[5],face[4];
     unsigned n=pot_sign_projected(&c,&pose,q,h);
     int readable=pot_sign_face(q,pose.flags,face);
+    PotPoint strip[4];
+    if(!readable&&pot_sign_material_plane(&pose,q,h,n,strip)){
+     for(unsigned k=0;k<4u;k++)assert(pot_sign_near(h,n,strip[k],0));
+     material++;
+    }
     reset();pot_sign_draw(frame.pixels,&c,&pose);guards();signs++;
     muted+=(readable==1);
     for(int y=0;y<135;y++)for(int x=0;x<HD_W;x++){
@@ -105,6 +124,8 @@ int main(void){
   }
  }
  assert(signs>400u&&limbs>1000u&&joints>1000u&&palms>100u&&soles>100u&&muted>0u&&torsos>200u);
+ assert(material>0u);
+ printf("Sign material and lettering: %u clipped/oblique shade planes, compact %u ink samples, full %u ink samples; bevel bounded\n",material,compact_ink,full_ink);
  printf("Body contours: %u normalized torso sections preserve measured centres and consistent side ordering\n",torsos);
  printf("Sign/body raster: %u sign poses, %u muted-print angles, %u connected limbs, %u bends, %u palms, %u soles; crop, contact and guards OK\n",signs,muted,limbs,joints,palms,soles);
  return 0;

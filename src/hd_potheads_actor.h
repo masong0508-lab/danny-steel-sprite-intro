@@ -447,6 +447,21 @@ static int pot_torso_sections(const PotPose *pose,PotJoint *ls,PotJoint *rs,PotJ
  *lh=pot_local(h,across,down,hw,0);*rh=pot_local(h,across,down,-hw,0);
  return 1;
 }
+/* Bevel the two corners beside the hem instead of introducing a
+   long needle-point on the costume. All resulting vertices remain
+   on the original annotated/derived contour edges. */
+static PotJoint pot_costume_mix(PotJoint a,PotJoint b,int eighths){
+ return (PotJoint){a.x+pot_set_round((b.x-a.x)*eighths,8),
+                   a.y+pot_set_round((b.y-a.y)*eighths,8)};
+}
+static void pot_costume_bevel(const PotJoint suit[7],PotJoint rounded[8]){
+ rounded[0]=pot_costume_mix(suit[0],suit[6],1);
+ rounded[1]=pot_costume_mix(suit[1],suit[2],1);
+ rounded[2]=suit[2];rounded[3]=suit[3];
+ rounded[4]=pot_costume_mix(suit[4],suit[3],2);
+ rounded[5]=pot_costume_mix(suit[4],suit[5],2);
+ rounded[6]=suit[5];rounded[7]=suit[6];
+}
 static void pot_tunic(uint8_t *p,const PotCamera *c,const PotPose *pose,int source_cloth){
  unsigned body=(1u<<POT_LSHOULDER)|(1u<<POT_RSHOULDER)|(1u<<POT_LHIP)|(1u<<POT_RHIP);
  if((pose->located&body)!=body)return;
@@ -479,26 +494,38 @@ static void pot_tunic(uint8_t *p,const PotCamera *c,const PotPose *pose,int sour
   pot_local(rs,across,down,-fold_width,-2),pot_local(rs,across,down,-fold_width-1,5),
   pot_local(low_right,across,down,-fold_width,3),hem,
   pot_local(low_left,across,down,fold_width,3),pot_local(ls,across,down,fold_width+1,5)};
- pot_cloth(p,c,suit,7u,HD_GOLD,0);
- PotJoint light[5]={pot_local(ls,across,down,1,-1),pot_local(rs,across,down,0,0),
-  pot_local(low_right,across,down,1,2),hem,pot_local(low_left,across,down,0,2)};
- pot_cloth(p,c,light,5u,HD_LAMP,0);
- PotJoint fold[3]={pot_local(ls,across,down,0,5),
-  pot_local(low_left,across,down,0,2),pot_local(hem,across,down,-2,-2)};
- pot_cloth(p,c,fold,3u,HD_GOLD,0);
+ PotJoint rounded[8];pot_costume_bevel(suit,rounded);
+ pot_cloth(p,c,rounded,8u,HD_GOLD,0);
+ /* Inset each cross-section of the light plane along the matching
+    costume edge. It shares the rounded hem instead of projecting
+    a second, sharper triangle out of the main silhouette. */
+ PotJoint light[8]={
+  pot_costume_mix(rounded[0],rounded[1],2),pot_costume_mix(rounded[1],rounded[0],1),
+  pot_costume_mix(rounded[2],rounded[7],1),pot_costume_mix(rounded[3],rounded[6],1),
+  pot_costume_mix(rounded[4],rounded[5],1),pot_costume_mix(rounded[5],rounded[4],2),
+  pot_costume_mix(rounded[6],rounded[3],2),pot_costume_mix(rounded[7],rounded[2],2)};
+ pot_cloth(p,c,light,8u,HD_LAMP,0);
+ hem=pot_mid(rounded[4],rounded[5]);
  /* A central folded seam follows the torso and its gravity-driven hem,
     rather than a static yellow block. Keep source matte builds intact. */
  PotPoint seam0=pot_actor_point(c,pot_local(shoulder,across,down,-2,5));
  PotPoint seam1=pot_actor_point(c,pot_local(hem,across,down,-1,-3));
  hd_line(p,seam0.x,seam0.y,seam1.x,seam1.y,HD_GOLD);
  if(pot_has(pose,POT_NECK)){
-  PotJoint hood[3]={pose->joint[POT_NECK],pot_local(rs,across,down,-7,-6),
-                    pot_local(rs,across,down,-1,7)};
-  pot_cloth(p,c,hood,3u,HD_GOLD,0);
-  hood[1]=pot_local(ls,across,down,7,-7);hood[2]=pot_local(ls,across,down,1,7);
-  pot_cloth(p,c,hood,3u,HD_LAMP,0);
+  int collar=pose->head_size.x/2+1;
+  if(collar<2)collar=2;
+  if(collar>5)collar=5;
+  /* Compact folded collar; the old 7-unit spikes made the costume
+     look like rigid shoulders/antennae during floor work. */
+  PotJoint hood[4]={pose->joint[POT_NECK],pot_local(rs,across,down,-collar,-3),
+                    pot_local(rs,across,down,-collar-1,1),pot_local(rs,across,down,-1,5)};
+  pot_cloth(p,c,hood,4u,HD_GOLD,0);
+  hood[1]=pot_local(ls,across,down,collar,-3);
+  hood[2]=pot_local(ls,across,down,collar+1,1);
+  hood[3]=pot_local(ls,across,down,1,5);
+  pot_cloth(p,c,hood,4u,HD_LAMP,0);
   PotPoint tip=pot_actor_point(c,hood[1]);
-  hd_ellipse(p,tip.x,tip.y,1,1,HD_BARK);
+  hd_pixel(p,tip.x,tip.y,HD_BARK);
  }
 }
 static void pot_dancer(uint8_t *p,const PotCamera *c,unsigned t){

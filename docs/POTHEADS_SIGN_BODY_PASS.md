@@ -38,3 +38,17 @@ incremental rounded quotients, and permit bounded eight-sample cache
 catch-up for small stalls. No new buffers or frame dropping. These
 changes must pass the full host, cartridge and emulator cadence gates
 before release; cause of regression and final performance not yet proven.
+
+### Narrow-face wordmark and cloth contour pass
+
+The preceding cadence correction recovered the opening from 26.579 to
+28.968 page flips/s in the scripted mGBA window with the 1,139,980-byte
+cache unchanged. The full host job failed a GCC maybe-uninitialized
+warning in the new sign test; initialize the two output variables and run
+both sign/body tests in the dedicated rotoscope workflow as well.
+Moderately readable faces now use a compact 36x13 wordmark rather than
+downsampling the 64x26 artwork. Clipped or edge-on boards still omit
+unverified print, but receive one subtle shade plane inset from a real
+measured long edge. Costume corners and hem are bevelled, with matching
+inset lighting and a head-scaled collar. No new framebuffer, raw reference
+media, or changes to pose keys. Fresh cache and cadence checks pending.
