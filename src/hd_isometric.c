@@ -145,11 +145,13 @@ static void building(uint8_t *p,int sx,int sy,int wx,int wy,
  /* District-level masses and architecture: the central archive is one
     coherent masonry block; the east shop row uses one low roof line.
     Border neighborhoods vary at block boundaries, not tile by tile. */
- HdDistrict d=hd_district(wx,wy,type);
+ int source_x=wx,source_y=wy;
+ story_world_source(&source_x,&source_y);
+ HdDistrict d=hd_district_source(source_x,source_y,type);
  int civic=d.civic,shops=d.shops,waterfront=d.waterfront;
  unsigned h=d.height,variant=d.variant;
  int front=exposed(wx,wy+1),side=exposed(wx+1,wy);
- int potheads=story_world_potheads(wx,wy);
+ int potheads=source_x==21&&source_y==11;
  int sign_x=sx+31,sign_y=sy-(int)h-13;
  int sign_visible=!(potheads&&(wx+wy)*8>actor_depth &&
       sign_x<actor_x+12&&sign_x+53>actor_x-12&&
@@ -512,8 +514,8 @@ static void landscape_iso(uint8_t *p,const Story *s,unsigned tick){
     }
     int h=(a+b+c+d)>>2,sy=base-h;
     if(sy<-100||sy>214)continue;
-    unsigned n=grain(x,y);
     if(!pass){
+     unsigned n=grain(x,y);
      if(sy>175)continue;
      if(!rural){
       hd_iso_tile_detail(p,sx,sy,material(tile,n));
