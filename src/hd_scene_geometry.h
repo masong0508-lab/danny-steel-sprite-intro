@@ -6,10 +6,10 @@ typedef struct {
  unsigned height,variant;
  int civic,shops,waterfront;
 } HdDistrict;
-static inline HdDistrict hd_district(int x,int y,char type){
+/* Canonical coordinates for callers that already resolved the parcel.
+   Keep architectural identity attached to the moved lot. */
+static inline HdDistrict hd_district_source(int x,int y,char type){
  HdDistrict d;
- /* Keep architectural identity attached to the moved lot. */
- story_world_source(&x,&y);
  if(story_city_extension(x,y)){
   int east=x>=24&&y<14;
   int civic=type=='A'||(x>=24&&y>=14&&y<20);
@@ -31,6 +31,10 @@ static inline HdDistrict hd_district(int x,int y,char type){
  if(x==21&&y==11)d.variant=7u;
  if(type=='A')d.variant=6u;
  return d;
+}
+static inline HdDistrict hd_district(int x,int y,char type){
+ story_world_source(&x,&y);
+ return hd_district_source(x,y,type);
 }
 /* Signed sub-tile offset in units of a quarter tile. The actual
    Story movement clock remains authoritative. */
