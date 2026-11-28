@@ -13,7 +13,7 @@ entire game or every cutscene is complete.
 - Last fully verified source before this pass:
   `d94176f18013e5591dc122960da1a376596b3a2b`.
   Screenshot-only follow-up: `a0cdce7beb5dbc595cb2691a802e4f540989e4be`.
-  The prior City Studies ROM is 3,779,136 bytes; SHA256
+  The prior City Studies ROM is 3,779,324 bytes; SHA256
   `daf5d68e088e9df5b36bc350eeef64260f0b4ecca17d84938637440726abd28c`.
   [Verified GBA build](https://github.com/masong0508-lab/danny-steel-sprite-intro/actions/runs/46083747348),
   [emulator capture](https://github.com/masong0508-lab/danny-steel-sprite-intro/actions/runs/46083747536),
@@ -21,6 +21,7 @@ entire game or every cutscene is complete.
 - Previous measured page flips/s: opening 29.466, overhead 14.932,
   first-person stationary 28.968, first-person walking 15.031.
   IWRAM static 23,664 / 24,576 allowed; EWRAM 190,768 / 196,608 allowed.
+  Prior opening cache: 1,153,160 bytes, 638 pictures, 11 seek records.
   These are measured prior results, not projections for new code.
 
 ## Current change set: opening-film quality
@@ -112,3 +113,35 @@ Before ending each work session or changing chats, commit actual progress
 and append the source SHA, tested artifact, CI outcomes, limitations and
 the single most important next task to this document. If a check is
 pending, say pending. The source tree, not chat history, is authoritative.
+
+## Checkpoint: projective sign pass and cadence correction
+
+The first source revision `82f09929f00a0e99c876826f81d7cdec7d27eaef`
+has [passed rotoscope regression](https://github.com/masong0508-lab/danny-steel-sprite-intro/actions/runs/46094856710)
+and [emulator capture](https://github.com/masong0508-lab/danny-steel-sprite-intro/actions/runs/46094856657).
+The generated cache shrank from 1,153,160 to 1,139,980 bytes, with
+all 638 exact pictures and 11 cue records retained. Opening benchmark
+regressed from 29.466 to 26.579 page flips/s (max gap 16 video frames).
+Overhead 14.932, stationary first-person 28.968, walking 15.031;
+emulator input verification zero failures. Full host/build run
+[46094856665](https://github.com/masong0508-lab/danny-steel-sprite-intro/actions/runs/46094856665)
+was still in progress when the follow-up correction was prepared.
+The reason for the cadence change is not yet proven.
+
+The follow-up removes repeated software divisions from the projective
+face: seed each scanline once and update rounded rational coordinates
+exactly using integer comparisons. It also permits bounded sequential
+ROT3 catch-up for up to eight samples and 49,152 total decoded/compressed
+bytes (work cap, not a RAM allocation). The ordinary two-sample and
+scripted cue paths are unchanged. Added exact quotient and eight-sample
+cache-replay regressions. Recheck actual ROM cadence and cache bytes
+against the baseline before delivery. No claim yet that the speed
+regression has been resolved. The old ROM's decoded frames also confirm
+blank-looking clipped overhead boards and angular floor-work silhouettes;
+these remain visual review targets, especially if private source is
+recovered. Do not invent hidden lettering or limb positions.
+
+The independent geometry model checked 3,164 sign camera projections,
+1,292 readable projective faces, 572 bounded corner corrections and
+19,729 UV samples without any orientation flips caused by the corrections.
+This supplements rather than replaces the C and emulator checks.

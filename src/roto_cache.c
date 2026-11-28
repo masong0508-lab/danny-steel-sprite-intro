@@ -45,13 +45,33 @@ static int recover(uint8_t *out,const uint32_t *clip,unsigned sample,RotoBase ba
  for(k++;k<=sample;k++)if(!delta(out,clip,k))return -1;
  return 1;
 }
+/* Small presentation stalls should not force a costly live redraw.
+   Bound total decoded + compressed bytes before replaying extra deltas.
+   Retain the original two-record path and all cue/fallback semantics. */
+static int can_advance(const uint32_t *clip,unsigned sample){
+ if(!valid||current_clip!=clip||sample<current_sample)return 0;
+ unsigned gap=sample-current_sample;
+ if(gap<=2u)return 1;
+ if(gap>ROTO_ADVANCE_WINDOW)return 0;
+ unsigned cost=0,directory=4u*(6u+clip[1]+2u*clip[3]);
+ for(unsigned i=current_sample+1u;i<=sample;i++){
+  unsigned a=clip[5u+i],b=clip[6u+i];
+  if((a|b)&3u||a<directory||b<a||b-a<4u||b>clip[5u+clip[1]])return 0;
+  const uint32_t *rec=(const uint32_t *)((const uint8_t *)clip+a);
+  unsigned n=rec[0]&65535u,z=rec[0]>>16;
+  if((n&3u)||n>ROTO_PACKET_MAX||(z?z:n)>b-a-4u||(!n&&z))return 0;
+  cost+=n+z;
+  if(cost>ROTO_ADVANCE_BUDGET)return 0;
+ }
+ return 1;
+}
 int roto_cache_render(uint8_t *out,const uint32_t *clip,unsigned tick,RotoBase base,RotoPaint live){
  if(!lease||out!=(uint8_t *)(void *)hd_shared_frame||!clip||!base||!live){valid=0;return 0;}
  if(clip[0]!=ROTO_CLIP_MAGIC||clip[2]>65535u||clip[3]>ROTO_SEEK_MAX||
     clip[1]!=clip[2]/2u+1u+(clip[2]&1u)||clip[4]>ROTO_CLIP_LIMIT||
     clip[4]<4u*(6u+clip[1]+2u*clip[3])||clip[5u+clip[1]]>clip[4]){valid=0;return 0;}
  unsigned sample=tick>=clip[2]?clip[1]-1u:tick/2u;
- if(!valid||current_clip!=clip||sample<current_sample||sample-current_sample>2u){
+ if(!can_advance(clip,sample)){
   valid=0;int found=recover(out,clip,sample,base);
   if(found<0)return 0;
   if(!found)live(out,sample==clip[1]-1u?clip[2]:sample*2u);

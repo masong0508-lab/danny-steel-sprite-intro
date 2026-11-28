@@ -118,7 +118,16 @@ static inline int pot_sign_map_init(const PotPoint q[4],PotSignMap *map){
  for(unsigned i=0;i<4u;i++)map->weight[i]=(uint16_t)(((uint64_t)w[i]*256u+max/2u)/max);
  return 1;
 }
-static inline int pot_sign_map_uv(const PotSignMap *map,const int edge[4],unsigned *u,unsigned *v){
+/* Rounded rational coordinate update, exact for odd/even denominators.
+   Adjacent pixels of a convex projective face are monotone in each
+   coordinate; use the previous quotient rather than a software divide. */
+static inline unsigned pot_sign_uv_step(unsigned prior,uint32_t n,uint32_t d,unsigned limit){
+ uint32_t twice=n*2u;
+ while(prior&&twice<(2u*prior-1u)*d)--prior;
+ while(prior<limit&&twice>=(2u*prior+1u)*d)++prior;
+ return prior;
+}
+static inline int pot_sign_map_uv_next(const PotSignMap *map,const int edge[4],unsigned *u,unsigned *v,int seeded){
  uint32_t e[4];
  for(unsigned i=0;i<4u;i++){
   if(edge[i]<0||edge[i]>65535)return 0;
@@ -126,7 +135,16 @@ static inline int pot_sign_map_uv(const PotSignMap *map,const int edge[4],unsign
  }
  uint32_t du=e[1]+e[3],dv=e[0]+e[2];
  if(!du||!dv)return 0;
- *u=(e[3]*63u+du/2u)/du;
- *v=(e[0]*25u+dv/2u)/dv;
+ uint32_t nu=e[3]*63u,nv=e[0]*25u;
+ if(seeded){
+  *u=pot_sign_uv_step(*u,nu,du,63u);
+  *v=pot_sign_uv_step(*v,nv,dv,25u);
+ }else{
+  *u=(nu+du/2u)/du;
+  *v=(nv+dv/2u)/dv;
+ }
  return 1;
+}
+static inline int pot_sign_map_uv(const PotSignMap *map,const int edge[4],unsigned *u,unsigned *v){
+ return pot_sign_map_uv_next(map,edge,u,v,0);
 }

@@ -53,9 +53,10 @@ static unsigned pot_sign_print(uint8_t *p,const PotPoint q[4],unsigned detail){
   int e[4];PotPoint start={left,y};
   for(unsigned i=0;i<4u;i++)e[i]=pot_sign_cross(q[i],q[(i+1u)&3u],start);
   uint8_t *out=p+y*HD_W+left;
+  unsigned u=0,v=0;int seeded=0;
   for(int x=left;x<=right;x++,out++){
-   unsigned u,v;
-   if(pot_sign_map_uv(&map,e,&u,&v)){
+   if(pot_sign_map_uv_next(&map,e,&u,&v,seeded)){
+    seeded=1;
     char ink=pot_sign_art[v][u];
     if(ink=='X')*out=detail==2u?HD_INK:HD_STONE_DARK;
     else if(ink=='g'&&detail==2u)*out=HD_LEAF_DARK;

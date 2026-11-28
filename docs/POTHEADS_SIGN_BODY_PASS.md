@@ -29,3 +29,12 @@ accessible file library. Re-review the actual opening film before claiming
 visual approval. The host cache builder evaluates ten span-gap options,
 choosing by padded size then raw packet length; existing ROT3 format,
 30-Hz sampling, scene limit and runtime RAM allocation are unchanged.
+
+### Cadence follow-up
+Emulator capture of the first projective pass succeeded, but the opening
+benchmark fell to 26.579 presented pictures/s from 29.466. The cache
+became 13,180 bytes smaller. Replace per-pixel divisions with exact
+incremental rounded quotients, and permit bounded eight-sample cache
+catch-up for small stalls. No new buffers or frame dropping. These
+changes must pass the full host, cartridge and emulator cadence gates
+before release; cause of regression and final performance not yet proven.

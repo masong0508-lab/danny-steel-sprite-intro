@@ -103,6 +103,25 @@ static int verify_runtime(FILE *out,unsigned bytes){
   if(!compare_runtime(clip,sample*2u)||live_calls!=before)goto done;
   count++;seeks++;
  }
+ unsigned catches=0;
+ for(unsigned start=90u;start+ROTO_ADVANCE_WINDOW<POT_CACHE_SAMPLES;start+=11u){
+  roto_cache_begin_frame(0);
+  if(!compare_runtime(clip,start*2u))goto done;
+  unsigned cost=0,end=start+ROTO_ADVANCE_WINDOW;
+  for(unsigned i=start+1u;i<=end;i++){
+   unsigned off=clip[5u+i],lengths=*(const uint32_t *)((const uint8_t *)clip+off);
+   cost+=(lengths&65535u)+(lengths>>16);
+  }
+  unsigned before=live_calls;
+  if(!compare_runtime(clip,end*2u))goto done;
+  if(cost<=ROTO_ADVANCE_BUDGET){
+   if(live_calls!=before)goto done;
+   catches++;
+  }
+  count+=2u;
+ }
+ if(!catches)goto done;
+ printf("ROT3 bounded catch-up: %u exact eight-sample replays without live painting\n",catches);
  uint32_t rng=41u;
  for(unsigned i=0;i<128u;i++){
   rng=rng*1664525u+1013904223u;

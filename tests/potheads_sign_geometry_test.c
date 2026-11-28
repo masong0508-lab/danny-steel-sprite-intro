@@ -41,6 +41,21 @@ int main(void){
  check_uv(trapezoid,(PotPoint){40,27},32,13,1);
  const PotPoint singular[4]={{0,0},{80,0},{80,1},{0,0}};
  PotSignMap bad;assert(!pot_sign_map_init(singular,&bad));
+ unsigned stepping=0;
+ for(unsigned d=1;d<=33553920u;d=d*3u+1u){
+  for(unsigned limit=25u;limit<=63u;limit+=38u){
+   /* n <= min(65535*256*limit, d*limit), as in the real edge map. */
+   uint32_t max_n=d<16776960u?d*limit:16776960u*limit;
+   for(unsigned k=0;k<=128u;k++){
+    uint32_t n=(uint32_t)((uint64_t)max_n*k/128u);
+    unsigned expected=(n+d/2u)/d;
+    for(unsigned prior=0;prior<=limit;prior++)
+     assert(pot_sign_uv_step(prior,n,d,limit)==expected);
+    stepping++;
+   }
+  }
+ }
+ printf("Exact incremental sign quotients: %u denominator/numerator cases with all starting texels\n",stepping);
  unsigned held=0,falling=0,clipped=0,readable=0,hidden=0,planar=0,stabilized=0,uv_samples=0;
  for(unsigned t=0;t<=POT_TRACE_LAST_TICK;t++){
   PotPose p;pot_trace_sample(t,&p);
@@ -75,10 +90,15 @@ int main(void){
      }
      /* Check a screen-space grid including rejected pixels outside the
         exact face; no texture access can ever exceed the authored art. */
-     for(int y=0;y<135;y+=11)for(int x=0;x<240;x+=13){
-      int e[4];for(unsigned j=0;j<4u;j++)e[j]=pot_sign_cross(face[j],face[(j+1u)&3u],(PotPoint){x,y});
-      unsigned u,v;
-      if(pot_sign_map_uv(&map,e,&u,&v)){assert(u<64u&&v<26u);uv_samples++;}
+     for(int y=0;y<135;y+=11){
+      unsigned prev_u=0,prev_v=0;int seeded=0;
+      for(int x=0;x<240;x++){
+       int e[4];for(unsigned j=0;j<4u;j++)e[j]=pot_sign_cross(face[j],face[(j+1u)&3u],(PotPoint){x,y});
+       unsigned u,v;
+       int ok=pot_sign_map_uv(&map,e,&u,&v);
+       assert(pot_sign_map_uv_next(&map,e,&prev_u,&prev_v,seeded)==ok);
+       if(ok){assert(u<64u&&v<26u&&prev_u==u&&prev_v==v);seeded=1;uv_samples++;}
+      }
      }
     }
    }
