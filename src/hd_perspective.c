@@ -1260,6 +1260,16 @@ static const uint8_t city_horizon_rise[11][235]={
   14,14,14,14,14,14,15,15,15,15,
  },
 };
+#if !defined(__arm__)
+/* Independent arithmetic reference for every immutable table entry. */
+int hd_city_horizon_tables_valid(void){
+ for(int c=0;c<48;c++)for(int k=0;k<11;k++)
+  if(city_horizon_side[c][k]!=(c*5+2-120)*(1024+512*k)/160)return 0;
+ for(int k=0;k<11;k++)for(int h=0;h<235;h++)
+  if(city_horizon_rise[k][h]!=h*400/(1024+512*k))return 0;
+ return 1;
+}
+#endif
 static void city_land_horizon(uint8_t *p,const Story *s,int cx,int cy,int fx,int fy,int rx,int ry){
  if(s->x<32u)return;
  const StoryTerrainRow *mesh=story_terrain_mesh(s);
