@@ -51,6 +51,10 @@ typedef struct {unsigned seed;uint8_t order[4],inverse[4];} WorldLayout;
 static WorldLayout world={0,{0,1,2,3},{0,1,2,3}};
 static unsigned world_revision;
 static char world_city[STORY_H][STORY_CITY_W] STORY_WORLD_RAM;
+/* Coordinate transforms are built once with the map. The hot renderer,
+   actor queries and material lookups no longer scan parcel envelopes. */
+static uint16_t city_origin[STORY_H][STORY_CITY_W] STORY_WORLD_RAM;
+static uint16_t city_destination[STORY_H][STORY_CITY_W] STORY_WORLD_RAM;
 static void world_layout(WorldLayout *w,unsigned seed){
  static const uint8_t divisor[4]={6,2,1,1};
  uint8_t available[4]={0,1,2,3};
@@ -84,8 +88,14 @@ static void world_transform(const WorldLayout *w,int *x,int *y,int inverse){
 }
 unsigned story_world_seed(void){return world.seed;}
 unsigned story_world_revision(void){return world_revision;}
-void story_world_source(int *x,int *y){world_transform(&world,x,y,0);}
-void story_world_place(int *x,int *y){world_transform(&world,x,y,1);}
+void story_world_source(int *x,int *y){
+ if(!world.seed||(unsigned)*x>=STORY_CITY_W||(unsigned)*y>=STORY_H)return;
+ unsigned id=city_origin[*y][*x];*x=(int)(id&63u);*y=(int)(id>>6);
+}
+void story_world_place(int *x,int *y){
+ if(!world.seed||(unsigned)*x>=STORY_CITY_W||(unsigned)*y>=STORY_H)return;
+ unsigned id=city_destination[*y][*x];*x=(int)(id&63u);*y=(int)(id>>6);
+}
 unsigned story_world_facing(unsigned facing){
  facing&=3u;
  if((facing&1u)?(world.seed&2u):(world.seed&1u))facing^=2u;
@@ -103,12 +113,22 @@ static char world_tile(const WorldLayout *w,int x,int y){
 char story_world_tile_for_seed(unsigned seed,int x,int y){
  WorldLayout w;world_layout(&w,seed);return world_tile(&w,x,y);
 }
+/* Read-only proposed world, independent of the live renderer/route caches. */
+void story_world_preview(unsigned seed,uint8_t out[STORY_H][STORY_W]){
+ WorldLayout w;world_layout(&w,seed);
+ for(int y=0;y<STORY_H;y++)for(int x=0;x<STORY_W;x++)
+  out[y][x]=(uint8_t)world_tile(&w,x,y);
+}
 void story_world_set(unsigned seed){
  seed%=STORY_WORLD_LAYOUTS;
  if(world.seed==seed)return;
  world_layout(&world,seed);
- if(seed)for(int y=0;y<STORY_H;y++)for(int x=0;x<STORY_CITY_W;x++)
-  world_city[y][x]=world_tile(&world,x,y);
+ if(seed)for(int y=0;y<STORY_H;y++)for(int x=0;x<STORY_CITY_W;x++){
+  int sx=x,sy=y;world_transform(&world,&sx,&sy,0);
+  city_origin[y][x]=(uint16_t)(sy*64+sx);
+  city_destination[sy][sx]=(uint16_t)(y*64+x);
+  world_city[y][x]=city_layout[sy][sx];
+ }
  ++world_revision;
 }
 char story_tile(int x, int y) {
@@ -127,7 +147,21 @@ unsigned story_land_level(const Story *s,unsigned patch){
    persistent game state or a second framebuffer. */
 static uint8_t brush[2][STORY_BRUSH_BYTES];
 static unsigned brush_revision[2],brush_initialized;
-static uint8_t hike_stage[2];
+static uint8_t hike_stage[2],city_tour_stage[2];
+unsigned story_city_tour_stage(unsigned slot){return city_tour_stage[slot&1u];}
+void story_city_tour_restore(unsigned slot,unsigned stage){
+ if(slot<2u&&stage<=STORY_CITY_TOUR_DONE)city_tour_stage[slot]=(uint8_t)stage;
+}
+static const uint8_t city_sites[STORY_CITY_STOPS][2]={
+ {26,6},{31,18},{11,24},{21,26},{34,23}
+};
+int story_city_site_position(unsigned id,int *x,int *y){
+ if(id>=STORY_CITY_STOPS)return 0;
+ int px=city_sites[id][0],py=city_sites[id][1];story_world_place(&px,&py);
+ if(x)*x=px;
+ if(y)*y=py;
+ return 1;
+}
 unsigned story_hike_stage(unsigned slot){return hike_stage[slot&1u];}
 void story_hike_restore(unsigned slot,unsigned stage){
  if(slot<2u&&stage<=4u)hike_stage[slot]=(uint8_t)stage;
@@ -187,7 +221,7 @@ static int brush_sample(const uint8_t *data,int x,int y){
  int h=(a*(2-(int)fx)+b*(int)fx)*(2-(int)fy)+(c*(2-(int)fx)+d*(int)fx)*(int)fy;
  return h*3*brush_weight(x,y)/8;
 }
-static const uint8_t (*terrain_ready(const Story *s))[STORY_W-STORY_CITY_W+1]{
+const StoryTerrainRow *story_terrain_mesh(const Story *s){
  unsigned slot=s->slot;brush_init(slot);
  if(mesh_slot!=slot||mesh_style!=s->terrain_style||mesh_revision!=brush_revision[slot]){
   static const uint8_t px[2]={44,54},py[2]={8,24};
@@ -206,15 +240,11 @@ static const uint8_t (*terrain_ready(const Story *s))[STORY_W-STORY_CITY_W+1]{
 }
 int story_terrain_vertex(const Story *s,int x,int y){
  if(x<STORY_CITY_W||x>STORY_W||(unsigned)y>STORY_H)return 0;
- return terrain_ready(s)[y][x-STORY_CITY_W];
+ return story_terrain_mesh(s)[y][x-STORY_CITY_W];
 }
 int story_terrain_height(const Story *s,int wx,int wy){
- int x=wx>>8,y=wy>>8,fx=wx&255,fy=wy&255;
- if(x<STORY_CITY_W||x>=STORY_W||(unsigned)y>=STORY_H)return 0;
- const uint8_t (*mesh)[STORY_W-STORY_CITY_W+1]=terrain_ready(s);
- unsigned col=(unsigned)(x-STORY_CITY_W);
- int a=mesh[y][col],b=mesh[y][col+1u],c=mesh[y+1][col],d=mesh[y+1][col+1u];
- return ((a*(256-fx)+b*fx)*(256-fy)+(c*(256-fx)+d*fx)*fy)>>16;
+ if(!story_rural(wx>>8,wy>>8))return 0;
+ return story_mesh_height(story_terrain_mesh(s),wx,wy);
 }
 static int outdoor_available(const Story *s){
  return !s->ended&&
@@ -222,22 +252,74 @@ static int outdoor_available(const Story *s){
     (s->rescue_stage==STORY_RESCUE_NONE||s->rescue_stage==STORY_RESCUE_SAVED);
 }
 static int land_safe(const Story *s){return outdoor_available(s)&&story_rural(s->x,s->y);}
+/* Transient input recognizer, deliberately outside the save codec.
+   Only the ordinary pause root can consume the full Konami sequence. */
+static uint8_t konami_step;
+static int konami_root(const Story *s){
+ return s->paused&&!(s->choice&~1u)&&outdoor_available(s)&&
+        !s->dialogue&&!s->cinema&&!s->activity&&!s->battle&&!s->risk_menu&&!s->choosing;
+}
+static int konami_input(Story *s,uint16_t keys,uint16_t pressed){
+ static const uint16_t sequence[]={64u,64u,128u,128u,32u,16u,32u,16u,2u,1u,8u};
+ if(!konami_root(s)){konami_step=0;return 0;}
+ if(!pressed)return 0;
+ if(keys==pressed&&pressed==sequence[konami_step]){
+  if(++konami_step==sizeof sequence/sizeof sequence[0]){
+   konami_step=0;s->choice=STORY_DEBUG_MENU;
+   s->studio_cursor=(uint8_t)((story_world_seed()+37u)%STORY_WORLD_LAYOUTS);
+  }
+  return 1;
+ }
+ konami_step=0;
+ if(keys==64u&&pressed==64u){konami_step=1;return 1;}
+ /* Wrong keys keep their normal pause-menu action. In particular,
+    B still exits from the root and A still opens the field guide. */
+ return 0;
+}
 static int hike_tracking(const Story *s){
  unsigned stage=story_hike_stage(s->slot);
  return outdoor_available(s)&&stage>=1u&&stage<=3u;
 }
+int story_city_tour_visible(const Story *s){
+ return outdoor_available(s)&&(s->flags&STORY_ALL)==STORY_ALL;
+}
+static int city_tour_tracking(const Story *s){
+ unsigned stage=story_city_tour_stage(s->slot);
+ return story_city_tour_visible(s)&&!hike_tracking(s)&&stage>0u&&stage<STORY_CITY_TOUR_DONE;
+}
+static int city_tour_here(const Story *s){
+ if(!story_city_tour_visible(s)||hike_tracking(s)||!story_city_extension(s->x,s->y)||story_rural(s->x,s->y))return -1;
+ int x=s->x,y=s->y;story_world_source(&x,&y);
+ unsigned stage=story_city_tour_stage(s->slot);
+ if(x==city_sites[0][0]&&y==city_sites[0][1])return 0;
+ if(stage>0u&&stage<STORY_CITY_TOUR_DONE&&x==city_sites[stage][0]&&y==city_sites[stage][1])return (int)stage;
+ return -1;
+}
 static unsigned brush_x(const Story *s){return ((unsigned)s->x-STORY_CITY_W+1u)/2u;}
 static unsigned brush_y(const Story *s){return ((unsigned)s->y+1u)/2u;}
-int story_brush_mode(const Story *s){
- return story_land_tools_enabled()&&land_safe(s)&&!s->paused&&!s->dialogue&&!s->activity&&!s->battle&&!s->risk_menu&&
-        !s->choosing&&(s->choice&STORY_BRUSH_MODE);
+int story_debug_menu(const Story *s){
+ return outdoor_available(s)&&s->paused&&
+        (s->choice&(STORY_DEBUG_MENU|0xe0u))==STORY_DEBUG_MENU&&
+        (s->choice&STORY_DEBUG_SELECT_MASK)<STORY_DEBUG_ROWS;
 }
-int story_brush_editable(const Story *s){
- if(!story_land_tools_enabled()||!land_safe(s)||story_solid(s->x,s->y))return 0;
+int story_debug_survey(const Story *s){
+ return land_safe(s)&&!s->paused&&!s->dialogue&&!s->activity&&
+        !s->battle&&!s->risk_menu&&!s->choosing&&
+        (s->choice&(STORY_DEBUG_ACCESS|STORY_SURVEY_MODE|STORY_BRUSH_MODE))==(STORY_DEBUG_ACCESS|STORY_SURVEY_MODE);
+}
+int story_brush_mode(const Story *s){
+ return land_safe(s)&&!s->paused&&!s->dialogue&&!s->activity&&!s->battle&&!s->risk_menu&&
+        !s->choosing&&(s->choice&(STORY_DEBUG_ACCESS|STORY_SURVEY_MODE|STORY_BRUSH_MODE))==(STORY_DEBUG_ACCESS|STORY_BRUSH_MODE);
+}
+static int brush_site_valid(const Story *s){
+ if(!land_safe(s)||story_solid(s->x,s->y))return 0;
  return brush_weight(s->x,s->y)>0&&node_allowed(brush_x(s),brush_y(s));
 }
+int story_brush_editable(const Story *s){
+ return story_brush_mode(s)&&brush_site_valid(s);
+}
 unsigned story_brush_grade(const Story *s){
- if(!story_brush_editable(s))return 1u;
+ if(!brush_site_valid(s))return 1u;
  brush_init(s->slot);return node_grade(brush[s->slot],brush_x(s),brush_y(s));
 }
 static void brush_grade(Story *s,int delta){
@@ -256,7 +338,7 @@ unsigned story_land_action(const Story *s){
  if((hike==1u&&s->x==49&&s->y==6)||(hike==2u&&s->x==53&&s->y==13))
     return STORY_LAND_WAYPOINT;
  if(hike==3u&&s->x==56&&s->y==11)return STORY_LAND_FINISH;
- if(story_land_tools_enabled()){
+ if(story_debug_survey(s)){
   if(s->x==44&&s->y==8)return STORY_LAND_PATCH0;
   if(s->x==54&&s->y==24)return STORY_LAND_PATCH1;
  }
@@ -442,6 +524,11 @@ static int story_goal_original(const Story *s, int *x, int *y, const char **labe
         else {*x=56;*y=11;*label="SUMMIT";}
         return 1;
     }
+    if(city_tour_tracking(s)){
+        static const char *const stops[]={"CITY WALK","CIVIC STUDY","PARK STUDY","CANAL STUDY","RIVER STUDY"};
+        unsigned stage=story_city_tour_stage(s->slot);
+        *x=city_sites[stage][0];*y=city_sites[stage][1];*label=stops[stage];return 1;
+    }
     if(show_tracking(s)){show_goal(s,x,y,label);return 1;}
     if(creative_tracking(s)){
         switch(s->neighborhood_target){
@@ -603,6 +690,7 @@ const char *story_goal_reason(const Story *s){
     default:break;
     }
     if(hike_tracking(s))return "HIKE / A AT NEXT TRAIL SIGN";
+    if(city_tour_tracking(s))return "SKETCH WALK / A AT NEXT SIGN";
     if(show_tracking(s)){
         switch(story_show_stage(s)){
         case 0:return "ASK MARA ABOUT A SHOW";
@@ -653,6 +741,7 @@ const char *story_goal_kind(const Story *s){
        s->life_stage==STORY_LIFE_FINAL_CLINIC)return "CARE";
     if(s->life_stage==STORY_LIFE_LAST_WORK)return "LAST";
     if(hike_tracking(s))return "HIKE";
+    if(city_tour_tracking(s))return "ART";
     if(show_tracking(s))return "SHOW";
     if(creative_tracking(s)||neighborhood_tracking(s))return "SIDE";
     if(s->life_stage==STORY_LIFE_WAIT ||
@@ -779,8 +868,9 @@ enum { D_NONE, D_OPEN, D_LETTER, D_LETTER_AGAIN, D_CLERK_LOCKED, D_CLERK, D_CLER
        D_NB_RETURN_13_0,
        D_NB_RETURN_13_1,D_CITY_EAST,D_CITY_CIVIC,D_CITY_PARK,D_CITY_CANAL,D_CITY_PLAZA,
        D_LAND_TRAIL,D_LAND_RIDGE,D_LAND_SHORE,D_LAND_SKETCH,D_LAND_SKETCH_DONE,D_LAND_REST,
-       D_HIKE_START,D_HIKE_MEADOW,D_HIKE_RIDGE,D_HIKE_DONE,D_HIKE_STOP,D_HIKE_AGAIN };
-_Static_assert(D_HIKE_AGAIN<256,"dialogue ID width");
+       D_HIKE_START,D_HIKE_MEADOW,D_HIKE_RIDGE,D_HIKE_DONE,D_HIKE_STOP,D_HIKE_AGAIN,
+       D_TOUR_START,D_TOUR_CIVIC,D_TOUR_PARK,D_TOUR_CANAL,D_TOUR_FINISH,D_TOUR_STOP,D_TOUR_DONE };
+_Static_assert(D_TOUR_DONE<256,"dialogue ID width");
 #define SCRIPT(name, ...) static const StoryPage name[] = { __VA_ARGS__ }
 /* The banana-sign shift is practical income, not Danny's calling. He is
    grateful for the stability without pretending to enjoy mascot work. */
@@ -1641,6 +1731,25 @@ SCRIPT(d_hike_stop,
  {"DANNY","I'll head back for now.","The trail can wait."});
 SCRIPT(d_hike_again,
  {"DANNY","I've climbed the ridge.","I can walk it again."});
+SCRIPT(d_tour_start,
+ {"DANNY","Four studies, one city.","I'll start at Civic Row."},
+ {"SKETCH WALK","Civic, park, canal,","then the river plaza."});
+SCRIPT(d_tour_civic,
+ {"DANNY","Stone and tall windows.","The old city has bones."},
+ {"DANNY","A study for the canvas.","Next stop: the park."});
+SCRIPT(d_tour_park,
+ {"DANNY","Trees soften the street.","I'll sketch the light."},
+ {"DANNY","The canal is next.","Room to think at last."});
+SCRIPT(d_tour_canal,
+ {"DANNY","The water holds the sky.","Let the lines loosen."},
+ {"DANNY","One more study to go.","Meet the river plaza."});
+SCRIPT(d_tour_finish,
+ {"DANNY","Four pages of the city.","Not just another shift."},
+ {"DANNY","I have enough to paint.","The walk was worth it."});
+SCRIPT(d_tour_stop,
+ {"DANNY","I'll put the book away.","The city will be here."});
+SCRIPT(d_tour_done,
+ {"DANNY","My studies are complete.","I'll enjoy the view."});
 SCRIPT(d_mara_master_shared,
  {"MARA", "Your song is here.", "I kept the copy."},
  {"DANNY", "I can still change", "the arrangement."},
@@ -1823,9 +1932,10 @@ static const struct { const StoryPage *pages; uint8_t count; } scripts[] = {
   SEQ(d_nb_return_13_0),
   SEQ(d_nb_return_13_1),SEQ(d_city_east),SEQ(d_city_civic),SEQ(d_city_park),SEQ(d_city_canal),SEQ(d_city_plaza),
   SEQ(d_land_trail),SEQ(d_land_ridge),SEQ(d_land_shore),SEQ(d_land_sketch),SEQ(d_land_sketch_done),SEQ(d_land_rest),
-  SEQ(d_hike_start),SEQ(d_hike_meadow),SEQ(d_hike_ridge),SEQ(d_hike_done),SEQ(d_hike_stop),SEQ(d_hike_again)
+  SEQ(d_hike_start),SEQ(d_hike_meadow),SEQ(d_hike_ridge),SEQ(d_hike_done),SEQ(d_hike_stop),SEQ(d_hike_again),
+  SEQ(d_tour_start),SEQ(d_tour_civic),SEQ(d_tour_park),SEQ(d_tour_canal),SEQ(d_tour_finish),SEQ(d_tour_stop),SEQ(d_tour_done)
 };
-_Static_assert(sizeof(scripts)/sizeof(scripts[0])==D_HIKE_AGAIN+1u,"script table order");
+_Static_assert(sizeof(scripts)/sizeof(scripts[0])==D_TOUR_DONE+1u,"script table order");
 static int neighborhood_return_id(unsigned id){
  return id>=D_NB_RETURN_0_0&&id<=D_NB_RETURN_13_1?(int)(id-D_NB_RETURN_0_0):-1;
 }
@@ -2021,9 +2131,11 @@ static void talk(Story *s, uint8_t id) {
 }
 void story_new_seeded(Story *s,int slot,unsigned seed) {
     story_world_set(seed);
+    konami_step=0;
     *s = (Story){0};
     s->terrain_style=STORY_LAND_DEFAULT;
     brush_reset((unsigned)slot&1u);
+    city_tour_stage[(unsigned)slot&1u]=0;
     studio_reset(); /* a new game starts with a clean optional tune */
     /* The Potheads opening now lands at its ACTUAL storefront; the first
        controllable frame starts beside the same facade seen in the film.
@@ -2408,6 +2520,9 @@ static int shift_here(const Story *s){
 }
 const char *story_action_hint(const Story *s){
     if(story_brush_mode(s))return story_brush_editable(s)?"A RAISE":"LAND LOCKED";
+    int tour=city_tour_here(s);
+    if(tour==0)return city_tour_tracking(s)?"A END WALK":story_city_tour_stage(s->slot)==STORY_CITY_TOUR_DONE?"A STUDIES":"A WALK";
+    if(tour>0)return "A SKETCH";
     unsigned land=story_land_action(s);
     if(land==STORY_LAND_PATCH0||land==STORY_LAND_PATCH1)return "A RAISE";
     if(land==STORY_LAND_SUMMIT)return s->art_steps<STORY_PROJECT_DONE?"A SKETCH":"A VIEW";
@@ -2510,6 +2625,7 @@ static void resolve_risk(Story *s){
     }else if(selected)commit_bad(s,target);
 }
 static void land_grade(Story *s,unsigned patch,int delta){
+    if(!story_debug_survey(s))return;
     unsigned old=story_land_level(s,patch);
     int next=(int)old+delta;
     if(next<0||next>3)return;
@@ -2518,6 +2634,27 @@ static void land_grade(Story *s,unsigned patch,int delta){
     s->dirty=1;
 }
 static void interact(Story *s) {
+    int tour=city_tour_here(s);
+    if(tour==0){
+        unsigned stage=story_city_tour_stage(s->slot);
+        if(stage==STORY_CITY_TOUR_DONE)talk(s,D_TOUR_DONE);
+        else if(stage){story_city_tour_restore(s->slot,0);s->dirty=1;talk(s,D_TOUR_STOP);}
+        else{story_city_tour_restore(s->slot,1);s->dirty=1;talk(s,D_TOUR_START);}
+        return;
+    }
+    if(tour>0){
+        unsigned stage=(unsigned)tour;
+        story_city_tour_restore(s->slot,stage+1u);s->dirty=1;
+        /* One finished walk completes one art layer. Intermediate
+           studies cannot be farmed by restarting the route. */
+        if(stage==STORY_CITY_TOUR_DONE-1u){
+            if(s->art_steps<STORY_PROJECT_DONE){
+                ++s->art_steps;s->flags|=STORY_ART;remember(s,STORY_DAY_ART);
+            }
+            stat_gain(&s->spark,2u);work_gain(s,2u);
+        }
+        talk(s,(uint8_t)(D_TOUR_CIVIC+stage-1u));return;
+    }
     unsigned land=story_land_action(s);
     if(land==STORY_LAND_TRAILHEAD){
         unsigned stage=story_hike_stage(s->slot);
@@ -2794,6 +2931,7 @@ void story_tick(Story *s, uint16_t keys) {
     enum { A=1, B=2, SELECT=4, START=8, RIGHT=16, LEFT=32, UP=64, DOWN=128, R=256, L=512 };
     uint16_t pressed = (uint16_t)(keys & ~s->old_keys);
     s->old_keys = keys;
+    if(!konami_root(s))konami_step=0;
     if (s->anim) --s->anim;
     /* The fourth violation after a SUCCESSFUL rescue retains its original
        immediate-bad-ending consequence. A failed rescue now has a playable,
@@ -3092,6 +3230,57 @@ void story_tick(Story *s, uint16_t keys) {
         }
         return;
     }
+    /* World tools are in the regular cartridge, but ordinary input
+       reaches this modal only after the complete Konami code. */
+    if(story_debug_menu(s)){
+        unsigned selected=s->choice&STORY_DEBUG_SELECT_MASK;
+        if(pressed&(B|START)){
+            if((s->choice&STORY_DEBUG_CONFIRM)&&!(pressed&START))s->choice&=(uint8_t)~STORY_DEBUG_CONFIRM;
+            else{s->paused=0;s->choice=0;s->studio_cursor=0;}
+            return;
+        }
+        if(s->choice&STORY_DEBUG_CONFIRM){
+            if(pressed&A){
+                if(selected==0u){
+                    unsigned next=s->studio_cursor%STORY_WORLD_LAYOUTS;
+                    if(next!=story_world_seed()){
+                        int x=s->x,y=s->y;
+                        int in_core=x>=1&&x<=22&&y>=1&&y<=16;
+                        unsigned face=in_core?story_world_facing(s->facing):s->facing;
+                        story_world_source(&x,&y);
+                        story_world_set(next);story_world_place(&x,&y);
+                        s->x=s->prev_x=(uint8_t)x;s->y=s->prev_y=(uint8_t)y;
+                        s->facing=(uint8_t)(in_core?story_world_facing(face):face);
+                        s->anim=s->cooldown=0;s->dirty=1;
+                    }
+                }else if(selected==3u){
+                    /* Keep the hike, story flags and creative work intact. */
+                    s->terrain_style=STORY_LAND_DEFAULT;
+                    brush_init(s->slot);memset(brush[s->slot],0x55,STORY_BRUSH_BYTES);
+                    ++brush_revision[s->slot];s->dirty=1;
+                }
+                s->choice&=(uint8_t)~STORY_DEBUG_CONFIRM;
+            }
+            return;
+        }
+        if(pressed&(UP|DOWN)){
+            selected=(selected+((pressed&UP)?STORY_DEBUG_ROWS-1u:1u))%STORY_DEBUG_ROWS;
+            s->choice=(uint8_t)(STORY_DEBUG_MENU|selected);
+        }else if(selected==0u&&(pressed&(LEFT|RIGHT))){
+            s->studio_cursor=(uint8_t)((s->studio_cursor+((pressed&LEFT)?STORY_WORLD_LAYOUTS-1u:1u))%STORY_WORLD_LAYOUTS);
+        }else if(selected==0u&&(pressed&R)){
+            s->studio_cursor=(uint8_t)((s->studio_cursor+37u)%STORY_WORLD_LAYOUTS);
+        }else if(pressed&A){
+            if(selected==0u||selected==3u)s->choice|=STORY_DEBUG_CONFIRM;
+            else if(selected==4u){s->paused=0;s->choice=0;s->studio_cursor=0;}
+            else if(land_safe(s)){
+                s->paused=0;s->choice=(uint8_t)(STORY_DEBUG_ACCESS|(selected==1u?STORY_BRUSH_MODE:STORY_SURVEY_MODE));
+                s->studio_cursor=0;
+            }
+        }
+        return;
+    }
+    if(konami_input(s,keys,pressed))return;
     if(pressed&START){
         s->paused^=1u;
         /* The journal is transient UI, never part of a bus decision. */
@@ -3155,15 +3344,14 @@ void story_tick(Story *s, uint16_t keys) {
         }
         return;
     }
-    /* SELECT switches the countryside brush on/off. L still switches
-       cameras; outside the countryside SELECT retains its old alias. */
-    if(!story_land_tools_enabled()||!land_safe(s))s->choice&=(uint8_t)~STORY_BRUSH_MODE;
-    if(story_land_tools_enabled()&&(pressed&SELECT)&&land_safe(s)){
-        s->choice^=STORY_BRUSH_MODE;return;
+    /* SELECT can only leave an editing mode, never enter it directly.
+       All editing entry points are behind the debug menu. */
+    if(!land_safe(s))s->choice&=(uint8_t)~(STORY_DEBUG_ACCESS|STORY_BRUSH_MODE|STORY_SURVEY_MODE);
+    if((story_brush_mode(s)||story_debug_survey(s))&&(pressed&(SELECT|R))){
+        s->choice=0;return;
     }
     if(story_brush_mode(s)){
-        if(pressed&R)s->choice&=(uint8_t)~STORY_BRUSH_MODE;
-        else if(pressed&(A|B)){
+        if(pressed&(A|B)){
             if((pressed&(A|B))==A)brush_grade(s,1);
             else if((pressed&(A|B))==B)brush_grade(s,-1);
             return;

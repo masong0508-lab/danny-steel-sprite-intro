@@ -6,6 +6,7 @@
 #include "hd_project_props.h"
 #include "city_furniture.h"
 #include "hd_landscape.h"
+#include "hd_iso_bounds.h"
 
 /* A real isometric projection of the ACTUAL 24x18 walkable town:
    x grows southeast and y southwest, so D-pad logic stays cardinal
@@ -18,6 +19,51 @@ static unsigned grain(int x,int y){
             (uint32_t)(y+131)*668265263u;
  n^=n>>13;n*=1274126177u;return (unsigned)(n^(n>>16));
 }
+/* Static ROM address grid replaces eighteen comparisons per candidate
+   tile. Its coordinates are canonical; the seeded transform resolves
+   the actual location before lookup. No new RAM allocation. */
+static const uint8_t iso_furniture[STORY_H][STORY_CITY_W]={
+ [2][31]='j',
+ [6][27]='j',
+ [7][33]='j',
+ [12][32]='j',
+ [16][29]='j',
+ [16][35]='j',
+ [19][10]='j',
+ [26][12]='j',
+ [19][21]='j',
+ [24][24]='j',
+ [22][34]='j',
+ [23][37]='j',
+ [22][9]='u',
+ [24][12]='u',
+ [6][36]='u',
+ [16][28]='u',
+ [22][31]='u',
+ [26][22]='u',
+ [6][26]='i',
+ [18][31]='i',
+ [24][11]='i',
+ [26][21]='i',
+ [23][34]='i',
+};
+static unsigned iso_prop(int x,int y){
+ if((unsigned)x>=STORY_CITY_W||(unsigned)y>=STORY_H)return 0;
+ story_world_source(&x,&y);
+ return iso_furniture[y][x];
+}
+#if !defined(__arm__)
+int hd_iso_furniture_index_valid(void){
+ for(int y=0;y<STORY_H;y++)for(int x=0;x<STORY_CITY_W;x++){
+  unsigned expected=0;
+  for(unsigned i=0;i<sizeof city_furniture/sizeof city_furniture[0];i++)
+   if(city_furniture[i].x==x&&city_furniture[i].y==y)expected=city_furniture[i].kind;
+  int wx=x,wy=y;story_world_place(&wx,&wy);
+  if(iso_prop(wx,wy)!=expected)return 0;
+ }
+ return 1;
+}
+#endif
 static int exposed(int x,int y){
  char c=story_tile(x,y);
  return c!='#'&&c!='A';
@@ -99,11 +145,13 @@ static void building(uint8_t *p,int sx,int sy,int wx,int wy,
  /* District-level masses and architecture: the central archive is one
     coherent masonry block; the east shop row uses one low roof line.
     Border neighborhoods vary at block boundaries, not tile by tile. */
- HdDistrict d=hd_district(wx,wy,type);
+ int source_x=wx,source_y=wy;
+ story_world_source(&source_x,&source_y);
+ HdDistrict d=hd_district_source(source_x,source_y,type);
  int civic=d.civic,shops=d.shops,waterfront=d.waterfront;
  unsigned h=d.height,variant=d.variant;
  int front=exposed(wx,wy+1),side=exposed(wx+1,wy);
- int potheads=story_world_potheads(wx,wy);
+ int potheads=source_x==21&&source_y==11;
  int sign_x=sx+31,sign_y=sy-(int)h-13;
  int sign_visible=!(potheads&&(wx+wy)*8>actor_depth &&
       sign_x<actor_x+12&&sign_x+53>actor_x-12&&
@@ -165,6 +213,16 @@ static void lamp(uint8_t *p,int sx,int sy,unsigned tick){
  hd_rect(p,x-4,y-27,9,3,HD_LAMP);
  hd_pixel(p,x,y-27,HD_PAPER);
  if(((tick/45u)&1u)==0u)hd_rect(p,x-1,y+3,3,1,HD_GOLD);
+}
+static void study_sign(uint8_t *p,int sx,int sy){
+ int x=sx+16,y=sy+12;
+ hd_ellipse(p,x,y+1,7,2,HD_SHADOW);
+ hd_rect(p,x-1,y-15,3,15,HD_BARK);
+ hd_rect(p,x-7,y-19,15,10,HD_STONE_DARK);
+ hd_rect(p,x-6,y-18,13,8,HD_PLASTER);
+ hd_rect(p,x-4,y-16,9,4,HD_COPPER);
+ hd_line(p,x-3,y-13,x,y-15,HD_INK);
+ hd_line(p,x,y-15,x+3,y-13,HD_INK);
 }
 static void bus(uint8_t *p,int sx,int sy,unsigned tick){
  /* Compact three-quarter view of the same cream-roofed last bus seen
@@ -419,7 +477,8 @@ static void rain(uint8_t *p,unsigned tick){
 static void landscape_iso(uint8_t *p,const Story *s,unsigned tick){
  hd_landscape_sky(p,s);
  HdSceneCamera camera=hd_scene_camera(s);
- int eye=story_terrain_height(s,camera.x,camera.y);
+ const StoryTerrainRow *mesh=story_terrain_mesh(s);
+ int eye=story_mesh_height(mesh,camera.x,camera.y);
  int gx=0,gy=0;const char *goal=0;
  int has_goal=story_goal(s,&gx,&gy,&goal);
  int dir=-1,steps=-1,route=story_route(s,&dir,&steps);
@@ -440,23 +499,29 @@ static void landscape_iso(uint8_t *p,const Story *s,unsigned tick){
    if(first<0)first=0;
    if(last>=STORY_W)last=STORY_W-1;
    int sx=104+16*(2*first-depth-(int)s->x+(int)s->y)-camera.iso_x;
+   int skip=hd_iso_prefix(sx,-65,5u);
+   first+=skip;sx+=skip*32;
    for(int x=first;x<=last;x++,sx+=32){
-    if(sx<-64)continue;
     if(sx>256)break;
     int y=depth-x;
     char tile=story_tile(x,y);
-    int h=story_terrain_height(s,x*256+128,y*256+128),sy=base-h;
+    unsigned rural=story_rural(x,y);
+    int a=0,b=0,c=0,d=0;
+    if(rural){
+     int col=x-STORY_CITY_W;
+     a=mesh[y][col];b=mesh[y][col+1];
+     c=mesh[y+1][col];d=mesh[y+1][col+1];
+    }
+    int h=(a+b+c+d)>>2,sy=base-h;
     if(sy<-100||sy>214)continue;
-    unsigned n=grain(x,y),rural=story_rural(x,y);
     if(!pass){
+     unsigned n=grain(x,y);
      if(sy>175)continue;
      if(!rural){
       hd_iso_tile_detail(p,sx,sy,material(tile,n));
       if(tile=='~'||tile==','||tile=='='||tile=='.')
        ground_detail(p,sx,sy,n,tile,tick);
      }else{
-      int a=story_terrain_vertex(s,x,y),b=story_terrain_vertex(s,x+1,y);
-      int c=story_terrain_vertex(s,x,y+1),d=story_terrain_vertex(s,x+1,y+1);
       HdLandPoint top={sx+16,base-a},right={sx+32,base+8-b},
                   bottom={sx+16,base+16-d},left={sx,base+8-c};
       unsigned shade1=(a+b>d+c),shade2=(a+c>b+d);
@@ -484,7 +549,7 @@ static void landscape_iso(uint8_t *p,const Story *s,unsigned tick){
      object(p,sx,sy,tile,tick,x,y,s,tall);
     }
     if(rural){
-     unsigned marker=hd_land_marker(x,y);
+     unsigned marker=hd_land_marker(s,x,y);
      if(marker){
       int mx=sx+23,my=sy+10;
       hd_rect(p,mx-1,my-12,2,12,HD_BARK);
@@ -492,12 +557,11 @@ static void landscape_iso(uint8_t *p,const Story *s,unsigned tick){
       hd_rect(p,mx-4,my-14,8,4,HD_PAPER);
       hd_pixel(p,mx,my-13,marker>=5u?HD_LEAF:HD_GOLD);
      }
-    }else if(tall&&!story_solid(x,y)){
-     int px=x,py=y;story_world_source(&px,&py);
-     for(unsigned j=0;j<sizeof city_furniture/sizeof city_furniture[0];j++){
-      const CityFurniture *prop=&city_furniture[j];
-      if(prop->x!=px||prop->y!=py)continue;
-      if(prop->kind=='j')lamp(p,sx,sy,tick);
+    }else if(tall){
+     unsigned prop=iso_prop(x,y);
+     if(prop&&!story_solid(x,y)){
+      if(prop=='j')lamp(p,sx,sy,tick);
+      else if(prop=='i'){if(story_city_tour_visible(s))study_sign(p,sx,sy);}
       else{
        hd_ellipse(p,sx+16,sy+12,11,3,HD_SHADOW);
        hd_line(p,sx+7,sy+1,sx+23,sy+9,HD_BARK);
@@ -505,7 +569,6 @@ static void landscape_iso(uint8_t *p,const Story *s,unsigned tick){
        hd_rect(p,sx+8,sy+5,2,5,HD_INK);
        hd_rect(p,sx+22,sy+11,2,3,HD_INK);
       }
-      break;
      }
     }
    }
@@ -530,8 +593,9 @@ void hd_isometric_draw(uint8_t *p,const Story *s,unsigned tick){
  for(int wy=-1;wy<=STORY_H;wy++){
   int sx=104+16*(-1-wy-(int)s->x+(int)s->y)-ox;
   int sy=72+8*(-1+wy-(int)s->x-(int)s->y)-oy;
-  for(int wx=-1;wx<=STORY_W;wx++,sx+=16,sy+=8){
-   if(sx<=-32||sy<=-18)continue;
+  int skip=hd_iso_ground_prefix(sx,sy);
+  sx+=skip*16;sy+=skip*8;
+  for(int wx=-1+skip;wx<=STORY_W;wx++,sx+=16,sy+=8){
    if(sx>=240||sy>=154)break;
    char c=story_tile(wx,wy);
    unsigned n=grain(wx,wy);
@@ -555,6 +619,7 @@ void hd_isometric_draw(uint8_t *p,const Story *s,unsigned tick){
  int actor_x=120,actor_foot=88;
  int player_depth=camera.depth;
  int drew_player=0;
+ int lx=17,ly=13;story_world_place(&lx,&ly);
  for(int depth=-2;depth<=STORY_W+STORY_H+1;depth++){
   /* Insert between the actual fractional depth planes while walking;
      drawing at the destination cell early would put him through walls. */
@@ -572,8 +637,9 @@ void hd_isometric_draw(uint8_t *p,const Story *s,unsigned tick){
   if(first< -1)first=-1;
   if(last>STORY_W)last=STORY_W;
   int sx=104+16*(2*first-depth-(int)s->x+(int)s->y)-ox;
+  int skip=hd_iso_prefix(sx,-48,5u);
+  first+=skip;sx+=skip*32;
   for(int wx=first;wx<=last;wx++,sx+=32){
-   if(sx<=-48)continue;
    if(sx>=256)break;
    int wy=depth-wx;
    char c=story_tile(wx,wy);
@@ -590,16 +656,14 @@ void hd_isometric_draw(uint8_t *p,const Story *s,unsigned tick){
     object(p,sx,sy,c,tick,wx,wy,s,
        !(depth*8>=player_depth && sx<actor_x+12 && sx+32>actor_x-12 &&
          sy+16>actor_foot-32 && sy-22<actor_foot+2));
-   int lx=17,ly=13;story_world_place(&lx,&ly);
    if(wx==lx&&wy==ly)lamp(p,sx,sy,tick);
-   if(story_city_extension(wx,wy)&&sy<166&&!story_solid(wx,wy)){
-    int px=wx,py=wy;story_world_source(&px,&py);
-    for(unsigned j=0;j<sizeof city_furniture/sizeof city_furniture[0];j++){
-     const CityFurniture *prop=&city_furniture[j];
-     if(prop->x!=px||prop->y!=py)continue;
-     if((wx+wy)*8>=player_depth&&sx<actor_x+12&&sx+32>actor_x-12&&
-        sy+16>actor_foot-32&&sy-24<actor_foot+2)break;
-     if(prop->kind=='j')lamp(p,sx,sy,tick);
+   if(story_city_extension(wx,wy)&&sy<166){
+    unsigned prop=iso_prop(wx,wy);
+    if(prop&&!story_solid(wx,wy)&&
+       !((wx+wy)*8>=player_depth&&sx<actor_x+12&&sx+32>actor_x-12&&
+         sy+16>actor_foot-32&&sy-24<actor_foot+2)){
+     if(prop=='j')lamp(p,sx,sy,tick);
+     else if(prop=='i'){if(story_city_tour_visible(s))study_sign(p,sx,sy);}
      else{
       hd_ellipse(p,sx+16,sy+12,11,3,HD_SHADOW);
       hd_line(p,sx+7,sy+1,sx+23,sy+9,HD_BARK);
@@ -607,7 +671,6 @@ void hd_isometric_draw(uint8_t *p,const Story *s,unsigned tick){
       hd_rect(p,sx+8,sy+5,2,5,HD_INK);
       hd_rect(p,sx+22,sy+11,2,3,HD_INK);
      }
-     break;
     }
    }
   }

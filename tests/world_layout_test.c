@@ -13,6 +13,7 @@ static uint16_t queue[STORY_W*STORY_H];
 static struct {uint8_t pre[32],p[HD_BYTES],post[32];} frame;
 static uint8_t prior[HD_BYTES];
 static unsigned canonical_count[256];
+static uint8_t preview[STORY_H][STORY_W];
 /* Immutable layout hashes captured from the original 96 seed recipes.
    A later generator must never silently relocate an existing save. */
 static const uint32_t legacy_hash[STORY_WORLD_BASE_LAYOUTS]={
@@ -86,7 +87,32 @@ static uint32_t layout_hash(unsigned seed){
   hash=(hash^(uint8_t)story_world_tile_for_seed(seed,x,y))*16777619u;
  return hash;
 }
+static void verify_random_pool(void){
+ WorldPool a,b,resumed;
+ world_pool_init(&a,12345u,255u);world_pool_init(&b,54321u,255u);
+ unsigned prior_seed=255u,different=0;
+ uint8_t raw[WORLD_POOL_LEN];
+ for(unsigned cycle=0;cycle<3u;cycle++){
+  uint8_t seen[STORY_WORLD_LAYOUTS]={0};
+  for(unsigned i=0;i<STORY_WORLD_LAYOUTS;i++){
+   unsigned seed=world_pool_pick(&a,i+cycle*31u);
+   unsigned other=world_pool_pick(&b,i+cycle*31u);
+   assert(seed<STORY_WORLD_LAYOUTS&&seed!=prior_seed&&!seen[seed]);
+   seen[seed]=1u;prior_seed=seed;different+=(seed!=other);
+   world_pool_encode(&a,raw);assert(world_pool_decode(&resumed,raw));
+   assert(a.last==resumed.last&&a.rng==resumed.rng&&!memcmp(a.used,resumed.used,sizeof a.used));
+   a=resumed;
+  }
+ }
+ assert(different>STORY_WORLD_LAYOUTS);
+ for(unsigned i=0;i<WORLD_POOL_LEN;i++){
+  raw[i]^=1u;assert(!world_pool_decode(&resumed,raw));raw[i]^=1u;
+ }
+ world_pool_init(&a,123u,37u);assert(world_pool_pick(&a,456u)!=37u);
+ puts("Random New Game: three full shuffled pools without repetitions, per-draw save/load, migration and CRC rejection");
+}
 int main(void){
+ verify_random_pool();
  Story s;story_new(&s,0);done(&s);
  for(int y=0;y<STORY_H;y++)for(int x=0;x<STORY_W;x++)canonical_count[(uint8_t)story_tile(x,y)]++;
  unsigned next=0;uint8_t used[STORY_WORLD_LAYOUTS]={0};
@@ -107,6 +133,12 @@ int main(void){
    assert(sx==x&&sy==y);
   }
   assert(!memcmp(tally,canonical_count,sizeof tally));
+  unsigned live_revision=story_world_revision();
+  unsigned proposed=(seed+37u)%STORY_WORLD_LAYOUTS;
+  story_world_preview(proposed,preview);
+  for(int y=0;y<STORY_H;y++)for(int x=0;x<STORY_W;x++)
+   assert(preview[y][x]==(uint8_t)story_world_tile_for_seed(proposed,x,y));
+  assert(story_world_seed()==seed&&story_world_revision()==live_revision);
   hashes[seed]=layout_hash(seed);
   if(seed<STORY_WORLD_BASE_LAYOUTS)assert(hashes[seed]==legacy_hash[seed]);
   for(unsigned i=0;i<seed;i++)assert(hashes[i]!=hashes[seed]);
@@ -152,10 +184,15 @@ int main(void){
   stand(&s,9,25,0);draw(&s,0);draw(&s,1);
  }
  assert(next==0u);
- /* Release lock: ordinary input can't modify either legacy plots or
-    the brush. Hiking, artwork and saved terrain data still exist. */
- assert(!story_land_tools_enabled());
+ /* Ordinary input cannot enter editing without the secret code.
+    Hiking, artwork and saved terrain data still exist. */
  story_new_seeded(&s,0,37u);done(&s);
+ unsigned before=story_world_seed();tap(&s,12u);
+ assert(!story_debug_menu(&s)&&s.paused&&story_world_seed()==before);
+ tap(&s,8u);assert(!s.paused);
+ /* A partial Konami prefix followed by START just resumes. */
+ tap(&s,8u);tap(&s,64u);tap(&s,64u);tap(&s,8u);
+ assert(!s.paused&&!story_debug_menu(&s)&&story_world_seed()==before);
  static const int patches[][2]={{44,8},{54,24},{50,7}};
  for(unsigned i=0;i<3u;i++){
   stand(&s,patches[i][0],patches[i][1],0);
@@ -165,6 +202,6 @@ int main(void){
   assert(s.terrain_style==style&&story_brush_revision(0)==rev);
  }
  stand(&s,42,7,0);tap(&s,1u);done(&s);assert(story_hike_stage(0)==1u);
- printf("Generated city: %u unique arrangements, conserved tile inventory, reachable story and neighborhood sites, live quest routes, guarded two-camera draws, persistent seeds and release terrain lock\n",STORY_WORLD_LAYOUTS);
+ printf("Generated city: %u unique arrangements, conserved tile inventory, reachable story and neighborhood sites, live quest routes, guarded two-camera draws, persistent seeds and hidden terrain lock\n",STORY_WORLD_LAYOUTS);
  return 0;
 }

@@ -30,15 +30,16 @@ static int put(FILE *out,const void *p,unsigned n){return fwrite(p,1,n,out)==n;}
 static int encode(FILE *out,const uint32_t *from,const uint32_t *to,unsigned *at){
  /* Choose the smallest real encoded packet, without lowering resolution,
     dropping pictures or changing the decoder. Host CPU only. */
- static const unsigned gaps[]={2u,3u,5u,8u,12u};
- unsigned best=UINT32_MAX,best_gap=0;
+ static const unsigned gaps[]={1u,2u,3u,4u,5u,6u,8u,10u,12u,16u};
+ unsigned best=UINT32_MAX,best_raw=UINT32_MAX,best_gap=0;
  for(unsigned j=0;j<sizeof gaps/sizeof gaps[0];j++){
   unsigned n=patch(from,to,packet,gaps[j]);
   if(n>ROTO_PACKET_MAX)continue;
   int z=n?LZ4_compress_HC((const char *)packet,compressed,(int)n,sizeof compressed,9):0;
   if(n&&z<=0)continue;
   unsigned stored=(z>0&&(unsigned)z<n)?(unsigned)z:n;
-  if(stored<best){best=stored;best_gap=gaps[j];}
+  unsigned padded=(stored+3u)&~3u;
+  if(padded<best||(padded==best&&n<best_raw)){best=padded;best_raw=n;best_gap=gaps[j];}
  }
  if(!best_gap)return 0;
  unsigned n=patch(from,to,packet,best_gap);
@@ -102,6 +103,25 @@ static int verify_runtime(FILE *out,unsigned bytes){
   if(!compare_runtime(clip,sample*2u)||live_calls!=before)goto done;
   count++;seeks++;
  }
+ unsigned catches=0;
+ for(unsigned start=90u;start+ROTO_ADVANCE_WINDOW<POT_CACHE_SAMPLES;start+=11u){
+  roto_cache_begin_frame(0);
+  if(!compare_runtime(clip,start*2u))goto done;
+  unsigned cost=0,end=start+ROTO_ADVANCE_WINDOW;
+  for(unsigned i=start+1u;i<=end;i++){
+   unsigned off=clip[5u+i],lengths=*(const uint32_t *)((const uint8_t *)clip+off);
+   cost+=(lengths&65535u)+(lengths>>16);
+  }
+  unsigned before=live_calls;
+  if(!compare_runtime(clip,end*2u))goto done;
+  if(cost<=ROTO_ADVANCE_BUDGET){
+   if(live_calls!=before)goto done;
+   catches++;
+  }
+  count+=2u;
+ }
+ if(!catches)goto done;
+ printf("ROT3 bounded catch-up: %u exact eight-sample replays without live painting\n",catches);
  uint32_t rng=41u;
  for(unsigned i=0;i<128u;i++){
   rng=rng*1664525u+1013904223u;

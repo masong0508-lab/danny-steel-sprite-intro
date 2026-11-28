@@ -13,12 +13,17 @@ static inline void hd_guide_map(uint8_t *p,const Story *s,int x,int y){
   if(tile=='=')ink=HD_STONE_LIT;
   if(story_rural(col,row)&&!story_solid(col,row)&&tile!='=')
    ink=story_terrain_vertex(s,col,row)>44?HD_STONE:HD_LEAF;
-  if(story_rural(col,row)&&((story_land_tools_enabled()&&((col==44&&row==8)||(col==54&&row==24)))||(col==56&&row==11)||(col==43&&row==22)||
+  if(story_rural(col,row)&&((((col==44&&row==8)||(col==54&&row==24))&&story_debug_survey(s))||(col==56&&row==11)||(col==43&&row==22)||
       (col==42&&row==7)||(col==49&&row==6)||(col==53&&row==13)))ink=HD_LAMP;
   if(tile=='M'||tile=='R'||tile=='F'||tile=='C'||tile=='K'||tile=='B')ink=HD_COPPER;
   if(has&&col==gx&&row==gy)ink=HD_GOLD;
   if(col==s->x&&row==s->y)ink=HD_PAPER;
   hd_rect(p,x+col,y+row,1,1,ink);
+ }
+ if(story_city_tour_visible(s))for(unsigned i=0;i<STORY_CITY_STOPS;i++){
+  int px,py;story_city_site_position(i,&px,&py);
+  if((px!=s->x||py!=s->y)&&(!has||px!=gx||py!=gy))
+   hd_pixel(p,x+px,y+py,HD_COPPER);
  }
  /* Only a genuine reachable next step is highlighted. */
  int dir=-1,steps=-1;

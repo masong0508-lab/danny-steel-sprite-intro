@@ -5,6 +5,9 @@
 #define ROTO_PACKET_MAX 32768u
 #define ROTO_SEEK_MAX 64u
 #define ROTO_SEEK_WINDOW 2u
+/* Work budget, NOT a new buffer. The existing packet is reused. */
+#define ROTO_ADVANCE_WINDOW 8u
+#define ROTO_ADVANCE_BUDGET 49152u
 #define ROTO_CLIP_MAGIC 0x33544f52u
 #define ROTO_CLIP_LIMIT 1258291u
 #if defined(__arm__)

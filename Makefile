@@ -24,12 +24,8 @@ HDR     := $(wildcard src/*.h)
 INC     := $(wildcard src/*.inc)
 ART     := $(wildcard assets/neighborhood/*.bin)
 HOST_CC ?= cc
-# Release cartridges never expose the terrain editor. Developer-only build:
-# make clean && make TERRAIN_DEBUG=1
-TERRAIN_DEBUG ?= 0
-ifeq ($(TERRAIN_DEBUG),1)
-CFLAGS += -DDANNY_TERRAIN_DEBUG
-endif
+# The hidden World Tools menu is included in the ordinary cartridge;
+# access is handled by the pause-screen Konami sequence in story.c.
 OPENING_CACHE ?= 1
 ifeq ($(OPENING_CACHE),1)
 CACHE_BIN := build/potheads-opening-cache.bin

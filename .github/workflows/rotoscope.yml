@@ -1,7 +1,7 @@
 name: Potheads source rotoscope regression
 on:
   push:
-    paths: ["src/potheads_motion.h","src/potheads_drape.h","src/potheads_leg_render.h","src/potheads_upper_render.h","src/potheads_cloth_render.h","src/hd_potheads_actor.h","tools/references/potheads_trace.json","tools/build_potheads_trace.py","tests/potheads*.c","tests/potheads_trace_pack_test.py",".github/workflows/rotoscope.yml"]
+    paths: ["src/potheads_motion.h","src/potheads_drape.h","src/potheads_leg_render.h","src/potheads_upper_render.h","src/potheads_cloth_render.h","src/hd_potheads_actor.h","src/potheads_sign_geometry.h","src/potheads_sign_render.h","src/potheads_continuity.h","src/potheads_shape.h","tools/references/potheads_trace.json","tools/build_potheads_trace.py","tests/potheads*.c","tests/potheads_trace_pack_test.py",".github/workflows/rotoscope.yml"]
   workflow_dispatch:
 jobs:
   rotoscope:
@@ -29,6 +29,12 @@ jobs:
         run: |
           gcc -std=c99 -O2 -Wall -Wextra -Werror -Isrc tests/potheads_upper_render_test.c -o /tmp/potheads_upper
           /tmp/potheads_upper
+      - name: Verify actual sign projection, texture and body contours
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Wno-unused-function -Isrc src/hd_canvas.c tests/potheads_sign_geometry_test.c -o /tmp/danny_sign_geometry
+          /tmp/danny_sign_geometry
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Wno-unused-function -Isrc src/hd_canvas.c tests/potheads_sign_body_raster_test.c -o /tmp/danny_sign_body_raster
+          /tmp/danny_sign_body_raster
       - name: Exercise every tick of the production cutscene painter
         run: |
           gcc -std=c11 -O2 -Wall -Wextra -Werror -Isrc \

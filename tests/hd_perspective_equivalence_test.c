@@ -5,6 +5,7 @@
 
 /* Host-only validator is deliberately excluded from the cartridge. */
 int hd_first_person_anchor_map_valid(void);
+int hd_city_horizon_tables_valid(void);
 unsigned hd_debug_road_rom_category(int tx,int ty,unsigned cx,unsigned cy);
 unsigned hd_debug_packed_road_row_category(int tx,int ty,unsigned cx,unsigned cy);
 unsigned hd_debug_packed_road_column_category(int tx,int ty,unsigned cx,unsigned cy);
@@ -243,6 +244,8 @@ static void verify_floor_revisits(void){
         cases,dry_hits-initial);
 }
 int main(void){
+ assert(hd_city_horizon_tables_valid());
+ puts("City horizon: 3113 exact signed lateral offsets and projected rises");
  verify_floor_revisits();
  verify_background_replay();
  verify_original_road_material_rom();

@@ -692,7 +692,8 @@ const uint8_t *hd_facade_at(int wx,int wy,char type,unsigned side){
    of columns. Clip each pair once and copy its original two ROM pixels
    together where alignment permits. No raster/texture cache is added. */
 typedef uint16_t FacadeHalf __attribute__((may_alias));
-void hd_facade_wall(uint8_t *p,int sx,int sy,int height,
+typedef uint32_t FacadeWord __attribute__((may_alias));
+static __attribute__((noinline)) void facade_wall_scaled(uint8_t *p,int sx,int sy,int height,
                     unsigned variant,unsigned side){
  if(height<=0||sx<=-16||sx>=HD_W)return;
  const uint8_t *a=hd_facade_texture(variant,side);
@@ -719,6 +720,44 @@ void hd_facade_wall(uint8_t *p,int sx,int sy,int height,
    row+=major;remain+=minor;
    if(remain>=height){row++;remain-=height;}
   }
+ }
+}
+
+/* The shipped building heights use pre-baked sheared rows. The original
+   projection is retained for arbitrary heights. Each contiguous row
+   has a pair-aligned coverage interval, so no transparent pixel leaks.
+   Normal camera alignment makes the full middle rows four word copies. */
+#include "hd_facade_rasters.inc"
+static inline __attribute__((always_inline)) void facade_row(uint8_t *out,const uint8_t *in,unsigned n){
+ if((((uintptr_t)out^(uintptr_t)in)&3u)==0u){
+  if(n&&((uintptr_t)out&1u)){*out++=*in++;--n;}
+  if(n>=2u&&((uintptr_t)out&2u)){
+   *(FacadeHalf *)(void *)out=*(const FacadeHalf *)(const void *)in;out+=2;in+=2;n-=2;
+  }
+  while(n>=4u){*(FacadeWord *)(void *)out=*(const FacadeWord *)(const void *)in;out+=4;in+=4;n-=4;}
+  if(n>=2u){*(FacadeHalf *)(void *)out=*(const FacadeHalf *)(const void *)in;out+=2;in+=2;n-=2;}
+ }
+ while(n--)*out++=*in++;
+}
+void hd_facade_wall(uint8_t *p,int sx,int sy,int height,
+                    unsigned variant,unsigned side){
+ if(height<=0||sx<=-16||sx>=HD_W)return;
+ unsigned id=(unsigned)height<sizeof facade_height_id?facade_height_id[height]:0u;
+ if(!id){facade_wall_scaled(p,sx,sy,height,variant,side);return;}
+ --id;side&=1u;variant&=7u;
+ int rows=height+8,top=sy+8-height;
+ int first=top<0?-top:0,last=top+rows>HD_H?HD_H-top:rows;
+ if(first>=last)return;
+ const uint8_t *raster=facade_rasters+facade_raster_offset[id]+(side*8u+variant)*(unsigned)rows*16u;
+ const uint8_t *spans=facade_span_codes+facade_span_offset[id]+side*(unsigned)rows;
+ int left=sx<0?-sx:0,right=sx+16>HD_W?HD_W-sx:16;
+ for(int row=first;row<last;row++){
+  unsigned code=spans[row];
+  int lo=(int)(code&15u)*2,hi=(int)(code>>4)*2;
+  if(lo<left)lo=left;
+  if(hi>right)hi=right;
+  if(lo>=hi)continue;
+  facade_row(p+(top+row)*HD_W+sx+lo,raster+row*16+lo,(unsigned)(hi-lo));
  }
 }
 

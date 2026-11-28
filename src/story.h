@@ -18,12 +18,24 @@
 #define STORY_LAND_WAYPOINT 6u
 #define STORY_LAND_FINISH 7u
 #define STORY_LAND_DEFAULT 5u
+#define STORY_CITY_STOPS 5u
+#define STORY_CITY_TOUR_DONE 5u
 /* Half-resolution editable control lattice, 2 bits per node. The
    transient brush toggle is used only while freely roaming. */
 #define STORY_BRUSH_COLS 13u
 #define STORY_BRUSH_ROWS 16u
 #define STORY_BRUSH_BYTES 52u
 #define STORY_BRUSH_MODE 0x08u
+#define STORY_SURVEY_MODE 0x04u
+/* The pause debug menu uses the otherwise inactive detail bit; it never
+   coexists with field-guide/journal/checklist flags. No new Story bytes. */
+#define STORY_DEBUG_MENU 0x10u
+/* In unpaused play the same bit authenticates an explicitly selected
+   terrain tool; ordinary walking and all save records leave it clear. */
+#define STORY_DEBUG_ACCESS STORY_DEBUG_MENU
+#define STORY_DEBUG_CONFIRM 0x08u
+#define STORY_DEBUG_SELECT_MASK 0x07u
+#define STORY_DEBUG_ROWS 5u
 static inline int story_rural(int x,int y){
  return x>=STORY_CITY_W&&x<STORY_W&&(unsigned)y<STORY_H;
 }
@@ -226,26 +238,36 @@ void story_world_place(int *x,int *y);
 unsigned story_world_facing(unsigned facing);
 int story_world_potheads(int x,int y);
 char story_world_tile_for_seed(unsigned seed,int x,int y);
+void story_world_preview(unsigned seed,uint8_t out[STORY_H][STORY_W]);
 int story_world_solid_for_seed(unsigned seed,int x,int y);
 void story_new_seeded(Story *s,int slot,unsigned seed);
 void story_resume_seeded(Story *s,int slot,int x,int y,int facing,int view,int flags,int ended,int ending,unsigned seed);
-static inline int story_land_tools_enabled(void){
-#if defined(DANNY_TERRAIN_DEBUG)
- return 1;
-#else
- return 0;
-#endif
-}
 const char *story_district_name(int x,int y);
 int story_terrain_vertex(const Story *s,int x,int y);
 int story_terrain_height(const Story *s,int wx,int wy);
+/* Frame-local immutable view; hot renderers acquire it once per frame. */
+typedef uint8_t StoryTerrainRow[STORY_W-STORY_CITY_W+1];
+const StoryTerrainRow *story_terrain_mesh(const Story *s);
+static inline int story_mesh_height(const StoryTerrainRow *mesh,int wx,int wy){
+ int x=wx>>8,y=wy>>8,fx=wx&255,fy=wy&255;
+ if(x<STORY_CITY_W||x>=STORY_W||(unsigned)y>=STORY_H)return 0;
+ unsigned col=(unsigned)(x-STORY_CITY_W);
+ int a=mesh[y][col],b=mesh[y][col+1u],c=mesh[y+1][col],d=mesh[y+1][col+1u];
+ return ((a*(256-fx)+b*fx)*(256-fy)+(c*(256-fx)+d*fx)*fy)>>16;
+}
 unsigned story_land_action(const Story *s);
 unsigned story_land_level(const Story *s,unsigned patch);
 int story_brush_mode(const Story *s);
+int story_debug_menu(const Story *s);
+int story_debug_survey(const Story *s);
 int story_brush_editable(const Story *s);
 unsigned story_brush_grade(const Story *s);
 unsigned story_brush_revision(unsigned slot);
 unsigned story_hike_stage(unsigned slot);
+unsigned story_city_tour_stage(unsigned slot);
+void story_city_tour_restore(unsigned slot,unsigned stage);
+int story_city_site_position(unsigned id,int *x,int *y);
+int story_city_tour_visible(const Story *s);
 void story_hike_restore(unsigned slot,unsigned stage);
 void story_brush_export(unsigned slot,uint8_t out[STORY_BRUSH_BYTES]);
 int story_brush_import(unsigned slot,const uint8_t in[STORY_BRUSH_BYTES]);

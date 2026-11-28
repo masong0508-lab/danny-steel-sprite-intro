@@ -1,23 +1,25 @@
-Source commit: e1b26cc1684ac4b7252180454bc3a73d4d3ff439
+Source commit: 45e3213a7c934530e0897869e9db6d920ac9fd73
 mGBA 0.10.2; read-only runtime verification, Story bytes=62
 PASS: built ROM exports its real input-queue counters
-opening state: scene=1, dialogue=1, page=0, ticks=175
+PASS: New Game selects a valid generated layout
+generated world seed: 7
+opening state: scene=1, dialogue=1, page=0, ticks=173
 PASS: New Game reaches the scripted opening
 PASS: held menu confirm does not skip opening dialogue
 PASS: actual ROM capture saved
-opening clock: video=600, processed=602, queue=2->0, accounted=600
+opening clock: video=600, processed=603, queue=3->0, accounted=600
 PASS: clock window advances 600 emulated video frames
 PASS: input queue remains bounded
 PASS: processed plus queued ticks track video time
 PASS: simulation keeps pace during painting
-  cinematic ticks advanced=602
+  cinematic ticks advanced=603
 PASS: opening route remains the actual Potheads scene
 PASS: cinematic clock advances with each simulation tick
 PASS: active Mode4 display survives the clock window
 PASS: one-frame A press advances exactly one dialogue page
 PASS: B reaches overhead town gameplay
 PASS: actual ROM capture saved
-town clock: video=600, processed=600, queue=4->4, accounted=600
+town clock: video=600, processed=600, queue=2->2, accounted=600
 PASS: clock window advances 600 emulated video frames
 PASS: input queue remains bounded
 PASS: processed plus queued ticks track video time
@@ -35,7 +37,7 @@ PASS: one-frame camera tap is captured once while drawing
 PASS: one-frame camera tap is captured once while drawing
 PASS: one-frame camera tap is captured once while drawing
 PASS: one-frame camera tap is captured once while drawing
-short camera taps: 12/12; observed response 1..5 video frames
+short camera taps: 12/12; observed response 1..2 video frames
 PASS: all tested one-frame camera presses are retained
 PASS: tested camera actions apply within twelve video frames
 held camera button: 1 observed toggle(s)
@@ -48,28 +50,43 @@ PASS: input queue remains bounded
 PASS: processed plus queued ticks track video time
 PASS: simulation keeps pace during painting
 PASS: active Mode4 display survives the clock window
-first-person turn: 0->1, response=1 video frames
-PASS: single-frame turn is retained promptly in each facing
-PASS: actual ROM capture saved
-first-person turn: 1->2, response=3 video frames
-PASS: single-frame turn is retained promptly in each facing
-PASS: actual ROM capture saved
 first-person turn: 2->3, response=1 video frames
 PASS: single-frame turn is retained promptly in each facing
 PASS: actual ROM capture saved
 first-person turn: 3->0, response=1 video frames
 PASS: single-frame turn is retained promptly in each facing
 PASS: actual ROM capture saved
+first-person turn: 0->1, response=1 video frames
+PASS: single-frame turn is retained promptly in each facing
+PASS: actual ROM capture saved
+first-person turn: 1->2, response=1 video frames
+PASS: single-frame turn is retained promptly in each facing
+PASS: actual ROM capture saved
 PASS: camera returns to overhead
-timed walk: before=(20,11), expected=(17,11), ROM=(17,11)
+timed walk: before=(3,6), expected=(6,6), ROM=(6,6)
 PASS: walk scenario actually moves through the original map
 PASS: held movement matches its real video-frame duration
 PASS: actual ROM capture saved
+PASS: Konami code recognizes only the full pause-screen sequence
+PASS: Konami code recognizes only the full pause-screen sequence
+PASS: Konami code recognizes only the full pause-screen sequence
+PASS: Konami code recognizes only the full pause-screen sequence
+PASS: Konami code recognizes only the full pause-screen sequence
+PASS: Konami code recognizes only the full pause-screen sequence
+PASS: Konami code recognizes only the full pause-screen sequence
+PASS: Konami code recognizes only the full pause-screen sequence
+PASS: Konami code recognizes only the full pause-screen sequence
+PASS: Konami code recognizes only the full pause-screen sequence
+PASS: Konami code recognizes only the full pause-screen sequence
+PASS: regular cartridge opens hidden World Tools without regeneration
+PASS: actual ROM capture saved
+PASS: closing the secret menu relocks it without changing the world
 PASS: short pause press works after movement
 PASS: short back press returns through the pause menu
 PASS: gameplay input capture stops cleanly in the menu
 PASS: actual ROM capture saved
 PASS: New Game restarts the runtime without stale keys or pages
+PASS: another New Game automatically selects a different generated world
 input queue dropped samples: current=0, peak across sessions=0
 PASS: no captured input samples overflow during the tested routes
 PASS: emulator reports no fatal/error events
