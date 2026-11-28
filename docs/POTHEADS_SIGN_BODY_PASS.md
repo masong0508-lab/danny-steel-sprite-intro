@@ -52,3 +52,16 @@ unverified print, but receive one subtle shade plane inset from a real
 measured long edge. Costume corners and hem are bevelled, with matching
 inset lighting and a head-scaled collar. No new framebuffer, raw reference
 media, or changes to pose keys. Fresh cache and cadence checks pending.
+
+### Connected fabric and measured arrow extension
+The previous narrow-face/costume release passed full host, cartridge,
+emulator and rotoscope checks. It measured 29.167 opening page flips/s
+and a 1,125,440-byte cache. Review of actual captured inversion and
+bridge frames still found an oversized dark hip junction and rigid
+double-outline seams. The next pass uses a bounded pelvic garment
+contour from measured hips/knees, layers limb fabric before edge
+strokes, and avoids support-dependent trouser width pops. A restrained
+shade plane follows a real observed arrow tip and adjacent board edge,
+with no new geometry outside the measured hull. No raw video or private
+matte recovered; this remains a source-guided authored refinement.
+Fresh tests and actual cartridge measurements are required.

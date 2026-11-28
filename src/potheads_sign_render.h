@@ -143,6 +143,27 @@ static int pot_sign_material_plane(const PotPose *pose,const PotPoint q[5],
  for(unsigned i=0;i<4u;i++)if(!pot_sign_near(h,n,strip[i],0))return 0;
  return pot_sign_cross(strip[0],strip[1],strip[2])>0;
 }
+/* Define a shallow cardboard fold at a genuinely visible arrow tip.
+   Only an observed external tip and an unambiguous adjacent measured
+   edge qualify. This does not modify the measured silhouette or print. */
+static int pot_sign_tip_plane(const PotPose *pose,const PotPoint q[5],const PotPoint *h,
+                             unsigned n,PotPoint plane[3]){
+ if(!(pose->flags&POT_SIGN_TIP_VISIBLE)||(pose->flags&POT_SIGN_CLIPPED)||n<4u)return 0;
+ int best=0,best_len=1;unsigned edge=0;
+ for(unsigned i=0;i<4u;i++){
+  PotPoint a=q[i],b=q[(i+1u)&3u];
+  int cross=-pot_sign_cross(a,b,q[4]),len=pot_sign_dist(a,b);
+  if(len&&cross>best*len/best_len){best=cross;best_len=len;edge=i;}
+ }
+ if(best<best_len*4)return 0;
+ PotPoint a=q[edge],b=q[(edge+1u)&3u];
+ /* Shade only the arrow extension, from the edge to its tip. */
+ plane[0]=pot_sign_inset(a,b,2u);
+ plane[1]=pot_sign_inset(q[4],b,2u);
+ plane[2]=pot_sign_inset(b,a,2u);
+ for(unsigned i=0;i<3u;i++)if(!pot_sign_near(h,n,plane[i],0))return 0;
+ return pot_sign_cross(plane[0],plane[1],plane[2])!=0;
+}
 static void pot_sign_draw(uint8_t *p,const PotCamera *c,const PotPose *pose){
  PotPoint q[5],h[5],face[4];
  unsigned n=pot_sign_projected(c,pose,q,h);
@@ -150,6 +171,9 @@ static void pot_sign_draw(uint8_t *p,const PotCamera *c,const PotPose *pose){
  if(n==1u){hd_pixel(p,h[0].x,h[0].y,HD_PAPER);return;}
  if(n==2u){hd_line(p,h[0].x,h[0].y,h[1].x,h[1].y,HD_PAPER);return;}
  pot_shape(p,h,n,HD_PAPER);
+ PotPoint tip_plane[3];
+ if(pot_sign_tip_plane(pose,q,h,n,tip_plane))
+  pot_shape(p,tip_plane,3u,HD_PLASTER_LIT);
  unsigned detail=(unsigned)pot_sign_face(q,pose->flags,face);
  if(detail)detail=pot_sign_print(p,face,detail);
  if(!detail){

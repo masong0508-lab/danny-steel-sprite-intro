@@ -169,3 +169,30 @@ private assets remain unchanged. Added explicit texture/contour and
 material-strip bounds tests. New ROM and performance are pending fresh
 workflow results. Original footage/mattes are still unavailable in this
 session; this is authored source-guided art, not a new manual trace.
+
+## Checkpoint: verified narrow-angle/soft-costume pass and next refinement
+
+Source `eb300577ba4bb493f5188ff5a93dc5ab6e93013c` passed all three workflows:
+[host + GBA build](https://github.com/masong0508-lab/danny-steel-sprite-intro/actions/runs/46095421578),
+[emulator capture](https://github.com/masong0508-lab/danny-steel-sprite-intro/actions/runs/46095421582),
+and [rotoscope regression](https://github.com/masong0508-lab/danny-steel-sprite-intro/actions/runs/46095421614).
+[Verified ROM archive](https://github.com/masong0508-lab/danny-steel-sprite-intro/actions/runs/46095421578/artifacts/15243348078).
+ROM SHA256 from real capture: `81f769fa4f1ec3658cec857bff72aa1d0db307be0756157d6b8d8b679913f53f`;
+capture ELF/ROM load bytes 3,755,844. Cache 1,125,440 / 1,258,291 bytes, 638 pictures,
+11 seeks. EWRAM static 190,768 / 196,608; IWRAM static 23,664 / 24,576.
+Opening page flips/s 29.167, overhead 14.932, stationary first-person
+28.968, walking 15.031. Runtime verification zero failures. Rotoscope
+195,074 UV checks, 4,140 connected limbs, 525 normalized torso sections.
+Screenshot-only successor `a8346128ce7f8daac2eb7781682262de0a169104` contains
+the captured images reviewed in this session. The baseline is now a
+genuine tested ROM, but angular limbs/hip blob remain in the floor poses.
+
+Next source pass: replace the oversized cross-hip stroke with a compact
+six-point pelvic garment yoke derived from measured hips and knee directions;
+preserve missing/cropped hips. Layer continuous limb material before
+seams, add short-segment fallback, and keep pants width constant across
+near-leg/support switches. Add a subtle material plane only on an observed
+external arrow extension; never invent a tip or clipped print.
+Preserve source trace, 638 cache samples and private matte paths. New
+raster bounds and crop regressions added. Verify both workflows, actual
+ROM cache and cadence before delivery; the new candidate is not yet tested.

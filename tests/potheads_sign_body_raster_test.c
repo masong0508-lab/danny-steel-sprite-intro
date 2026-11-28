@@ -41,7 +41,7 @@ int main(void){
   {POT_LSHOULDER,POT_LELBOW,POT_LWRIST},{POT_RSHOULDER,POT_RELBOW,POT_RWRIST},
   {POT_LHIP,POT_LKNEE,POT_LANKLE},{POT_RHIP,POT_RKNEE,POT_RANKLE}
  };
- unsigned signs=0,limbs=0,joints=0,palms=0,soles=0,muted=0,torsos=0,material=0;
+ unsigned signs=0,limbs=0,joints=0,palms=0,soles=0,muted=0,torsos=0,material=0,pelvis=0,tip_planes=0;
  for(unsigned t=0;t<=POT_TRACE_LAST_TICK;t+=2u){
   PotPose pose;pot_render_sample(t,&pose,0);
   PotJoint ls=pose.joint[POT_LSHOULDER],rs=pose.joint[POT_RSHOULDER];
@@ -55,12 +55,33 @@ int main(void){
    assert(ax*ax+ay*ay<=4*(pose.head_size.x*2+4)*(pose.head_size.x*2+4));
    torsos++;
   }
+  PotJoint hip_contour[6];
+  unsigned pelvis_n=pot_pelvis_outline(&pose,hip_contour);
+  if(pelvis_n){
+   assert(pelvis_n==6u);
+   assert(!(pose.boundary&((1u<<POT_LHIP)|(1u<<POT_RHIP))));
+   for(unsigned j=0;j<pelvis_n;j++){
+    PotJoint anchor=pose.joint[(j==0u||j>=4u)?POT_LHIP:POT_RHIP];
+    int dx=hip_contour[j].x-anchor.x,dy=hip_contour[j].y-anchor.y;
+    assert(dx*dx+dy*dy<=100);
+   }
+   pelvis++;
+  }
   for(unsigned camera=90;camera<=180;camera+=90){
    PotCamera c=pot_camera(camera);
+   reset();pot_pelvis(frame.pixels,&c,&pose);guards();
+   if(!pelvis_n)for(unsigned j=0;j<HD_BYTES;j++)assert(frame.pixels[j]==HD_WET);
    if(pose.flags&3u){
     PotPoint q[5],h[5],face[4];
     unsigned n=pot_sign_projected(&c,&pose,q,h);
     int readable=pot_sign_face(q,pose.flags,face);
+    PotPoint plane[3];
+    if(pot_sign_tip_plane(&pose,q,h,n,plane)){
+     assert(pose.flags&POT_SIGN_TIP_VISIBLE);
+     assert(!(pose.flags&POT_SIGN_CLIPPED));
+     for(unsigned k=0;k<3u;k++)assert(pot_sign_near(h,n,plane[k],0));
+     tip_planes++;
+    }
     PotPoint strip[4];
     if(!readable&&pot_sign_material_plane(&pose,q,h,n,strip)){
      for(unsigned k=0;k<4u;k++)assert(pot_sign_near(h,n,strip[k],0));
@@ -124,7 +145,8 @@ int main(void){
   }
  }
  assert(signs>400u&&limbs>1000u&&joints>1000u&&palms>100u&&soles>100u&&muted>0u&&torsos>200u);
- assert(material>0u);
+ assert(material>0u&&pelvis>200u&&tip_planes>0u);
+ printf("Silhouette polish: %u bounded pelvic contours, %u observed arrow-extension shade planes; clipped hips and tips remain unpainted\n",pelvis,tip_planes);
  printf("Sign material and lettering: %u clipped/oblique shade planes, compact %u ink samples, full %u ink samples; bevel bounded\n",material,compact_ink,full_ink);
  printf("Body contours: %u normalized torso sections preserve measured centres and consistent side ordering\n",torsos);
  printf("Sign/body raster: %u sign poses, %u muted-print angles, %u connected limbs, %u bends, %u palms, %u soles; crop, contact and guards OK\n",signs,muted,limbs,joints,palms,soles);

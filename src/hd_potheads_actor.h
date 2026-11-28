@@ -105,7 +105,10 @@ static void pot_jointed(uint8_t *p,PotPoint a,PotPoint b,PotPoint c,
                          unsigned shade,unsigned caps){
  int dx=b.x-a.x,dy=b.y-a.y,ex=c.x-b.x,ey=c.y-b.y;
  unsigned l=pot_sqrt((unsigned)(dx*dx+dy*dy)),m=pot_sqrt((unsigned)(ex*ex+ey*ey));
- if(!l||!m||dx*ex+dy*ey<-(int)(l*m/2u)){
+ /* A projected segment shorter than its own half-width can fold
+    through the adjacent ribbon. Use the bounded tapered fallback there
+    as well as at a true reversal. */
+ if(!l||!m||l<(unsigned)(wa/2)||m<(unsigned)(wc/2)||dx*ex+dy*ey<-(int)(l*m/2u)){
   pot_taper_panel(p,a,b,wa,wb,body,lit,caps&1u);
   pot_taper_panel(p,b,c,wb,wc,body,shade,caps&2u);
   if(wb>=3)hd_ellipse(p,b.x,b.y,wb/2,wb/2,body);
@@ -126,16 +129,27 @@ static void pot_jointed(uint8_t *p,PotPoint a,PotPoint b,PotPoint c,
   lo[i]=(PotPoint){centers[i].x-n[i].x,centers[i].y-n[i].y};
   hi[i]=(PotPoint){centers[i].x+n[i].x,centers[i].y+n[i].y};
  }
+ /* Paint the connected silhouette first, then a single cloth plane.
+    The old per-segment outline could overlap a second panel at the
+    bend, leaving a black mechanical hinge. Neither panel has an
+    artificial cross-limb seam at the tracked joint. */
  for(unsigned i=0;i<2u;i++){
   PotPoint quad[4]={lo[i],hi[i],hi[i+1u],lo[i+1u]};
   pot_shape(p,quad,4u,body);
+ }
+ for(unsigned i=0;i<2u;i++){
   PotPoint panel[4]={centers[i],hi[i],hi[i+1u],centers[i+1u]};
   pot_shape(p,panel,4u,shade);
-  hd_line(p,lo[i].x,lo[i].y,lo[i+1u].x,lo[i+1u].y,HD_INK);
+ }
+ /* Outer shadow edge and one fabric highlight, not twin black rails.
+    At a compressed wrist or ankle the highlight ends naturally. */
+ for(unsigned i=0;i<2u;i++){
   hd_line(p,hi[i].x,hi[i].y,hi[i+1u].x,hi[i+1u].y,HD_INK);
-  PotPoint x={centers[i].x-n[i].x/2,centers[i].y-n[i].y/2};
-  PotPoint y={centers[i+1u].x-n[i+1u].x/2,centers[i+1u].y-n[i+1u].y/2};
-  hd_line(p,x.x,x.y,y.x,y.y,lit);
+  if(n[i].x||n[i].y){
+   PotPoint x={centers[i].x-n[i].x/2,centers[i].y-n[i].y/2};
+   PotPoint y={centers[i+1u].x-n[i+1u].x/2,centers[i+1u].y-n[i+1u].y/2};
+   hd_line(p,x.x,x.y,y.x,y.y,lit);
+  }
  }
  if((caps&1u)&&wa>=4)hd_ellipse(p,a.x,a.y,wa/2,wa/2,body);
  if((caps&2u)&&wc>=4)hd_ellipse(p,c.x,c.y,wc/2,wc/2,body);
@@ -216,26 +230,23 @@ static void pot_ground_shoe(uint8_t *p,PotPoint ankle,PotPoint toe,PotPoint sole
 static void pot_leg(uint8_t *p,const PotCamera *c,const PotPose *pose,unsigned side){
  unsigned hip=side?POT_RHIP:POT_LHIP,knee=side?POT_RKNEE:POT_LKNEE;
  unsigned ankle=side?POT_RANKLE:POT_LANKLE,toe=side?POT_RTOE:POT_LTOE;
- int thick=(pose->head_size.x*3+1)/2+2;
- unsigned near=(pose->flags&POT_NEAR_LEFT_LEG)?0u:1u;
- /* Foreshortened foreground thighs broaden during the supported floor
-    turns. Inverted airborne legs retain the standing proportions. */
- if(side==near&&(pose->contact_mask&12u)&&pot_has(pose,POT_NECK)&&
-    pot_has(pose,hip)&&pose->joint[hip].y>pose->joint[POT_NECK].y)
-  thick+=2;
+ /* Use a stable garment width for the whole floor sequence. The
+    near-leg flag changes only draw order, not the physical trouser
+    diameter. This removes a two-unit width pop at support changes. */
+ int thick=(pose->head_size.x*3+1)/2+3;
  int width=pot_actor_size(c,thick);
  if(pot_has(pose,hip)&&pot_has(pose,knee)&&pot_has(pose,ankle)&&
     !(pose->boundary&(1u<<knee))){
   pot_jointed(p,pot_actor_point(c,pose->joint[hip]),pot_actor_point(c,pose->joint[knee]),
               pot_actor_point(c,pose->joint[ankle]),width+1,width>3?width-1:2,width>5?width-3:2,
-              HD_INK,HD_ROAD_COOL,HD_ROAD,pot_caps(pose,hip,ankle));
+              HD_ROAD,HD_ROAD_COOL,HD_INK,pot_caps(pose,hip,ankle));
  }else{
   if(pot_has(pose,hip)&&pot_has(pose,knee))
    pot_stroke(p,pot_actor_point(c,pose->joint[hip]),pot_actor_point(c,pose->joint[knee]),
-    width,HD_INK,HD_ROAD,pot_caps(pose,hip,knee));
+    width,HD_ROAD,HD_ROAD_COOL,pot_caps(pose,hip,knee));
   if(pot_has(pose,knee)&&pot_has(pose,ankle))
    pot_stroke(p,pot_actor_point(c,pose->joint[knee]),pot_actor_point(c,pose->joint[ankle]),
-    width-2,HD_INK,HD_STONE_DARK,pot_caps(pose,knee,ankle)&(pot_has(pose,hip)?2u:3u));
+    width>3?width-2:2,HD_ROAD,HD_STONE_DARK,pot_caps(pose,knee,ankle)&(pot_has(pose,hip)?2u:3u));
  }
  if(pot_has(pose,ankle)&&pot_has(pose,toe)&&
     !(pose->boundary&((1u<<ankle)|(1u<<toe)))){
@@ -528,6 +539,71 @@ static void pot_tunic(uint8_t *p,const PotCamera *c,const PotPose *pose,int sour
   hd_pixel(p,tip.x,tip.y,HD_BARK);
  }
 }
+/* A bounded pelvic yoke follows the measured hip centres rather than
+   painting a fat transverse capsule over both thighs. The two lower
+   corners follow the actual knee directions where those joints exist.
+   A cropped hip never receives a synthetic rounded end. */
+static unsigned pot_pelvis_outline(const PotPose *pose,PotJoint q[6]){
+ const unsigned hips=(1u<<POT_LHIP)|(1u<<POT_RHIP);
+ if((pose->located&hips)!=hips||(pose->boundary&hips))return 0;
+ PotJoint l=pose->joint[POT_LHIP],r=pose->joint[POT_RHIP];
+ PotJoint centre=pot_mid(l,r);
+ PotJoint down={0,256};
+ if(pot_has(pose,POT_LSHOULDER)&&pot_has(pose,POT_RSHOULDER))
+  down=pot_direction(pot_mid(pose->joint[POT_LSHOULDER],pose->joint[POT_RSHOULDER]),centre);
+ else if(pot_has(pose,POT_NECK))down=pot_direction(pose->joint[POT_NECK],centre);
+ else if(pot_has(pose,POT_LKNEE)&&pot_has(pose,POT_RKNEE))
+  down=pot_direction(centre,pot_mid(pose->joint[POT_LKNEE],pose->joint[POT_RKNEE]));
+ PotJoint across={down.y,-down.x};
+ if((l.x-r.x)*across.x+(l.y-r.y)*across.y<0){across.x=-across.x;across.y=-across.y;}
+ int rx=pose->head_size.x;
+ int edge=rx/3+1;if(edge<2)edge=2;if(edge>4)edge=4;
+ int depth=rx/2+1;if(depth<2)depth=2;if(depth>5)depth=5;
+ PotJoint ld=down,rd=down;
+ if(pot_has(pose,POT_LKNEE)&&!(pose->boundary&(1u<<POT_LKNEE)))
+  ld=pot_direction(l,pose->joint[POT_LKNEE]);
+ if(pot_has(pose,POT_RKNEE)&&!(pose->boundary&(1u<<POT_RKNEE)))
+  rd=pot_direction(r,pose->joint[POT_RKNEE]);
+ q[0]=pot_local(l,across,down,edge,-depth);
+ q[1]=pot_local(r,across,down,-edge,-depth);
+ q[2]=pot_local(r,across,down,-edge,0);
+ q[3]=pot_local(r,across,rd,-edge/2,depth);
+ q[4]=pot_local(l,across,ld,edge/2,depth);
+ q[5]=pot_local(l,across,down,edge,0);
+ return 6u;
+}
+static void pot_pelvis(uint8_t *p,const PotCamera *c,const PotPose *pose){
+ PotJoint q[6];
+ if(!pot_pelvis_outline(pose,q))return;
+ /* Convex envelope of these six bounded garment points keeps inverted
+    or crossed hip estimates from producing a bow-tie patch. */
+ PotPoint v[6];
+ for(unsigned i=0;i<6u;i++)v[i]=pot_actor_point(c,q[i]);
+ /* The outline is small: sort its points and form the six-point hull.
+    The general sign hull is intentionally limited to five vertices. */
+ PotPoint hull[12];unsigned n=0;
+ for(unsigned i=1;i<6u;i++){
+  PotPoint x=v[i];unsigned j=i;
+  while(j&&(v[j-1u].x>x.x||(v[j-1u].x==x.x&&v[j-1u].y>x.y))){v[j]=v[j-1u];j--;}
+  v[j]=x;
+ }
+ for(unsigned i=0;i<6u;i++){
+  while(n>=2u&&pot_sign_cross(hull[n-2u],hull[n-1u],v[i])<=0)n--;
+  hull[n++]=v[i];
+ }
+ unsigned lower=n;
+ for(int i=4;i>=0;i--){
+  while(n>lower&&pot_sign_cross(hull[n-2u],hull[n-1u],v[i])<=0)n--;
+  hull[n++]=v[i];
+ }
+ if(n>1u)n--;
+ if(n>=3u&&n<=6u)pot_shape(p,hull,n,HD_ROAD);
+ /* A short waistband shadow is anchored to the original hips, not
+    an oversized sphere. It is occluded naturally by the tunic. */
+ PotPoint a=pot_actor_point(c,pot_mid(q[0],q[5]));
+ PotPoint b=pot_actor_point(c,pot_mid(q[1],q[2]));
+ if(n>=3u&&pot_sign_dist(a,b)>=4)hd_line(p,a.x,a.y,b.x,b.y,HD_INK);
+}
 static void pot_dancer(uint8_t *p,const PotCamera *c,unsigned t){
  PotPose pose;
  unsigned source=t>180u?t-180u:0u;
@@ -559,10 +635,7 @@ static void pot_dancer(uint8_t *p,const PotCamera *c,unsigned t){
     legs, so do not paint either articulated leg or the old hip stroke. */
  if(leg_frame<0){
   pot_leg(p,c,&pose,near_leg^1u);
-  if(pot_has(&pose,POT_LHIP)&&pot_has(&pose,POT_RHIP))
-   pot_stroke(p,pot_actor_point(c,pose.joint[POT_LHIP]),
-    pot_actor_point(c,pose.joint[POT_RHIP]),pot_actor_size(c,pose.head_size.x*2),HD_INK,HD_ROAD,
-    pot_caps(&pose,POT_LHIP,POT_RHIP));
+  pot_pelvis(p,c,&pose);
   if(!floor_work)pot_leg(p,c,&pose,near_leg);
  }else if(!floor_work)pot_source_leg_draw(p,c,leg_frame);
  if(upper_frame<0)pot_tunic(p,c,&pose,cloth_frame);
