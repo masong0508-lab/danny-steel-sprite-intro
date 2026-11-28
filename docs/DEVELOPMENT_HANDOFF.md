@@ -196,3 +196,13 @@ external arrow extension; never invent a tip or clipped print.
 Preserve source trace, 638 cache samples and private matte paths. New
 raster bounds and crop regressions added. Verify both workflows, actual
 ROM cache and cadence before delivery; the new candidate is not yet tested.
+
+## Checkpoint: live terrain and city renderer continuation
+
+Latest recorded actual emulator source: `45e3213a7c934530e0897869e9db6d920ac9fd73`, capture-only successor `01b01db538867d286b23bd0973930f4b91489ebb`. Its cadence report records 29.167 opening, 14.932 overhead, 28.968 stationary and 15.031 moving first-person page flips/s; no new FPS claim until a matching candidate is built and measured. The previously delivered d94176f ROM was independently rechecked: 3,779,324 bytes, matching SHA256, header checksum, ZIP CRC and byte-identical packaged ROM.
+
+Source candidate `7ed8f2155561a8cda9b5b0ed9b1a143f186594cc`:
+- Urban horizon now acquires the live terrain mesh once rather than for each rural sample; 528 lateral offsets and 2,585 projected rises are immutable, exact C integer quotients (3,641 ROM bytes, no new work RAM). The 3,113 entries were independently checked by integer remainder bounds; a host validator has been added to the native perspective equivalence suite. Height and live terrain edits still drive silhouettes.
+- Rural ray samples skip the landmark/debug-state query outside the marker footprint and reuse the already bounded rural/urban classification; the unchanged footprint and palette preserve the intended pixels.
+- Isometric building rendering resolves canonical parcel coordinates once for district and Potheads identity; the landscape depth pass no longer computes a ground hash it never uses. No terrain, story, save, map or rotoscope asset changes.
+- Status: source commits pushed to existing PR #68; fresh host, devkitARM memory, emulator capture and cadence results are not yet verified. Do not publish a new ROM or claim a measured speed increase until they pass. In particular the horizon changes primarily benefit the eastern city and terrain; the old-quarter stationary/walking cadence still needs direct profiling and optimization.
